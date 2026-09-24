@@ -1,4 +1,4 @@
-# Stakeholderinterview — verdieping, ronde 1
+# Stakeholderinterview — verdieping
 
 **Datum:** 24 september 2026
 **Stakeholder:** Axel
@@ -9,6 +9,8 @@
 
 ---
 
+# Ronde 1
+
 ## Wat "feedback" moet betekenen
 
 Met feedback bedoelde ik vooral duidelijke overzichten van hoe het ervoor staat. Denk aan een
@@ -17,14 +19,6 @@ goed beeld van wat er precies waarheen gaat.
 
 Een maandoverzicht achteraf, met hoe je het gedaan hebt in vergelijking met je budget en misschien
 ook met andere maanden, is ook geen slecht idee.
-
-## Wat er met het restant in een potje gebeurt
-
-Maak het een mogelijkheid om te kiezen.
-
-Als eerste stap zou ik het restant doorzetten naar één gekozen potje — of dat nu de spaarrekening
-is of de aandelenrekening. Later zouden we ook een "schuif door naar volgende maand"-optie kunnen
-toevoegen.
 
 ## Hoe transacties de app in komen
 
@@ -43,9 +37,59 @@ Ik heb zelf geen schulden, dus dat kan voor nu buiten de scope blijven.
 
 ---
 
-## Opmerking bij dit antwoord
+# Ronde 2
 
-Vermogensoverzicht kwam in het oorspronkelijke interview niet voor. Het is daarmee geen detail maar
-een **tweede pijler** naast het budgetteren, en verandert wat MoneyBud is: niet alleen "waar gaat
-mijn maandgeld heen", maar ook "hoe sta ik ervoor". Dit is genoteerd zodat het als zodanig wordt
-meegenomen en niet als bijzaak van het budgetdeel behandeld wordt.
+## Plek en doel zijn twee verschillende dingen
+
+> Dit is het kernidee dat in deze ronde naar boven kwam.
+
+We moeten onderscheid maken tussen **waar het geld zich bevindt** — betaalrekening, spaarrekening,
+aandelenrekening, fysiek contant — en **waar het voor bedoeld is**, het budgetpotje.
+
+Overblijfsels gaan dus in een budgetpotje, dat op zijn beurt op een specifieke plek staat.
+
+## Saldo van een rekening
+
+Allebei. Je kunt het saldo zelf vrij bijwerken, en daarnaast kunnen we zoveel automatische
+berekeningen toevoegen als we tijd voor hebben.
+
+De simpele variant kan er meteen in: de spaarrekening krijgt erbij wat ik daarvoor gebudgetteerd
+heb. Moeilijkere berekeningen kunnen we later toevoegen.
+
+## Begin van de budgetmaand
+
+Instelbaar.
+
+## Beleggingen
+
+Voor nu alleen wat ik zelf invul. Mogelijk kan ik later kijken of het mogelijk is om dit
+realistisch te integreren.
+
+---
+
+## Uitwerking van "plek en doel"
+
+Dit onderscheid is groter dan het lijkt, dus het is hier uitgeschreven om te controleren of het
+klopt met wat de stakeholder bedoelde.
+
+Elk bedrag heeft **altijd twee eigenschappen tegelijk**, die onafhankelijk van elkaar variëren:
+
+| | Betekenis | Voorbeelden |
+|---|---|---|
+| **Plek** | Waar het geld fysiek staat | Betaalrekening, spaarrekening, aandelenrekening, contant |
+| **Doel** | Waar het voor bedoeld is | Boodschappen, hobby, uit huis gaan, ongebudgetteerd |
+
+Twee bedragen op dezelfde rekening kunnen een verschillend doel hebben, en hetzelfde doel kan over
+meerdere plekken verspreid staan.
+
+**Waarom dit belangrijk is:** de twee pijlers van MoneyBud zijn hiermee geen twee losse
+functionaliteiten, maar twee manieren om naar dezelfde gegevens te kijken.
+
+- **Vermogen** = alles opgeteld, gegroepeerd op *plek*
+- **Budget** = alles opgeteld, gegroepeerd op *doel*
+
+Dat verklaart ook waarom het restant van een potje naar een spaarrekening kan: het geld verandert
+van plek én van doel, en beide overzichten blijven daarna kloppen.
+
+De simpele automatische berekening die hierboven genoemd wordt — de spaarrekening krijgt erbij wat
+ervoor gebudgetteerd is — is precies zo'n verplaatsing.
