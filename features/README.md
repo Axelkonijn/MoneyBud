@@ -23,11 +23,17 @@ Feature: Record an expense
   So that I can see where my money goes
 
   Scenario: Recording an expense reduces the remaining budget
-    Given I have a monthly budget of 400 euro for "Groceries"
-    And I have already spent 150 euro on "Groceries" this month
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have already spent 150 euro on "Groceries" in the current budget period
     When I record an expense of 25 euro for "Groceries"
-    Then the remaining "Groceries" budget should be 225 euro
+    Then the remaining "Groceries" budget in the current budget period should be 225 euro
 ```
+
+**Name the budget period the same way every time** — `in the current budget period`, `in the
+previous budget period`, `in the next budget period` — even in a scenario where only one period is
+in play. Never "this month": the day a period starts is configurable and need not match a calendar
+month (glossary: *Budget period*). One grammar means one step definition rather than several that
+mean the same thing.
 
 **Concrete numbers, not vague ones.** "a budget of 400 euro" beats "a budget". Money bugs hide in
 rounding and edge cases, so scenarios should name exact amounts — and cover the awkward ones:
