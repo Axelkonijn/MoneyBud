@@ -18,7 +18,8 @@ machine. It answers two questions:
 - **How am I doing?** — total net worth across all accounts
 
 These are not two separate features. Every amount has both a **location** (which account it sits
-in) and a **purpose** (which category it is earmarked for), and those vary independently. Net worth
+in) and a **purpose** (which category it is earmarked for, or *Unassigned* until the user decides),
+and those vary independently. Net worth
 is the same data grouped by location; the budget is that data grouped by purpose. One model, two
 views. See [§12 Glossary](12-glossary.md) for the precise definitions.
 
@@ -44,20 +45,31 @@ assessor whose requirements have to be met.
 
 | Capability | |
 |---|---|
-| Record income and expenses, one-off or recurring, each labelled and categorised | |
+| Record income and expenses, one-off or recurring, each labelled and each given a purpose — an expense as it is entered, income later, by assigning it ([§12](12-glossary.md)) | |
 | Assign monthly amounts to categories, with sensible defaults and easy customisation | |
 | See at a glance where money is going, and how the period compares to the budget and to earlier periods | |
 | Track balances across accounts and see total net worth | |
 | Direct what is left over at the end of a period somewhere useful rather than losing it | |
 
-### First increment
+### The first version
 
 The stakeholder works in SCRUM terms: the first version is **a working demo to give feedback on,
 not an MVP**. It covers manual entry of income and expenses, and categories with amounts.
 
+**That first version takes more than one increment to build, and the two words are not
+interchangeable.** The **first increment** built recording an *expense* and nothing else; recording
+*income* was the second, and is now built too. Where [§12](12-glossary.md) says "not in the first
+increment" it means that increment, not the demo as a whole — so a thing absent from it may still
+be part of the first version. Other sections now say "not built yet" or "in any increment so far"
+instead, because the count has moved past one and a claim pinned to the first increment stops
+telling the reader what is true today.
+
 Accounts, net worth, and recurring transactions are later increments. They are deferred, not
 dropped — the model above describes MoneyBud as intended, and the documentation should not be read
-as if the first increment is the product.
+as if any one increment is the product. **Recurring transactions in particular do not replace
+one-off entry**: the capability table above lists the two together because the stakeholder wants
+both, permanently, and entering an amount by hand stays first-class once schedules exist
+([§12](12-glossary.md), *Income may be dated in the future*).
 
 ## 1.2 Quality Goals
 

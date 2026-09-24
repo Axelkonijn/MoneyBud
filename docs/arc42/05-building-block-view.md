@@ -18,7 +18,7 @@ missing one.
 
 | Building block | Responsibility |
 |---|---|
-| **`src/MoneyBud.Domain`** | The whole application. Categories, budgets, expenses, budget periods and the `Money` type. Computes *Remaining* and decides what to refuse. Depends on nothing but the .NET base class library — no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
+| **`src/MoneyBud.Domain`** | The whole application. Categories, budgets, expenses, income, budget periods and the `Money` type. Computes *Remaining* and *Unassigned*, and decides what to refuse. Depends on nothing but the .NET base class library — no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
 | **`tests/MoneyBud.Specs`** | Runs the specification against the domain: Reqnroll step definitions on top of xUnit, with the scenario's world in `Support/`. Also holds the developer unit tests in `Unit/`, which are tests and not specification — see ADR 0004 for why they share a project and what rule keeps them subordinate |
 
 `features/` is **not a building block.** It holds the Gherkin specification, and the specs project
@@ -32,7 +32,12 @@ The solution file is `MoneyBud.slnx` at the repository root.
 `MoneyBud.Domain` is a handful of types with no internal boundary worth drawing. A breakdown of it
 would restate the class list, and [§8.1](08-crosscutting-concepts.md) already says the thing about
 those types that is actually worth saying — how [§12](12-glossary.md)'s two distinctions are
-expressed, and which of its concepts have no code at all. The code itself is the level-2 view.
+expressed, where income sits relative to them, and which of its concepts have no code at all. The
+code itself is the level-2 view.
+
+Adding a capability therefore updates the responsibility above and §8.1, and leaves the rest of
+this section alone. The income increment added `Income`, `IncomeRefusal`, `RecordIncomeResult` and
+three members on `Ledger` without moving a single boundary.
 
 ## What is not here yet
 

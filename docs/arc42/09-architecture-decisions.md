@@ -22,8 +22,16 @@ accepted, with nothing built on it. It was corrected in place, with the correcte
 rather than deleted. That is the bar for amending rather than superseding, and it is meant to be a
 hard one to clear.
 
-Not every decision gets a record. **Persistence is deferred for the first increment — nothing is
-stored, state lives in memory for the lifetime of a run** — and that is written up in
+Not every decision gets a record. **Persistence is still deferred — nothing is stored, state lives
+in memory for the lifetime of a run** — and that is written up in
 [§8.3](08-crosscutting-concepts.md) rather than here, because it is a scope decision rather than an
 architectural one. It is noted in this section so that a reader scanning the index does not
 conclude it was never decided.
+
+**The income increment added no record, and that is the expected outcome**, not an omission. It
+introduced no technology, moved no boundary ([§5](05-building-block-view.md)) and reopened no money
+rule — [ADR 0003](../decisions/0003-money-representation.md) already covered income, because its
+rules were written about transactions rather than about expenses. The two decisions it did settle
+are both about how one class expresses the model rather than about the architecture, so they are
+recorded in [§8.1](08-crosscutting-concepts.md): why the figure is called `UnassignedIn` before
+anything assigns, and why `IncomeRefusal` deliberately has no future-date member.

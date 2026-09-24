@@ -116,22 +116,12 @@ public sealed class RecordExpenseSteps(SpecContext context)
     [Then(@"the expense should be recorded")]
     public void ThenTheExpenseShouldBeRecorded() =>
         Assert.True(
-            context.Result.WasRecorded,
-            $"Expected it to be recorded, but it was refused: {context.Result.Refusal}.");
+            context.ExpenseResult.WasRecorded,
+            $"Expected it to be recorded, but it was refused: {context.ExpenseResult.Refusal}.");
 
     [Then(@"the expense should not be recorded")]
     public void ThenTheExpenseShouldNotBeRecorded() =>
-        Assert.False(context.Result.WasRecorded, "Expected it not to be recorded, but it was.");
-
-    [Then(@"I should not be warned or asked to confirm")]
-    public void ThenIShouldNotBeWarnedOrAskedToConfirm()
-    {
-        // There is no warning to assert the absence of. RecordExpenseResult has nowhere to put
-        // one and no outcome between recorded and refused, so asserting that the expense simply
-        // went through is what "not warned or asked to confirm" amounts to.
-        Assert.True(context.Result.WasRecorded);
-        Assert.Null(context.Result.Refusal);
-    }
+        Assert.False(context.ExpenseResult.WasRecorded, "Expected it not to be recorded, but it was.");
 
     [Then(@"I should be told that an expense needs a category")]
     public void ThenIShouldBeToldAnExpenseNeedsACategory() =>
@@ -148,13 +138,17 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void ThenIShouldBeToldAnExpenseMustBeMoreThanZero() =>
         AssertRefused(ExpenseRefusal.AmountNotPositive);
 
-    [Then(@"I should be told that an amount cannot be finer than a cent")]
-    public void ThenIShouldBeToldAnAmountCannotBeFinerThanACent() =>
-        AssertRefused(ExpenseRefusal.AmountFinerThanCent);
-
     [Then(@"I should be told that an expense cannot be dated in the future")]
     public void ThenIShouldBeToldAnExpenseCannotBeDatedInTheFuture() =>
         AssertRefused(ExpenseRefusal.DateInFuture);
+
+    // Both this and the remaining-budget step below are used by record-income.feature too,
+    // which asserts that recording income leaves the plan layer alone.
+    [Then(@"the budget for ""([^""]*)"" in the (current|previous|next) budget period should (?:still )?be (\S+) euro")]
+    public void ThenTheBudgetForShouldBe(string category, string which, string expected) =>
+        Assert.Equal(
+            SpecParsing.MoneyAmount(expected),
+            Ledger.BudgetFor(category, Ledger.Period(which)));
 
     [Then(@"the remaining ""([^""]*)"" budget in the (current|previous|next) budget period should (?:still )?be (\S+) euro")]
     public void ThenTheRemainingBudgetShouldBe(string category, string which, string expected) =>
@@ -189,6 +183,12 @@ public sealed class RecordExpenseSteps(SpecContext context)
         Assert.Equal(count, matching);
     }
 
+    [Then(@"my ""([^""]*)"" spending in the (current|previous|next) budget period should include (\S+) euro without a label")]
+    public void ThenMySpendingShouldIncludeUnlabelled(string category, string which, string amount) =>
+        Assert.Contains(
+            Ledger.ExpensesFor(category, Ledger.Period(which)),
+            e => e.Amount == SpecParsing.MoneyAmount(amount) && e.Label is null);
+
     [Then(@"my ""([^""]*)"" spending in the (current|previous|next) budget period should include (\S+) euro labelled ""([^""]*)""")]
     public void ThenMySpendingShouldIncludeLabelled(
         string category, string which, string amount, string label) =>
@@ -199,14 +199,14 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // ----------------------------------------------------------------- Shared
 
     private void Record(string amount, string? category, string? label, string? date) =>
-        context.LastResult = Ledger.RecordExpense(
-            SpecParsing.Amount(amount), category, Ledger.Date(date), label);
+        context.Record(Ledger.RecordExpense(
+            SpecParsing.Amount(amount), category, Ledger.Date(date), label));
 
     private void AssertRefused(ExpenseRefusal expected)
     {
         Assert.False(
-            context.Result.WasRecorded, "Expected the expense to be refused, but it was recorded.");
-        Assert.Equal(expected, context.Result.Refusal);
+            context.ExpenseResult.WasRecorded, "Expected the expense to be refused, but it was recorded.");
+        Assert.Equal(expected, context.ExpenseResult.Refusal);
     }
 
     private void AssertNothingSpentOn(string category, BudgetPeriod period) =>

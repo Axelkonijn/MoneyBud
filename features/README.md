@@ -55,4 +55,5 @@ linked into that project rather than copied into it, so there is one copy of the
 no way for a stale duplicate to keep passing — see
 [ADR 0004](../docs/decisions/0004-solution-layout.md).
 
-Only `record-expense.feature` exists so far, and every scenario in it passes.
+Two feature files exist so far — `record-expense.feature` and `record-income.feature` — and every
+scenario in both passes.

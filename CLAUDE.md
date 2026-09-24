@@ -88,44 +88,65 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 190 passing: 34 scenario cases, the rest developer unit tests
+dotnet test  MoneyBud.slnx     # 234 passing: 68 scenario cases, the rest developer unit tests
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-24, after the first increment shipped green. Update this when a stage completes._
+_Last updated 2026-09-25, after the income increment shipped green. Update this when a stage completes._
 
-**Done: all five stages, for `record-expense` only.** The first increment is built and green.
+**Done: all five stages, twice — for `record-expense` and for `record-income`.** Both are built
+and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
   interview round.
 - arc42 §1–§5, §7, §8, §9, §11 and §12 filled. §6 and §10 are empty *with their reasons written
   down* — there is one building block that does anything, and nothing user-facing to measure.
-- `features/record-expense.feature` — 19 scenarios, **approved by Axel at the first gate**.
-- Implementation plan **approved by Axel at the second gate** on 2026-09-24. It settled the money
-  questions ([ADR 0003](docs/decisions/0003-money-representation.md)), deferred persistence with a
-  stated trigger ([§8.3](docs/arc42/08-crosscutting-concepts.md)), and fixed the solution shape
-  ([ADR 0004](docs/decisions/0004-solution-layout.md)).
-- Built, reviewed by `spec-reviewer`, and documented back into arc42 §8.1, §5 and §4.
+- `features/record-expense.feature` — 21 scenarios, **approved at the first gate**. Two were added
+  later, when label trimming was settled during the income increment.
+- `features/record-income.feature` — 16 scenarios, **approved at the first gate** on 2026-09-25.
+- Increment 1's plan, approved at the second gate on 2026-09-24, settled the money questions
+  ([ADR 0003](docs/decisions/0003-money-representation.md)), deferred persistence with a stated
+  trigger ([§8.3](docs/arc42/08-crosscutting-concepts.md)), and fixed the solution shape
+  ([ADR 0004](docs/decisions/0004-solution-layout.md)). Increment 2's needed **no new ADR** —
+  nothing in it was architectural ([§9](docs/arc42/09-architecture-decisions.md)).
+- Both were reviewed by `spec-reviewer` and documented back into arc42.
 
-**What exists in code:** `Money` (whole cents in a `long`), `Category`, `Expense`, `BudgetPeriod`,
-`BudgetPeriodCalendar`, `ExpenseRefusal`, `RecordExpenseResult`, `Ledger`. No UI, no storage, no
-accounts — all three deliberate, all three with their reasoning recorded.
+**What exists in code:** `Money` (whole cents in a `long`), `Category`, `BudgetPeriod`,
+`BudgetPeriodCalendar`, `Ledger`, and a matching pair per transaction — `Expense`,
+`ExpenseRefusal`, `RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`.
+No UI, no storage, no accounts — all three deliberate, all three with their reasoning recorded.
 
-**Next: stage 1 again, for whatever capability comes after this.** The pipeline restarts at
-wishes; nothing skips ahead to code. The obvious candidates, none of them specified:
+**Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
+2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
+first gate; the plan was approved at the second; `spec-reviewer` found no defect and no faked
+scenario. What was settled along the way:
 
-- **Recording income**, and with it *Unassigned*, *Assign* and *Left to assign*. These are
-  specifiable today — they need no accounts — and they are the smallest step towards something
-  Axel can actually react to.
-- **Creating a category and setting a budget.** Both exist in code only as test scaffolding
-  (`Ledger.AddCategory`, `Ledger.SetBudget`) with no user-facing behaviour, because neither has
-  scenarios.
-- **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the two above
-  first, or there is nothing to show.
+- An income has an amount, a date and a **required** label — an expense's label stays optional,
+  because an expense's *category* already says what it is and an income has nothing else.
+- **Future dates are allowed**, where an expense's are refused. Expenses already have a
+  forward-looking layer — the *Budget* — so a planned expense duplicates a concept that exists,
+  while there is no planned income and so nothing to budget a period with.
+- ***Unassigned* and *Left to assign* were one figure under two names.** Merged, named
+  *Unassigned*; **`Left to assign` is a retired term**. Its negative state is *Over-assigned*.
+- **Net worth is what you have today** and excludes expected income. *Unassigned* is a period
+  figure, net worth is a point-in-time figure, and they differ about future-dated income by design.
+
+It also settled two rules that reach back into `record-expense`: **every label is trimmed** at the
+ends and left alone inside, and an expense label that trims to nothing is **no label** rather than
+one made of spaces. That is why `record-expense.feature` grew two scenarios.
+
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
+
+- **Creating and removing a category**, with the default categories the interview asks for. It
+  exists in code only as test scaffolding (`Ledger.AddCategory`) with no user-facing behaviour.
+- **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
+  *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.
+- **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the above first,
+  or there is nothing to show.
 - **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
@@ -149,12 +170,23 @@ the thing to read. In outline:
 - **MoneyBud shows, it never blocks.** Overspending a budget, overdrawing an account by assigning,
   overdrawing it by spending — all allowed, all shown, none warned about.
 
-Also settled: expenses require a category; exactly zero is not over budget; the label is
-optional; future dates are refused; amounts are whole cents and never rounded
+**The two transactions deliberately differ**, and this is the easiest thing to get wrong: an
+**expense** requires a category, its label is optional, and a future date is **refused**; an
+**income** names no category, its label is **required**, and a future date is **allowed** and
+counts towards *Unassigned* from the moment it is recorded. Common to both: every label is
+trimmed at the ends and left alone inside, a label that trims to nothing is "no label", exactly
+zero *Remaining* is not over budget, and amounts are whole cents and never rounded
 ([§8.2](docs/arc42/08-crosscutting-concepts.md)).
 
-**No open questions.** Three arose while the first increment was being built and all three were
-answered by Axel the same day:
+**One open question, and it cannot be answered yet.** A budget period never closes, so an income
+can be back-dated into a period whose *Unassigned* was already swept. §12 covers the analogous
+case for a late *expense*, but the principle does not necessarily extend — a late expense means
+MoneyBud moved too much, a late income means there was more to move, and those disagree about
+which period's figures change. There is no sweep and no accounts, so there is nothing to decide
+against; it goes live when the sweep is built. Recorded in [§12](docs/arc42/12-glossary.md).
+
+Everything else is settled. Three questions arose while the first increment was being built and
+all three were answered by Axel the same day:
 
 - **A start day the month is too short for clamps to that month's last day.** So a period
   configured to start on the 31st runs 28 February to 30 March — starting on a day nobody picked

@@ -25,7 +25,7 @@ These are genuinely open, not omitted:
 
 | Open | Where it will be settled |
 |---|---|
-| How data is stored on the machine — file, embedded database, something else — and where it lives | [§8.3](08-crosscutting-concepts.md), which defers it: **nothing is stored in the first increment**, and §8.3 states what will force the choice |
+| How data is stored on the machine — file, embedded database, something else — and where it lives | [§8.3](08-crosscutting-concepts.md), which defers it: **nothing is stored yet, in any increment built so far**, and §8.3 states what will force the choice |
 | Installation and distribution: installer or copied folder, self-contained or framework-dependent .NET, how updates reach the machine | Not yet needed. The demo runs from the development machine, so nothing forces this choice yet |
 | Which operating systems are supported | Follows the UI toolkit, which ADR 0002 deliberately leaves open |
 | Backup, and what happens to the data if the machine dies | Untouched while the demo's data is throwaway ([§1.1](01-introduction-and-goals.md)). Becomes a real question the moment it is not |

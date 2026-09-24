@@ -31,6 +31,28 @@ is **Unassigned** — a value on the *purpose* dimension, the absence of a purpo
 worth like any other money. It appears in the budget view beside the categories, never in the list
 of accounts.
 
+**Future-dated income does not weaken that rule, because it is not money yet.** An income dated
+next month counts towards its period's *Unassigned* from the moment it is recorded (*Income may be
+dated in the future*, below), which looks at first like an amount with a purpose and no location.
+It is not. **There is no euro in existence to lack a location.** What MoneyBud holds until the date
+arrives is the *record of a transaction that will happen*, not money sitting nowhere. The claim
+above is about money, so it survives untouched.
+
+**What that does cost is a difference in time base between the two views, and it is by design.**
+
+| View | Time base | Expected income |
+|---|---|---|
+| **Net worth** (location) | A **point in time** — today's balances | **Not counted.** Net worth is what you have today |
+| ***Unassigned*** (purpose) | A **whole budget period** | **Counted**, from the moment the income is recorded |
+
+So the two views will disagree about future-dated income, on purpose. [§1.1](01-introduction-and-goals.md)
+calls them "one model, two views"; the views answering *when* differently is not a crack in that
+model — it is what the two questions mean. Net worth answers "how am I doing **now**", and an
+amount that has not arrived is not something you have. *Unassigned* answers "what is there to
+budget **for this period**", and an amount arriving inside the period is exactly what you have to
+budget. **Nobody should have to discover this by noticing the two figures disagree**, which is why
+it is stated here and again under *Net worth* in the terms table.
+
 **A category may be *backed* by accounts, and that does not fold the two dimensions into one.**
 Savings and Stocks are categories whose whole point is that the money really lands somewhere, so
 they name the accounts it lands in. The relationship is **many-to-many**: one category can be
@@ -50,7 +72,9 @@ here, because everyday speech uses "budget" for both.
 | **The plan** | What each category is *meant* to get this period — its **Budget** | By *assigning* from the pool |
 | **The actual** | What has *really* been spent against each category | By recording expenses |
 
-**Income forms a pool.** Every euro that arrives is *Unassigned* until it is given a purpose.
+**Income forms a pool.** Every euro of a period's income is *Unassigned* until it is given a
+purpose — from the moment the income is **recorded**, which for a future-dated income is before the
+money arrives (*Income may be dated in the future*, below).
 Assigning €200 to Groceries moves €200 out of *Unassigned* and into the Groceries **Budget**; the
 rest of the pool stays *Unassigned*. **Nothing has been spent at this point.** Assigning is
 planning, and only planning.
@@ -222,7 +246,7 @@ Three things are untouched by it:
 | | Unaffected |
 |---|---|
 | ***Remaining*** | Still goes negative freely — that is the state called *Over budget*, and the approved scenarios assert it |
-| ***Left to assign*** | Still goes negative when more is assigned than the period's income, which assigning is allowed to do |
+| ***Unassigned*** | Still goes negative when more is assigned than the period's income, which assigning is allowed to do — that state is *Over-assigned* |
 | **Transaction amounts** | [ADR 0003](../decisions/0003-money-representation.md)'s positive-magnitude convention is about *Transactions* and their direction. Assigning is not a transaction, so the two rules do not meet |
 
 **An over-large negative assignment is clipped, and the shortfall is reported.** Assigning −50
@@ -272,7 +296,7 @@ has not got it, **the assignment still goes through.** The account balance goes 
 shown as **overdrawn**. Nothing blocks, and nothing warns.
 
 **Why.** Consistency with what MoneyBud already does everywhere else: it shows, it does not
-enforce. *Left to assign* is shown and never enforced (below), and spending a category past its
+enforce. *Unassigned* is shown and never enforced (below), and spending a category past its
 budget is allowed, unwarned, and shown as a negative *Remaining* — which
 [`features/record-expense.feature`](../../features/record-expense.feature) asserts scenario by
 scenario. A block or a warning here would be the one place the app second-guessed the user, and it
@@ -366,23 +390,23 @@ merely unassigned. The two are related, not equal. What happens when they disagr
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. |
 | **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
-| **Unassigned** | Money that has arrived but has not been earmarked for anything yet — the pool that assigning draws from, and that a negative assignment puts money back into. A *purpose* — the absence of one — and not a location: unassigned money still sits in an account. Shown to the user and assigned from directly, rather than being only a figure derived from a total. Not a category, and it does not survive the end of a budget period: it is *swept* — see below. |
+| **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
 | **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. |
-| **Left to assign** | Income for a budget period minus everything assigned to categories in it. Starts at the period's full income, because carrying budgets over carries figures and not assignments. Reaches zero when the user has finished budgeting the period. Shown prominently, and never enforced — see below. |
+| **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. **Not in the income increment**: with no act of assigning, nothing subtracts from *Unassigned*, so it cannot go negative yet — see *Over-assigned* below. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. |
-| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. Whether it also carries a category is not the same question for the two — see the two rows below. |
-| **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. May be one-off or recurring. |
-| **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an optional **Label** of its own, below. The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. |
-| **Label** | An expense's own free-text name, distinct from its category: "Albert Heijn" labels an expense whose category is "Groceries". It says *which particular purchase this was*, where the category says *what kind of spending it counts as*. **Optional** — an expense may have none, and nothing is derived from it. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
-| **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment. |
+| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). |
+| **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). |
+| **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an **optional** **Label** of its own, below. **May not be dated in the future**, unlike an income — money not yet spent is a plan, and the plan layer already has a word for it, the *Budget* (see *Income may be dated in the future; an expense may not*). The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. |
+| **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
+| **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
 | **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. |
 | **Accumulated** | **Account-backed categories only.** Everything ever assigned to the category minus everything ever spent against it — the running sum of its *Remaining* across all periods, and so the money its backing accounts have built up on its behalf. Shown beside the period's *Budget* and *Remaining*, which reset at every boundary while *Accumulated* does not. An unbacked category has no such figure, because it is swept empty at every boundary and nothing accumulates. Related to, but not equal to, a backing account's *Balance* — see *Backed categories accumulate* above. Not in the first increment. |
 | **Leftover** | A category's *Remaining* when its budget period ends — money that was assigned but not spent. For an unbacked category it is *swept* rather than allowed to vanish; a backed category keeps its leftover, because that money is already in its account — see below. A leftover is computed at the end of a period; computing it does not close the period — see below. |
 | **Sweep** | What happens at the end of a budget period to money that has not landed anywhere: the *Unassigned* pool and the *Leftovers* of every unbacked category are moved together into one **sweep destination**, out of the *pool account* and into that destination's default backing account. Backed categories are not swept. Automatic, not prompted — see below. |
 | **Sweep destination** | The category a sweep moves money into. **Must itself be account-backed**, so that swept money really arrives somewhere. Set once as a default, applied automatically at every period end, shown in the period summary, and redirectable afterwards — see below. |
-| **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure. |
+| **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure, and a **point-in-time** one: it is **what you have today**. Income dated in the future is **not** counted, because it is not money yet — there is nothing in any account for it to be part of. This is where net worth and *Unassigned* part company on purpose: *Unassigned* is a **period** figure and includes an expected income from the moment it is recorded, so the two views disagree about that amount by design and not by error. See *The central distinction* above. |
 | **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. |
 
@@ -481,15 +505,15 @@ knows whether the money really went back.
 
 When a budget period opens, each category's amount from the previous period is remembered and
 **offered back** — but nothing has been assigned yet. The pool starts whole: the period's income is
-entirely *Unassigned*, every category's *Budget* is zero until the user acts, and *Left to assign*
-starts at the full income. **One action assigns last period's plan in full**, after which individual
+entirely *Unassigned*, every category's *Budget* is zero until the user acts, and the *Unassigned*
+figure starts at the full income. **One action assigns last period's plan in full**, after which individual
 figures can be adjusted like any other.
 
 **Why.** This is the shape that makes both of the things we want true at once.
 
 - **A period genuinely starts with everything unassigned**, so the pool model holds without
-  exception. *Left to assign* keeps the meaning it was given — "how much of my money still needs a
-  job" — instead of starting deeply negative and climbing towards zero as the salary lands, which
+  exception. *Unassigned* keeps the meaning it was given — "how much of my money still needs a
+  job" — instead of starting deeply *Over-assigned* and climbing towards zero as the salary lands, which
   is what happens if a new period opens with last period's assignments already in place and no
   income yet received.
 - **Re-planning a stable month stays near-zero work** (quality goal 2,
@@ -501,6 +525,130 @@ figures can be adjusted like any other.
 Carrying figures rather than assignments follows from a *Budget* being a plan (above). There is no
 money sitting in a category to carry anywhere; there is only last period's intention, which is a
 good first guess at this period's.
+
+## Income carries a label, and it is required
+
+> **An income must have a label. An expense's label stays optional.**
+
+The requirement is the stakeholder's own, from [round 1](../stakeholder/2026-09-24-interview.md):
+*"En ik moet duidelijk kunnen aangeven waar het van is"* — I must be able to say clearly what it is
+from.
+
+**Why the two differ, which is the part worth recording.** The asymmetry looks arbitrary until you
+notice that the two transactions are not carrying the same amount of information to begin with:
+
+| | What already says what it is | What the label adds |
+|---|---|---|
+| **Expense** | Its **category**. "Groceries, €32.15, Tuesday" is a complete record of what kind of spending this was | *Which particular purchase* — "Albert Heijn". Detail on top of a record that already reads |
+| **Income** | **Nothing.** An income names no category; it lands *Unassigned* by definition | *What this money is* — salary, refund, birthday gift. Without it the record is a bare amount |
+
+So an unlabelled expense is still legible and an unlabelled income is genuinely blank. The two
+rules are the same principle — *a transaction must say what it is* — applied to records that start
+from different places.
+
+**What it buys (goal 1, [§1.2](01-introduction-and-goals.md)).** The pool is what the user budgets
+from. A pool of three anonymous amounts makes deciding where they should go guesswork, and a
+windfall that cannot be told apart from a salary is exactly the case *Unassigned* exists to hold
+honestly.
+
+**What it costs (goal 2), accepted.** It is a required field on an entry MoneyBud otherwise wants
+frictionless. Accepted because the frequency argument runs the other way here than it does for
+expenses: income is recorded a handful of times a period, not several times a week standing in a
+shop, so one more field costs far less than the same field would on an expense — which is the same
+reasoning that makes *An expense defaults to the pool account* (above) worth its known weak spot.
+
+**Nothing is derived from the label**, on either transaction. It is free text for the reader, not a
+key, not a category by another name.
+
+### A label is trimmed, and that is what makes "blank" mean anything
+
+> **Surrounding whitespace is stripped; the inner text is left alone.** `"  Salaris september  "`
+> is stored as `"Salaris september"`.
+
+**Trimming is the primary rule, and refusing a blank label is its consequence.** A label that trims
+to nothing is not a label — so an income labelled `"   "` is an income with no label at all, and
+the requirement above refuses it on exactly the same ground as one with no label given.
+
+The order matters, because it was first written the other way round: "required means the label must
+actually say something", with the trimming left implicit. That implicit step was the problem.
+**Something has to trim `"   "` in order to judge it blank**, so if the stored label were *not*
+trimmed, the two rules would disagree about what a label is — one trimming to decide, the other
+keeping whatever it was handed. Making the trim the rule and the refusal its consequence leaves one
+answer to that question instead of two.
+
+**Trimming loses nothing anyone wants**, which is what makes it safe. Nothing is derived from a
+label (above): no lookup, no grouping, no comparison that a leading space could carry meaning for.
+The only thing stripping it can destroy is whitespace nobody meant to type.
+
+**Inner whitespace is untouched.** `"Salaris  september"` keeps its double space. The argument is
+about text at the edges of a field, where it is almost always an accident of typing or pasting; it
+says nothing about what someone wrote in the middle, and MoneyBud does not tidy the user's prose.
+
+**This is one rule covering both labels, not an income rule.** An expense's label is *optional*, so
+there is no blank-is-refused rule there for trimming to follow from — but that is a difference in
+what the two transactions do with an empty result, not a difference in what a label **is**. Storing
+`"  Albert Heijn  "` untrimmed while storing `"  Salaris september  "` trimmed would be an
+inconsistency with no argument behind it, and the "nothing is derived from a label" reason applies
+to both equally. So **every label is trimmed**, and the required/optional difference decides only
+what happens when the result is empty:
+
+| Label that trims to nothing | Outcome |
+|---|---|
+| On an **income** | **Refused.** The label is required and this is not one |
+| On an **expense** | Accepted as **no label**, which an expense is allowed to have (*Label*, in the terms table) |
+
+**How the two halves were settled.** The blank-is-refused half was written here first as a
+**derivation** — it follows from the reason the requirement exists rather than from anything the
+interviews say in so many words — stated in full so that it could be contradicted. It was not
+contradicted; the stakeholder confirmed it. The trimming half is his own decision, taken once it
+was noticed that the derivation had quietly assumed it. Both now stand as decisions, and the
+scenarios for recording income assert them.
+
+## Income may be dated in the future; an expense may not
+
+> **An income may be dated in the future.** It counts against the budget period its date falls in,
+> including a period still to come, and it joins that period's *Unassigned* **from the moment it is
+> recorded, not from its date**.
+
+An expense may not: [`features/record-expense.feature`](../../features/record-expense.feature)
+refuses one dated tomorrow or in the next period, and that stays true.
+
+**A derivation about "from the moment it is recorded".** *Unassigned* is a per-period figure, so
+these two statements do not conflict: the income belongs to **its own** period's *Unassigned* — the
+one its date falls in — and what happens on recording is that the figure for that period changes
+**straight away**, rather than the income sitting invisible until its date arrives. Recording next
+month's salary today makes next month's pool show it today. That is the whole point of the rule; if
+the figure waited for the date, future-dating would buy nothing.
+
+**Why — the stakeholder's reasoning, recorded as his.**
+
+- **To budget a period you have to know what is coming into it.** Budgeting a period out of the
+  previous period's money is the wrong shape. And nothing rolls forward across a boundary
+  (*Nothing crosses a period boundary without a purpose*, below), so the next period's pool is its
+  own income and nothing else — without future-dated income that pool is empty until the money
+  physically lands, and the period cannot be planned until it has already begun.
+- **Expenses already have a forward-looking layer, and income has none.** A planned expense *is* a
+  budget: assigning €400 to Groceries is exactly the statement "I expect to spend €400 here". To
+  record that as a future-dated expense would be to say the same thing twice, in a concept that
+  already exists, on the wrong layer — and the *actual* layer would then contain money that has not
+  moved. There is no matching "planned income" anywhere in the model, so on the income side
+  future-dating is not a duplicate of anything; it is the only way to state a future amount at all.
+
+**So the asymmetry is a consequence of the plan/actual split, not an inconsistency in it.** The
+plan layer covers the future for spending; income has only the actual layer, and therefore has to
+cover its own future. Anyone reading "income may be future-dated, expenses may not" as MoneyBud
+being inconsistent has found the wrong explanation — this is the right one.
+
+**A scope note, not a claim about budgeting in general.** The stakeholder observed that future
+expenses are not a thing for him personally, because he has no loans, while acknowledging that
+loans would be a genuine case for them. That is a fact about this user, recorded as such. If a loan
+or any other committed future payment ever enters the picture, this is the paragraph to reopen, and
+the question to reopen it with is whether such a payment is an expense or a plan.
+
+**Future-dated entry is not a stand-in for recurring transactions.** [§1.1](01-introduction-and-goals.md)
+lists one-off and recurring side by side as capabilities; both are wanted, permanently and
+together. Nothing here should be read as "recurring will replace this later" — entering an amount
+by hand, dated whenever it belongs, stays a first-class act once recurring income exists.
 
 ## Unassigned money is something you can see, not something you work out
 
@@ -521,7 +669,76 @@ It is where money waits until it becomes one.
   to work out; shown on screen, it is something the user can point at and move.
 
 The wait is not open-ended. *Unassigned* holds money until the user gives it a purpose or the
-budget period ends, whichever comes first — see next.
+budget period ends, whichever comes first — see *Nothing crosses a period boundary without a
+purpose*, below.
+
+### One figure, not two
+
+***Unassigned* and *Left to assign* were two names for one number.** Both were defined as the
+period's income minus everything assigned to categories in it; there is no state in which they
+differ, and no operation that moves one without moving the other. They are now **one figure, named
+*Unassigned***. *Left to assign* is retired as a term and should not appear in new documentation,
+scenarios or code.
+
+**Why that name and not the other.** The argument is the one immediately above, and it is why this
+merge goes in this direction rather than the reverse:
+
+- ***Unassigned* names a thing; *Left to assign* names an arithmetic result.** One is money you
+  point at and move; the other is a remainder you work out. The section above settles that it has
+  to be the first, because a pool that is only a derived total costs goal 1 — so keeping the
+  derived-sounding name would have argued against the decision it was supposed to describe.
+- **One word already does both jobs.** *Unassigned* is the name of the **value on the purpose
+  dimension** (*the central distinction*, at the top of this glossary) as well as of the figure
+  that measures it. Two names would have been a value name and a figure name that always had to be
+  kept in step, for no difference in meaning.
+
+**Where the retired name survives, read it as *Unassigned*.**
+[ADR 0003](../decisions/0003-money-representation.md) still lists *Left to assign* among the
+figures that go negative. It is left as written, because records are not rewritten
+([§9](09-architecture-decisions.md)) and its point — that `Money` has to be signed — is unaffected
+by what the figure is called.
+
+### Shown, never enforced
+
+MoneyBud shows the *Unassigned* figure prominently. When it reaches zero, every euro has a job and
+the user has finished budgeting the period.
+
+That is the whole of it. MoneyBud never blocks an action, refuses a period, or nags because
+*Unassigned* is not zero. **A period is never "incomplete"** in any state the software recognises;
+the figure is information, not a gate.
+
+**Why.** The stakeholder's stated motivation is to be *more motivated*, not better policed
+([§1.1](01-introduction-and-goals.md)). Making the gap obvious serves goal 1 — you can see at a
+glance whether your money has been given jobs — and costs goal 2 nothing. Enforcing it would add
+precisely the friction that gets budgeting apps abandoned, and would punish the user for the normal
+case of not having decided yet.
+
+### Over-assigned
+
+**The negative state of *Unassigned* is called *Over-assigned*:** more has been assigned to the
+period's categories than the period's income. This is allowed — assigning is never refused, and may
+even overdraw the pool account (above) — so the state needed a name.
+
+| Figure | Below zero it is called | It is a property of |
+|---|---|---|
+| *Remaining* | **Over budget** | a category, within one period |
+| *Balance* | **Overdrawn** | an account |
+| *Unassigned* | **Over-assigned** | a budget period |
+
+All three are shown as a plain negative figure, never blocked and never warned about — the same
+treatment, and the same reasoning, as *Assigning may overdraw the pool account* above.
+
+**Naming it is what makes the merge above safe.** The one real objection to folding *Left to
+assign* into *Unassigned* is that "unassigned" reads oddly below zero: money cannot be less than
+unassigned, so the merged figure appears to describe something impossible. *Over-assigned* answers
+it. Below zero the figure has stopped describing money waiting for a purpose and started describing
+a plan that outruns the income, and that is a different enough thing to deserve its own word —
+exactly as *Over budget* is the word for a *Remaining* that has stopped describing money left.
+
+**Not in the income increment.** With no act of assigning, nothing subtracts from *Unassigned*:
+recording income only ever increases it, so it cannot go negative. No code and no scenario in this
+increment will reach *Over-assigned*. It is defined now because the merge above needed it, not
+because anything is about to use it.
 
 ## Nothing crosses a period boundary without a purpose
 
@@ -546,7 +763,7 @@ income and nothing else.
   capabilities in [§1.1](01-introduction-and-goals.md), not a detail.
 - The unassigned rule is the same argument applied to the pool. Money that has sat purposeless
   across a period boundary is precisely the state the app exists to remove, and letting it roll
-  forward would break *Left to assign*: the figure would stop being "this period's income minus
+  forward would break *Unassigned*: the figure would stop being "this period's income minus
   what I assigned from it" and become a running total over an unbounded history — a number the user
   can no longer read at a glance, which costs goal 1.
 - Together they are also what lets the next period start whole, which *Budgets carry over* (above)
@@ -572,8 +789,8 @@ leftovers of unbacked categories are assumed to be sitting — neither of them e
 anywhere else.
 
 **Why automatic.** A period ends because time passed, not because the user did something, so there
-is no action to hang a choice on. A prompt would have to be raised out of nowhere, and *Left to
-assign: shown, never enforced* (below) has already settled that MoneyBud does not nag or block over
+is no action to hang a choice on. A prompt would have to be raised out of nowhere, and *Shown,
+never enforced* (above) has already settled that MoneyBud does not nag or block over
 money that has not been given a job. Automatic-but-visible-and-reversible is the only shape that
 loses no money and demands nothing: the sweep always happens, the summary always says where it
 went, and a user who disagrees moves it afterwards — which is an ordinary transfer between two
@@ -581,22 +798,6 @@ backed categories, not a special case.
 
 This replaces an earlier reading of these as two separate decisions the user takes from two
 different places. They are one automatic movement with one destination.
-
-## Left to assign: shown, never enforced
-
-MoneyBud shows a prominent **Left to assign** figure: income for the period minus everything
-assigned. When it reaches zero, every euro has a job and the user has finished budgeting the
-period.
-
-That is the whole of it. MoneyBud never blocks an action, refuses a period, or nags because *Left
-to assign* is not zero. **A period is never "incomplete"** in any state the software recognises;
-the figure is information, not a gate.
-
-**Why.** The stakeholder's stated motivation is to be *more motivated*, not better policed
-([§1.1](01-introduction-and-goals.md)). Making the gap obvious serves goal 1 — you can see at a
-glance whether your money has been given jobs — and costs goal 2 nothing. Enforcing it would add
-precisely the friction that gets budgeting apps abandoned, and would punish the user for the normal
-case of not having decided yet.
 
 ## Dutch source terms
 
@@ -612,17 +813,78 @@ alongside this documentation does not introduce drift.
 | Rekening | Account |
 | Vermogen | Net worth |
 | Inkomsten / Uitgaven | Income / Expenses |
+| Waar het van is | What an income **is from** — carried by the income's **Label**, which is why that label is required. Not a category: it says what this money is, not what it is for |
 | Overzichtelijk | Legible, clear at a glance — see quality goal 1 in [§1](01-introduction-and-goals.md) |
 
 ## Open questions
 
-**None.** Every question that has stood here has been answered, including the one that arose while
-the first increment was being built rather than from the interviews.
+**One**, below. It is recorded so that it is not rediscovered late, and it is **not** waiting on an
+answer from anyone: there is nothing yet for either answer to be true of (*Why it cannot be answered
+yet*). Everything else that has ever stood here has been answered, including the questions that
+arose while the first increment was being built and the one raised by future-dated income rather
+than by an interview; the *Answered* table below says where each answer lives.
 
-One question about the same boundary is open **elsewhere**: how a configurable period start day
-interacts with timezones ([§8.2](08-crosscutting-concepts.md), *Still open*). It is a different
-question from the short-month one answered above — that one is about the calendar, this one is
-about which instant a day begins at — and it is recorded there rather than here.
+### What happens to an income back-dated into a period that has already been swept?
+
+A budget period **ends but never closes** (*Ending versus closing a budget period*, above), so an
+income can be dated into a period whose *Unassigned* has already been swept away. The pool that the
+sweep emptied then gains money after the fact, and nothing settled so far says what becomes of it.
+
+**The analogy that nearly answers it.** *A late expense against a leftover that has already been
+directed* (above) is the same situation on the other layer, and it has an answer with a principle
+behind it: **recalculate what MoneyBud owns, report what it does not.** The derived figure is
+recomputed, the discrepancy is shown, and the real transfer is left for the user to correct, because
+MoneyBud does not silently rewrite a record of money that really moved. It is tempting to carry that
+straight across — sweep the extra too, report it — and it may well turn out to be right.
+
+**Where the analogy stops being safe to lean on.** The two cases push the already-acted-on figure in
+opposite directions, and that is not a detail of sign:
+
+| | What the late transaction does to the figure the sweep acted on | What MoneyBud discovers |
+|---|---|---|
+| A late **expense** | **Reduces** a *Leftover* that has already been moved | It moved **too much** — the correct figure is smaller than the one it acted on |
+| A late **income** | **Increases** an *Unassigned* that has already been emptied | There was **more to move** — the correct figure is larger than the one it acted on |
+
+Discovering it moved too much leaves only the destination to correct. Discovering there was more to
+move leaves a live amount that has to go somewhere, and two things about it are true at once that
+are not true of the late expense: **the money was never given a purpose** — where the swept
+*Leftover* had one, the category it was assigned to — and **the period it belongs to is over**, so
+there is no act of assigning left to perform inside it. That is enough to make at least two answers
+defensible, and they disagree about *which period's figures change*:
+
+| Answer | What it says | What argues for it |
+|---|---|---|
+| **Sweep it too** | The money belongs to its own period, that period's pool has already gone to the sweep destination, so this follows it there and the user is told | Consistency with the late expense, and with *Nothing crosses a period boundary without a purpose*: money that sat purposeless across a boundary is precisely what the sweep exists for |
+| **It belongs to the period you are in now** | The money still has no purpose and there is a live period in which to give it one, so it joins the **current** period's *Unassigned* instead | It is the only answer that leaves the money assignable at all. The other hands a still-purposeless amount to a destination the user never chose for *it*, in a period he has finished with |
+
+**What the second answer would cost, which is why this is not a formality.** It would be an
+exception to two things already settled. *Nothing crosses a period boundary without a purpose* says
+the next period's pool is "that period's income and nothing else"; and
+[`features/record-income.feature`](../../features/record-income.feature) already asserts, in
+approved scenarios, that an income counts against the budget period its **date** falls in and that a
+back-dated one raises that period's *Unassigned* without disturbing the current one. Those scenarios
+do not decide this question — they are written against periods that have not been swept, and no
+sweep exists to have run — but they do mean the second answer arrives as an exception to an approved
+rule rather than as a free choice. The first answer costs nothing already written and is for that
+reason the likelier outcome; it is not recorded as the answer, because "likelier" is not "decided",
+and the two produce different figures for different periods.
+
+**Why it cannot be answered yet.** There is no sweep in the code, no accounts, and therefore no
+valid sweep destination at all — a destination must be *account-backed*, and with no accounts there
+can be no backed category ([§11](11-risks-and-technical-debt.md)). In the demo the money a sweep
+would move simply vanishes at the boundary, which the stakeholder accepted explicitly on the grounds
+that the data is throwaway. So there is nothing to decide **against**: both answers describe what
+happens to a movement that does not exist. **This becomes live when the sweep is built, and not
+before** — it is filed here so that it is met then, rather than discovered afterwards by someone
+looking at a swept period that has grown an income.
+
+It arose while the income scenarios were being written and was parked there rather than answered,
+because nothing in the income increment reaches a sweep.
+
+One further question about the period boundary is open **elsewhere**: how a configurable period
+start day interacts with timezones ([§8.2](08-crosscutting-concepts.md), *Still open*). It is a
+different question from the short-month one answered above — that one is about the calendar, this
+one is about which instant a day begins at — and it is recorded there rather than here.
 
 ### Answered
 
@@ -639,11 +901,19 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | May assigning overdraw the pool account? | *Assigning may overdraw the pool account* — yes, shown, not blocked |
 | May an amount be assigned negatively, and may a *Budget* go negative? | *An amount may be assigned negatively, and a Budget floors at zero* — yes to the first, no to the second. What an over-large negative assignment does was answered in the same section before it was ever filed here as a question: it is clipped and the shortfall reported |
 | What does a configured start day mean in a month too short to contain it? | *A start day the month is too short for clamps to its last day* — it clamps, with an unexplained 31-day period accepted as the cost |
+| Does an income need a label, given it has no category? | *Income carries a label, and it is required* — yes, required, where an expense's stays optional |
+| What is stored when a label has whitespace around it, and does a blank one count? | *A label is trimmed, and that is what makes "blank" mean anything* — surrounding whitespace is stripped and inner text left alone, on **both** labels. Trimming is the rule; refusing a blank income label is its consequence, because a label that trims to nothing is not a label |
+| May an income be dated in the future, when an expense may not? | *Income may be dated in the future; an expense may not* — yes, and the asymmetry follows from the plan/actual split |
+| Are *Unassigned* and *Left to assign* two figures or one? | *One figure, not two* — one, named *Unassigned*; *Left to assign* retired |
+| What is a negative *Unassigned* called? | *Over-assigned* — the third member of the family with *Over budget* and *Overdrawn* |
+| Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
-**Three** of these answers were taken with their drawbacks visible rather than resolved: the
+**Four** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
-shown exactly like an overspent budget despite being a harder fact; and a clamped start day
-produces a period that is longer than its neighbours with nothing on screen explaining why. Each is
+shown exactly like an overspent budget despite being a harder fact; a clamped start day
+produces a period that is longer than its neighbours with nothing on screen explaining why; and net
+worth and *Unassigned* will disagree about an expected income, because they are answering about
+different moments in time. Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
@@ -651,3 +921,9 @@ written up where the decision is, and the first is carried in
 ([§11](11-risks-and-technical-debt.md)), so it reaches none of the account-related answers above,
 and it has no assigning either. The start-day answer changes nothing already built: no approved
 scenario configures a start day, and the default of the 1st fits in every month.
+
+**Nothing here blocks the income increment either.** Recording income reaches *Income*, *Label*,
+*Unassigned* and the future-dating rule, all four of which are settled above. It does **not** reach
+assigning, so it does not reach *Over-assigned*, the *Budget* floor or the clipping rule; and it has
+no account, so an income lands in *Unassigned* without landing anywhere on the location dimension —
+the same accepted gap an expense has ([§11](11-risks-and-technical-debt.md)).

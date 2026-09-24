@@ -122,6 +122,25 @@ Feature: Record an expense
 
   # ----------------------------------------------------------------------------------
   # The label
+  #
+  # A label is trimmed: surrounding whitespace is stripped and the inner text is left alone,
+  # so "  Albert Heijn  " is stored as "Albert Heijn" and "Albert  Heijn" keeps its double
+  # space. MoneyBud does not tidy the user's prose; the rule is about text at the edges of a
+  # field, where it is almost always an accident of typing or pasting.
+  #
+  # This is one rule covering every label, not an income rule. Something has to trim "   " in
+  # order to judge it blank, so storing a label untrimmed would leave the two rules disagreeing
+  # about what a label is — one trimming to decide, the other keeping whatever it was handed.
+  # And nothing is derived from a label, on either transaction: no lookup, no grouping, no
+  # comparison a leading space could carry meaning for. The only thing stripping it destroys is
+  # whitespace nobody meant to type.
+  #
+  # Required versus optional decides only what happens when the result is empty. On an income
+  # a label that trims to nothing is refused, because an income's label is required. On an
+  # expense it is simply no label, which an expense is allowed to have — so an expense labelled
+  # "   " is the same expense as one recorded without a label, not one labelled with spaces.
+  # Both halves are written up in arc42 §12, "A label is trimmed, and that is what makes
+  # 'blank' mean anything".
   # ----------------------------------------------------------------------------------
 
   Scenario: An expense keeps its own label alongside its category
@@ -136,6 +155,24 @@ Feature: Record an expense
     And I have not yet spent anything on "Groceries" in the current budget period
     When I record an expense of 18 euro for "Groceries" without a label
     Then the expense should be recorded
+    And the remaining "Groceries" budget in the current budget period should be 382 euro
+
+  Scenario: An expense label loses the whitespace around it and keeps everything inside it
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have not yet spent anything on "Groceries" in the current budget period
+    When I record an expense of 27.40 euro for "Groceries" labelled "  Albert Heijn  "
+    Then the expense should be recorded
+    And my "Groceries" spending in the current budget period should include 27.40 euro labelled "Albert Heijn"
+    And the remaining "Groceries" budget in the current budget period should be 372.60 euro
+
+  # The same 18 euro and the same 382 euro as the scenario above it, on purpose: a label of
+  # nothing but spaces trims to nothing, and an expense with no label is exactly what that is.
+  Scenario: An expense labelled with nothing but spaces is recorded with no label
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have not yet spent anything on "Groceries" in the current budget period
+    When I record an expense of 18 euro for "Groceries" labelled "   "
+    Then the expense should be recorded
+    And my "Groceries" spending in the current budget period should include 18 euro without a label
     And the remaining "Groceries" budget in the current budget period should be 382 euro
 
   # ----------------------------------------------------------------------------------

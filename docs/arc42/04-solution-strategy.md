@@ -18,11 +18,13 @@ Each has its own record or section; this table is the map, not the reasoning.
 | **Money** | A signed `Money` value type over a whole number of cents; sub-cent amounts refused rather than rounded; direction carried by the transaction type; no currency field | [ADR 0003](../decisions/0003-money-representation.md), [§8.2](08-crosscutting-concepts.md) |
 | **Decomposition** | One domain library and one specification project. No layered set, no application layer | [ADR 0004](../decisions/0004-solution-layout.md), [§5](05-building-block-view.md) |
 | **Persistence** | None. State lives in memory for the lifetime of a run | [§8.3](08-crosscutting-concepts.md) |
-| **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
+| **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
 
-Read together, these say one thing: **the first increment is a domain library and its executable
-specification, and nothing else.** Everything that would normally surround it — a UI, a store, a
-process boundary — has been deferred with a stated trigger rather than sketched.
+Read together, these say one thing: **everything built so far is a domain library and its
+executable specification, and nothing else.** Two increments in — recording an expense, then
+recording an income — that is still the whole of it. Everything that would normally surround it —
+a UI, a store, a process boundary — has been deferred with a stated trigger rather than sketched,
+and adding a second capability did not put pressure on any of those deferrals.
 
 ## How the quality goals fare
 
@@ -31,8 +33,9 @@ increment at all, and saying so is more useful than claiming otherwise.
 
 ### 1. Legibility — **not yet served**
 
-There is no user interface, so nothing is shown to anyone. Nothing in the first increment delivers
-this goal.
+There is no user interface, so nothing is shown to anyone. Nothing built so far delivers this goal,
+and the income increment did not change that — it added a figure, *Unassigned*, that nobody can
+look at.
 
 What exists is a **precondition**, and it should not be mistaken for a delivery: *Remaining* is
 computed in exactly one place, from the plan minus the actual, so there can be no second figure
@@ -44,11 +47,14 @@ legible display needs to have underneath it. It is not a legible display.
 
 Same reason: entry happens through a UI, and there isn't one.
 
-Two things were shaped with the goal in mind and cost nothing to note — the label is optional, and
-a category with no budget set records an expense like any other, so nothing has to be set up before
-spending can be recorded. Against that, the visible behaviour of this increment is mostly
-*refusal*: five reasons an expense is rejected. Refusing bad input is not the same as making entry
-effortless, and can easily be its opposite. The decisions that will actually serve this goal — the
+Three things were shaped with the goal in mind and cost nothing to note — an expense's label is
+optional (an income's is **required**, and [§12](12-glossary.md) argues why that is not the same
+trade); a category with no budget set records an expense like any other, so nothing has to be set
+up before spending can be recorded; and an income names no category at all, so money can be
+recorded as arriving before any decision has been made about it. Against that, the visible
+behaviour of what is built is still mostly *refusal*: five reasons an expense is rejected and
+three an income is. Refusing bad input is not the same as making entry effortless, and can easily
+be its opposite. The decisions that will actually serve this goal — the
 account default, the one-action carry-over of last period's budgets ([§12](12-glossary.md)) —
 belong to later increments.
 
