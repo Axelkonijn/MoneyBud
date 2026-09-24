@@ -141,19 +141,31 @@ one made of spaces. That is why `record-expense.feature` grew two scenarios.
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Creating and removing a category** — the next increment, and the least specified of these.
-  Round 1 already asks for it: adding categories should be easy, there must be **standaard­
-  categorieën** ("boodschappen of hobby"), and a category that does not apply to you can sit at
-  zero *or* be taken out. Nothing beyond that is settled, and at least four things need Axel
-  before scenarios can be written:
-    - **What happens to a category's history when it is removed** — the expenses recorded against
-      it, and its budgets in past periods. This is the meaty one; everything else is detail.
-    - **Whether category names are case-sensitive.** They are today, by accident rather than by
-      decision: `Ledger` keys categories with `StringComparer.Ordinal`, so "groceries" and
-      "Groceries" are two categories. Nobody chose that.
-    - **Duplicate names**, and whether **renaming** exists at all.
-    - **Whether the default categories are seeded now or wait for a UI** — Axel leaned towards
-      "with this increment" when asked on 2026-09-25, but it was not a firm decision.
+- **Creating and removing a category** — the next increment. **Stage 1 is done**: Axel settled it
+  on 2026-09-25 and it is recorded in [§12](docs/arc42/12-glossary.md). **Stage 3, the scenarios,
+  is next and carries the first gate.** What was settled:
+    - **Removing a category takes it out of new entry; its history stays.** The state is called
+      **Archived** — not *deleted*, because nothing is: its expenses and its past budgets remain
+      and past periods still show it. Never destroys a record, never blocks — and the interview's
+      actual case, a default category that does not apply to you, has no history at all.
+    - **Adding the name of an archived category brings it back, history and all**, and MoneyBud
+      says it was brought back rather than created. So there is **no separate un-archive act**,
+      for the same reason there is no separate unassign act — one gesture rather than a second
+      named concept. This also settles the late-expense case by derivation: recording against an
+      archived category means bringing it back, which is one action, not a special case.
+    - **Names are compared case-insensitively and stored exactly as typed** — the same shape as
+      the label rule. This is a **correction**: `Ledger` keys categories with
+      `StringComparer.Ordinal` today, so names are case-sensitive by accident, not by decision.
+    - **Adding a name you already have** returns the category you already have, and MoneyBud says
+      so rather than silently doing nothing. Derived and put to Axel; not contradicted. Note the
+      argument behind it — "the end state you wanted is already true" — **does not** reach the
+      archived case, which is why that needed its own decision above.
+    - **Renaming is not in this increment** — deferred, not rejected.
+    - **The default categories are Boodschappen, Huur, Hobby, Sparen, Verzekeringen,
+      Abonnementen** — Axel's own list, "enough to get an idea and test". They are **Dutch**
+      where the feature files use English names; those are synthetic test data, these are
+      user-facing content. **`Sparen` is unbacked for now** and becomes account-backed when the
+      location dimension arrives — not an oversight.
   In code it is only test scaffolding: `Ledger.AddCategory` with no user-facing behaviour.
 - **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
   *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.

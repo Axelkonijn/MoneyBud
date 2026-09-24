@@ -146,6 +146,28 @@ between the two transactions is only what each does with an empty result: an inc
 expense accepts it. That is a difference in the requirement, not in what a label *is*, and keeping
 it to one method is what stops it becoming two.
 
+### Category names are case-sensitive in code, and §12 now says they should not be
+
+`Ledger` keys its categories with `StringComparer.Ordinal`, and `ExpensesFor` matches with
+`e.Category.Name == categoryName`, which is ordinal too. So "boodschappen" and "Boodschappen" are
+**two categories** today, in two places.
+
+**Nothing decided that.** It arrived with the first increment's scaffold, where no approved scenario
+ever spelled one category two ways, so the choice was never visible enough to be made.
+[§12](12-glossary.md) now settles it the other way — compared case-insensitively, stored as typed —
+which makes this a **correction** rather than a new rule.
+
+**The code and the documentation therefore disagree until the category increment is built**, and
+that is recorded here rather than left to be discovered. Nothing depends on it: no scenario in
+either approved feature file uses two spellings of one name, so fixing it changes no assertion. Both
+places have to move together, which is the reason for naming them both.
+
+**`Ledger.AddCategory` already has half of the duplicate rule.** It returns the existing category
+when the name is taken, which is the shape [§12](12-glossary.md) now settles — arrived at by
+accident, and missing the other half: it is **silent**, where §12 requires the user to be told. Like
+`SetBudget` (above) it is scaffolding reachable only from step definitions, with no scenario of its
+own.
+
 ### `Ledger` is not a §12 term, and that is worth flagging
 
 §12 has no word for *the whole model* — the thing holding the categories, the budgets, the expenses
@@ -175,6 +197,7 @@ wrote a row for it".
 | *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
 | *Assign*, *Over-assigned* | **No approved scenarios, and no code.** Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md) — the source, the negative assignment, the *Budget* floored at zero, the clipped shortfall — and is waiting on scenarios, not on a decision. Only the backed-category half of assigning needs accounts; the rest is specifiable today |
+| *Archived*, and the **default categories** | **No approved scenarios, and no code.** `Ledger` can add a category and has **no way to take one out of use** — there is no archive flag, no filter on what may be recorded against, and no starting set of categories anywhere in the domain. The model is settled in [§12](12-glossary.md), including bringing an archived category back, so this is waiting on scenarios and on nothing else. One thing the code will have to face that §12 does not settle for it: `ExpenseRefusal.UnknownCategory` was written when every category the user had was available for recording, and §12 now says an archived one is **brought back** by naming it rather than refused — so whether recording an expense can reach that path at all, or only category creation can, is a question for the scenarios |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
