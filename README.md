@@ -4,12 +4,19 @@ A personal budgeting app — track income, expenses and savings goals for one pe
 
 ## Status
 
-**Very early.** There is no application yet. The repository currently holds notes and working
-agreements while the shape of the project is figured out. Nothing here runs.
+**Very early.** There is no application yet — the repository currently holds the architecture
+documentation skeleton and the way of working. Nothing here runs.
 
 ## Stack
 
-Not chosen yet. See `docs/decisions/` once that changes.
+.NET 10 / C#, with [Reqnroll](https://reqnroll.net) for Gherkin scenarios — see
+[ADR 0001](docs/decisions/0001-dotnet-and-reqnroll.md).
+
+## How this project is built
+
+Requirements are documented with [arc42](docs/arc42/), specified as
+[Gherkin scenarios](features/), and only then implemented. The scenarios are the contract: they
+are reviewed and approved before any code is written against them.
 
 ## A note on data
 
