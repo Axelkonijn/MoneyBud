@@ -34,7 +34,11 @@ apps deliver the former. The latter is what he is actually after, and he was exp
 and feedback are what produce it.
 
 He is aware that commercial alternatives exist. Building his own is a deliberate choice, so that it
-fits his own needs — and, separately, because the project is an exercise in professional practice.
+fits his own needs.
+
+MoneyBud is a hobby project. It follows a professional way of working because that is useful and
+because the stakeholder wants the practice, but it is not a course assignment and there is no
+assessor whose requirements have to be met.
 
 ### Core capabilities
 
