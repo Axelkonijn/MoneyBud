@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <!-- Keep Reqnroll's generated code-behind in obj/ rather than beside the .feature file.
+         Without this it would be written into features/, which holds the specification and
+         nothing else. -->
+    <ReqnrollUseIntermediateOutputPathForCodeBehind>true</ReqnrollUseIntermediateOutputPathForCodeBehind>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="Reqnroll.xUnit" Version="3.3.4" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- The feature files are authored in features/ at the repository root, not in this project.
+       That location is fixed by CLAUDE.md: they are the specification, not test fixtures, and
+       they stay findable without knowing anything about the solution layout. Linking them in
+       is what lets Reqnroll generate from them where they are. -->
+  <ItemGroup>
+    <ReqnrollFeatureFile Include="..\..\features\**\*.feature"
+                         Link="Features\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MoneyBud.Domain\MoneyBud.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -14,7 +14,9 @@ Public repo: https://github.com/Axelkonijn/MoneyBud
 **.NET 10 / C#**, with **Reqnroll** for Gherkin scenarios. See
 [ADR 0001](docs/decisions/0001-dotnet-and-reqnroll.md).
 
-UI form — console, desktop or web — is not decided yet.
+Desktop application, running locally — [ADR 0002](docs/decisions/0002-desktop-application-first.md).
+**Which desktop UI toolkit is still open**, and nothing has been built against one: the first
+increment is a domain library and its scenarios, with no UI at all.
 
 ## Way of working
 
@@ -44,8 +46,9 @@ quietly.
 | `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones |
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
-| `features/` | Gherkin feature files. Conventions in `features/README.md` |
-| `src/` | Application code. Empty — nothing built yet |
+| `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
+| `src/` | Application code. `MoneyBud.Domain` — the whole application for now |
+| `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/` |
 
 The stakeholder material is Dutch and the documentation is English. `docs/arc42/12-glossary.md`
 holds the agreed translation of the domain terms — use it rather than translating afresh.
@@ -83,33 +86,47 @@ account numbers and statements never enter the repository.
 
 ## Commands
 
-None yet — no solution has been scaffolded.
+```
+dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
+dotnet test  MoneyBud.slnx     # 186 passing: 34 scenario cases, the rest developer unit tests
+```
+
+The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-24. Update this when a stage completes._
+_Last updated 2026-09-24, after the first increment shipped green. Update this when a stage completes._
 
-**Done:** stages 1, 2 and 3.
+**Done: all five stages, for `record-expense` only.** The first increment is built and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
   interview round.
-- arc42 §1, §2, §3, §7, §11 and §12 filled; §8.2 partly. Deployment form decided — desktop first,
-  [ADR 0002](docs/decisions/0002-desktop-application-first.md).
+- arc42 §1–§5, §7, §8, §9, §11 and §12 filled. §6 and §10 are empty *with their reasons written
+  down* — there is one building block that does anything, and nothing user-facing to measure.
 - `features/record-expense.feature` — 19 scenarios, **approved by Axel at the first gate**.
+- Implementation plan **approved by Axel at the second gate** on 2026-09-24. It settled the money
+  questions ([ADR 0003](docs/decisions/0003-money-representation.md)), deferred persistence with a
+  stated trigger ([§8.3](docs/arc42/08-crosscutting-concepts.md)), and fixed the solution shape
+  ([ADR 0004](docs/decisions/0004-solution-layout.md)).
+- Built, reviewed by `spec-reviewer`, and documented back into arc42 §8.1, §5 and §4.
 
-**Next: stage 4 — an implementation plan, which is the second approval gate.** Nothing gets built
-until Axel approves it. The plan has to settle things deliberately left open:
+**What exists in code:** `Money` (whole cents in a `long`), `Category`, `Expense`, `BudgetPeriod`,
+`BudgetPeriodCalendar`, `ExpenseRefusal`, `RecordExpenseResult`, `Ledger`. No UI, no storage, no
+accounts — all three deliberate, all three with their reasoning recorded.
 
-- **The §8.2 money questions** — how amounts are represented in code and stored, the sign
-  convention, whether a currency field exists. The whole-cents rule is decided; these are not.
-- **Persistence (§8.3) is empty**, and §7 names it as the thing §7 cannot answer.
-- **No solution has been scaffolded.** ADR 0001 fixes .NET 10 and Reqnroll; project layout, test
-  project and desktop UI toolkit are all unchosen.
+**Next: stage 1 again, for whatever capability comes after this.** The pipeline restarts at
+wishes; nothing skips ahead to code. The obvious candidates, none of them specified:
 
-Only `record-expense` is specified. Recording income, creating categories, assigning from the
-pool and the end-of-period sweep all still need scenarios of their own, and the sweep in
-particular depends on accounts, which are not in the first increment.
+- **Recording income**, and with it *Unassigned*, *Assign* and *Left to assign*. These are
+  specifiable today — they need no accounts — and they are the smallest step towards something
+  Axel can actually react to.
+- **Creating a category and setting a budget.** Both exist in code only as test scaffolding
+  (`Ledger.AddCategory`, `Ledger.SetBudget`) with no user-facing behaviour, because neither has
+  scenarios.
+- **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the two above
+  first, or there is nothing to show.
+- **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
@@ -136,10 +153,26 @@ Also settled: expenses require a category; exactly zero is not over budget; the 
 optional; future dates are refused; amounts are whole cents and never rounded
 ([§8.2](docs/arc42/08-crosscutting-concepts.md)).
 
-**No open questions.** §12 ended the day with none — the seven that arose were all answered, two
-of them accepted with their drawbacks written down rather than solved (the expense account
-default will silently be wrong for cash; one marker covers both an overspent budget and a real
-overdraft). The live risks are in [§11](docs/arc42/11-risks-and-technical-debt.md), not here.
+**No open questions.** Three arose while the first increment was being built and all three were
+answered by Axel the same day:
+
+- **A start day the month is too short for clamps to that month's last day.** So a period
+  configured to start on the 31st runs 28 February to 30 March — starting on a day nobody picked
+  and 31 days long. Taken with that consequence visible, because it keeps periods tiling and
+  keeps "configurable" true for every day rather than true with an exception.
+- **An amount may be assigned negatively; a *Budget* floors at zero.** Assigning -50 pulls money
+  back to *Unassigned*, so no separate "unassign" act is needed, but a plan for less than nothing
+  is not a plan. **An over-large negative assignment is clipped and the shortfall reported** —
+  -50 against a *Budget* of 30 moves 30, never refuses, and never stays quiet about the other
+  20. Nothing is built yet — this settles the model the assign scenarios will be written against.
+- **Euro-only is a decision, not an assumption.** §2 is hardened accordingly, which is what
+  [ADR 0003](docs/decisions/0003-money-representation.md)'s no-currency-field argument rests on.
+
+Earlier, seven questions were settled while the model was being agreed, two of them accepted with
+their drawbacks written down rather than solved (the expense account default will silently be
+wrong for cash; one marker covers both an overspent budget and a real overdraft).
+
+The live risks are in [§11](docs/arc42/11-risks-and-technical-debt.md), not here.
 
 **Watch out for:** the first version is a **demo to gather feedback on, not an MVP**. Its data is
 throwaway. Do not argue for building things now on the grounds that migrating real data later would

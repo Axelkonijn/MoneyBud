@@ -14,7 +14,7 @@ it belongs in section 4 or an ADR instead.
 | Runs locally on the user's own machine | Stakeholder preference, stated in the interview even after acknowledging that a web app would more easily cover desktop and mobile. Rules out designs that require a server to be useful |
 | Desktop and mobile are both wanted | Stated as "het hoeft niet alleen een app te zijn". Syncing between them is desirable but explicitly a nice-to-have, not a requirement |
 | Single user | No sharing, no multi-user accounts, no permissions |
-| Euro only | Assumption, stated back to the stakeholder and not contradicted |
+| Euro only | **Stakeholder decision, taken deliberately on 2026-09-24.** It stood here as an assumption that had been stated back and not contradicted until [ADR 0003](../decisions/0003-money-representation.md) leaned on it to drop the currency field; an argument resting on silence is not an argument, so it was put to the stakeholder as a question and he settled it. Reversing it is now a decision to revisit rather than an assumption to correct — [§8.2](08-crosscutting-concepts.md) holds the trigger |
 
 ## Organisational
 

@@ -199,6 +199,72 @@ not built yet ([§11](11-risks-and-technical-debt.md)), which is why
 [`features/record-expense.feature`](../../features/record-expense.feature) records expenses without
 one.
 
+## An amount may be assigned negatively, and a *Budget* floors at zero
+
+Assigning moves an amount out of *Unassigned* and into a category's *Budget* (*plan and actual*,
+above). It runs **both ways**:
+
+> **Assigning −50 to Groceries moves €50 back out of the Groceries *Budget* and into
+> *Unassigned*.**
+
+**So there is no separate act of unassigning.** The rejected alternative was exactly that: a
+dedicated "unassign" action standing beside "assign". It was rejected as a second concept doing
+what a minus sign already does — two names to learn, two places in the interface and two sets of
+scenarios, for one movement whose only variable is direction.
+
+**A *Budget* floors at zero.** A *Budget* is a plan, and a plan for less than nothing is not a
+plan. There is no state in which a category is planned to have −€50.
+
+**This is a rule about the plan layer and about nothing else.** It is easy to read a floor at zero
+as a general statement that money in MoneyBud does not go negative, and that is not what it says.
+Three things are untouched by it:
+
+| | Unaffected |
+|---|---|
+| ***Remaining*** | Still goes negative freely — that is the state called *Over budget*, and the approved scenarios assert it |
+| ***Left to assign*** | Still goes negative when more is assigned than the period's income, which assigning is allowed to do |
+| **Transaction amounts** | [ADR 0003](../decisions/0003-money-representation.md)'s positive-magnitude convention is about *Transactions* and their direction. Assigning is not a transaction, so the two rules do not meet |
+
+**An over-large negative assignment is clipped, and the shortfall is reported.** Assigning −50
+where the *Budget* is 30 cannot leave the *Budget* at −20, because of the floor. What happens
+instead:
+
+> **The *Budget* goes to zero, €30 returns to *Unassigned*, and the user is told that only €30
+> could come back.**
+
+The first half follows from conservation: assigning moves money, so nothing can come back out of a
+category that never went in, and €30 is all there is to move. That much was written here as a
+derivation, stated in full so it could be contradicted if it was wrong about what the stakeholder
+wanted. It was not contradicted. The second half — that the shortfall is *said* rather than
+silently absorbed — is the part that was genuinely chosen, against two alternatives:
+
+| Rejected | Why |
+|---|---|
+| **Clip silently** | The lowest-friction option, and the one that leaves the user holding a wrong figure. They asked for 50, got 30, and nothing acknowledged the difference — so anyone working from a number in their head is now wrong and was not told. That is precisely the legibility failure quality goal 1 ([§1.2](01-introduction-and-goals.md)) exists to prevent |
+| **Refuse the assignment outright** | It would be the one place MoneyBud blocked something the user plainly meant, and it would hand the user arithmetic MoneyBud could do for them (goal 2) |
+
+**Refusing was weighed against the fact that MoneyBud does refuse things** — a sub-cent amount
+([§8.2](08-crosscutting-concepts.md)), a future expense date
+([`features/record-expense.feature`](../../features/record-expense.feature)) — and the distinction
+that settled it is
+worth keeping: those are **bad input**, where this is a **sensible intention that can only be
+half-honoured**. The two deserve different treatment. Bad input has no correct reading to act on;
+this one has a correct reading, it is just smaller than what was asked for.
+
+So the shape is **honour as much of the intention as conservation allows, and never let the
+shortfall go unmentioned** — which is the same shape as *A late expense against a leftover that has
+already been directed* below: recalculate what MoneyBud owns, report what it does not. This is an
+instance of an existing principle rather than a rule of its own.
+
+**What is fixed here is that a shortfall is reported, not how it is worded.** The wording is copy,
+it belongs to a UI that does not exist, and nothing in this section should be read as specifying a
+sentence.
+
+**Nothing is built for this.** There is no assigning in the code at all: `Ledger.SetBudget` writes
+a plan directly, standing in for an act that does not exist yet
+([§8.1](08-crosscutting-concepts.md)), and no approved scenario assigns anything. What this section
+settles is the model that the assign-from-the-pool scenarios will be written against.
+
 ## Assigning may overdraw the pool account
 
 Assigning to a **backed** category moves real money out of the pool account. If the pool account
@@ -300,11 +366,11 @@ merely unassigned. The two are related, not equal. What happens when they disagr
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. |
 | **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
-| **Unassigned** | Money that has arrived but has not been earmarked for anything yet — the pool that assigning draws from. A *purpose* — the absence of one — and not a location: unassigned money still sits in an account. Shown to the user and assigned from directly, rather than being only a figure derived from a total. Not a category, and it does not survive the end of a budget period: it is *swept* — see below. |
-| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
-| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. |
+| **Unassigned** | Money that has arrived but has not been earmarked for anything yet — the pool that assigning draws from, and that a negative assignment puts money back into. A *purpose* — the absence of one — and not a location: unassigned money still sits in an account. Shown to the user and assigned from directly, rather than being only a figure derived from a total. Not a category, and it does not survive the end of a budget period: it is *swept* — see below. |
+| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
+| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. |
 | **Left to assign** | Income for a budget period minus everything assigned to categories in it. Starts at the period's full income, because carrying budgets over carries figures and not assignments. Reaches zero when the user has finished budgeting the period. Shown prominently, and never enforced — see below. |
-| **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A budget period **ends**, but it is never **closed** — see below. |
+| **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. |
 | **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. Whether it also carries a category is not the same question for the two — see the two rows below. |
 | **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. May be one-off or recurring. |
 | **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an optional **Label** of its own, below. The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. |
@@ -319,6 +385,53 @@ merely unassigned. The two are related, not equal. What happens when they disagr
 | **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure. |
 | **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. |
+
+## A start day the month is too short for clamps to its last day
+
+*Budget period* above says the day a period starts on is configurable. February has no 31st, so a
+configured start day cannot always be honoured literally:
+
+> **A start day later than the month has clamps to that month's last day.** Configure the 31st and
+> February's period starts on the **28th** — the 29th in a leap year.
+
+**Why.**
+
+- **"Configurable" stays true for every day of the month**, instead of true with an exception. The
+  rejected alternative below buys clarity by making the 29th, 30th and 31st unchoosable, which is a
+  rule the user has to discover about a setting that otherwise has none.
+- **It is what billing cycles conventionally do.** A user who has ever had a card statement or a
+  subscription dated at the end of the month has met this behaviour already, so the app is not
+  inventing a convention of its own.
+- **Periods still tile.** Every day belongs to exactly one budget period, none to two and none to
+  none. That is the property that stops an expense counting twice or vanishing at a boundary, and
+  it is what makes any answer here safe *except* one that leaves a gap.
+
+**The accepted cost, stated plainly.** Configure the 31st and the period containing 15 March 2026
+runs **28 February to 30 March**. It starts on a day the user did not pick, and it is **31 days
+long** against 28 for the period before it. This happens twice a year, and **nothing on screen
+explains why** — a period is silently longer than its neighbours, which is a direct cost to
+legibility, quality goal 1 ([§1.2](01-introduction-and-goals.md)).
+
+**The rejected alternative: restrict the configurable start day to 1–28**, so a month too short for
+it can never occur. This was the recommendation put to the stakeholder, on the ground that the
+unexplained 31-day period costs more than the three lost choices do, and **it was not taken.** The
+stakeholder chose clamping with that cost in front of him. The argument for restricting does not
+evaporate by being declined: if the odd period length ever confuses anyone in practice, this is the
+paragraph to reopen and restricting the range is the answer already on the table.
+
+A third option was noticed and is weaker than either: anchoring to one chosen start *date* and
+counting whole months from it. It produces the same dates and only moves the question, which
+returns as "what is one month after 31 January".
+
+This behaviour was in the code as a **placeholder** before it was a decision. It is now a decision,
+pinned by `BudgetPeriodCalendar`'s doc comment and by developer tests that assert the clamp for
+start days 30 and 31 including a leap year, alongside the tiling property for every start day from
+1 to 31.
+
+**No approved scenario configures a start day.**
+[`features/record-expense.feature`](../../features/record-expense.feature) is written in terms of
+"the previous", "the current" and "the next budget period", so nothing already approved depended on
+which way this went, and nothing has to change now that it has gone this way.
 
 ## Ending versus closing a budget period
 
@@ -503,8 +616,17 @@ alongside this documentation does not introduce drift.
 
 ## Open questions
 
-**None.** Every question that has stood here has been answered by the stakeholder, and each answer
-is written up in the section it belongs to rather than kept in a list here:
+**None.** Every question that has stood here has been answered, including the one that arose while
+the first increment was being built rather than from the interviews.
+
+One question about the same boundary is open **elsewhere**: how a configurable period start day
+interacts with timezones ([§8.2](08-crosscutting-concepts.md), *Still open*). It is a different
+question from the short-month one answered above — that one is about the calendar, this one is
+about which instant a day begins at — and it is recorded there rather than here.
+
+### Answered
+
+Each answer is written up in the section it belongs to rather than kept in a list here:
 
 | Question | Where the answer lives |
 |---|---|
@@ -515,12 +637,17 @@ is written up in the section it belongs to rather than kept in a list here:
 | Is *Accumulated* a sum of *Budget* or of *Remaining*? | *Backed categories accumulate* — of *Remaining*, so it nets out spending |
 | Does an expense default to an account? | *An expense defaults to the pool account* — yes, overridable per expense, with a known weak spot recorded there and in [§11](11-risks-and-technical-debt.md) |
 | May assigning overdraw the pool account? | *Assigning may overdraw the pool account* — yes, shown, not blocked |
+| May an amount be assigned negatively, and may a *Budget* go negative? | *An amount may be assigned negatively, and a Budget floors at zero* — yes to the first, no to the second. What an over-large negative assignment does was answered in the same section before it was ever filed here as a question: it is clipped and the shortfall reported |
+| What does a configured start day mean in a month too short to contain it? | *A start day the month is too short for clamps to its last day* — it clamps, with an unexplained 31-day period accepted as the cost |
 
-Two of these answers were taken with their drawbacks visible rather than resolved: the expense
-default is wrong for cash and nothing outside MoneyBud will say so, and an overdrawn account is
-shown exactly like an overspent budget despite being a harder fact. Both are written up where the
-decision is, and the first is carried in [§11](11-risks-and-technical-debt.md). They are accepted
-costs, not open questions.
+**Three** of these answers were taken with their drawbacks visible rather than resolved: the
+expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
+shown exactly like an overspent budget despite being a harder fact; and a clamped start day
+produces a period that is longer than its neighbours with nothing on screen explaining why. Each is
+written up where the decision is, and the first is carried in
+[§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
-**Nothing here blocks the first increment**, which has no accounts at all
-([§11](11-risks-and-technical-debt.md)) and so reaches none of the account-related answers above.
+**Nothing here blocks the first increment.** It has no accounts at all
+([§11](11-risks-and-technical-debt.md)), so it reaches none of the account-related answers above,
+and it has no assigning either. The start-day answer changes nothing already built: no approved
+scenario configures a start day, and the default of the 1st fits in every month.

@@ -45,7 +45,7 @@ systems at all — this makes the technical context almost empty, and the emptin
 | Channel | How it works |
 |---|---|
 | The user ↔ MoneyBud | Directly, through the application's own interface, on the machine it is installed on. No network is involved at any point |
-| MoneyBud ↔ its own data | Local storage on that same machine. What form that takes is undecided — see [§8.3](08-crosscutting-concepts.md) |
+| MoneyBud ↔ its own data | Local storage on that same machine. What form that takes is undecided, and **in the first increment there is no such channel at all** — nothing is stored, see [§8.3](08-crosscutting-concepts.md) |
 
 **There are no protocols, ports, APIs or interchange formats to document**, because there is nobody
 on the other end of them. Nothing listens, nothing dials out, and MoneyBud does not need the machine

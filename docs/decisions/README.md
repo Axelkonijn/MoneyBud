@@ -11,3 +11,5 @@ that says so.
 |---|---|---|
 | [0001](0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted |
 | [0002](0002-desktop-application-first.md) | The first version is a desktop application | Accepted |
+| [0003](0003-money-representation.md) | How money is represented in code | Accepted |
+| [0004](0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted |
