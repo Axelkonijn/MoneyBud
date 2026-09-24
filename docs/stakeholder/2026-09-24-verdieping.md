@@ -67,6 +67,26 @@ realistisch te integreren.
 
 ---
 
+# Ronde 3
+
+## Wat de eerste versie moet kunnen
+
+- Inkomsten en uitgaven handmatig invoeren, met een label erop
+- Potjes met bedragen: categorieën aanmaken, er een maandbedrag aan hangen, zien wat er nog over is
+
+Rekeningen en vermogen, en terugkerende posten, horen **niet** bij de eerste versie.
+
+## Wat het startscherm laat zien
+
+Waar mijn geld heen gaat — het radiale diagram, de verdeling over categorieën in één oogopslag.
+
+## Aannames die niet zijn tegengesproken
+
+- MoneyBud is voor één gebruiker; er kijkt niemand mee
+- Alle bedragen zijn in euro's
+
+---
+
 ## Uitwerking van "plek en doel"
 
 Dit onderscheid is groter dan het lijkt, dus het is hier uitgeschreven om te controleren of het
