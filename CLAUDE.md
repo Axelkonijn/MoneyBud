@@ -88,7 +88,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 186 passing: 34 scenario cases, the rest developer unit tests
+dotnet test  MoneyBud.slnx     # 190 passing: 34 scenario cases, the rest developer unit tests
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.

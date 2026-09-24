@@ -46,5 +46,13 @@ or field entries. Scenarios should survive a UI rewrite untouched.
 
 ## Running them
 
-Not yet — no test project exists. Reqnroll step definitions will live in the test project once the
-solution is scaffolded. See [ADR 0001](../docs/decisions/0001-dotnet-and-reqnroll.md).
+```
+dotnet test MoneyBud.slnx
+```
+
+Step definitions live in `tests/MoneyBud.Specs/Steps/`. **The feature files stay here** and are
+linked into that project rather than copied into it, so there is one copy of the specification and
+no way for a stale duplicate to keep passing — see
+[ADR 0004](../docs/decisions/0004-solution-layout.md).
+
+Only `record-expense.feature` exists so far, and every scenario in it passes.
