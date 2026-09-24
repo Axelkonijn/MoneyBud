@@ -12,6 +12,9 @@ data/real/
 *.qif
 *.csv.private
 
+# Raw personal notes — only the cleaned versions in docs/stakeholder/ are published
+docs/transcript.txt
+
 # Databases
 *.db
 *.db-journal
