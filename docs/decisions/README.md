@@ -10,3 +10,4 @@ that says so.
 | # | Decision | Status |
 |---|---|---|
 | [0001](0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted |
+| [0002](0002-desktop-application-first.md) | The first version is a desktop application | Accepted |

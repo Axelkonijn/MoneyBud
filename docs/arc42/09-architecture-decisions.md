@@ -11,3 +11,4 @@ later ask "why on earth is it like this?".
 | # | Decision | Status | Date |
 |---|---|---|---|
 | [0001](../decisions/0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted | 2026-09-24 |
+| [0002](../decisions/0002-desktop-application-first.md) | The first version is a desktop application | Accepted | 2026-09-24 |

@@ -38,5 +38,22 @@ recorded here because each one changes this section rather than merely adding a 
 
 ## 3.3 Technical Context
 
-_Not yet filled in — depends on the deployment form, which has not been decided. See
-[§7](07-deployment-view.md)._
+MoneyBud is a single desktop application running on the user's own machine
+([ADR 0002](../decisions/0002-desktop-application-first.md)). Combined with §3.1 — no external
+systems at all — this makes the technical context almost empty, and the emptiness is the finding:
+
+| Channel | How it works |
+|---|---|
+| The user ↔ MoneyBud | Directly, through the application's own interface, on the machine it is installed on. No network is involved at any point |
+| MoneyBud ↔ its own data | Local storage on that same machine. What form that takes is undecided — see [§8.3](08-crosscutting-concepts.md) |
+
+**There are no protocols, ports, APIs or interchange formats to document**, because there is nobody
+on the other end of them. Nothing listens, nothing dials out, and MoneyBud does not need the machine
+to be online to work.
+
+The first external channel would arrive with bank import (§3.2 above). That is when this section
+gains a file format or a protocol, and not before — nothing here should be designed in advance of
+it.
+
+The desktop UI framework is deliberately not named here; ADR 0002 decides the deployment form, not
+the toolkit.
