@@ -141,8 +141,20 @@ one made of spaces. That is why `record-expense.feature` grew two scenarios.
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Creating and removing a category**, with the default categories the interview asks for. It
-  exists in code only as test scaffolding (`Ledger.AddCategory`) with no user-facing behaviour.
+- **Creating and removing a category** — the next increment, and the least specified of these.
+  Round 1 already asks for it: adding categories should be easy, there must be **standaard­
+  categorieën** ("boodschappen of hobby"), and a category that does not apply to you can sit at
+  zero *or* be taken out. Nothing beyond that is settled, and at least four things need Axel
+  before scenarios can be written:
+    - **What happens to a category's history when it is removed** — the expenses recorded against
+      it, and its budgets in past periods. This is the meaty one; everything else is detail.
+    - **Whether category names are case-sensitive.** They are today, by accident rather than by
+      decision: `Ledger` keys categories with `StringComparer.Ordinal`, so "groceries" and
+      "Groceries" are two categories. Nobody chose that.
+    - **Duplicate names**, and whether **renaming** exists at all.
+    - **Whether the default categories are seeded now or wait for a UI** — Axel leaned towards
+      "with this increment" when asked on 2026-09-25, but it was not a firm decision.
+  In code it is only test scaffolding: `Ledger.AddCategory` with no user-facing behaviour.
 - **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
   *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.
 - **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the above first,
