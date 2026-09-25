@@ -70,6 +70,23 @@ public sealed partial class MoneyBudApp : ObservableObject
     public IReadOnlyList<string> CategorySuggestions =>
         Ledger.CategoriesOffered.Select(c => c.Name).Order(Alphabetical).ToList();
 
+    /// <summary>
+    /// Whether a suggestion stays in the list while something is typed: it contains what was
+    /// typed, case ignored, with runs of whitespace counted as one as the name rule counts them
+    /// (arc42 §12, *Category entry is free text with suggestions*: narrowing on "contains").
+    /// Nothing typed keeps every suggestion. Ordinal, so the machine's language plays no part.
+    /// </summary>
+    public static bool SuggestionMatches(string? typed, string suggestion) =>
+        CategoryName.Normalise(typed) is not { } search
+        || OneSpace(suggestion).Contains(OneSpace(search), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The suggestions left once something has been typed, still alphabetical.</summary>
+    public IReadOnlyList<string> SuggestionsFor(string? typed) =>
+        CategorySuggestions.Where(s => SuggestionMatches(typed, s)).ToList();
+
+    private static string OneSpace(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(text.Trim(), @"\s+", " ");
+
     // The invariant culture rather than ordinal, so that "Één keer" sorts among the E's instead
     // of after Z; still fixed, so the machine's language cannot change the order.
     private static readonly StringComparer Alphabetical =

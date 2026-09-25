@@ -29,7 +29,9 @@
 #     no other. Suggestions are in alphabetical order (settled by the stakeholder on 2026-09-25),
 #     and case does not count: "hobby" sorts as if it were "Hobby". A name is still shown as it is
 #     stored. This is NOT the order of the Overview's rows, which is by Budget.
-#   - Not asserted: whether the suggestions narrow as I type. That is not settled.
+#   - Not asserted here: that the suggestions narrow as I type, to the names containing what I
+#     typed. Settled after this file was approved (glossary: "Category entry is free text with
+#     suggestions") and held by the developer unit tests.
 #
 # Every scenario starts from an empty ledger and names the categories it needs. The names are
 # synthetic test data.

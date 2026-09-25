@@ -91,6 +91,24 @@ public sealed class FormTests
             app.CategorySuggestions);
     }
 
+    // Narrowing on "contains" (arc42 §12), decided here rather than by the toolkit's own filter.
+    [Theory]
+    [InlineData("schap", new[] { "Boodschappen" })]
+    [InlineData("HU", new[] { "Huur" })]
+    [InlineData("  ren ", new[] { "Sparen" })]
+    [InlineData("", new[] { "Abonnementen", "Boodschappen", "Hobby", "Huur", "Sparen", "Verzekeringen" })]
+    [InlineData("xyz", new string[0])]
+    public void Suggestions_narrow_to_the_names_that_contain_what_was_typed(string typed, string[] left) =>
+        Assert.Equal(left, app.SuggestionsFor(typed));
+
+    [Fact]
+    public void Narrowing_counts_a_run_of_spaces_as_one_like_the_name_rule()
+    {
+        app.AddCategory("Vaste lasten");
+
+        Assert.Equal(["Vaste lasten"], app.SuggestionsFor("vaste   las"));
+    }
+
     [Fact]
     public void Stepping_clears_what_was_said_about_the_last_act()
     {

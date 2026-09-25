@@ -131,7 +131,7 @@
                 <Grid ColumnDefinitions="*,8,*">
                   <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
                   <AutoCompleteBox Grid.Column="2" Text="{Binding Category}"
-                                   PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="Contains"
+                                   PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}"
                                    MinimumPrefixLength="0"
                                    ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
                 </Grid>
@@ -199,7 +199,7 @@
           <StackPanel DockPanel.Dock="Top" DataContext="{Binding ExpenseForm}" x:DataType="p:ExpenseForm">
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <AutoCompleteBox Text="{Binding Category}" PlaceholderText="{x:Static p:Tekst.Category}"
-                             FilterMode="Contains" MinimumPrefixLength="0"
+                             FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}" MinimumPrefixLength="0"
                              ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
             <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
