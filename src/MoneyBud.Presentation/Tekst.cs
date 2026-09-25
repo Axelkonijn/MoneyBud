@@ -101,6 +101,12 @@ public static class Tekst
 
     // ------------------------------------------------------------------ refusals
 
+    public static string AmbiguousAmount(string typed)
+    {
+        var (asThousands, asDecimal) = AmountInput.Readings(typed);
+        return $"„{typed.Trim()}” is dubbelzinnig: bedoel je {asThousands} of {asDecimal}?";
+    }
+
     public static string NotAnAmount(string? typed) =>
         string.IsNullOrWhiteSpace(typed)
             ? "Vul een bedrag in."

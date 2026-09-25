@@ -65,11 +65,15 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// The categories suggested when recording an expense or assigning: those offered for new
-    /// entry, so never an archived one, in alphabetical order with case ignored (§12). Ordinal,
-    /// like every other comparison of names, so the machine's language cannot change the order.
+    /// entry, so never an archived one, in alphabetical order with case ignored (§12).
     /// </summary>
     public IReadOnlyList<string> CategorySuggestions =>
-        Ledger.CategoriesOffered.Select(c => c.Name).Order(StringComparer.OrdinalIgnoreCase).ToList();
+        Ledger.CategoriesOffered.Select(c => c.Name).Order(Alphabetical).ToList();
+
+    // The invariant culture rather than ordinal, so that "Één keer" sorts among the E's instead
+    // of after Z; still fixed, so the machine's language cannot change the order.
+    private static readonly StringComparer Alphabetical =
+        StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, ignoreCase: true);
 
     [ObservableProperty]
     public partial Notice? Notice { get; private set; }
@@ -211,5 +215,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         Refresh();
     }
 
-    private void NotAnAmount(string? typed) => Refuse(Tekst.NotAnAmount(typed));
+    private void NotAnAmount(string? typed) =>
+        Refuse(AmountInput.Read(typed, out _) == AmountReading.Ambiguous
+            ? Tekst.AmbiguousAmount(typed!)
+            : Tekst.NotAnAmount(typed));
 }

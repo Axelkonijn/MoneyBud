@@ -137,15 +137,9 @@ public sealed class Ledger
         categoriesInOrderAdded.Where(archived.Contains).ToList();
 
     /// <summary>
-    /// Every category, in use and archived alike, in the order it was first added. Bringing a
-    /// category back does not add it again, so it keeps its place — the tie order the Overview
-    /// sorts by (arc42 §12, *The order of categories and slices*).
-    /// </summary>
-    public IReadOnlyList<Category> Categories => categoriesInOrderAdded.ToList();
-
-    /// <summary>
-    /// The categories a period shows, in the order they were added (arc42 §12, *When any category
-    /// is shown in a period: the full rule*): every category with history there, and every
+    /// The categories a period shows, in the order they were added — the Overview's tie order, and
+    /// a category brought back keeps its first place because bringing back does not add it again
+    /// (arc42 §12, *When any category is shown in a period: the full rule*): every category with history there, and every
     /// category <i>in use</i> in the current period and every later one, where it can be planned
     /// for. A past period shows only what has history in it, and an archived category is shown
     /// only where it has history.

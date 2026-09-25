@@ -70,6 +70,28 @@ public sealed class FormTests
     }
 
     [Fact]
+    public void Two_thousand_written_the_Dutch_way_is_refused_as_ambiguous_not_recorded_as_two()
+    {
+        Assert.Null(app.RecordIncome("2.000", "Salaris"));
+
+        Assert.Empty(app.Overview.Incomes);
+        Assert.True(app.Notice!.IsRefusal);
+        Assert.Contains("2000", app.Notice.Text);
+        Assert.Contains("2,00", app.Notice.Text);
+    }
+
+    [Fact]
+    public void Suggestions_are_alphabetical_with_accented_names_among_their_letters()
+    {
+        app.AddCategory("Zorg");
+        app.AddCategory("Één keer");
+
+        Assert.Equal(
+            ["Abonnementen", "Boodschappen", "Één keer", "Hobby", "Huur", "Sparen", "Verzekeringen", "Zorg"],
+            app.CategorySuggestions);
+    }
+
+    [Fact]
     public void Stepping_clears_what_was_said_about_the_last_act()
     {
         app.AddCategory("Vakantie");

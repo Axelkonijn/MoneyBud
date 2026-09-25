@@ -36,8 +36,11 @@ public sealed class AssignSteps(SpecContext context)
 
     // Leaving the period as it starts out, which is the period on screen (step-between-periods.feature).
     [When(@"I (?:assign|try to assign) (\S+) euro to ""([^""]*)"" without naming a budget period")]
+    //
+    // Read off the assign form, as the Desktop does: it always submits the form's own period, so
+    // this proves the form starts out on the period shown and stays with it, midnight included.
     public void WhenIAssignWithoutNamingAPeriod(string amount, string category) =>
-        Assign(amount, category, period: null);
+        Assign(amount, category, context.App.AssignForm.Period);
 
     // ------------------------------------------------------------------- Then
 

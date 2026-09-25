@@ -57,8 +57,11 @@ public sealed class RecordIncomeSteps(SpecContext context)
 
     // Leaving the date as it starts out: today, whatever period is on screen.
     [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" without giving a date")]
-    public void WhenIRecordAnIncomeLabelledWithoutGivingADate(string amount, string label) =>
+    public void WhenIRecordAnIncomeLabelledWithoutGivingADate(string amount, string label)
+    {
+        Assert.Null(context.App.IncomeForm.Date);
         Record(amount, label, date: null);
+    }
 
     [When(@"I (?:record|try to record) an income of (\S+) euro without a label")]
     public void WhenIRecordAnIncomeWithoutALabel(string amount) =>

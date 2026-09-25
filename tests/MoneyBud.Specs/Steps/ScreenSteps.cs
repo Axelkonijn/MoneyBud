@@ -172,7 +172,7 @@ public sealed class ScreenSteps(SpecContext context)
         Assert.True(overview.Ring.IsEmpty, "The ring should be empty.");
 
         // The hint's wording is copy, not a term (arc42 §12); what is fixed is that there is one.
-        Assert.False(string.IsNullOrWhiteSpace(overview.RingHint), "An empty ring should carry a hint.");
+        Assert.Equal(Tekst.EmptyRing, overview.RingHint);
     }
 
     [Then(@"^the ring for the (current|previous|next) budget period should not be empty$")]

@@ -22,6 +22,7 @@ public sealed class AmountInputTests
     [InlineData("- 20", "-20")]
     [InlineData("12,345", "12.345")]
     [InlineData("1.832", "1.832")]
+    [InlineData("2.00", "2.00")]
     [InlineData("0", "0")]
     public void Reads_what_was_typed_exactly(string typed, string euros)
     {
@@ -45,5 +46,19 @@ public sealed class AmountInputTests
     [InlineData("--5")]
     [InlineData("12345678901234")]
     [InlineData("1,00000000000000000000000000001")]
-    public void Is_not_an_amount(string? typed) => Assert.False(AmountInput.TryRead(typed, out _));
+    public void Is_not_an_amount(string? typed) =>
+        Assert.Equal(AmountReading.NotAnAmount, AmountInput.Read(typed, out _));
+
+    // Two readings, both whole cents: two thousand the Dutch way, or two euros. Refused rather
+    // than guessed, because nothing further down could tell the wrong one.
+    [Theory]
+    [InlineData("2.000", "2000", "2,00")]
+    [InlineData("1,500", "1500", "1,50")]
+    [InlineData("0.100", "100", "0,10")]
+    [InlineData("-2.000", "-2000", "-2,00")]
+    public void A_mark_and_three_digits_ending_in_zero_is_ambiguous(string typed, string asThousands, string asDecimal)
+    {
+        Assert.Equal(AmountReading.Ambiguous, AmountInput.Read(typed, out _));
+        Assert.Equal((asThousands, asDecimal), AmountInput.Readings(typed));
+    }
 }

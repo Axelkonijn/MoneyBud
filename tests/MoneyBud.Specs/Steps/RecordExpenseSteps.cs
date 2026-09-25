@@ -136,8 +136,12 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // Leaving the date as it starts out, which is today whatever period is on screen
     // (step-between-periods.feature). Every variant above that names no date means the same.
     [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" without giving a date")]
-    public void WhenIRecordAnExpenseLabelledWithoutGivingADate(string amount, string category, string label) =>
+    public void WhenIRecordAnExpenseLabelledWithoutGivingADate(string amount, string category, string label)
+    {
+        // The form's date starts out empty whatever period is shown; empty is what means today.
+        Assert.Null(context.App.ExpenseForm.Date);
         Record(amount, category, label, date: null);
+    }
 
     // ------------------------------------------------------------------- Then
 
