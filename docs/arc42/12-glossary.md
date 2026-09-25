@@ -287,7 +287,101 @@ sentence.
 **Nothing is built for this.** There is no assigning in the code at all: `Ledger.SetBudget` writes
 a plan directly, standing in for an act that does not exist yet
 ([§8.1](08-crosscutting-concepts.md)), and no approved scenario assigns anything. What this section
-settles is the model that the assign-from-the-pool scenarios will be written against.
+settles is the model that the assign-from-the-pool scenarios will be written against. It is in the
+assigning increment's scope (*Nothing here blocks the assigning increment*, at the end of this
+glossary).
+
+## Assigning happens in the current budget period and later ones, never in a past one
+
+> **An amount can be assigned in the current budget period or any later one. Assigning in a past
+> period is refused.** That holds for a negative amount too: money cannot be pulled back out of a
+> past period's plan either.
+
+Settled by the stakeholder on 2026-09-25, before any assigning is built.
+
+**Why.** Two reasons.
+
+- **It is the display rule's own split.** *When any category is shown in a period* (below) already
+  divides periods this way. The current and later periods are the ones you **plan**, and a past
+  period is a **record of what happened**. Assigning is planning, so it belongs to the periods that
+  are planned. Re-planning a record would stop it being one.
+- **It keeps assigning out of the sweep's territory.** A past period's *Unassigned* and *Leftovers*
+  are what the end-of-period sweep acts on (*The sweep*, below). A changed plan there would change a
+  *Leftover* that has already been swept. That is the same shape as this glossary's one open
+  question, *What happens to an income back-dated into a period that has already been swept?*
+  (below), and nothing should widen that question before there is a sweep to answer it against.
+
+| Rejected | Why |
+|---|---|
+| **Any period, since periods never close** | It reads *Ending versus closing a budget period* (below) as covering the plan, and it does not. A period never closes so that **late transactions**, real events entered after the fact, can land where they belong. Re-planning a period after it has ended records no event. It rewrites what the plan was |
+| **Move the assignment into the current period** | It would act on a reading the user never gave. They named a past period, and MoneyBud would quietly plan a different one |
+
+**Refused, not half-honoured.** The stakeholder's first answer was "current and future only". That
+an assignment in a past period is then **refused** was first written here as a derivation, stated so
+that it could be contradicted, and was **confirmed by the stakeholder on 2026-09-25**. The reasoning
+is why it stands. It follows the distinction *An amount may be assigned negatively* (above) draws.
+An assignment in a past period is **bad input**, with no correct reading to act on, like a
+future-dated expense. It is not a sensible intention that can be half-honoured, like an over-large
+negative assignment.
+
+**Future periods are allowed without limit.** This matches future-dated income, which counts
+towards its own period's *Unassigned* however far ahead that period is (*Income may be dated in the
+future*, below). A future period can have a pool to assign from, so it can be planned.
+
+**This fixes a past period's plan, not the period.** A past period still accepts expenses and income
+(*Ending versus closing a budget period*, below). What stops changing when a period ends is its
+*Budgets*. Its *Remaining* can still move, but only from the actual side, when a late expense lands.
+
+**The accepted cost: a forgotten plan cannot be fixed once its period is over.** Forget to assign to
+Groceries in October, and October shows Groceries over budget for good. This was noticed while the
+rule was being written up, put to the stakeholder, and **accepted by him on 2026-09-25**. In his
+words, *"past is past"*. A past period is a record of what happened, and that includes the plan you
+actually had. No plan was made for October's Groceries, so an over-budget figure there is **true**,
+not a mistake to be tidied away.
+
+## Assigning zero is accepted and moves nothing
+
+> **Assigning 0 to a category is accepted, and changes no figure.** It does not bring an archived
+> category back either (*Only a positive assignment brings it back*, below).
+
+In the stakeholder's words, settled on 2026-09-25: *"Harmless, however it also does not bring an
+archived category back."*
+
+**This is deliberately not symmetric with transactions**, and a reader will expect it to be. An
+expense must be more than 0 euro
+([`record-expense.feature`](../../features/record-expense.feature)), and so must an income
+([`record-income.feature`](../../features/record-income.feature)). Assigning follows neither rule.
+
+**Why.** Zero is refused on a transaction because a transaction of nothing is a record of an event
+that never happened. The actual layer would gain an entry describing nothing, and that is bad input
+with no correct reading. Assigning zero moves nothing and changes no figure, so there is nothing it
+could make false and nothing to refuse. It is also not an act of planning for the category, which is
+why the reason for bringing an archived category back does not reach it.
+
+| Rejected | Why |
+|---|---|
+| **Refuse it, like a zero expense** | The symmetry is only in the number. A transaction of zero is refused because it would be a false record; an assignment of zero leaves every figure as it was. Refusing it would block an act that cannot hurt, which is the opposite of *Shown, never enforced* (below) |
+
+## When an assignment is refused
+
+> **An assignment is refused for its target, never for its amount being zero or negative.** The
+> refusals are: a name that trims to nothing, a name that is not one of your categories (in use or
+> archived), an amount finer than a cent, and a past budget period.
+
+**The amount rules and the target rules are separate.** Zero is accepted and an over-large negative
+is clipped (above), but both still need a valid target. So 0 in a past period is refused, and so is
+0 to a name you do not have. −500 against a *Budget* of 400 in a past period is **refused, not
+clipped**, so no shortfall is reported. In the stakeholder's words: *"zero is accepted, but it would
+still be canceled because of the other problems."* This clarifies *Assigning zero is accepted* and
+the clipping rule. It changes neither.
+
+**When several rules are broken, the user is told the first of them, in this order:** a name that
+trims to nothing, then a name that is not one of your categories, then an amount finer than a cent,
+then a past period. **Why:** it is the order recording an expense already uses (category, then
+amount, then date), and one order across every kind of entry is one thing to learn. Only which
+refusal is **reported** is decided here. Every one of them refuses.
+
+Both settled by the stakeholder on 2026-09-25. Not built.
 
 ## Assigning may overdraw the pool account
 
@@ -577,9 +671,10 @@ got.
 
 - The category is **not offered for new entry**: not when recording an expense, and not when
   assigning. Not being offered is not the same as being refused. An expense recorded against its
-  name is recorded, and an amount assigned to it is assigned, and either brings it back (*Recording
-  an expense against an archived category brings it back* and *Assigning to an archived category
-  brings it back*, below).
+  name is recorded, and an amount assigned to it is assigned. Recording an expense brings it back,
+  and so does assigning a **positive** amount; a negative or zero assignment is carried out and
+  leaves it archived (*Recording an expense against an archived category brings it back* and
+  *Assigning to an archived category brings it back*, below).
 - Its last figure is **not offered back** when a new period opens (*An archived category's figure
   is not offered back when a period opens*, below).
 - It **still owns its expenses**. Nothing is reassigned, nothing is orphaned.
@@ -591,7 +686,7 @@ got.
   archived (next).
 - The state is about **new entry only**. It says nothing about money.
 - It is **not permanent**: adding its name again brings the category back, and so does recording
-  an expense against it or assigning to it — all three below.
+  an expense against it or assigning a positive amount to it — all three below.
 
 Archiving applies to a category **you have and that is in use**. *Archived* is a yes-or-no state of
 an existing category, so archiving a name you do not have, or archiving a category that is already
@@ -674,8 +769,8 @@ category you could assign to has to be there to be assigned to, whether or not a
 happened to it yet. A past period is a **record of what happened**, so it shows only what has
 history there, which is the same rule already settled for an archived category. The planning reason
 does not reach an archived category, because an archived category is not offered for assigning
-(*Assigning to an archived category brings it back*, below). Naming it anyway brings it back, and
-then it is a category in use.
+(*Assigning to an archived category brings it back*, below). Assigning a positive amount to its name
+anyway brings it back, and then it is a category in use.
 
 | Rejected | Why |
 |---|---|
@@ -719,8 +814,8 @@ has can express on its own.
 **Adding its name is no longer the only way back.** When this paragraph was written it was; since
 2026-09-25 recording an expense against the category brings it back too (next). There is still no
 separate un-archive act, but the argument above now has to carry two routes instead of one, and the
-next section says how far it still does. Assigning became a third route later the same day
-(*Assigning to an archived category brings it back*, below).
+next section says how far it still does. Assigning a positive amount became a third route later the
+same day (*Assigning to an archived category brings it back*, below).
 
 ### Recording an expense against an archived category brings it back
 
@@ -778,16 +873,20 @@ inference that turned out to rest on a route that was never there.
 
 ### Assigning to an archived category brings it back
 
-> **An archived category is not offered when assigning. Assigning to its name anyway brings it
-> back** — history and all, spelled as it was — **and the user is told**, exactly as when an expense
-> is recorded against it.
+> **An archived category is not offered when assigning. Assigning a positive amount to its name
+> anyway brings it back** — history and all, spelled as it was — **and the user is told**, exactly as
+> when an expense is recorded against it. A negative or zero assignment does not bring it back
+> (*Only a positive assignment brings it back*, below).
 
-Settled by the stakeholder on 2026-09-25, before any assigning is built.
+Settled by the stakeholder on 2026-09-25, before any assigning is built. The rule first read
+"assigning to its name anyway brings it back", without regard to sign; the sign was settled later
+the same day.
 
 **Why.** It is **one rule for every kind of new entry.** *Archived* means taken out of new entry,
 and naming an archived category is how you bring it back. Recording an expense and assigning are
-both new entry, so they behave the same way. This makes assigning a **third route back**, after
-adding the name and recording an expense. There is still **no separate un-archive act**: all three
+both new entry, so they behave the same way. A negative or zero assignment is not new entry for the
+category in that sense, which is why it does not count (*Only a positive assignment brings it
+back*, below). This makes a positive assignment a **third route back**, after adding the name and recording an expense. There is still **no separate un-archive act**: all three
 are acts the user already has, and bringing back is an announced side-effect of each. The
 reconciliation in the section above carries a third route as well as a second.
 
@@ -796,9 +895,38 @@ reconciliation in the section above carries a third route as well as a second.
 | **Not offered, and refused** | A detour for an obvious intent. This is the reason option (a) lost for expenses, and it applies unchanged |
 | **Offered** | Archiving would then hide a category from expense entry only. That contradicts what *Archived* means, which is out of **new entry**, not out of one kind of it |
 
+#### Only a positive assignment brings it back
+
+> **A negative assignment to an archived category does not bring it back, and neither does
+> assigning zero. Only a positive assignment does.**
+
+Take Hobby, archived while €60 is still budgeted for it in the current period. Archiving returned
+nothing to *Unassigned* — archiving says nothing about money, and
+[`archive-category.feature`](../../features/archive-category.feature) says so — and Hobby is still
+shown in the current period, because a budget of more than zero is history. Assigning −60 to Hobby
+moves the €60 back into *Unassigned*, and **Hobby stays archived**. The clip still applies: −80
+against that €60 moves €60, reports the €20 that could not come back, and Hobby stays archived.
+
+**Why.** Bringing back exists because naming an archived category **for new entry** is a sign that
+you want it again — that is the reason the three routes back share. Pulling its money out is the
+opposite sign. It is **tidying up** after putting the category away, not planning for it. Assigning
+zero is neither: it plans nothing, so the reason for bringing back does not reach it
+(*Assigning zero is accepted and moves nothing*, above). Settled by the stakeholder on 2026-09-25.
+
+| Rejected | Why |
+|---|---|
+| **One rule regardless of sign** | Simpler to state, and it would make the only way to reclaim an archived category's leftover budget a bring-back followed by a second archive: two acts, the second undoing a side-effect of the first, to finish tidying a category already put away. That is the friction quality goal 2 ([§1.2](01-introduction-and-goals.md)) exists to prevent |
+
+**What happens next, derived rather than asked.** Once the money is out, an archived category with
+nothing spent in that period has no history there — a zero budget with nothing spent is not history
+(*Where an archived category is still shown*, above) — so it stops being shown in that period. That
+completes the tidying up. If something was spent, it has history and stays shown, like any archived
+category with history. This follows from the display rule and was not put to the stakeholder
+separately.
+
 **Not built.** There is no act of assigning yet. `Ledger.SetBudget` stands in for it as scaffolding
-and does **not** bring an archived category back. That is now a known gap between the scaffold and
-the decided rule, recorded in [§8.1](08-crosscutting-concepts.md).
+and does **not** bring an archived category back, whatever the sign. That is a known gap between the
+scaffold and the decided rule, recorded in [§8.1](08-crosscutting-concepts.md).
 
 ### An archived category's figure is not offered back when a period opens
 
@@ -895,16 +1023,16 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). Taken out of use by **archiving**, never by deleting: its history stays, and adding its name again or recording an expense against it brings it back (*A category is taken out of use, not deleted*, above). **Renaming** is not in this increment. MoneyBud ships with six **default categories** (above). |
-| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning to it** (decided, not yet built). Each way, the user is told it was brought back. There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). |
+| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it** (decided, not yet built). Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. |
 | **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
 | **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
-| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. An **archived** category is not offered for assigning. Assigning to its name anyway **brings it back**, and the user is told (see *Assigning to an archived category brings it back* above). Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
-| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. |
-| **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. **Not in the income increment**: with no act of assigning, nothing subtracts from *Unassigned*, so it cannot go negative yet — see *Over-assigned* below. |
+| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Possible in the **current budget period and any later one**; assigning in a **past** period is **refused** (*Assigning happens in the current budget period and later ones*, above). **Assigning zero** is accepted and changes nothing, unlike a zero expense or income, which is refused (*Assigning zero is accepted and moves nothing*, above). Refused only for its **target** or its cents, never for being zero or negative. The refusals, in the order the first one broken is reported, are: a name that trims to nothing, a name that is not one of your categories, an amount finer than a cent, and a past period. That is the same order recording an expense uses. An otherwise acceptable zero or clippable negative is still refused if its target is wrong (*When an assignment is refused*, above). An **archived** category is not offered for assigning. Assigning a **positive** amount to its name anyway **brings it back**, and the user is told; a negative or zero assignment leaves it archived (see *Assigning to an archived category brings it back* above). Not built; in scope for the assigning increment (*Nothing here blocks the assigning increment*, below). Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
+| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
+| **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. **Not built**: with no act of assigning, nothing subtracts from *Unassigned*, so it cannot go negative yet. In scope for the assigning increment — see *Over-assigned* below. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. |
 | **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). |
 | **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). |
@@ -991,6 +1119,12 @@ period stops accepting entries.
 The consequence is that any figure derived from a past period — *Remaining*, and *Leftover* above
 all — has to be understood as the current best answer rather than a permanently fixed one. What
 that means when a leftover has already been acted on is set out next.
+
+**Assigning is refused in a past period, and that does not close it.** Closing is about what may be
+*recorded*, and a past period goes on accepting expenses and income. What a past period stops
+accepting is changes to its **plan** (*Assigning happens in the current budget period and later
+ones, never in a past one*, above). A late transaction is a real event arriving late. Re-planning
+after the fact is not an event at all.
 
 ## A late expense against a leftover that has already been directed
 
@@ -1247,10 +1381,11 @@ it. Below zero the figure has stopped describing money waiting for a purpose and
 a plan that outruns the income, and that is a different enough thing to deserve its own word —
 exactly as *Over budget* is the word for a *Remaining* that has stopped describing money left.
 
-**Not in the income increment.** With no act of assigning, nothing subtracts from *Unassigned*:
-recording income only ever increases it, so it cannot go negative. No code and no scenario in this
-increment will reach *Over-assigned*. It is defined now because the merge above needed it, not
-because anything is about to use it.
+**Not built.** With no act of assigning, nothing subtracts from *Unassigned*: recording income only
+ever increases it, so it cannot go negative. No code and no scenario reaches *Over-assigned* yet. It
+was defined during the income increment because the merge above needed it. It is in the assigning
+increment's scope, which is what will make it reachable (*Nothing here blocks the assigning
+increment*, at the end of this glossary).
 
 ## Nothing crosses a period boundary without a purpose
 
@@ -1363,6 +1498,10 @@ archived category brings it back*, *An archived category's figure is not offered
 opens*). [§8.1](08-crosscutting-concepts.md) and [§11](11-risks-and-technical-debt.md) record
 what the code does meanwhile.
 
+Four more were answered on 2026-09-25 for the **assigning increment**: what it covers, which periods
+can be assigned in, whether a negative assignment brings an archived category back, and what
+assigning zero does. None of them is built.
+
 ### What happens to an income back-dated into a period that has already been swept?
 
 A budget period **ends but never closes** (*Ending versus closing a budget period*, above), so an
@@ -1462,19 +1601,25 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | May a category be renamed? | *Renaming a category is not in this increment* — deferred with its two questions named, not rejected |
 | Which categories does MoneyBud ship with? | *The default categories* — six, Dutch, a starting set chosen to be tried. *Sparen* ships unbacked until accounts exist |
 | Is a category in use shown in a period where it has no history? | *When any category is shown in a period: the full rule* — **yes in the current and future periods**, because those are the periods you plan; **no in a past one**, which is a record of what happened. A category is shown in P if it has history in P, or if it is in use and P is current or later. Chosen over "every period, always" and "only with history, always". Settled 2026-09-25; not built |
-| What does assigning to an archived category do? | *Assigning to an archived category brings it back* — the category is **not offered**, and assigning to its name anyway **brings it back**, announced, like recording an expense. A third route back, and still no un-archive act. Chosen over refusing and over offering it. Settled 2026-09-25; not built, and `SetBudget` does not do this yet ([§8.1](08-crosscutting-concepts.md)) |
+| What does assigning to an archived category do? | *Assigning to an archived category brings it back* — the category is **not offered**, and assigning to its name anyway **brings it back**, announced, like recording an expense. A third route back, and still no un-archive act. Chosen over refusing and over offering it. Settled 2026-09-25; not built, and `SetBudget` does not do this yet ([§8.1](08-crosscutting-concepts.md)). Refined the same day: only a **positive** assignment brings it back (next rows) |
+| Does a negative assignment to an archived category bring it back? | *Only a positive assignment brings it back* — **no**. Pulling its money out is tidying up, not planning for it, and the category stays archived; an over-large one is still clipped and the shortfall reported. Chosen over one rule regardless of sign, which would make reclaiming an archived category's budget a bring-back followed by a second archive. Settled 2026-09-25; not built |
+| May zero be assigned, and does it bring an archived category back? | *Assigning zero is accepted and moves nothing* — **accepted**, changes nothing, and does **not** bring an archived category back. Deliberately unlike a zero expense or income, which is refused because it records a transaction that never happened. Chosen over refusing it. Settled 2026-09-25; not built |
+| In which budget periods can an amount be assigned? | *Assigning happens in the current budget period and later ones, never in a past one* — current and later, future ones without limit. It matches the display rule's split between planned periods and past records, and keeps assigning out of the sweep's territory. A past-period assignment is **refused**: first derived, then confirmed. Chosen over "any period, since periods never close" and over moving the assignment into the current period. The cost, that a forgotten plan cannot be fixed after its period, was accepted: "past is past". Settled 2026-09-25; not built |
+| Which refusal is reported when an assignment breaks several rules, and is a zero or clippable negative still refused for a wrong target? | *When an assignment is refused* — blank name, then unknown name, then finer than a cent, then past period, the same order as recording an expense. **Yes**: the amount rules and the target rules are separate, so 0 or −500 in a past period is refused, not accepted or clipped. Settled 2026-09-25; not built |
+| What does the assigning increment cover? | *Nothing here blocks the assigning increment* — assigning in current and later periods, *Over-assigned*, the clipped shortfall and bringing back. Backed categories, the pool account, one-action carry-over, the sweep and any UI are out, each for its own reason. Settled 2026-09-25 |
 | Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; carry-over is not built |
 | Must category names in feature files be English? | *They are Dutch because they are content* — **no**. A name is test data because it is synthetic and no scenario leans on the defaults, not because of its language. Settled 2026-09-25, loosening the earlier "English, with the rest of the specification" |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
-**Five** of these answers were taken with their drawbacks visible rather than resolved: the
+**Six** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
 shown exactly like an overspent budget despite being a harder fact; a clamped start day
 produces a period that is longer than its neighbours with nothing on screen explaining why; net
 worth and *Unassigned* will disagree about an expected income, because they are answering about
 different moments in time; and an archived category now has three routes back rather than one
-(adding its name, recording an expense, assigning), which weakens the argument for having no
-un-archive act without overturning it. Each is
+(adding its name, recording an expense, assigning a positive amount), which weakens the argument for having no
+un-archive act without overturning it; and a plan forgotten in a period that has since ended cannot
+be fixed, so that period shows over budget for good ("past is past"). Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
@@ -1513,3 +1658,21 @@ shown in every period where it has history, the current one included. Four more 
 the scenarios were being reviewed. Inner whitespace in a name is ignored for comparison and kept as
 typed. Archiving is never confirmed first. The user is told afterwards that a category was archived.
 A zero budget with nothing spent is not history.
+
+**Nothing here blocks the assigning increment, and its scope is settled** (2026-09-25). Nothing in
+it is built.
+
+**In:** assigning a positive, negative or zero amount to a category, in the current budget period
+or a later one. *Unassigned* moves, and can go *Over-assigned*. An over-large negative assignment is
+clipped and the shortfall reported. A positive assignment to an archived category's name brings it
+back, announced. **Refused**, on the same rules as recording an expense and [§8.2](08-crosscutting-concepts.md):
+a name that is none of your categories, in use or archived; a name that trims to nothing; an amount
+finer than a cent. Also refused: any past period. The order in which these are reported, and how
+they combine with zero and clipping, are in *When an assignment is refused* (above).
+
+| Out | Why |
+|---|---|
+| Account-backed categories and the pool account | They need the location dimension, and there are no accounts ([§11](11-risks-and-technical-debt.md)). Every category is unbacked, so assigning in this increment is planning only and moves no money |
+| *One action assigns last period's plan in full* (*Budgets carry over as figures*) | It belongs with **period opening**, which is a slice of its own |
+| The sweep | Needs accounts and a period end to act on, as it did before |
+| Any UI | This increment is a domain library and its scenarios, like the three before it. A UI is the increment after it |

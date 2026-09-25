@@ -102,22 +102,43 @@ the act that moves an amount out of *Unassigned* and into a category's *Budget*,
 income does not perform it.
 
 **That is a scaffold for the scenarios, not a model of assigning.** It is the method to re-examine
-first when assigning arrives: assigning has a source, may overdraw it, moves real money for a
-backed category, may be negative, and floors the *Budget* it writes at zero
-([§12](12-glossary.md)). `SetBudget` expresses none of that — it takes a `Money` and stores it,
-with no floor and no source, because no approved scenario reaches any of those rules yet.
+first when assigning arrives. Assigning subtracts from *Unassigned*, may be negative, floors the
+*Budget* it writes at zero and reports what a clip held back, is refused in a past period, accepts
+zero, and — for a backed category, later — has a source it may overdraw ([§12](12-glossary.md)).
+`SetBudget` expresses none of that. It takes a `Money` and stores it, for any period, with no floor
+and no source, because no approved scenario reaches any of those rules yet. The assigning
+increment's scope is settled and leaves the source out: there are no accounts, so every category is
+unbacked ([§12](12-glossary.md), *Nothing here blocks the assigning increment*).
 
 **It also works on an archived category, and does not bring it back. That now disagrees with a
 decided rule.** When the scaffold was written the question was open. The scaffold had to do
 *something* when handed an archived category, and it did the thing that decides least. On
 2026-09-25 the stakeholder settled it ([§12](12-glossary.md), *Assigning to an archived category
-brings it back*): an archived category is not offered for assigning, and assigning to its name
-anyway **brings it back**, with the user told. `SetBudget` does neither, and nothing tests either
-behaviour. This is a **known gap between the scaffold and the rule**, not a second rule. The
-assigning increment must build the real act to §12's rule, and then **retire `SetBudget` or align
-it**. Nothing may treat `SetBudget`'s behaviour on an archived category as meaning anything.
-Carry-over at period open is decided too: an archived category's figure is not offered back. It is
-unbuilt for every category, so there is no scaffold for it to disagree with.
+brings it back*): an archived category is not offered for assigning, a **positive** assignment to
+its name anyway **brings it back**, with the user told, and a negative or zero one leaves it
+archived. `SetBudget` brings nothing back whatever the amount, and nothing tests any of it. This is
+a **known gap between the scaffold and the rule**, not a second rule. The assigning increment must
+build the real act to §12's rule, and then **retire `SetBudget` or align it**. Nothing may treat
+`SetBudget`'s behaviour on an archived category as meaning anything. Carry-over at period open is
+decided too: an archived category's figure is not offered back. It is unbuilt for every category,
+so there is no scaffold for it to disagree with.
+
+**Two things in approved scenarios stand in the way of simply retiring it.** Both are for the
+scenario stage to settle, not the build, because each is about what an approved *Given* means.
+
+- **Budgets set in a past period.** [`record-expense.feature`](../../features/record-expense.feature)
+  and [`archive-category.feature`](../../features/archive-category.feature) set up budgets "in the
+  previous budget period", bound to `SetBudget`. The real act will refuse that
+  ([§12](12-glossary.md), *Assigning happens in the current budget period and later ones*). The
+  state itself is real, made back when that period was current, so the *Givens* are honest. But
+  their bindings will need some way to produce it other than assigning today.
+- **Budgets that never left the pool.**
+  [`record-income.feature`](../../features/record-income.feature), *Recording income leaves every
+  category's plan and spending untouched*, sets €460 of budgets in the current period, records a
+  €2,000 income, and asserts *Unassigned* is €2,000. That holds only because `SetBudget` bypasses
+  the pool. Once `UnassignedIn` subtracts what was assigned, as §12 defines it, either those
+  budgets were assigned and the figure should be €1,540, or they were not and the ledger holds
+  budgets nobody assigned, which §12 has no word for.
 
 ### "MoneyBud shows, it never blocks" is held by a type
 
@@ -267,7 +288,7 @@ wrote a row for it".
 | *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* | The location dimension has not been in any increment so far ([§11](11-risks-and-technical-debt.md)) |
 | *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
-| *Assign*, *Over-assigned* | **No approved scenarios, and no code.** Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md) — the source, the negative assignment, the *Budget* floored at zero, the clipped shortfall, and assigning to an archived category bringing it back — and is waiting on scenarios, not on a decision. Only the backed-category half of assigning needs accounts; the rest is specifiable today |
+| *Assign*, *Over-assigned* | **No approved scenarios, and no code.** They are the **next increment**, and its scope is settled ([§12](12-glossary.md), *Nothing here blocks the assigning increment*). Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md): the negative assignment, the *Budget* floored at zero, the clipped shortfall, the current period and later ones only, zero accepted, and only a positive assignment bringing an archived category back. It is waiting on scenarios, not on a decision. The backed-category half of assigning, with its source, needs accounts and is **out** of the increment |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
