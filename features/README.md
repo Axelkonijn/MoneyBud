@@ -56,6 +56,5 @@ no way for a stale duplicate to keep passing — see
 [ADR 0004](../docs/decisions/0004-solution-layout.md).
 
 Five feature files exist so far — `record-expense.feature`, `record-income.feature`,
-`add-category.feature`, `archive-category.feature` and `assign-to-category.feature`. Every
-scenario in the first four passes; `assign-to-category.feature` is awaiting approval and is not
-built yet.
+`add-category.feature`, `archive-category.feature` and `assign-to-category.feature` — and every
+scenario in all five passes.

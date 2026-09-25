@@ -177,7 +177,7 @@ and one low defect, fixed. Everything is in [§12](docs/arc42/12-glossary.md); i
   proves no other scenario depends on the defaults.
 
 **Increment 4 — assigning to a category — is done and green**, on branch
-`increment-4-assigning`. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
+`increment-4-assigning`, **pushed but not yet merged into `main`** — Axel decides when. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
 and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
 
 - **Assigning moves an amount; it does not set a figure.** Out of the period's *Unassigned*, onto
@@ -203,6 +203,10 @@ and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
 - **Which categories a period shows:** every category with history there (a budget of more than
   zero, or an expense), **plus** every category in use in the **current and future** periods,
   where they can be planned for. A past period shows only what has history in it.
+
+**Watch out for:** `Ledger.HasBudget` can tell "never assigned" from "assigned, then taken back
+to zero", although §12 says there is no separate "unbudgeted" state. Only the specs' "I have never
+set a budget" steps use it; if a UI ever does, revisit §12 first ([§8.1](docs/arc42/08-crosscutting-concepts.md)).
 
 **Watch out for:** that display rule is not implemented anywhere yet — the ledger exposes
 `HasHistoryIn` and `IsArchived`, and the archive scenarios' "should (not) be shown" steps are bound
@@ -264,7 +268,7 @@ all three were answered by Axel the same day:
   back to *Unassigned*, so no separate "unassign" act is needed, but a plan for less than nothing
   is not a plan. **An over-large negative assignment is clipped and the shortfall reported** —
   -50 against a *Budget* of 30 moves 30, never refuses, and never stays quiet about the other
-  20. Nothing is built yet — this settles the model the assign scenarios will be written against.
+  20. Built in increment 4.
 - **Euro-only is a decision, not an assumption.** §2 is hardened accordingly, which is what
   [ADR 0003](docs/decisions/0003-money-representation.md)'s no-currency-field argument rests on.
 
