@@ -15,8 +15,9 @@ Public repo: https://github.com/Axelkonijn/MoneyBud
 [ADR 0001](docs/decisions/0001-dotnet-and-reqnroll.md).
 
 Desktop application, running locally — [ADR 0002](docs/decisions/0002-desktop-application-first.md).
-**Which desktop UI toolkit is still open**, and nothing has been built against one: the first
-increment is a domain library and its scenarios, with no UI at all.
+The toolkit is **Avalonia 12** ([ADR 0005](docs/decisions/0005-avalonia-ui-toolkit.md)), over a
+**toolkit-free presentation layer** that decides everything the screen shows
+([ADR 0006](docs/decisions/0006-three-source-projects.md)).
 
 ## Way of working
 
@@ -47,8 +48,8 @@ quietly.
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
-| `src/` | Application code. `MoneyBud.Domain` — the whole application for now |
-| `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/` |
+| `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
+| `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
 
 The stakeholder material is Dutch and the documentation is English. `docs/arc42/12-glossary.md`
 holds the agreed translation of the domain terms — use it rather than translating afresh.
@@ -88,17 +89,18 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 350 passing: 169 scenario cases, the rest developer unit tests
+dotnet test  MoneyBud.slnx     # 572 passing: 324 scenario cases, 248 developer unit tests
+dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-25, after the assigning increment shipped green. Update this when a stage completes._
+_Last updated 2026-09-26, after the UI increment shipped green on branch `increment-5-ui`. Update this when a stage completes._
 
-**Done: all five stages, four times — for `record-expense`, `record-income`, categories and
-assigning.** All four are built and green.
+**Done: all five stages, five times — for `record-expense`, `record-income`, categories,
+assigning and the desktop UI.** All five are built and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -120,13 +122,19 @@ assigning.** All four are built and green.
   increment 3's or increment 4's. Axel **waived the plan gate** for increment 3 and said to go
   straight to code; increment 4's plan was **approved at the second gate**.
 - All four were reviewed by `spec-reviewer` and documented back into arc42.
+- The UI's six feature files — `overview`, `step-between-periods`, `show-categories-in-a-period`,
+  `list-transactions-in-a-period`, `suggest-categories` (approved 2026-09-25) and `type-an-amount`
+  (approved 2026-09-26, added after review) — and its plan, approved at the second gate, which
+  brought ADRs 0005 and 0006.
 
-**What exists in code:** `Money` (whole cents in a `long`), `Category` and `CategoryName` (the
+**What exists in code:** a desktop app (below) over `Money` (whole cents in a `long`), `Category` and `CategoryName` (the
 name rule), `AddCategoryResult`, `BudgetPeriod`, `BudgetPeriodCalendar`, `Ledger` (which also
 archives and assigns, and whose `StartNew` seeds the default categories), `AssignResult` and
 `AssignRefusal`, and a matching pair per transaction — `Expense`, `ExpenseRefusal`,
 `RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`.
-No UI, no storage, no accounts — all three deliberate, all three with their reasoning recorded.
+In `MoneyBud.Presentation`: `MoneyBudApp` (the screen), `PeriodOverview` and `Ring`, the entry
+forms, `AmountInput` and `Tekst`. No storage and no accounts — both deliberate, with their
+reasoning recorded.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -197,26 +205,50 @@ and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
 - **`SetBudget` is gone.** A budget is made only by `Ledger.Assign`. The specs make a past
   period's budget by moving the test clock into that period and assigning — no test-only door.
 
-**Settled ahead of later increments** (2026-09-25, in §12; none of it is built):
+**Increment 5 — the desktop UI — is done and green**, on branch `increment-5-ui` (not yet merged).
+Settled with Axel on 2026-09-25 and 2026-09-26; `spec-reviewer` found no faked scenario, one
+medium defect ("2.000" was recorded as €2,00 — now refused) and one low (accented names sorted
+after Z), both fixed. All in [§12](docs/arc42/12-glossary.md), *The user interface*; in outline:
 
-- **When a period opens**, an archived category's last figure is **not offered back**.
-- **Which categories a period shows:** every category with history there (a budget of more than
-  zero, or an expense), **plus** every category in use in the **current and future** periods,
-  where they can be planned for. A past period shows only what has history in it.
+- **It covers what the domain does, and nothing more** — so **no editing or deleting** an entry,
+  accepted for the demo. **Everything is Dutch**, in §12's *Dutch display terms*, which a unit
+  test reads from the markdown and holds `Tekst` to.
+- **One window, Axel's layout:** income left, the plan in the middle, expenses right. The start
+  screen is the **Overview**, headed by the **ring**: a slice per category sized to its *Budget*
+  and filled as far as spent, *Unassigned* as the last slice clockwise, an overspent slice kept
+  budget-sized and **marked**, over-assigned drawn as budgets only. **Over budget and
+  over-assigned now carry one marker** beside the negative figure — a **revision** of "unremarked";
+  how an overdraft is shown is open again, until accounts exist.
+- **Order:** rows and slices largest *Budget* first, ties in order added; transactions newest
+  first, in **two** lists; suggestions alphabetical, narrowing on "contains".
+- **Periods:** step back and forward, **no** jump to today. The screen holds its period as a
+  period, so at midnight it **stays** and just loses its *Huidige periode* label. A date left
+  empty is **today**; an assignment defaults to the **period on screen**. An entry landing
+  elsewhere leaves the screen put and **says where it went**.
+- **The category box is free text with suggestions**, so all three routes back stay reachable.
+- **Typing an amount:** comma or point is the decimal mark, no thousands separator; "2.000"
+  (three digits ending in 0) is refused as **ambiguous**; four-plus decimals that are whole cents,
+  and ",50", are not amounts. The cent rule stays the domain's.
+- **Start day fixed at the 1st**: the ledger can't change it once budgets exist. Deferred.
+- **Starts with the six defaults, keeps nothing** — so §8.3's trigger for storage is now
+  *reachable*: the first time Axel minds re-entering data, storage is due.
 
 **Watch out for:** `Ledger.HasBudget` can tell "never assigned" from "assigned, then taken back
-to zero", although §12 says there is no separate "unbudgeted" state. Only the specs' "I have never
-set a budget" steps use it; if a UI ever does, revisit §12 first ([§8.1](docs/arc42/08-crosscutting-concepts.md)).
+to zero", although §12 says there is no separate "unbudgeted" state. Only test code uses it — two
+setup steps, the first-start check and one unit test — and the ring deliberately does not. If a
+screen ever needs it, revisit §12 first ([§8.1](docs/arc42/08-crosscutting-concepts.md)).
 
-**Watch out for:** that display rule is not implemented anywhere yet — the ledger exposes
-`HasHistoryIn` and `IsArchived`, and the archive scenarios' "should (not) be shown" steps are bound
-to those. When a period view is built, implement the full rule there and rebind those steps to it
-([§11](docs/arc42/11-risks-and-technical-debt.md)).
+**Watch out for:** `MoneyBud.Desktop` must **decide nothing**. Narrowing the suggestions was once
+the toolkit's own filter and had to be moved into Presentation. Anything the window chooses is
+untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
+
+**Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
+category's last figure is **not offered back**.
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **A UI**, which is what turns this into the demo ADR 0002 is about. Income, categories and
-  assigning now exist, so there is something to show.
+- **Demo it to Axel and gather feedback** — the point of ADR 0002. That feedback may reorder
+  everything below.
 - **Opening a period** — offering last period's figures back and the one action that assigns them
   in full. Settled in §12, not built.
 - **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
@@ -250,12 +282,14 @@ trimmed at the ends and left alone inside, a label that trims to nothing is "no 
 zero *Remaining* is not over budget, and amounts are whole cents and never rounded
 ([§8.2](docs/arc42/08-crosscutting-concepts.md)).
 
-**One open question, and it cannot be answered yet.** A budget period never closes, so an income
+**Two open questions, and neither can be answered yet.** The first: a budget period never closes, so an income
 can be back-dated into a period whose *Unassigned* was already swept. §12 covers the analogous
 case for a late *expense*, but the principle does not necessarily extend — a late expense means
 MoneyBud moved too much, a late income means there was more to move, and those disagree about
 which period's figures change. There is no sweep and no accounts, so there is nothing to decide
-against; it goes live when the sweep is built. Recorded in [§12](docs/arc42/12-glossary.md).
+against; it goes live when the sweep is built. The second: **how an overdrawn account is shown**,
+now that over budget and over-assigned carry a marker — reopened by the UI increment's marker
+revision, and met when accounts are built. Both recorded in [§12](docs/arc42/12-glossary.md).
 
 Everything else is settled. Three questions arose while the first increment was being built and
 all three were answered by Axel the same day:
@@ -274,7 +308,8 @@ all three were answered by Axel the same day:
 
 Earlier, seven questions were settled while the model was being agreed, two of them accepted with
 their drawbacks written down rather than solved (the expense account default will silently be
-wrong for cash; one marker covers both an overspent budget and a real overdraft).
+wrong for cash; one display covers both an overspent budget and a real overdraft — the second now
+reopened, as above).
 
 The live risks are in [§11](docs/arc42/11-risks-and-technical-debt.md), not here.
 
