@@ -12,4 +12,6 @@ that says so.
 | [0001](0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted |
 | [0002](0002-desktop-application-first.md) | The first version is a desktop application | Accepted |
 | [0003](0003-money-representation.md) | How money is represented in code | Accepted |
-| [0004](0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted |
+| [0004](0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; decision 1 superseded by 0006 |
+| [0005](0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted |
+| [0006](0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1 |

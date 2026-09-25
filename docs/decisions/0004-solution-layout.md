@@ -1,7 +1,14 @@
 # 0004 — The layout of the solution: two projects, xUnit, linked feature files
 
-**Status:** Accepted
+**Status:** Accepted. **Decision 1, "two projects", superseded** by
+[ADR 0006](0006-three-source-projects.md) on 2026-09-25, when the UI arrived. Decisions 2, 3 and 4
+stand.
 **Date:** 2026-09-24
+
+> The record below is left as it was written. It predicted its own partial supersession ("if a UI
+> or a store arrives and the domain starts accumulating things that are not domain, that is the
+> signal"), and ADR 0006 cites that passage. Read what it says about two projects, empty layers and
+> a very short §5 as true of the four increments before the UI.
 
 ## Context
 

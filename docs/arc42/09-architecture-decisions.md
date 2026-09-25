@@ -13,7 +13,9 @@ later ask "why on earth is it like this?".
 | [0001](../decisions/0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted | 2026-09-24 |
 | [0002](../decisions/0002-desktop-application-first.md) | The first version is a desktop application | Accepted | 2026-09-24 |
 | [0003](../decisions/0003-money-representation.md) | How money is represented in code | Accepted, amended same day | 2026-09-24 |
-| [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted | 2026-09-24 |
+| [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
+| [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
+| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1 | 2026-09-25 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -21,6 +23,12 @@ statement it made about [§2](02-architecture-constraints.md) stopped being true
 accepted, with nothing built on it. It was corrected in place, with the corrected belief quoted
 rather than deleted. That is the bar for amending rather than superseding, and it is meant to be a
 hard one to clear.
+
+**ADR 0004 is the first record superseded, and only in part.** Its decision 1, two projects, was
+replaced by ADR 0006 when the UI arrived. Its other three decisions stand, so the record stays
+**Accepted**, with a status line naming the part that no longer holds. Its body is unchanged. That
+is not the ADR 0003 kind of amendment: a decision *did* change, so a new record carries it and the
+old one keeps what was believed.
 
 Not every decision gets a record. **Persistence is still deferred — nothing is stored, state lives
 in memory for the lifetime of a run** — and that is written up in
@@ -51,8 +59,16 @@ and the past-period setup in the specs made by moving the test clock rather than
 test-only door into the domain. Both are recorded in [§8.1](08-crosscutting-concepts.md). Deleting a
 scaffold is not a reversal of anything a record had decided, so there was nothing to supersede.
 
-**The UI increment is expected to add one: the desktop UI toolkit.** It is not in the index because
-it has not been decided. ADR 0002 left the toolkit open on purpose. It will be proposed at the plan
-gate and recorded then. The same gate is when to re-examine whether ADR 0004's two-project layout
-still holds once there is a UI, as [§5](05-building-block-view.md) asks. What the UI shows and does was settled first, as
-requirements, in [§12](12-glossary.md), *The user interface*. None of that depends on the toolkit.
+**The UI increment added two**, both approved at its plan gate on 2026-09-25. **ADR 0005** chooses
+the toolkit that ADR 0002 left open on purpose: Avalonia, over WPF, .NET MAUI and WinUI 3.
+**ADR 0006** is the re-examination of ADR 0004's layout that [§5](05-building-block-view.md) asked
+for once a UI existed. The answer was three source projects, the middle one a toolkit-free
+presentation layer where the new scenarios run. What the UI shows and does was settled first, as
+requirements, in [§12](12-glossary.md), *The user interface*, and none of that depends on either
+record.
+
+**Several things the UI increment settled are not records**, for the same reason as the earlier
+increments' were not: they are about how one layer expresses the requirements, not about the
+architecture. How typed text becomes an amount, why display formatting ignores the machine's
+culture, and how the scenarios reach the screen are in [§8.2](08-crosscutting-concepts.md) and
+[§8.4](08-crosscutting-concepts.md).

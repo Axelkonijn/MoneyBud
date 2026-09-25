@@ -758,6 +758,16 @@ exists to prevent. Settled by the stakeholder on 2026-09-25.
 that. The rule is about history, not about whether a period is past: a past period in which the
 category has no history does not show it either.
 
+> **On the Overview, an archived category that is still shown carries a *Gearchiveerd* caption, and
+> has no archive button.**
+
+Built this way in the UI increment. The stakeholder saw it after the spec review and said to keep it
+(2026-09-25). **Why**, in the documentation's reasoning: a row that looks like every other row would
+let the user believe a category is in use when it is put away, and then wonder why it is not
+suggested. The caption says why. There is no archive button because archiving an archived category
+is not something the user can do (*What the state fixes*, above). The caption is the display term
+for *Archived* (*Dutch display terms*, below), so no new word was needed.
+
 ### When any category is shown in a period: the full rule
 
 The rule above covers archived categories. It left one case open, which the category increment met
@@ -1041,7 +1051,7 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). Taken out of use by **archiving**, never by deleting: its history stays, and adding its name again or recording an expense against it brings it back (*A category is taken out of use, not deleted*, above). **Renaming** is not in this increment. MoneyBud ships with six **default categories** (above). |
-| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). |
+| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
@@ -1050,7 +1060,7 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
 | **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Possible in the **current budget period and any later one**; assigning in a **past** period is **refused** (*Assigning happens in the current budget period and later ones*, above). **Assigning zero** is accepted and changes nothing, unlike a zero expense or income, which is refused (*Assigning zero is accepted and moves nothing*, above). Refused only for its **target** or its cents, never for being zero or negative. The refusals, in the order the first one broken is reported, are: a name that trims to nothing, a name that is not one of your categories, an amount finer than a cent, and a past period. That is the same order recording an expense uses. An otherwise acceptable zero or clippable negative is still refused if its target is wrong (*When an assignment is refused*, above). An **archived** category is not offered for assigning. Assigning a **positive** amount to its name anyway **brings it back**, and the user is told; a negative or zero assignment leaves it archived (see *Assigning to an archived category brings it back* above). Built in the assigning increment for **unbacked** categories, which is every category while there are no accounts: `Ledger.Assign`, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature) ([§8.1](08-crosscutting-concepts.md)). The backed half, the real transfer, is not built. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
-| **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). |
+| **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). The marker's badge reads *Te veel toegewezen*. Built in the UI increment. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). |
 | **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). |
 | **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). |
@@ -1058,7 +1068,7 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
 | **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
-| **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). |
+| **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker's badge reads *Over budget*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). Built in the UI increment. |
 | **Accumulated** | **Account-backed categories only.** Everything ever assigned to the category minus everything ever spent against it — the running sum of its *Remaining* across all periods, and so the money its backing accounts have built up on its behalf. Shown beside the period's *Budget* and *Remaining*, which reset at every boundary while *Accumulated* does not. An unbacked category has no such figure, because it is swept empty at every boundary and nothing accumulates. Related to, but not equal to, a backing account's *Balance* — see *Backed categories accumulate* above. Not in the first increment. |
 | **Leftover** | A category's *Remaining* when its budget period ends — money that was assigned but not spent. For an unbacked category it is *swept* rather than allowed to vanish; a backed category keeps its leftover, because that money is already in its account — see below. A leftover is computed at the end of a period; computing it does not close the period — see below. |
 | **Sweep** | What happens at the end of a budget period to money that has not landed anywhere: the *Unassigned* pool and the *Leftovers* of every unbacked category are moved together into one **sweep destination**, out of the *pool account* and into that destination's default backing account. Backed categories are not swept. Automatic, not prompted — see below. |
@@ -1066,8 +1076,8 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure, and a **point-in-time** one: it is **what you have today**. Income dated in the future is **not** counted, because it is not money yet — there is nothing in any account for it to be part of. This is where net worth and *Unassigned* part company on purpose: *Unassigned* is a **period** figure and includes an expected income from the moment it is recorded, so the two views disagree about that amount by design and not by error. See *The central distinction* above. |
 | **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. |
-| **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). Specified for the UI increment, not built (*The user interface*, above). |
-| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Not built. |
+| **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). |
+| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. |
 
 ## A start day the month is too short for clamps to its last day
 
@@ -1480,8 +1490,15 @@ different places. They are one automatic movement with one destination.
 
 The fifth increment puts a desktop UI over the domain. Everything in this section was settled with
 the stakeholder on 2026-09-25, in conversation. Like the follow-ups of 2026-09-24, it went straight
-into this glossary rather than into a new interview round. **None of it is built.** The UI toolkit
-is **not** settled (*The toolkit is not chosen here*, below).
+into this glossary rather than into a new interview round.
+
+**It is built.** Its scenarios were approved at the scenario gate, its plan at the plan gate, and it
+was reviewed by `spec-reviewer`, all on 2026-09-25. How a typed amount is read was ruled at the plan
+gate. Five more rulings followed the review: the refusal of an ambiguous amount, how suggestions
+narrow, what the marker's badge says, the *Gearchiveerd* caption, and a refinement of
+"alphabetical". Each sits in the section it belongs to. The toolkit is
+Avalonia (*The toolkit*, below). How the screen is arranged in code is in
+[§8.4](08-crosscutting-concepts.md).
 
 ### It covers what the domain does, and nothing more
 
@@ -1523,6 +1540,33 @@ below), and a list that reshuffles is harder to scan. The order added means noth
 looking for a name. This is a separate order from the Overview's, and the two are **not** meant to
 match.
 
+**"Alphabetical" means the invariant culture's order, ignoring case.** So "hobby" sorts as if it
+were "Hobby", and a name starting with an accented letter sorts among its letter: "Één keer" among
+the E's. The order still does not depend on the machine's language. This **refines** what the
+scenario gate approved, which assumed alphabetical meant the same ordinal comparison as category
+names use. Ordinal puts "Één" after "Z", because it compares character codes, and nobody reading a
+list alphabetically expects that. The stakeholder settled it on 2026-09-25, after the review. Names
+are still **compared** ordinally ([§8.1](08-crosscutting-concepts.md)). Only the order they are
+**listed** in uses the invariant culture. The two are different questions: whether two names are
+one category must never depend on language data, and the order a person scans a list in is about
+language.
+
+> **The suggestions narrow as you type, on "contains".** Typing "schap" leaves Boodschappen among
+> the suggestions.
+
+Settled by the stakeholder on 2026-09-25, after the review, over narrowing on "starts with" and over
+not narrowing at all. It settles what
+[`suggest-categories.feature`](../../features/suggest-categories.feature) left open ("whether the
+suggestions narrow as I type … is not settled"). No reasoning came with the choice. **What it
+does not change:** narrowing only filters the **offers**. What is typed is still judged as typed, so
+"Groc" is still refused as an unknown name and never completed to a suggestion (*Approved at the
+scenario gate*, below).
+
+**How it is built is carried as a risk.** Narrowing is the toolkit's own category-box filter,
+configured in the Desktop's window. So no scenario and no test holds it, although
+[ADR 0006](../decisions/0006-three-source-projects.md) puts the suggestions in the presentation layer
+where the scenarios run ([§11](11-risks-and-technical-debt.md)).
+
 | Rejected | Why |
 |---|---|
 | **A pick-list alone** | It would put the recording and assigning routes back, and the unknown-name refusal, out of the user's reach. A UI meant to cover what the domain does would silently cover less |
@@ -1537,6 +1581,53 @@ is covered. **Accepted by the stakeholder for the demo** on 2026-09-25, with tha
 front of him. Correcting entries becomes its own later increment. Carried in
 [§11](11-risks-and-technical-debt.md).
 
+### Typing an amount
+
+> **A comma or a point is the decimal mark, so "12,50" and "12.50" are both twelve fifty. No
+> thousands separator is accepted.** Text that is not an amount is **refused before anything is
+> recorded**, and the user is told so. A euro sign, a true minus sign ("−") and spaces around the
+> number are tolerated.
+
+Ruled by the stakeholder at the plan gate, 2026-09-25. **Why either mark**, in the documentation's
+reasoning: Dutch writes a comma, and a point is just as easily typed. Refusing either would make the
+user learn which one MoneyBud wants, for no gain. **Why no thousands separator**: with both marks
+meaning "decimal", a separator could not be told apart from one.
+
+> **A point or comma followed by exactly three digits ending in 0, such as "2.000" or "1,500", is
+> refused as ambiguous**, and the refusal names both readings: *bedoel je 2000 of 2,00?*
+
+Settled by the stakeholder on 2026-09-25, **after the spec review**, which found the problem.
+**Why**:
+
+- **"2.000" was being recorded as €2,00 without a word.** Under the rule above it reads as two
+  euros.
+- **Nothing downstream could catch it.** Both readings, two euros and two thousand, are whole
+  cents, so the cent rule ([§8.2](08-crosscutting-concepts.md)) passes either.
+- **MoneyBud itself shows thousands with a point**: "€ 2.000,00". A user who has seen that on screen
+  has every reason to type "2.000" and mean two thousand.
+- **An entry cannot be corrected** ([§11](11-risks-and-technical-debt.md)). A wrong amount stays
+  wrong for the rest of the run.
+
+**Why only when the three digits end in 0.** That is exactly the case where both readings are whole
+cents. "1.832" is also a mark and three digits, but read as a decimal it is finer than a cent, so
+**it goes on to be refused as finer than a cent**, which is a refusal the user sees. Only the case
+that would otherwise pass silently is caught here. "2.00" and "2,5" are not ambiguous and are read
+as decimals.
+
+**Refused, not guessed.** It follows the distinction *An amount may be assigned negatively* (above)
+draws: an ambiguous amount is **bad input**. It has two correct readings, not one, and MoneyBud
+cannot tell which was meant. Naming both readings lets the user fix it in one step, because the form
+keeps what was typed after a refusal.
+
+**What reading an amount does not decide.** It never rounds, and it never judges a sign. "12,345" is
+read as typed and refused by the cent rule. A minus is read, and whether it is allowed is the
+domain's to say: an assignment takes it, and an expense refuses it. So the rules of *Transaction*
+and *Assign* are untouched. Only text now comes before them
+([§8.2](08-crosscutting-concepts.md)).
+
+**Built** in the presentation layer as `AmountInput`, and held by unit tests. **No scenario covers
+it yet** ([§11](11-risks-and-technical-debt.md)).
+
 ### Stepping between periods
 
 > **The UI steps back and forward from the current budget period**, to the previous and the next.
@@ -1547,13 +1638,16 @@ dated either way. Each lands in its own period, so each needs a way to reach tha
 settled bounds how far the stepping goes: assigning is allowed in future periods without limit, and
 no rule bounds how far back an expense or income may be dated.
 
-**This is where the display rule gets built.** Which categories a period shows is already settled
+**This is where the display rule got built.** Which categories a period shows is already settled
 (*When any category is shown in a period: the full rule*, above): every category with history
 there, plus every category in use in the current and later periods, and in a past period only what
-has history. Stepping is the first view that needs the whole rule. So the gap
-[§8.1](08-crosscutting-concepts.md) and [§11](11-risks-and-technical-debt.md) record, a settled
-rule with no implementation, is **scheduled for this increment**. It is not closed. It closes when
-the view is built and the "shown" steps are bound to it.
+has history. Stepping was the first view that needed the whole rule. It is now one domain query,
+`Ledger.CategoriesShownIn`, and the "shown" steps read the Overview built on it. The gap
+[§8.1](08-crosscutting-concepts.md) and [§11](11-risks-and-technical-debt.md) used to record, a
+settled rule with no implementation, is **closed**.
+
+**Stepping clears the last thing MoneyBud said.** This was built that way and not put to the
+stakeholder ([§8.4](08-crosscutting-concepts.md)).
 
 #### No one-step way back to the current period
 
@@ -1583,8 +1677,8 @@ current and **the period on screen has become the previous one**. From then on:
 - **It is a past period for the display rule** (*When any category is shown in a period: the full
   rule*, above). It shows only categories with history there, so a category in use with no history
   in it **drops off the screen** the next time the view is drawn, without the user doing anything.
-  This consequence is put in front of the stakeholder at the scenario gate (*Awaiting the scenario
-  gate*, below).
+  This consequence was put in front of the stakeholder at the scenario gate, and he approved the
+  scenarios with it (*Approved at the scenario gate*, below).
 - **A new entry's date defaults to the new today**, so it lands in the new period, and the Overview
   says so (below).
 
@@ -1603,7 +1697,12 @@ claim the stakeholder made. `Ledger.Today` reads the clock every time it is aske
 boundary by itself. The past-period refusal and the display rule both follow from that. What the
 screen has to do is **hold the period it shows as a period**, and not as "the current one" or as an
 offset from it. A view that held "current" would follow today into the new period, which is the
-option not chosen.
+option not chosen. **Built that way**, as `MoneyBudApp.ShownPeriod`.
+
+**"The next time the view is drawn" is at most a minute away.** While MoneyBud sits untouched, the
+Desktop looks again once a minute, so for up to a minute after the boundary the label can still read
+*Huidige periode*. Any act makes it look again at once. Nothing is announced either way, as ruled
+above ([§8.4](08-crosscutting-concepts.md)).
 
 ### Defaults, and entering while another period is shown
 
@@ -1752,6 +1851,17 @@ figure and replaces nothing.
 are members of one family, a figure below zero that is shown and never blocked (*Over-assigned*,
 above), and one marker keeps them one thing to learn.
 
+> **"The same marker" means the same look. Each badge names its own state**: *Over budget* beside
+> a category's *Resterend*, and *Te veel toegewezen* beside *Niet toegewezen*.
+
+As built, the marker is one badge style with the state's display term on it. Asked after the review
+whether two wordings still count as "the same marker", the stakeholder **confirmed it does**
+(2026-09-25). **Why it is right**, in the documentation's reasoning: the look carries "this figure is
+below zero, and that is allowed", which is what the two states share, and the word says which of the
+two it is, which a user would otherwise have to work out from where the badge sits. On the ring, an
+overspent slice is marked by an outer edge in the marker's colour. The scenarios assert that the two
+states carry the same marker. The look itself is the Desktop's, and stays out of the scenarios.
+
 **It does not cover *Overdrawn*.** *Overdrawn* is the third member of the family, a negative account
 *Balance*. There are no accounts, so it is not in this increment, and **this revision says nothing
 about how it is shown.** *Assigning may overdraw the pool account* (above) had decided that an
@@ -1855,23 +1965,21 @@ where it went.
 behave in a narrow window. Those stay open, as *One marker for over budget and over-assigned*
 (above) says of layout in general.
 
-### Awaiting the scenario gate
+### Approved at the scenario gate
 
-The stakeholder will see the items below at the scenario gate. The first three are **assumptions**
-the scenario writer made while writing this increment's scenarios. **They are not decisions** until
-that gate approves them. They are recorded here so that an approval, or a change, has somewhere to
-land. The last is a **consequence** of a ruling already made. It is recorded as a consequence, and it
-is here so that he sees it before approving.
+The items below were written up here, while this increment's scenarios were being written, as
+**assumptions** the scenario writer had made and one **consequence** of a ruling already taken. They
+waited on the scenario gate. **The stakeholder approved the scenarios with all of them on
+2026-09-25**, so they now stand as decisions. The reasoning is kept, because it is why they stand.
+One of them was later refined (the alphabetical row).
 
-| Assumption | What it rests on |
+| Approved | What it rests on |
 |---|---|
 | **An expense row shows its category**, alongside its date, label and amount | An expense's category is what says what it is, which is why its label is optional (*Income carries a label, and it is required*, above). A list without it would lose that. An income has no category, so its row has none |
 | **With spending but neither income nor any *Budget*, the ring is empty and the spending is listed with the marker** | It combines two rows of the ring table in *The overview, and its ring*: the ring is empty when there is neither income nor a *Budget*, and spending against a *Budget* of zero gets no slice and is listed with the marker. Spending does not appear in the first condition, so it does not stop the ring being empty. The hint that there is no income yet stays true |
-| **A partial name such as "Groc", submitted as typed, is judged as typed**: refused as an unknown category, not silently completed to a suggestion | The category box accepts any text, and suggestions are offers (*Category entry is free text with suggestions*, above). Completing a name silently would record against a category the user did not name |
-
-| Consequence | Of what |
-|---|---|
-| **Once a period boundary passes while MoneyBud is open, in-use categories with no history in the period on screen drop off it** the next time the view is drawn, without the user doing anything | *Staying open across a period boundary* (above): the screen stays on the period it showed, which has become a past period, and the display rule shows a past period only what has history in it. Not a problem to solve. It is recorded as a consequence of two settled rules acting together |
+| **A partial name such as "Groc", submitted as typed, is judged as typed**: refused as an unknown category, not silently completed to a suggestion | The category box accepts any text, and suggestions are offers (*Category entry is free text with suggestions*, above). Completing a name silently would record against a category the user did not name. Narrowing the suggestions as you type, settled after the review, changes nothing here |
+| **Suggestions are alphabetical, with case ignored** | Approved as "the same ordinal comparison as category names". **Refined after the review** to the invariant culture's order, case ignored, so that an accented first letter sorts among its letter (*Category entry is free text with suggestions*, above) |
+| **Consequence: once a period boundary passes while MoneyBud is open, in-use categories with no history in the period on screen drop off it** the next time the view is drawn, without the user doing anything | *Staying open across a period boundary* (above): the screen stays on the period it showed, which has become a past period, and the display rule shows a past period only what has history in it. Not a problem to solve. It is a consequence of two settled rules acting together, and he approved the scenarios with it in front of him |
 
 ### What the UI starts with, and what it keeps
 
@@ -1893,6 +2001,8 @@ reasoning recorded here is the documentation's, not his:
 anything, so nobody could mind losing it. From here on, a request to keep data is the signal §8.3
 is waiting for.
 
+**Built that way.** The Desktop starts every run with `Ledger.StartNew`, and keeps nothing.
+
 ### The UI is in Dutch
 
 > **Everything MoneyBud shows is in Dutch**, in the terms of *Dutch display terms* (below), which the
@@ -1909,11 +2019,14 @@ messages so that a UI can word them without the domain changing. The display ter
 not sentences. The sentence that tells a user a refusal, a shortfall or a bring-back is copy, and
 belongs to the UI.
 
-### The toolkit is not chosen here
+### The toolkit
 
-Which desktop UI toolkit is still open. It will be proposed at the plan gate and recorded as an ADR
-then ([§9](09-architecture-decisions.md)). Nothing in this section depends on it. The scenarios for
-this increment stay declarative and toolkit-free, as `features/README.md` requires.
+It is **Avalonia**, chosen at the plan gate on 2026-09-25 and recorded in
+[ADR 0005](../decisions/0005-avalonia-ui-toolkit.md). It was not chosen here, and nothing in this
+section depends on it. This section first read *The toolkit is not chosen here*, and that stayed
+true: the requirements were settled first, and the toolkit was picked to serve them. The scenarios
+for this increment are declarative and toolkit-free, as `features/README.md` requires, and they run
+against a layer with no toolkit in it ([ADR 0006](../decisions/0006-three-source-projects.md)).
 
 ## Dutch source terms
 
@@ -1993,6 +2106,12 @@ toegewezen*.
 and the other terms of the location dimension have nothing to display in this increment. Their
 Dutch is fixed when they are built, not guessed ahead of it.
 
+**This table is read by a test.** `TekstTests` parses it from this file and holds the constants in
+`Tekst` to it ([§8.4](08-crosscutting-concepts.md)). Changing a Dutch cell, or adding or removing a
+row, fails the test suite until the code follows. Keep this section's heading and the table's header row
+exactly as they are, because the test finds the table by them. The marker badges, the *Gearchiveerd*
+caption and the *Niet teruggezet* notice all use terms from this table. No word was added for them.
+
 ## Open questions
 
 **One**, below. It is recorded so that it is not rediscovered late, and it is **not** waiting on an
@@ -2017,16 +2136,16 @@ Both were **answered on 2026-09-25**, together with a third that belongs to the 
 whether an archived category's figure is offered back when a period opens. All three were
 **decided** (*When any category is shown in a period: the full rule*, *Assigning to an archived
 category brings it back*, *An archived category's figure is not offered back when a period opens*).
-The assigning one is now **built**. The display rule and carry-over are not, and
-[§8.1](08-crosscutting-concepts.md) and [§11](11-risks-and-technical-debt.md) record what the code
-does meanwhile.
+The assigning one was **built** in the assigning increment, and the display rule in the UI increment
+([§8.1](08-crosscutting-concepts.md)). Carry-over is not built, and §8.1 records what the code does
+meanwhile.
 
 Four more were answered on 2026-09-25 for the **assigning increment**: what it covers, which periods
 can be assigned in, whether a negative assignment brings an archived category back, and what
 assigning zero does. The increment was built to all four.
 
-Nine more were answered the same day for the **UI increment**, none of them built yet: what the UI
-covers, whether it shows periods other than the current one, whether it lets the start day be
+Nine more were answered the same day for the **UI increment**, which is now built to all of them:
+what the UI covers, whether it shows periods other than the current one, whether it lets the start day be
 changed, how the ring is drawn, how it shows overspending and over-assignment, what data it starts
 with and keeps, and what language it displays (*The user interface*, above). Two followed from
 those: whether the category box is free text, and what an empty ring shows. Eight more were
@@ -2037,9 +2156,12 @@ period, what a category row shows, the order of categories and slices, the order
 entries, and what happens when MoneyBud stays open past a period boundary. Three smaller points
 they left open were answered the same day: "stays and says where it went" covers an assignment too;
 a period's expenses and incomes are two lists, with the Overview's layout as the stakeholder's wish
-alongside that answer; and a brought-back category keeps its original place in "order added". Three
-assumptions the scenario writer made, and one consequence of staying open across a boundary, are
-recorded in *Awaiting the scenario gate* (above). They wait on that gate and are not open questions.
+alongside that answer; and a brought-back category keeps its original place in "order added". The
+scenario writer's assumptions, and one consequence of staying open across a boundary, were approved
+with the scenarios (*Approved at the scenario gate*, above). How a typed amount is read was ruled at
+the plan gate. Five more points were settled after the spec review: an ambiguous amount is refused,
+suggestions narrow on "contains", each marker badge names its own state, an archived category that
+is still shown is captioned, and "alphabetical" means the invariant culture's order.
 
 One question is **opened** by them rather than answered: whether an overdrawn account gets the
 marker *Over budget* and *Over-assigned* now have. It cannot be answered before accounts exist, and
@@ -2143,7 +2265,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Does adding a name in a different capitalisation change the existing category's spelling? | Same section, *The existing spelling is kept* — **no**, for an active category, an archived one brought back by adding its name, and one brought back by recording an expense against it. Taking the new spelling would be a rename by the back door |
 | May a category be renamed? | *Renaming a category is not in this increment* — deferred with its two questions named, not rejected |
 | Which categories does MoneyBud ship with? | *The default categories* — six, Dutch, a starting set chosen to be tried. *Sparen* ships unbacked until accounts exist |
-| Is a category in use shown in a period where it has no history? | *When any category is shown in a period: the full rule* — **yes in the current and future periods**, because those are the periods you plan; **no in a past one**, which is a record of what happened. A category is shown in P if it has history in P, or if it is in use and P is current or later. Chosen over "every period, always" and "only with history, always". Settled 2026-09-25; not built |
+| Is a category in use shown in a period where it has no history? | *When any category is shown in a period: the full rule* — **yes in the current and future periods**, because those are the periods you plan; **no in a past one**, which is a record of what happened. A category is shown in P if it has history in P, or if it is in use and P is current or later. Chosen over "every period, always" and "only with history, always". Settled 2026-09-25; built in the UI increment |
 | What does assigning to an archived category do? | *Assigning to an archived category brings it back* — the category is **not offered**, and assigning to its name anyway **brings it back**, announced, like recording an expense. A third route back, and still no un-archive act. Chosen over refusing and over offering it. Settled 2026-09-25; built in the assigning increment, which also retired the `SetBudget` scaffold that did not do this ([§8.1](08-crosscutting-concepts.md)). Refined the same day: only a **positive** assignment brings it back (next rows) |
 | Does a negative assignment to an archived category bring it back? | *Only a positive assignment brings it back* — **no**. Pulling its money out is tidying up, not planning for it, and the category stays archived; an over-large one is still clipped and the shortfall reported. Chosen over one rule regardless of sign, which would make reclaiming an archived category's budget a bring-back followed by a second archive. Settled 2026-09-25; built in the assigning increment |
 | May zero be assigned, and does it bring an archived category back? | *Assigning zero is accepted and moves nothing* — **accepted**, changes nothing, and does **not** bring an archived category back. Deliberately unlike a zero expense or income, which is refused because it records a transaction that never happened. Chosen over refusing it. Settled 2026-09-25; built in the assigning increment |
@@ -2152,30 +2274,35 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What does the assigning increment cover? | *Nothing here blocks the assigning increment* — assigning in current and later periods, *Over-assigned*, the clipped shortfall and bringing back. Backed categories, the pool account, one-action carry-over, the sweep and any UI are out, each for its own reason. Settled 2026-09-25; built to that scope |
 | Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; carry-over is not built |
 | Must category names in feature files be English? | *They are Dutch because they are content* — **no**. A name is test data because it is synthetic and no scenario leans on the defaults, not because of its language. Settled 2026-09-25, loosening the earlier "English, with the rest of the specification" |
-| What does the UI cover? | *It covers what the domain does, and nothing more* — everything the domain already does, in the stakeholder's words "all that is currently working on the backend", all three routes back included. No editing or deleting of a transaction, because the domain has neither; that consequence was **accepted** by the stakeholder for the demo, and correcting entries becomes its own later increment ([§11](11-risks-and-technical-debt.md)). Settled 2026-09-25; not built |
-| Is the category box a pick-list or free text? | *Category entry is free text with suggestions* — **free text**, suggesting the offered categories and accepting any name. Chosen over a pick-list alone, which would put two routes back and the unknown-name refusal out of reach. "Not offered" means not suggested. Settled 2026-09-25; not built |
-| What does the ring show when there is nothing to draw? | *The overview, and its ring* — an **empty grey outline with a hint**, only when the period has neither income nor any *Budget*. The hint's wording is copy. Settled 2026-09-25; not built |
-| Does the UI show periods other than the current one? | *Stepping between periods* — **yes**, back and forward, because entries land in past and future periods and a current-only UI would accept entries it could never show. This is where the display rule gets built. Settled 2026-09-25; not built |
+| What does the UI cover? | *It covers what the domain does, and nothing more* — everything the domain already does, in the stakeholder's words "all that is currently working on the backend", all three routes back included. No editing or deleting of a transaction, because the domain has neither; that consequence was **accepted** by the stakeholder for the demo, and correcting entries becomes its own later increment ([§11](11-risks-and-technical-debt.md)). Settled 2026-09-25; built in the UI increment |
+| Is the category box a pick-list or free text? | *Category entry is free text with suggestions* — **free text**, suggesting the offered categories and accepting any name. Chosen over a pick-list alone, which would put two routes back and the unknown-name refusal out of reach. "Not offered" means not suggested. Settled 2026-09-25; built in the UI increment |
+| What does the ring show when there is nothing to draw? | *The overview, and its ring* — an **empty grey outline with a hint**, only when the period has neither income nor any *Budget*. The hint's wording is copy. Settled 2026-09-25; built in the UI increment |
+| Does the UI show periods other than the current one? | *Stepping between periods* — **yes**, back and forward, because entries land in past and future periods and a current-only UI would accept entries it could never show. This is where the display rule got built, as `Ledger.CategoriesShownIn`. Settled 2026-09-25; built in the UI increment |
 | Can the UI change the period start day? | *The period start day stays at the 1st, for now* — **not in this increment**. The stakeholder's ruling was "if the backend is ready, yes"; it is not, because budgets are stored against their period's first day. Deferred, not rejected; the configurable-start-day rule stands. Settled 2026-09-25 |
-| What does the start screen show, and how is the ring drawn? | *The overview, and its ring* — the Overview, headed by a ring with one slice per category, sized to its *Budget* and filled as far as spent, plus a slice for *Unassigned*. Chosen over a ring of spending only and a ring of budgets only. Settled 2026-09-25; not built |
-| How does the ring show an overspent category, spending with no budget, and an over-assigned period? | Same section — an overspent slice stays budget-sized, filled and marked; spending with no budget gets no slice and is listed with the marker; an over-assigned ring shows budgets only, with *Unassigned* marked. One marker for all of them, beside the **negative figure itself**, not a positive "over by". The marker is a **revision** by the stakeholder of the earlier "plain negative figure, unremarked", for *Over budget* and *Over-assigned* only; how *Overdrawn* is shown is not settled. The over-assigned answer was chosen over a ring at income size with an overflowing segment. Settled 2026-09-25; not built |
-| What data does the UI start with, and is it kept? | *What the UI starts with, and what it keeps* — the six default categories and nothing else, and nothing is kept on close. Chosen over synthetic demo data and over saving to a file. [§8.3](08-crosscutting-concepts.md) stands. Settled 2026-09-25; not built |
-| What language does MoneyBud display, and in which terms? | *The UI is in Dutch* and *Dutch display terms* — Dutch, in terms the stakeholder approved. "Nog toe te wijzen" is not used, because *Left to assign* is retired in both languages. Settled 2026-09-25; not built |
-| What do a new entry's date and an assignment's period default to while a period is on screen? | *Defaults, and entering while another period is shown* — an expense's or income's date defaults to **today**, whatever period is shown; assigning defaults to the **period on screen**. Entries are recorded as they happen, and assigning is planning the period being looked at. Settled 2026-09-25; not built |
-| Is assigning offered while a past period is shown? | Same section — **yes, and it is refused with its reason**. With the default above, that is how the past-period refusal is reached from the UI. Chosen over not offering it. Settled 2026-09-25; not built |
-| What does the Overview do after an entry lands in a period other than the one on screen? | Same section — it **stays** on the period it showed and **says which period** the entry went to. Chosen over jumping to that period and over staying silent. Settled 2026-09-25; not built |
-| Does that cover an assignment made into a period other than the one on screen? | Same section, *Assignments are covered too* — **yes**, the same as expenses and incomes: the Overview stays, and MoneyBud says which period the assignment went to. Settled 2026-09-25; not built |
-| Is there a one-step way back to the current period? | *No one-step way back to the current period* — **no**. Stepping back and forward is the only way to move. *Huidige periode* stays as a label, not an action. Chosen over a "Huidige periode" action. Settled 2026-09-25; not built |
-| What does a category row on the Overview show? | *What each category row shows* — its *Budget*, *Spent* and *Remaining*, with the marker when over budget. Chosen over *Remaining* only. Settled 2026-09-25; not built |
-| In what order are categories listed and slices drawn? | *The order of categories and slices* — **largest *Budget* first**, ties in the **order added**, and the *Unassigned* slice **always last going clockwise**, the ring running clockwise. Chosen over order added and alphabetical for the main order, over alphabetical for ties, and over sorting *Unassigned* by size or putting it first. The order changes as you assign. Settled 2026-09-25; not built |
-| In what order are a period's entries listed? | *A period's entries are listed newest first* — newest date first, and on the same date newest-recorded first. Chosen over oldest first. Settled 2026-09-25; not built |
-| Are a period's expenses and incomes one list or two? | Same section — **two**, "definitely", each ordered within itself, so no recording order across both is needed. Settled 2026-09-25; not built |
-| How is the Overview laid out? | *The Overview's layout: income, plan, expenses* — the stakeholder's wish: income on the left, the plan (ring and category rows) in the middle, expenses on the right. Presentation, so fixed in this glossary and not in the scenarios. Given 2026-09-25; not built |
+| What does the start screen show, and how is the ring drawn? | *The overview, and its ring* — the Overview, headed by a ring with one slice per category, sized to its *Budget* and filled as far as spent, plus a slice for *Unassigned*. Chosen over a ring of spending only and a ring of budgets only. Settled 2026-09-25; built in the UI increment |
+| How does the ring show an overspent category, spending with no budget, and an over-assigned period? | Same section — an overspent slice stays budget-sized, filled and marked; spending with no budget gets no slice and is listed with the marker; an over-assigned ring shows budgets only, with *Unassigned* marked. One marker for all of them, beside the **negative figure itself**, not a positive "over by". The marker is a **revision** by the stakeholder of the earlier "plain negative figure, unremarked", for *Over budget* and *Over-assigned* only; how *Overdrawn* is shown is not settled. The over-assigned answer was chosen over a ring at income size with an overflowing segment. Settled 2026-09-25; built in the UI increment. "The same marker" was confirmed after the review to mean the same look, with each badge naming its own state (next rows) |
+| What data does the UI start with, and is it kept? | *What the UI starts with, and what it keeps* — the six default categories and nothing else, and nothing is kept on close. Chosen over synthetic demo data and over saving to a file. [§8.3](08-crosscutting-concepts.md) stands. Settled 2026-09-25; built in the UI increment |
+| What language does MoneyBud display, and in which terms? | *The UI is in Dutch* and *Dutch display terms* — Dutch, in terms the stakeholder approved. "Nog toe te wijzen" is not used, because *Left to assign* is retired in both languages. Settled 2026-09-25; built in the UI increment |
+| What do a new entry's date and an assignment's period default to while a period is on screen? | *Defaults, and entering while another period is shown* — an expense's or income's date defaults to **today**, whatever period is shown; assigning defaults to the **period on screen**. Entries are recorded as they happen, and assigning is planning the period being looked at. Settled 2026-09-25; built in the UI increment |
+| Is assigning offered while a past period is shown? | Same section — **yes, and it is refused with its reason**. With the default above, that is how the past-period refusal is reached from the UI. Chosen over not offering it. Settled 2026-09-25; built in the UI increment |
+| What does the Overview do after an entry lands in a period other than the one on screen? | Same section — it **stays** on the period it showed and **says which period** the entry went to. Chosen over jumping to that period and over staying silent. Settled 2026-09-25; built in the UI increment |
+| Does that cover an assignment made into a period other than the one on screen? | Same section, *Assignments are covered too* — **yes**, the same as expenses and incomes: the Overview stays, and MoneyBud says which period the assignment went to. Settled 2026-09-25; built in the UI increment |
+| Is there a one-step way back to the current period? | *No one-step way back to the current period* — **no**. Stepping back and forward is the only way to move. *Huidige periode* stays as a label, not an action. Chosen over a "Huidige periode" action. Settled 2026-09-25; built in the UI increment |
+| What does a category row on the Overview show? | *What each category row shows* — its *Budget*, *Spent* and *Remaining*, with the marker when over budget. Chosen over *Remaining* only. Settled 2026-09-25; built in the UI increment |
+| In what order are categories listed and slices drawn? | *The order of categories and slices* — **largest *Budget* first**, ties in the **order added**, and the *Unassigned* slice **always last going clockwise**, the ring running clockwise. Chosen over order added and alphabetical for the main order, over alphabetical for ties, and over sorting *Unassigned* by size or putting it first. The order changes as you assign. Settled 2026-09-25; built in the UI increment |
+| In what order are a period's entries listed? | *A period's entries are listed newest first* — newest date first, and on the same date newest-recorded first. Chosen over oldest first. Settled 2026-09-25; built in the UI increment |
+| Are a period's expenses and incomes one list or two? | Same section — **two**, "definitely", each ordered within itself, so no recording order across both is needed. Settled 2026-09-25; built in the UI increment |
+| How is the Overview laid out? | *The Overview's layout: income, plan, expenses* — the stakeholder's wish: income on the left, the plan (ring and category rows) in the middle, expenses on the right. Presentation, so fixed in this glossary and not in the scenarios. Given 2026-09-25; built in the UI increment |
 | Where does a brought-back category fall in "order added"? | *The order of categories and slices* — in its **original place**. Bringing back is not adding again. First the documentation's reading of the code, then confirmed by the stakeholder on 2026-09-25; the code already does this |
 | In what order do the six default categories count as added? | Same section — **in the order the stakeholder listed them**: Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen, which is their order at a first start. Follows from order added and the list being his. Settled 2026-09-25 |
-| In what order are category suggestions listed? | *Category entry is free text with suggestions* — **alphabetically**. Chosen over the Overview's order and over the order added. Settled 2026-09-25; not built |
-| Is anything announced when a new period begins while MoneyBud is open? | *Staying open across a period boundary* — **no**. Only the label of the period on screen changes: it stops being labelled as the current period. Chosen over a short notice. Settled 2026-09-25; not built |
-| What happens when MoneyBud stays open past a period boundary? | *Staying open across a period boundary* — the screen **stays on the period it showed**, which has now become the previous period, so assigning in it is refused from then on. Chosen over following today into the new period. Settled 2026-09-25; not built |
+| In what order are category suggestions listed? | *Category entry is free text with suggestions* — **alphabetically**. Chosen over the Overview's order and over the order added. Settled 2026-09-25; built in the UI increment. **Refined after the review**: alphabetical means the invariant culture's order with case ignored, so "Één" sorts among the E's, not after Z as ordinal comparison put it. Still independent of the machine's language |
+| Is anything announced when a new period begins while MoneyBud is open? | *Staying open across a period boundary* — **no**. Only the label of the period on screen changes: it stops being labelled as the current period. Chosen over a short notice. Settled 2026-09-25; built in the UI increment |
+| What happens when MoneyBud stays open past a period boundary? | *Staying open across a period boundary* — the screen **stays on the period it showed**, which has now become the previous period, so assigning in it is refused from then on. Chosen over following today into the new period. Settled 2026-09-25; built in the UI increment |
+| How is typed text read as an amount? | *Typing an amount* — a comma or a point is the decimal mark, no thousands separator is accepted, and text that is not an amount is refused before anything is recorded. A euro sign, a true minus sign and surrounding spaces are tolerated. Ruled at the plan gate, 2026-09-25; built in the UI increment |
+| Is "2.000" two thousand or two euros? | Same section — **neither: it is refused as ambiguous**, naming both readings. Any point or comma followed by exactly three digits ending in 0 is, because both readings are whole cents and nothing downstream could catch the wrong one. "1.832" still reaches the domain and is refused as finer than a cent. Found by the spec review; settled after it on 2026-09-25; built |
+| Do the suggestions narrow as you type? | *Category entry is free text with suggestions* — **yes, on "contains"**: "schap" finds Boodschappen. Chosen over "starts with" and over not narrowing. Settles what `suggest-categories.feature` left open. Settled after the review, 2026-09-25; built, in the Desktop, and covered by no scenario ([§11](11-risks-and-technical-debt.md)) |
+| Is a marker that reads *Over budget* in one place and *Te veel toegewezen* in the other still "the same marker"? | *One marker for over budget and over-assigned* — **yes**: the same look, with each badge naming its own state. Confirmed after the review, 2026-09-25 |
+| How does the Overview show an archived category that is still shown? | *Where an archived category is still shown* — with a **Gearchiveerd** caption, and **no archive button**. Built that way, seen after the review, and kept by the stakeholder, 2026-09-25 |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
 **Seven** of these answers were taken with their drawbacks visible rather than resolved: the
@@ -2214,8 +2341,8 @@ them. It left two things unsettled that belong to later increments. The first wa
 **in use** is shown in a period where it has no history, which belongs to the period view. The
 second was what **assigning** to an archived category does, which belongs to the assigning
 increment. Both were answered on 2026-09-25, along with carry-over for an archived category. The
-assigning answer has since been built; the other two have not, and §8.1 and
-[§11](11-risks-and-technical-debt.md) record what the code does meanwhile. Two questions arose while this model was being written up and both were
+assigning answer has since been built, and so has the display rule. Carry-over has not, and §8.1
+records what the code does meanwhile. Two questions arose while this model was being written up and both were
 answered the same day: what an added name does when an archived category carries it, and whether an
 archived category can be brought back at all. They turned out to be one question. Three more were
 answered on 2026-09-25, before the scenarios were written: recording an expense against an archived
@@ -2250,3 +2377,12 @@ they combine with zero and clipping, are in *When an assignment is refused* (abo
 | *One action assigns last period's plan in full* (*Budgets carry over as figures*) | It belongs with **period opening**, which is a slice of its own |
 | The sweep | Needs accounts and a period end to act on, as it did before |
 | Any UI | This increment is a domain library and its scenarios, like the three before it. A UI is the increment after it |
+
+**Nothing here blocked the UI increment, and it is built** to *The user interface* (above). Its five
+new feature files were approved at the scenario gate, the plan at the
+plan gate, and `spec-reviewer` reviewed the result, all on 2026-09-25. Two records came with it: the
+toolkit, [ADR 0005](../decisions/0005-avalonia-ui-toolkit.md), and the project layout,
+[ADR 0006](../decisions/0006-three-source-projects.md). The domain gained two queries and no
+behaviour. It reaches nothing about accounts, so the location dimension stays out, as before.
+**Two of the rulings it settled have no scenario yet**: how a typed amount is read, and narrowing
+suggestions as you type ([§11](11-risks-and-technical-debt.md)).

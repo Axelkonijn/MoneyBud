@@ -6,7 +6,7 @@ know regardless of which part of the system they're touching.
 
 ---
 
-_§8.1, §8.2 and §8.3 are filled in._
+_§8.1 to §8.4 are filled in. §8.4 arrived with the UI._
 
 ## 8.1 Domain Model
 
@@ -76,10 +76,15 @@ own:
   no refusal consults it. To keep it honest, an assignment that changes nothing — zero, or a
   negative clipped against a *Budget* already at zero — **writes nothing**, so it cannot make
   `HasBudget` true. The clip case once did, by storing a zero; `spec-reviewer` found it, and it was
-  fixed before the increment closed. **The UI must not consult it either.** The Overview's ring
-  treats "no budget" as a *Budget* of zero, however it got there ([§12](12-glossary.md), *The
-  overview, and its ring*), so a ring built on `HasBudget` would draw a difference §12 says does
-  not exist.
+  fixed before the increment closed. **The UI must not consult it either, and it does not.** The
+  Overview's ring treats "no budget" as a *Budget* of zero, however it got there ([§12](12-glossary.md),
+  *The overview, and its ring*), so a ring built on `HasBudget` would draw a difference §12 says
+  does not exist. `PeriodOverview` and `Ring` read `BudgetFor` and nothing else, and no production
+  code calls `HasBudget` at all. **Only the specs use it**: the *I have never set a budget* and
+  *I have set no budget* *Givens*, and one *Then*, the first-start check that no category has a
+  budget or any spending, plus one unit test. **This stays a watch-out.** A query that can tell
+  apart two states §12 says are one is safe only while nothing a user sees is built on it. If a
+  view ever wants it, revisit §12 first.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case
@@ -189,10 +194,12 @@ signature, and a second rule, "every category act tells its outcome", which is c
 | `Ledger.Assign` → `AssignResult` | Exactly **two** shapes: assigned, handing back the category, or **refused** for one `AssignRefusal`. Two facts ride on an assigned result: `Shortfall`, how much of a negative amount could not come back, and `CategoryBroughtBack`. Both are zero or false on a refused one | Going *Over-assigned* produces a plain assignment, because there is nowhere else for it to go. `Shortfall` is the clip being **said rather than absorbed** ([§12](12-glossary.md), *An over-large negative assignment is clipped*). Like `CategoryBroughtBack`, it is information after the fact, not a warning and not a third outcome. `CategoryBroughtBack` is only ever true for a **positive** amount, and only once every check has passed. It **throws** for a `BudgetPeriod` that is not one of the ledger's calendar periods, such as a hand-made date range. A user picks a period from the calendar and cannot reach that, so, as with archiving, it is a caller's mistake rather than a situation to report |
 
 Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal` and `AssignRefusal` **values, not messages**. The wording the user
-sees belongs to the UI, which is not built yet ([§5](05-building-block-view.md)); putting copy in the
-domain would put it in the wrong place and would make re-wording it a domain change. The UI
-increment settled that the wording is **Dutch** ([§12](12-glossary.md), *The UI is in Dutch*),
-which changes nothing here: the Dutch text lives in the UI, and the domain keeps its reasons.
+sees belongs to the UI; putting copy in the domain would put it in the wrong place and would make
+re-wording it a domain change. The UI increment settled that the wording is **Dutch**
+([§12](12-glossary.md), *The UI is in Dutch*), and built it that way. Every Dutch sentence is in
+`Tekst`, in the presentation layer ([§8.4](#84-the-presentation-layer)), and the domain keeps its
+reasons. **The arrangement held when tested:** the UI increment wrote every refusal in Dutch without
+changing a line of any refusal type.
 
 **`IncomeRefusal` has no `DateInFuture` member, and the absence is the decision.** `ExpenseRefusal`
 has one, so the asymmetry is visible in the source and looks exactly like an oversight to anyone
@@ -266,32 +273,35 @@ of their assertions.
 `AddCategory` had also returned the existing category silently. It now returns an
 `AddCategoryResult` that says which of its four outcomes happened (above).
 
-### Where a category is shown: the domain states the facts, not the view
+### Where a category is shown: one domain query, used by the view and by the steps
 
-[§12](12-glossary.md) now settles the **whole** display rule (*When any category is shown in a
-period: the full rule*). A category is shown in period P if it has history in P (a budget of more
-than zero, or an expense), **or** if it is in use and P is the current period or a later one. The
-domain exposes the facts that rule needs: `Ledger.HasHistoryIn(category, period)`,
-`Ledger.IsArchived(category)` and `Ledger.CurrentPeriod`. It has **no "is shown" query**.
+[§12](12-glossary.md) settles the **whole** display rule (*When any category is shown in a period:
+the full rule*). A category is shown in period P if it has history in P (a budget of more than zero,
+or an expense), **or** if it is in use and P is the current period or a later one. Since the UI
+increment it is **one domain query, `Ledger.CategoriesShownIn(period)`**. It returns the categories
+in the order they were added, so a category brought back keeps its first place. "Current" is read
+from the clock on every call, so a period that was current becomes past the moment the next one
+begins, with nothing rebuilt around it.
 
-**Why there is no such query, then and now.** When the category increment was built, the reason was
-that the rule was **unsettled**. §12 had decided only the archived half, and an `IsShownIn` would
-have had to guess whether a category in use is shown where it has no history. That was answered on
-2026-09-25, so the reason has changed. The query is now **not built yet, because no view needs
-it**. It is not missing for want of a decision any more.
+**Why in the domain, and not in the view.** Which categories a period has anything to say about is a
+fact about the model, and it is the same fact for any view: a second screen, a mobile one, a report.
+How they are ordered on the Overview, largest *Budget* first, is the screen's, and lives in
+`PeriodOverview` ([§8.4](#84-the-presentation-layer)).
 
-**The consequence is carried in [§11](11-risks-and-technical-debt.md).** For now the rule exists only
-in the step definitions, and only its archived half at that. They combine `HasHistoryIn` and
-`IsArchived`, and nothing in production code does. When a period view is built, it should implement
-the **full** rule, and the "shown" steps should be rebound to it. Since the assigning increment
-those steps carry two scenarios in
-[`assign-to-category.feature`](../../features/assign-to-category.feature) as well as the archive
-scenarios.
+**The steps read the view, not the ledger.** The "should (not) be shown in … period" steps used by
+the archive scenarios and two assign scenarios now read the rows of the period's Overview. The same
+goes for "shown as over budget" (the row's marker), "shown as over-assigned" (the marker beside
+*Unassigned*) and "offered" (the suggestions). So a green suite describes what the screen lists. Before the
+UI existed they combined `HasHistoryIn` and `IsArchived` in the step definitions, and only the
+archived half of the rule existed anywhere. That gap was carried in
+[§11](11-risks-and-technical-debt.md) and is now closed.
 
-**A view now needs it.** The UI increment's Overview steps back and forward between periods
-([§12](12-glossary.md), *Stepping between periods*), and so it is the first thing that has to decide
-which categories each period shows. That is where the full rule gets built. Until it is, everything
-above still describes the code.
+**How this section read before, kept because the reasoning changed twice.** When the category
+increment was built there was **no "is shown" query**, because the rule was unsettled and an
+`IsShownIn` would have had to guess the in-use half. Once §12 settled it on 2026-09-25, the query
+was still absent, now because no view needed it. The UI's stepping between periods was the first
+view that did, and the query was built with it. `HasHistoryIn` and `IsArchived` remain, as the
+halves the full rule is made of.
 
 ### A first start is a door of its own
 
@@ -409,6 +419,52 @@ here:
 [ADR 0001](../decisions/0001-dotnet-and-reqnroll.md) was pointing at when it named `decimal` as a
 reason C# suits this domain. The two records agree; `decimal` simply stops at the boundary.
 
+### Decided: typed text becomes a `decimal` exactly as typed, and the cent rule stays the domain's
+
+The UI put one more step in front of that boundary: the user types **text**. `AmountInput`, in the
+presentation layer, turns it into the `decimal` the domain takes. The rules it reads by are
+[§12](12-glossary.md)'s (*Typing an amount*). What matters here is what it does **not** do:
+
+- **It never rounds.** The `decimal` it passes on is exactly the digits typed. "12,345" becomes
+  12.345, and the domain refuses it as finer than a cent, which is the refusal the user sees. The
+  whole-cents rule has one home, and it is still the domain.
+- **It never judges a sign.** A leading minus is read, because assigning a negative amount is how
+  money goes back to *Unassigned*. Whether a negative is allowed is the domain's to say: an expense
+  refuses it, and an assignment takes it.
+- **It is bounded so that nothing can be lost in the conversion.** It reads at most thirteen whole
+  digits and ten decimals. Ten decimals always fit a `decimal` exactly, where a longer tail would be
+  rounded by the parse and would turn a refusable amount into an acceptable one without a word.
+  Thirteen whole digits is far inside what a `Money`'s `long` of cents can hold. Anything longer is
+  refused as not an amount.
+
+So there are now **two layers of refusal, in a fixed order**: text that is not an amount, or is
+ambiguous, is refused by the presentation layer before the domain sees it, and everything else is
+refused, or not, by the domain's own rules ([§6](06-runtime-view.md)). The first layer's refusals are
+not domain reasons and have no enum. They are the screen's, like the rest of what it reads.
+
+### Decided: display formatting is fixed, not taken from the machine
+
+An amount is shown as **"€ 1.832,45"**, and a negative one as **"−€ 20,00"** with a true minus sign.
+`Tekst.Euro` builds this from fixed separators, not from the machine's nl-NL culture data. **Why:**
+the same reason the category name comparer is ordinal ([§8.1](#81-domain-model)). What MoneyBud
+shows should not depend on where it runs, and culture data differs between operating systems and
+versions in exactly these details: the group separator, the minus sign, the space after the €.
+
+That display is also **why "2.000" is ambiguous**. MoneyBud itself shows thousands with a point, so a
+user who has seen "€ 2.000,00" on screen has every reason to type "2.000"
+([§12](12-glossary.md), *Typing an amount*).
+
+### The ring's proportions are drawing shares, not amounts
+
+`Ring` works out each slice's start and sweep as a `double` share of the circle, and how far it is
+filled as another. **Apart from the pixel geometry `RingControl` draws them with, these are the
+only floating-point numbers in MoneyBud, and they are not money.** No amount is computed from them, and nothing flows back from them into a `Money`. Every
+slice's size and fill is a `Money`, read from the domain, and the shares are derived from those for
+drawing only. So the "never `double` for money" rule and the premise of the whole-cents rule above
+(amounts are entered, never computed) both stand. A share that is off in the ninth decimal moves a
+pixel, not a cent. The one scenario that checks shares asserts that they close the circle to nine
+places.
+
 ### Decided: amounts are positive magnitudes, and direction comes from the transaction type
 
 An *Income* increases the total and an *Expense* decreases it. **Neither stores a negative
@@ -498,7 +554,98 @@ to a file and over starting with synthetic demo data ([§12](12-glossary.md), *W
 with, and what it keeps*). The trigger above has not fired. The UI is, though, the first increment
 in which it **can** fire: until now nobody could enter anything, so nobody could mind losing it.
 
+**The UI is built, and keeps nothing.** Every start is a first start: the Desktop builds its ledger
+with `Ledger.StartNew`, and it is gone when the window closes. The trigger above is now reachable
+and has not fired.
+
 This is a **scope** decision rather than an architectural one, which is why it lives here and not
 as a record in [`docs/decisions/`](../decisions/). MoneyBud already records "not in the first
 increment" in the section the thing belongs to — [§12](12-glossary.md) does it for accounts, the
 pool account, backed categories and the sweep — and none of those got a record of their own either.
+
+## 8.4 The presentation layer
+
+`MoneyBud.Presentation` holds everything the screen decides and has no UI toolkit
+([ADR 0006](../decisions/0006-three-source-projects.md), [§5](05-building-block-view.md)). What the
+screen shows was settled with the stakeholder and is in [§12](12-glossary.md), *The user
+interface*. This section covers what a developer needs to know about how the layer is arranged,
+how the scenarios reach it, and which behaviour was decided while building rather than ruled on.
+
+### The period on screen is held as a period
+
+`MoneyBudApp.ShownPeriod` is a `BudgetPeriod`, never "the current one" and never an offset from it.
+That is what makes §12's *Staying open across a period boundary* hold without machinery. When a new
+period begins, the ledger's idea of "current" moves by itself, because `Ledger.CurrentPeriod` reads
+the clock on every call. The period on screen does not move, so it becomes a past period. The
+past-period refusal for assigning and the display rule then follow from the domain. Whether the
+period is labelled *Huidige periode* is worked out on every read.
+
+### Nothing is cached, and the screen is told to look again
+
+`PeriodOverview` is worked out afresh from the ledger every time it is read, so nothing on screen can
+hold a figure that has since changed ([§6](06-runtime-view.md)). `MoneyBudApp.Refresh` changes
+nothing. It raises property changes so that whatever is bound looks again. Every act calls it.
+
+**The Desktop also calls it once a minute**, and that is the only thing that moves the *Huidige
+periode* label when a period ends while MoneyBud is open. The consequence, stated so it is not
+rediscovered: **for up to a minute after a period boundary the screen can be out of date.** The label
+can still read *Huidige periode*, and in-use categories with no history can still be listed in a
+period that has just become past. An assignment made in that minute is refused as past, because the
+domain reads the clock itself. Any act refreshes at once, so the refusal also corrects the label.
+Nothing is announced either way, which is what §12 asks.
+
+### Decided while building, not put to the stakeholder
+
+These are visible to the user and were chosen in the build. They are recorded here so that they are
+not mistaken for rulings. None contradicts a ruling, and any of them can be put to the stakeholder
+if he reacts to it.
+
+| Behaviour | Why it was built this way |
+|---|---|
+| **A form clears after its entry goes through, and keeps what was typed after a refusal** | A refusal is corrected in place, not retyped. A cleared form after success shows that it went through. The assign form clears only its amount, and keeps its category and period |
+| **Every date starts empty, and empty means today** | §12's default ("an entry's date defaults to today, whatever period is on screen"), built so the date never follows the period on screen. The picker shows *Vandaag* until a date is chosen |
+| **The assign form's period follows the screen when it steps, and can be moved on its own** | §12's "assigning defaults to the period on screen", plus a way to name another period without moving the screen, which is how an assignment lands elsewhere |
+| **Stepping clears the last notice** | A notice is about the last thing done. After stepping it would sit beside a period it may not describe |
+| **A period is named by its month, "maart 2026", or by its first and last day when it is not a calendar month** | Every period starts on the 1st in this increment, so the second form is not reachable yet. It exists so that a configurable start day would not produce a wrong month name ([§11](11-risks-and-technical-debt.md), the start-day row) |
+| **Amounts are shown as "€ 1.832,45" and "−€ 20,00"** | [§8.2](#82-money-handling), *display formatting is fixed* |
+
+### All the Dutch is in `Tekst`, and a test holds it to §12
+
+`Tekst` holds two kinds of text. The **display terms** are fixed. They are §12's *Dutch display
+terms* table, and a unit test (`TekstTests`) **reads that table from `12-glossary.md`**. It fails if
+a row's Dutch and its constant disagree, and if a row is added to or removed from the table without
+the test's own list of rows following. So the table is load-bearing: editing it is a code change.
+The **sentences**, meaning refusals, outcomes and the notice about where an entry went, are copy.
+They are not pinned word for word. What is checked is that every refusal reason has one, and, by a
+deliberately crude check, that none reads as English.
+
+**A new refusal reason cannot go unworded.** Each refusal switch in `Tekst` lists every reason and
+has **no fallback arm**. The project suppresses CS8524, the warning about values outside an enum's
+names, so that **CS8509**, a missing named value, still fires. A reason added to the domain without
+Dutch wording is therefore a warning, and the build is kept at zero warnings. A fallback arm would
+have silenced exactly the case that matters.
+
+**The toolkit's own text follows the thread culture**, which the Desktop's `Program` fixes to nl-NL.
+That covers the date picker's month and day names, for example. MoneyBud's own text does not depend
+on it.
+
+### How the scenarios are run
+
+| Step | Acts on | Why |
+|---|---|---|
+| ***Given*** | **The ledger, directly** | Setting up is not what is under test. A budget in a past period is still made by moving the test clock and assigning ([§8.1](#81-domain-model)), so setup cannot make a state the rules forbid |
+| ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: the scenarios' amounts are all meant to reach the domain |
+| ***Then*** about **what is shown** | **The presentation layer**: the period's `PeriodOverview`, its rows, ring and lists, the suggestions, and the notice | Each is a claim about what MoneyBud shows. A period is read with `OverviewFor`, without stepping to it, so checking one period never moves the screen a later step asserts on. This is what closed the [§11](11-risks-and-technical-debt.md) row about "shown" steps bound to the ledger |
+| ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
+
+**What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
+wording against §12, money formatting, the ring's shares, and the forms, alongside the domain's
+tests from earlier increments. ADR 0004's rule applies to them unchanged: a unit test is never the
+reason a behaviour exists.
+
+**That rule has an open case.** The amount-reading rules, including the ambiguity refusal, were
+ruled on by the stakeholder and are held **only** by unit tests. No scenario types "2.000". Suggestion
+narrowing is held by nothing at all ([§11](11-risks-and-technical-debt.md)).
+
+**At the close of the UI increment**: 489 tests passing with zero warnings. That is 251 scenario
+cases, 169 from the four earlier increments and 82 new, and 238 developer unit tests.

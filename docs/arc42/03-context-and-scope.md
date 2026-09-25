@@ -55,5 +55,6 @@ The first external channel would arrive with bank import (§3.2 above). That is 
 gains a file format or a protocol, and not before — nothing here should be designed in advance of
 it.
 
-The desktop UI framework is deliberately not named here; ADR 0002 decides the deployment form, not
-the toolkit.
+The UI toolkit, Avalonia, is now chosen ([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)).
+It changes nothing in this section: it sits inside the application, on the first row above, and
+adds no channel to anything outside it.

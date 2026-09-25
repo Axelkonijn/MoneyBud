@@ -8,18 +8,29 @@ Only decompose where it earns its keep. A level-3 breakdown of a trivial compone
 
 ---
 
-MoneyBud is **one class library and one test project**. That is the whole structure, and it is a
-deliberate choice rather than an unfinished one — the reasoning is in
-[ADR 0004](../decisions/0004-solution-layout.md). This section is therefore short, for the same
-reason [§7](07-deployment-view.md) is: a short section can be the right answer rather than a
-missing one.
+MoneyBud is **three source projects and one test project**. Until the fifth increment it was one
+library and one test project. The UI split into a layer that decides what the screen shows and a
+thin one that draws it. The reasoning is in [ADR 0006](../decisions/0006-three-source-projects.md),
+which supersedes the "two projects" of [ADR 0004](../decisions/0004-solution-layout.md). This
+section stays short, for the same reason [§7](07-deployment-view.md) is.
 
 ## Level 1 — Whitebox: MoneyBud
 
+```
+MoneyBud.Desktop  ──►  MoneyBud.Presentation  ──►  MoneyBud.Domain
+   (Avalonia)            (no UI toolkit)             (base class library only)
+                               ▲                            ▲
+                               └──────  MoneyBud.Specs  ────┘
+```
+
+An arrow is a project reference. Nothing references the Desktop.
+
 | Building block | Responsibility |
 |---|---|
-| **`src/MoneyBud.Domain`** | The whole application. Categories, budgets, expenses, income, budget periods and the `Money` type. Adds and archives categories and brings archived ones back, under one category name rule (`CategoryName`). Ships the six default categories for a first start (`Ledger.StartNew`). Assigns to categories (`Ledger.Assign`, reporting through `AssignResult` and `AssignRefusal`), which is the only way a budget is made. Computes *Remaining*, *Unassigned* and whether a period is *Over-assigned*, decides what to refuse, and reports what each category act did. Depends on nothing but the .NET base class library — no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
-| **`tests/MoneyBud.Specs`** | Runs the specification against the domain: Reqnroll step definitions on top of xUnit, with the scenario's world in `Support/`. Also holds the developer unit tests in `Unit/`, which are tests and not specification — see ADR 0004 for why they share a project and what rule keeps them subordinate |
+| **`src/MoneyBud.Domain`** | The model and its rules. Categories, budgets, expenses, income, budget periods and the `Money` type. Adds and archives categories and brings archived ones back, under one category name rule (`CategoryName`). Ships the six default categories for a first start (`Ledger.StartNew`). Assigns to categories (`Ledger.Assign`), which is the only way a budget is made. Computes *Remaining*, *Unassigned* and whether a period is *Over-assigned*, decides what to refuse, and reports what each act did. Decides which categories a period shows (`Ledger.CategoriesShownIn`). Depends on nothing but the .NET base class library: no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
+| **`src/MoneyBud.Presentation`** | **Everything the screen decides, with no UI toolkit.** `MoneyBudApp` is the whole screen: the period on screen and stepping, the acts the user can take with their defaults, and the notice afterwards, including where an entry went when it landed in another period. `PeriodOverview` is one period as the Overview shows it (rows, markers, the two lists), and `Ring` is its slices with their clockwise shares. It also holds the category suggestions, the entry forms, `AmountInput` for reading typed text, and `Tekst` for every Dutch word shown. References the domain, and CommunityToolkit.Mvvm, which depends on no toolkit ([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)) |
+| **`src/MoneyBud.Desktop`** | The Avalonia window, laid out income, plan, expenses, and `RingControl`, which draws the ring from `Ring`'s shares. Starts a first-start ledger on the system clock, and tells the screen to look again once a minute. **Deliberately thin, and with no automated tests** ([§11](11-risks-and-technical-debt.md)) |
+| **`tests/MoneyBud.Specs`** | Runs the specification: Reqnroll step definitions on xUnit, with the scenario's world in `Support/`. *Given* steps set up the ledger; every *When* acts through `MoneyBudApp`; *Then* steps about what is shown read the presentation layer ([§8.4](08-crosscutting-concepts.md)). Also holds the developer unit tests in `Unit/`, for both the domain and the presentation layer. They are tests and not specification; ADR 0004 says why they share a project and what rule keeps them subordinate |
 
 `features/` is **not a building block.** It holds the Gherkin specification, and the specs project
 *links* those files in rather than owning a copy of them (ADR 0004). It is listed here only because
@@ -29,32 +40,27 @@ The solution file is `MoneyBud.slnx` at the repository root.
 
 ## There is no level 2
 
-`MoneyBud.Domain` is a handful of types with no internal boundary worth drawing. A breakdown of it
-would restate the class list, and [§8.1](08-crosscutting-concepts.md) already says the thing about
-those types that is actually worth saying — how [§12](12-glossary.md)'s two distinctions are
-expressed, where income sits relative to them, and which of its concepts have no code at all. The
-code itself is the level-2 view.
+None of the three projects has an internal boundary worth drawing. The domain is a handful of types,
+and [§8.1](08-crosscutting-concepts.md) says what is worth saying about them. The presentation layer
+is a handful more, and [§8.4](08-crosscutting-concepts.md) does the same for it. The Desktop is one
+window and one control. A breakdown of any of them would restate the class list. The code itself is
+the level-2 view.
 
-Adding a capability therefore updates the responsibility above and §8.1, and leaves the rest of
-this section alone. The income increment added `Income`, `IncomeRefusal`, `RecordIncomeResult` and
-three members on `Ledger` without moving a single boundary. The category increment added
-`CategoryName` and `AddCategoryResult`, and archiving and first-start members on `Ledger`, and it
-moved none either. The assigning increment added `AssignResult` and `AssignRefusal`, and
-`Assign` and `IsOverAssigned` on `Ledger`. It removed `Ledger.SetBudget`
-([§8.1](08-crosscutting-concepts.md)), and it moved no boundary either.
+Adding a capability therefore updates the responsibilities above and §8, and leaves the rest of this
+section alone. The income, category and assigning increments each added types to the domain and
+moved no boundary. The UI increment is the one that did move them, and ADR 0006 records it. It added
+two queries to the domain, `CategoriesShownIn` and `ExpensesIn`, and no behaviour.
 
 ## What is not here yet
 
-Two building blocks are conspicuously absent, and both are absent for a recorded reason rather
-than by omission:
+One building block is conspicuously absent, for a recorded reason rather than by omission:
 
 | Absent | Why |
 |---|---|
-| **A user interface** | [ADR 0002](../decisions/0002-desktop-application-first.md) settles that MoneyBud is a desktop application but deliberately leaves the toolkit open, and no approved scenario needs a screen yet. Nothing in the domain anticipates one: refusals are reasons rather than messages precisely so that the UI can be added without the domain changing ([§8.1](08-crosscutting-concepts.md)). **It is the fifth increment**, now at stage 2. What it covers is settled in [§12](12-glossary.md), *The user interface*. The toolkit is still open and will be proposed at the plan gate |
-| **Anything that stores data** | [§8.3](08-crosscutting-concepts.md) defers persistence entirely — state lives in `Ledger` for the lifetime of a run and is gone afterwards — and states what will force the decision |
+| **Anything that stores data** | [§8.3](08-crosscutting-concepts.md) defers persistence entirely. State lives in `Ledger` for the lifetime of a run and is gone afterwards, and the UI starts from the default categories every time. §8.3 states what will force the decision, and the UI is the first increment in which it can |
 
-Adding either is the moment to re-examine whether two projects are still the right number
-([ADR 0004](../decisions/0004-solution-layout.md)).
+Adding it is the moment to re-examine the project layout again
+([ADR 0006](../decisions/0006-three-source-projects.md)).
 
 [§7](07-deployment-view.md) maps all of this onto one process on one machine, which no part of
 this section changes.

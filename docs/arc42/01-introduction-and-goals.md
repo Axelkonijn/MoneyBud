@@ -64,14 +64,16 @@ be part of the first version. Other sections now say "not built yet" or "in any 
 instead, because the count has moved past one and a claim pinned to the first increment stops
 telling the reader what is true today.
 
-**The fifth increment is the first with a screen.** The four before it (expenses, income,
-categories, assigning) built a domain library with no user interface. The fifth puts a desktop UI,
-in Dutch, over everything the domain does, and so turns the library into the demo
+**The fifth increment is the first with a screen, and it is built.** The four before it (expenses,
+income, categories, assigning) built a domain library with no user interface. The fifth puts a
+desktop UI, in Dutch, over everything the domain does, and so turns the library into the demo
 [ADR 0002](../decisions/0002-desktop-application-first.md) is about. Its start screen is the one
 round 3 asked for: *"waar mijn geld heen gaat — het radiale diagram"*, the Overview headed by a ring
 that shows each category's plan and spending in one picture. It keeps nothing when it closes
 ([§8.3](08-crosscutting-concepts.md)). What it covers, and how the ring is drawn, are in
-[§12](12-glossary.md), *The user interface*.
+[§12](12-glossary.md), *The user interface*. It is built with Avalonia
+([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)), over a presentation layer that holds
+everything the screen decides ([ADR 0006](../decisions/0006-three-source-projects.md)).
 
 Accounts, net worth, and recurring transactions are later increments. They are deferred, not
 dropped — the model above describes MoneyBud as intended, and the documentation should not be read

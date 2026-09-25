@@ -15,90 +15,110 @@ Each has its own record or section; this table is the map, not the reasoning.
 |---|---|---|
 | **Technology** | .NET 10 / C#, with Reqnroll for the Gherkin scenarios | [ADR 0001](../decisions/0001-dotnet-and-reqnroll.md) |
 | **Deployment form** | A desktop application: one process on the user's own machine, no server, no network | [ADR 0002](../decisions/0002-desktop-application-first.md), [§7](07-deployment-view.md) |
+| **UI toolkit** | Avalonia 12 with its Fluent theme, and CommunityToolkit.Mvvm for the view models. Chosen partly because it keeps the deferred mobile wish reachable | [ADR 0005](../decisions/0005-avalonia-ui-toolkit.md) |
 | **Money** | A signed `Money` value type over a whole number of cents; sub-cent amounts refused rather than rounded; direction carried by the transaction type; no currency field | [ADR 0003](../decisions/0003-money-representation.md), [§8.2](08-crosscutting-concepts.md) |
-| **Decomposition** | One domain library and one specification project. No layered set, no application layer | [ADR 0004](../decisions/0004-solution-layout.md), [§5](05-building-block-view.md) |
+| **Decomposition** | Three source projects: the domain; a **presentation layer with no UI toolkit**, holding everything the screen decides; and a thin Avalonia desktop. One specification project runs the scenarios against the first two, with no window | [ADR 0006](../decisions/0006-three-source-projects.md), which supersedes the "two projects" of [ADR 0004](../decisions/0004-solution-layout.md); [§5](05-building-block-view.md) |
 | **Persistence** | None. State lives in memory for the lifetime of a run | [§8.3](08-crosscutting-concepts.md) |
 | **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
 
-Read together, these say one thing: **everything built so far is a domain library and its
-executable specification, and nothing else.** Four increments in — recording an expense, recording
-an income, adding and archiving categories, and assigning to them — that is still the whole of it.
-Everything that would normally surround it — a UI, a store, a process boundary — has been deferred
-with a stated trigger rather than sketched, and adding capabilities has not put pressure on any of
-those deferrals.
+Read together, these say: **a domain library, a screen over it, and an executable specification
+that reaches both.** For four increments the first and third were the whole of it. The fifth added
+the screen and split it in two. What the screen *decides* sits in a layer the scenarios can run
+without a window. What it *draws* sits in a thin toolkit project that nothing tests automatically.
+A store and a second process are still deferred with a stated trigger rather than sketched
+([§8.3](08-crosscutting-concepts.md)).
 
 ## How the quality goals fare
 
-[§1.2](01-introduction-and-goals.md) ranks four quality goals. Two of them are not served by this
-increment at all, and saying so is more useful than claiming otherwise.
+[§1.2](01-introduction-and-goals.md) ranks four quality goals. For four increments, the two
+highest-ranked had no implementation at all, because they are about what the user sees and does.
+The UI increment changed that for both, to different degrees. **None of the four is measured**:
+[§10](10-quality-requirements.md) is still empty, because no measure has been agreed with the
+stakeholder. "Served" below means that something is built for the goal. It does not mean the goal
+has been shown to be met.
 
-### 1. Legibility — **not yet served**
+### 1. Legibility — **served, through the ring**
 
-There is no user interface, so nothing is shown to anyone. Nothing built so far delivers this goal,
-and the income increment did not change that — it added a figure, *Unassigned*, that nobody can
-look at.
+The Overview is the first thing built for this goal. Its ring puts each category's plan and
+spending in one picture. A slice is sized to the *Budget* and filled as far as it has been spent, so
+*Remaining* is the unfilled part of a slice rather than a figure to look up. *Unassigned* is a slice
+of its own, so the ring is the period's income, the part without a purpose included
+([§12](12-glossary.md), *The overview, and its ring*). Each row states in figures what its slice
+draws: *Budget*, *Uitgegeven*, *Resterend*. An overspent category and an over-assigned period carry
+a marker beside the negative figure.
 
-What exists is a **precondition**, and it should not be mistaken for a delivery: *Remaining* is
-computed in exactly one place, from the plan minus the actual, so there can be no second figure
-quietly disagreeing with the first ([§8.1](08-crosscutting-concepts.md)); *Over budget* is derived
-from it rather than stored, so the two cannot drift apart. A single, consistent number is what a
-legible display needs to have underneath it. It is not a legible display.
+The earlier groundwork is what makes this safe rather than merely present. *Remaining* is computed
+in exactly one place ([§8.1](08-crosscutting-concepts.md)), and the ring and the rows both read it
+from there. So the picture and the figures cannot disagree with each other or with the domain.
 
-**Scheduled, not built.** The UI increment's Overview is the first thing designed to serve this
-goal. Its ring puts each category's plan and spending in one picture, so *Remaining* is the unfilled
-part of a slice rather than a figure to look up ([§12](12-glossary.md), *The overview, and its
-ring*). Until it is built, "not yet served" stands.
+**What is not yet known** is whether it is legible *to the stakeholder*, which is what the goal is
+about. That is the demo's question to answer. Only the stakeholder can answer it, and nothing here
+claims otherwise.
 
-### 2. Effortless entry — **not yet served**
+### 2. Effortless entry — **partly served: entry exists, on desktop only**
 
-Same reason: entry happens through a UI, and there isn't one.
+Entry now happens through a screen, and several things were shaped to take work out of it:
 
-Three things were shaped with the goal in mind and cost nothing to note — an expense's label is
-optional (an income's is **required**, and [§12](12-glossary.md) argues why that is not the same
-trade); a category with no budget set records an expense like any other, so nothing has to be set
-up before spending can be recorded; and an income names no category at all, so money can be
-recorded as arriving before any decision has been made about it. Against that, the visible
-behaviour of what is built is still mostly *refusal*: five reasons an expense is rejected, three an
-income is, and four an assignment is. Refusing bad input is not the same as making entry effortless, and can easily
-be its opposite. The decisions that will actually serve this goal — the
-account default, the one-action carry-over of last period's budgets ([§12](12-glossary.md)) —
-belong to later increments.
+- an entry's date defaults to today, and an assignment's period to the period on screen;
+- the category box suggests the categories in use, narrowing as you type, and still accepts any
+  name;
+- after a refusal a form keeps what was typed, so it is corrected in place rather than retyped;
+- an expense's label is optional, and a category with no budget records an expense like any other.
+
+Three things hold it back, and all three are recorded rather than solved:
+
+- **It is on the desktop, and entry happens out of the house**
+  ([ADR 0002](../decisions/0002-desktop-application-first.md), [§11](11-risks-and-technical-debt.md)).
+  This is the goal the desktop-first trade costs most.
+- **A wrong entry cannot be corrected** except by closing MoneyBud and losing everything, which the
+  stakeholder accepted for the demo ([§11](11-risks-and-technical-debt.md)).
+- **Much of what is visible is still refusal**: five reasons an expense is refused, three for an
+  income, four for an assignment, and now two more before any of them, for text that is not an
+  amount or is ambiguous ([§12](12-glossary.md), *Typing an amount*). Each is there to stop a wrong
+  record, and none of them makes entry easier.
+
+The decisions that would serve it most belong to later increments: the account default, and the
+one-action carry-over of last period's budgets ([§12](12-glossary.md)).
 
 ### 3. Adaptability — **genuinely served**
 
-This is the goal the increment's structure is actually built around.
-
-- **`MoneyBud.Domain` depends on nothing but the base class library** — no UI toolkit, no storage
-  library, not even an ambient clock. Adding any of those later is an addition rather than an
-  untangling, which is what makes ADR 0004's two-project layout safe to keep.
-- **Refusals are reasons, not messages** ([§8.1](08-crosscutting-concepts.md)), so re-wording
-  anything the user reads never reaches the domain.
-- **The scenarios are declarative** (`features/README.md`), so the specification survives being
-  pointed at a different UI — the property [ADR 0002](../decisions/0002-desktop-application-first.md)
-  relies on when it defers mobile.
+- **`MoneyBud.Domain` still depends on nothing but the base class library.** It has no UI toolkit,
+  no storage library and no ambient clock. The UI increment's two packages went into the new projects
+  instead ([ADR 0006](../decisions/0006-three-source-projects.md)).
+- **The toolkit is at the edge.** Everything the screen decides is in `MoneyBud.Presentation`, which
+  has no reference to Avalonia. Replacing the toolkit, or adding a mobile head, means a new window,
+  and no scenario would change.
+- **Refusals are reasons, not messages** ([§8.1](08-crosscutting-concepts.md)). All the Dutch is in
+  one class, `Tekst`, so rewording anything the user reads touches neither the domain nor the
+  window. A refusal reason added to the domain without Dutch wording is a compiler warning, and the
+  build is kept at zero warnings ([§8.4](08-crosscutting-concepts.md)).
+- **The scenarios are declarative** (`features/README.md`), and the screen scenarios run against a
+  layer with no toolkit. So the specification survives being pointed at a different UI, which is
+  the property [ADR 0002](../decisions/0002-desktop-application-first.md) relies on when it defers
+  mobile.
 - **`Money` has no division and no fractional multiplication** by deliberate omission
-  ([ADR 0003](../decisions/0003-money-representation.md)), which makes the one rule that would be
-  expensive to break hard to break by accident.
+  ([ADR 0003](../decisions/0003-money-representation.md)), so the one rule that would be expensive
+  to break is hard to break by accident. The ring's proportions are drawing shares, not amounts, and
+  do not reach `Money` ([§8.2](08-crosscutting-concepts.md)).
 
-The caveat: adaptability of the **software** is served; adaptability of the **data**, which
+The caveat stands: adaptability of the **software** is served; adaptability of the **data**, which
 [§1.2](01-introduction-and-goals.md) names in the same breath, is untouched because there is no
-stored data to adapt.
+stored data to adapt. The inability to correct an entry is that caveat as the user meets it.
 
 ### 4. Local operation — **served, and trivially so**
 
 One process on one machine, no server, no network dependency, nothing written anywhere
-([ADR 0002](../decisions/0002-desktop-application-first.md), [§7](07-deployment-view.md)). This is
-the easiest of the four to satisfy today and the easiest to give away later: desktop/mobile sync,
-deferred rather than rejected in [§3.2](03-context-and-scope.md), is the thing that would put
-pressure on it. It should be an explicit trade when that arrives, not a drift.
+([ADR 0002](../decisions/0002-desktop-application-first.md), [§7](07-deployment-view.md)). The UI
+changed nothing here. This is the easiest of the four to satisfy today and the easiest to give away
+later: desktop/mobile sync, deferred rather than rejected in [§3.2](03-context-and-scope.md), is the
+thing that would put pressure on it. It should be an explicit trade when that arrives, not a drift.
 
 ## The honest summary
 
-**Two of the four ranked goals have no implementation.** That is the expected shape of an increment
-with no user interface, and it follows from what the first version is meant to be — a demo to
-gather feedback on ([§1.1](01-introduction-and-goals.md)). But it means this section cannot yet
-claim the architecture is meeting the goals it is ranked against. It is meeting two of them and
-laying groundwork for the other two.
+**All four goals now have something built for them, and none has been measured.** Legibility has its
+first real delivery in the ring. Effortless entry has an entry screen, on the device where entry
+happens least. Adaptability and local operation are served as before.
 
-Revisit when a UI exists. That is also when [§10](10-quality-requirements.md) becomes writable:
-goals 1 and 2 have no measurable scenario today because there is nothing to measure them on.
+That is the right shape for a demo that exists to be reacted to ([§1.1](01-introduction-and-goals.md)).
+The stakeholder's reaction is the measure that matters now. When he names what "at a glance" or
+"no effort" should mean in practice, [§10](10-quality-requirements.md) is where it gets written.
