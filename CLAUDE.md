@@ -88,17 +88,17 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 234 passing: 68 scenario cases, the rest developer unit tests
+dotnet test  MoneyBud.slnx     # 282 passing: 104 scenario cases, the rest developer unit tests
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-25, after the category scenarios were approved. Update this when a stage completes._
+_Last updated 2026-09-25, after the category increment shipped green. Update this when a stage completes._
 
-**Done: all five stages, twice — for `record-expense` and for `record-income`.** Both are built
-and green.
+**Done: all five stages, three times — for `record-expense`, `record-income` and categories.**
+All three are built and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -108,16 +108,21 @@ and green.
 - `features/record-expense.feature` — 21 scenarios, **approved at the first gate**. Two were added
   later, when label trimming was settled during the income increment.
 - `features/record-income.feature` — 16 scenarios, **approved at the first gate** on 2026-09-25.
+- `features/add-category.feature` and `features/archive-category.feature`, plus five scenarios added
+  to `record-expense.feature` — **approved at the first gate** on 2026-09-25.
 - Increment 1's plan, approved at the second gate on 2026-09-24, settled the money questions
   ([ADR 0003](docs/decisions/0003-money-representation.md)), deferred persistence with a stated
   trigger ([§8.3](docs/arc42/08-crosscutting-concepts.md)), and fixed the solution shape
   ([ADR 0004](docs/decisions/0004-solution-layout.md)). Increment 2's needed **no new ADR** —
-  nothing in it was architectural ([§9](docs/arc42/09-architecture-decisions.md)).
-- Both were reviewed by `spec-reviewer` and documented back into arc42.
+  nothing in it was architectural ([§9](docs/arc42/09-architecture-decisions.md)), and neither did
+  increment 3's. Axel **waived the plan gate** for increment 3 and said to go straight to code.
+- All three were reviewed by `spec-reviewer` and documented back into arc42.
 
-**What exists in code:** `Money` (whole cents in a `long`), `Category`, `BudgetPeriod`,
-`BudgetPeriodCalendar`, `Ledger`, and a matching pair per transaction — `Expense`,
-`ExpenseRefusal`, `RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`.
+**What exists in code:** `Money` (whole cents in a `long`), `Category` and `CategoryName` (the
+name rule), `AddCategoryResult`, `BudgetPeriod`, `BudgetPeriodCalendar`, `Ledger` (which also
+archives, and whose `StartNew` seeds the default categories), and a matching pair per
+transaction — `Expense`, `ExpenseRefusal`, `RecordExpenseResult` and `Income`, `IncomeRefusal`,
+`RecordIncomeResult`.
 No UI, no storage, no accounts — all three deliberate, all three with their reasoning recorded.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
@@ -139,40 +144,45 @@ It also settled two rules that reach back into `record-expense`: **every label i
 ends and left alone inside, and an expense label that trims to nothing is **no label** rather than
 one made of spaces. That is why `record-expense.feature` grew two scenarios.
 
+**Increment 3 — adding and archiving a category — is done and green**, on branch
+`increment-3-categories`. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
+and one low defect, fixed. Everything is in [§12](docs/arc42/12-glossary.md); in outline:
+
+- **Removing a category takes it out of new entry; its history stays.** The state is called
+  **Archived** — not *deleted*, because nothing is. Archiving **never asks for confirmation** and
+  **says afterwards** that it was archived. An archived category is **shown in every period where
+  it has history** — a budget of more than zero, or an expense — **the current period included**,
+  and nowhere else. A zero budget with nothing spent is not history.
+- **Two routes back, and still no un-archive act.** Adding an archived category's name brings it
+  back, history and all. So does **recording an expense against it**: the expense is recorded,
+  the category comes back, and MoneyBud says so. That was **decided**, overturning an earlier
+  derivation that assumed recording could add a category — it cannot; an unknown name is refused.
+  An expense refused for another reason brings nothing back.
+- **Category names: trim the ends, count a run of inner whitespace as one, ignore case** — for
+  every comparison, adding and recording alike, and ordinally so the machine's culture cannot
+  change the answer. Stored trimmed, otherwise as typed. A name that trims to nothing is refused.
+- **Adding a name you already have** returns that category, **spelled as it already was**, and says
+  it was already there. Taking the new spelling would be a rename by the back door.
+- **Archiving a name you don't have, or archiving twice, are non-cases** — Axel's ruling. The code
+  throws for both, as caller mistakes rather than user situations.
+- **Renaming is not in this increment** — deferred, not rejected.
+- **The default categories are Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen** —
+  Axel's own list, "enough to get an idea and test". **Dutch** where the feature files use English
+  names: those are synthetic test data, these are user-facing content. **`Sparen` is unbacked for
+  now** and becomes account-backed when the location dimension arrives — not an oversight. The
+  scenarios start from an **empty** ledger unless they are about the first start, which is what
+  proves no other scenario depends on the defaults.
+
+**Watch out for** in later increments: **whether an archived category is shown in a period lives
+only in the step definitions.** The ledger exposes `HasHistoryIn` and `IsArchived`, not an "is
+shown" query, because whether a category *in use* is shown where it has no history is unsettled.
+When a period view is built, the archive scenarios' "should (not) be shown" steps must be rebound
+to it. Three questions surfaced that belong to later increments: is an archived category offered
+when assigning; is its figure offered back when a period opens; is a category in use shown in a
+period where it has no history.
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Adding and archiving a category** — the current increment, on branch
-  `increment-3-categories`. **Stages 1–3 are done and the scenarios are approved** (2026-09-25):
-  `features/add-category.feature`, `features/archive-category.feature`, and five new scenarios in
-  `features/record-expense.feature`. Axel waived a separate plan gate for this one and said to go
-  on to code. Everything is in [§12](docs/arc42/12-glossary.md); in outline:
-    - **Removing a category takes it out of new entry; its history stays.** The state is called
-      **Archived** — not *deleted*, because nothing is. Archiving **never asks for confirmation**
-      and **says afterwards** that it was archived. An archived category is **shown in every
-      period where it has history** — a budget of more than zero, or an expense — **the current
-      period included**, and nowhere else. A zero budget with nothing spent is not history.
-    - **Two routes back, and still no un-archive act.** Adding an archived category's name brings
-      it back, history and all. So does **recording an expense against it**: the expense is
-      recorded, the category comes back, and MoneyBud says so. That was **decided**, overturning an
-      earlier derivation that assumed recording could add a category — it cannot; an unknown name
-      is refused. An expense refused for another reason brings nothing back.
-    - **Category names: trim the ends, count a run of inner spaces as one, ignore case** — for
-      every comparison, adding and recording alike. Stored trimmed, otherwise as typed. A name
-      that trims to nothing is refused. This is a **correction**: `Ledger` keys categories with
-      `StringComparer.Ordinal` today, so names are compared exactly by accident, not by decision.
-    - **Adding a name you already have** returns that category, **spelled as it already was**, and
-      says it was already there. Taking the new spelling would be a rename by the back door.
-    - **Archiving a name you don't have, or archiving twice, are non-cases** — Axel's ruling: you
-      can only archive a category you have that is in use. No behaviour is specified for either.
-    - **Renaming is not in this increment** — deferred, not rejected.
-    - **The default categories are Boodschappen, Huur, Hobby, Sparen, Verzekeringen,
-      Abonnementen** — Axel's own list, "enough to get an idea and test". They are **Dutch**
-      where the feature files use English names; those are synthetic test data, these are
-      user-facing content. **`Sparen` is unbacked for now** and becomes account-backed when the
-      location dimension arrives — not an oversight.
-  Three questions surfaced that belong to later increments, not this one: is an archived category
-  offered when assigning; is its figure offered back when a period opens; is an active category
-  shown in a period where it has no history.
 - **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
   *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.
 - **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the above first,

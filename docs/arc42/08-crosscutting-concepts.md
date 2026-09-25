@@ -107,6 +107,14 @@ backed category, may be negative, and floors the *Budget* it writes at zero
 ([§12](12-glossary.md)). `SetBudget` expresses none of that — it takes a `Money` and stores it,
 with no floor and no source, because no approved scenario reaches any of those rules yet.
 
+**It also works on an archived category, and does not bring it back.** That is not an answer to
+what assigning to an archived category should do. The question is **not settled**: now that
+bringing a category back is a side-effect of acts the user already has (§12), assigning is an
+obvious candidate for a third such act, and nothing has decided whether it is one. The scaffold had
+to do *something* when handed an archived category, and it does the thing that decides least.
+**Nothing tests either answer.** The assigning increment has to
+settle this before it writes scenarios, not inherit whatever `SetBudget` happens to do.
+
 ### "MoneyBud shows, it never blocks" is held by a type
 
 `RecordExpenseResult` and `RecordIncomeResult` each have exactly two shapes: recorded, or refused
@@ -119,7 +127,17 @@ in [`record-expense.feature`](../../features/record-expense.feature) it is spend
 that goes unremarked, and in [`record-income.feature`](../../features/record-income.feature) it is
 an income dated in the future. Two unrelated rules, one structural reason.
 
-Refusals are `ExpenseRefusal` and `IncomeRefusal` **values, not messages**. The wording the user
+**The category acts are held the same way.** They add a third place where the rule is carried by a
+signature, and a second rule, "every category act tells its outcome", which is carried the same way
+([§12](12-glossary.md), *Archiving is announced, never confirmed*):
+
+| Member | Its shape | What the shape holds |
+|---|---|---|
+| `Ledger.AddCategory` → `AddCategoryResult` | Exactly **four** outcomes: `Created`, `AlreadyThere` or `BroughtBack`, each handing back the category, or **refused** with `CategoryRefusal.NameMissing` | Adding a name you already have is **not a refusal**, because the end state is already true. *Already there* and *brought back* are different outcomes because they tell the user different things. A name that trims to nothing is the only refusal |
+| `Ledger.ArchiveCategory` → `Category` | Returns the archived category, so the user can be told what was archived, spelled as MoneyBud has it. **No confirmation parameter and no third outcome** | "Archiving is never confirmed" holds **by signature**: there is nowhere to put a question. It **throws** for a name that is not one of your categories and for a category already archived. §12 defines no user-facing behaviour for either, so reaching one is a mistake in the caller, not a situation to report to the user |
+| `RecordExpenseResult.CategoryBroughtBack` | A flag on a **recorded** result. Always false on a refused one | Information after the fact, **not a third outcome and not a warning**. Recording still has exactly two shapes. This only says that recording brought an archived category back, which nothing else about recording an expense would show |
+
+Refusals are `ExpenseRefusal`, `IncomeRefusal` and `CategoryRefusal` **values, not messages**. The wording the user
 sees belongs to a UI that does not exist yet ([§5](05-building-block-view.md)); putting copy in the
 domain would put it in the wrong place and would make re-wording it a domain change.
 
@@ -146,41 +164,68 @@ between the two transactions is only what each does with an empty result: an inc
 expense accepts it. That is a difference in the requirement, not in what a label *is*, and keeping
 it to one method is what stops it becoming two.
 
-### Category names are compared exactly in code — case and whitespace — and §12 now says they should not be
+### One category name rule, held by one comparer
 
-`Ledger` keys its categories with `StringComparer.Ordinal`, and `ExpensesFor` matches with
-`e.Category.Name == categoryName`, which is ordinal too. So "boodschappen" and "Boodschappen" are
-**two categories** today, in two places.
+[§12](12-glossary.md)'s name rule has two halves, what is **stored** and what is **compared**. The
+code keeps them in two members of one static class, `CategoryName`:
 
-**Nothing decided that.** It arrived with the first increment's scaffold, where no approved scenario
-ever spelled one category two ways, so the choice was never visible enough to be made.
-[§12](12-glossary.md) now settles it the other way — compared case-insensitively, stored as typed —
-which makes this a **correction** rather than a new rule.
+| Half | Member | What it does |
+|---|---|---|
+| **Stored** | `CategoryName.Normalise` | Trims the ends and keeps everything inside exactly as typed, capitalisation and spacing both. Returns null when nothing survives, which is how a name that trims to nothing becomes no name |
+| **Compared** | `CategoryName.Comparer` | Trims the ends, reduces every run of inner whitespace to one space, and ignores case |
 
-**Whitespace diverges the same way.** §12 also settles that a category name is **trimmed** at the
-ends before it is compared or stored, and that one which trims to nothing is **refused**. Neither
-holds in code: `AddCategory` stores whatever it is handed, so "Hobby " and "Hobby" are two keys and
-a name of spaces is accepted. `RecordExpense` already treats a whitespace-only category name as
-naming none (`IsNullOrWhiteSpace` → `CategoryMissing`), which agrees with §12, but it neither trims a
-name nor ignores its case before looking it up. §12 also collapses any run of inner whitespace to one space for
-comparison, while still storing the name as typed, and the code does nothing of the kind. So
-"Vaste  lasten" and "Vaste lasten" are two keys today. And an expense recorded against "  groceries " is
-refused today as `UnknownCategory`, where §12 — confirmed by the stakeholder for recording as well as
-for adding — says it is recorded against Groceries. Same origin, same status: inherited from
-scaffolding, never decided, and reachable by no approved scenario.
+**Case is ignored ordinally, never by the machine's culture.** A culture-sensitive comparison could
+make the same two names one category on one machine and two on another. The Turkish dotless i is
+the classic case. The rule exists so that nobody ends up with two categories they meant as one, so
+it cannot depend on where it runs. "Whitespace" means what `char.IsWhiteSpace` means, the same
+reading the label rule takes.
 
-**The code and the documentation therefore disagree until the category increment is built**, and
-that is recorded here rather than left to be discovered. Nothing depends on it: no scenario in
-either approved feature file uses two spellings of one name, so fixing it changes no assertion. Both
-places have to move together, which is the reason for naming them both.
+**There is one `Category` object per name, and everything else is keyed by that object, not by a
+string.** `Ledger` keys its name lookup with `CategoryName.Comparer`. Budgets, expenses and the
+archived set all hold the `Category` itself. So once a name has been found, no second string
+comparison can disagree with the first. Every `Ledger` member that takes a name goes through one
+private `Find`, so every spelling the rule matches is accepted everywhere. Recording against
+"  groceries " records against Groceries.
 
-**`Ledger.AddCategory` already has half of the duplicate rule.** It returns the existing category
-when the name is taken, which is the shape [§12](12-glossary.md) now settles — arrived at by
-accident, and missing the other half: it is **silent**, where §12 requires the user to be told. It
-also happens to keep the existing spelling, which §12 now requires too, though under ordinal keys the
-question of a second spelling never reaches it. Like
-`SetBudget` (above) it is scaffolding reachable only from step definitions, with no scenario of its
-own.
+**Whether a category is archived is not on `Category`.** It is the ledger's set of archived
+categories. Archiving is a fact about how the ledger uses a category, not about the category, and
+an expense recorded against it last year should not change because the category was put away today.
+
+**This subsection used to record a divergence, and the category increment corrected it.** Until
+then `Ledger` keyed categories with `StringComparer.Ordinal`, and `ExpensesFor` matched with
+`e.Category.Name == categoryName`. So "boodschappen" and "Boodschappen" were two categories, and so
+were "Hobby " and "Hobby" and "Vaste  lasten" and "Vaste lasten". A name made only of spaces could be
+added, and an expense against "  groceries " was refused as `UnknownCategory`. **Nothing had decided
+any of that.** It arrived with the first increment's scaffold, where no approved scenario ever spelled
+one category two ways. §12 then settled the rule, and this section named the code as disagreeing until
+the category increment was built. It has been built, and the disagreement is gone. No scenario in
+the two earlier feature files uses two spellings of one name, so the correction did not reach any
+of their assertions.
+`AddCategory` had also returned the existing category silently. It now returns an
+`AddCategoryResult` that says which of its four outcomes happened (above).
+
+### Where an archived category is shown: the domain states the fact, not the view
+
+§12 settles that an archived category is shown in every period where it has history, meaning a
+budget of more than zero or an expense, the current period included. The domain exposes the two facts
+that rule needs, `Ledger.HasHistoryIn(category, period)` and `Ledger.IsArchived(category)`. It
+has **no "is shown" query**, and that is deliberate. §12 settles when an *archived* category is
+shown. It does not settle whether a category **in use** is shown in a period where it has no
+history. That question belongs to the increment that builds a period view, and an `IsShownIn`
+written now would have to guess at it.
+
+**The consequence is carried in [§11](11-risks-and-technical-debt.md).** For now the "shown" rule
+exists only in the step definitions. They combine the two facts, and nothing in production code
+does. When a period view is built, nothing forces it to use `HasHistoryIn`.
+
+### A first start is a door of its own
+
+`new Ledger(...)` gives an **empty** ledger. `Ledger.StartNew(...)` gives what a first start
+gives: the six default categories (`Ledger.DefaultCategoryNames`, [§12](12-glossary.md)) and
+nothing else. The spec context builds every scenario on the constructor. Only the "first time"
+steps call `StartNew`, and they refuse to run after any other setup. So a scenario that quietly
+relied on Boodschappen being there would fail. Independence from the default set is **enforced**,
+not hoped for.
 
 ### `Ledger` is not a §12 term, and that is worth flagging
 
@@ -202,7 +247,10 @@ reason differs by row, and the difference is the point.
 **A row leaves this table when it is built.** *Income* and *Unassigned* were here until the income
 increment shipped; `Ledger.RecordIncome` and `Ledger.UnassignedIn` now exist and
 [`record-income.feature`](../../features/record-income.feature) is approved, so the entry is gone
-rather than amended. Read the absence of a §12 term from this table as "built", not as "nobody
+rather than amended. *Archived* and the **default categories** left the same way when the category
+increment shipped. `Ledger.ArchiveCategory`, `Ledger.StartNew` and `Ledger.DefaultCategoryNames` now
+exist, with [`add-category.feature`](../../features/add-category.feature) and
+[`archive-category.feature`](../../features/archive-category.feature) approved. Read the absence of a §12 term from this table as "built", not as "nobody
 wrote a row for it".
 
 | §12 concept | Why there is no code |
@@ -211,7 +259,6 @@ wrote a row for it".
 | *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
 | *Assign*, *Over-assigned* | **No approved scenarios, and no code.** Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md) — the source, the negative assignment, the *Budget* floored at zero, the clipped shortfall — and is waiting on scenarios, not on a decision. Only the backed-category half of assigning needs accounts; the rest is specifiable today |
-| *Archived*, and the **default categories** | **No approved scenarios, and no code.** `Ledger` can add a category and has **no way to take one out of use** — there is no archive flag, no filter on what may be recorded against, and no starting set of categories anywhere in the domain. The model is settled in [§12](12-glossary.md), including bringing an archived category back, so this is waiting on scenarios and on nothing else. One thing the code will have to face: `ExpenseRefusal.UnknownCategory` was written when every category the user had was available for recording. This row used to leave open whether recording an expense could reach the bring-back path at all; §12 now settles that it does — an expense against an archived category's name is **recorded** and the category **brought back**, with the user told; a refused expense brings nothing back. So a recorded expense will need to be able to carry "and the category was brought back" with it, and `UnknownCategory` narrows to names that are neither active nor archived. §12 also settles that an archived category is still shown in every period where it has a budget of more than zero or an expense, the current one included, so whatever lists a period's categories cannot simply filter archived ones out, and it cannot use "a budget entry exists" as the test either, because a zero budget does not count. Archiving is never confirmed first, and the user is told afterwards, so archiving needs an outcome to report like the other category acts |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |

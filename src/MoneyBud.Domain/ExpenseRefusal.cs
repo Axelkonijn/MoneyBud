@@ -8,10 +8,16 @@ namespace MoneyBud.Domain;
 /// </summary>
 public enum ExpenseRefusal
 {
-    /// <summary>No category was named. An expense must name one (arc42 §12, *Expense*).</summary>
+    /// <summary>
+    /// No category was named — or the name trimmed to nothing, which is no name (arc42 §12). An
+    /// expense must name one (§12, *Expense*).
+    /// </summary>
     CategoryMissing,
 
-    /// <summary>A category was named, but it is not one of the user's.</summary>
+    /// <summary>
+    /// A category was named, but it is not one of the user's — neither in use nor archived. An
+    /// archived category's name is not refused: recording against it brings it back.
+    /// </summary>
     UnknownCategory,
 
     /// <summary>The amount was zero or negative.</summary>

@@ -35,3 +35,9 @@ rules were written about transactions rather than about expenses. The two decisi
 are both about how one class expresses the model rather than about the architecture, so they are
 recorded in [§8.1](08-crosscutting-concepts.md): why the figure is called `UnassignedIn` before
 anything assigns, and why `IncomeRefusal` deliberately has no future-date member.
+
+**The category increment added none either, for the same reason.** It introduced no technology,
+moved no boundary and touched no money rule. What it settled in code is how the domain expresses
+§12's category model: one ordinal name comparer, categories keyed by object rather than by string,
+result types that make "never confirmed" true by signature, and an "is shown" query left out on
+purpose. That belongs in [§8.1](08-crosscutting-concepts.md), and it is recorded there.

@@ -18,7 +18,7 @@ missing one.
 
 | Building block | Responsibility |
 |---|---|
-| **`src/MoneyBud.Domain`** | The whole application. Categories, budgets, expenses, income, budget periods and the `Money` type. Computes *Remaining* and *Unassigned*, and decides what to refuse. Depends on nothing but the .NET base class library — no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
+| **`src/MoneyBud.Domain`** | The whole application. Categories, budgets, expenses, income, budget periods and the `Money` type. Adds and archives categories and brings archived ones back, under one category name rule (`CategoryName`). Ships the six default categories for a first start (`Ledger.StartNew`). Computes *Remaining* and *Unassigned*, decides what to refuse, and reports what each category act did. Depends on nothing but the .NET base class library — no UI framework, no storage, not even an ambient clock (`TimeProvider` is passed in) |
 | **`tests/MoneyBud.Specs`** | Runs the specification against the domain: Reqnroll step definitions on top of xUnit, with the scenario's world in `Support/`. Also holds the developer unit tests in `Unit/`, which are tests and not specification — see ADR 0004 for why they share a project and what rule keeps them subordinate |
 
 `features/` is **not a building block.** It holds the Gherkin specification, and the specs project
@@ -37,7 +37,9 @@ code itself is the level-2 view.
 
 Adding a capability therefore updates the responsibility above and §8.1, and leaves the rest of
 this section alone. The income increment added `Income`, `IncomeRefusal`, `RecordIncomeResult` and
-three members on `Ledger` without moving a single boundary.
+three members on `Ledger` without moving a single boundary. The category increment added
+`CategoryName` and `AddCategoryResult`, and archiving and first-start members on `Ledger`, and it
+moved none either.
 
 ## What is not here yet
 

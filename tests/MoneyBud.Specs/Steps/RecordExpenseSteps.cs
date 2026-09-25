@@ -26,8 +26,9 @@ public sealed class RecordExpenseSteps(SpecContext context)
     }
 
     [Given(@"I have a category ""([^""]*)""")]
-    public void GivenIHaveACategory(string category) => Ledger.AddCategory(category);
+    public void GivenIHaveACategory(string category) => EnsureCategory(category);
 
+    // Neither in use nor archived: an archived category is still one of mine.
     [Given(@"I have no category called ""([^""]*)""")]
     public void GivenIHaveNoCategoryCalled(string category) =>
         Assert.False(Ledger.HasCategory(category), $"{category} should not be a category.");
@@ -35,7 +36,7 @@ public sealed class RecordExpenseSteps(SpecContext context)
     [Given(@"I have a budget of (\S+) euro for ""([^""]*)"" in the (current|previous|next) budget period")]
     public void GivenIHaveABudgetFor(string amount, string category, string which)
     {
-        Ledger.AddCategory(category);
+        EnsureCategory(category);
         Ledger.SetBudget(category, Ledger.Period(which), SpecParsing.MoneyAmount(amount));
     }
 
@@ -49,7 +50,7 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void GivenIHaveAlreadySpent(string amount, string category, string which)
     {
         var period = Ledger.Period(which);
-        Ledger.AddCategory(category);
+        EnsureCategory(category);
 
         // Setup goes through the same door as anything else, so a setup expense that would be
         // refused fails the scenario here rather than quietly not existing.
@@ -64,14 +65,14 @@ public sealed class RecordExpenseSteps(SpecContext context)
     [Given(@"I have not yet spent anything on ""([^""]*)"" in the (current|previous|next) budget period")]
     public void GivenIHaveNotYetSpentAnythingOn(string category, string which)
     {
-        Ledger.AddCategory(category);
+        EnsureCategory(category);
         AssertNothingSpentOn(category, Ledger.Period(which));
     }
 
     [Given(@"I have not yet spent anything on ""([^""]*)"" in either budget period")]
     public void GivenIHaveNotYetSpentAnythingOnInEitherPeriod(string category)
     {
-        Ledger.AddCategory(category);
+        EnsureCategory(category);
         AssertNothingSpentOn(category, Ledger.Period("previous"));
         AssertNothingSpentOn(category, Ledger.Period("current"));
     }
@@ -208,6 +209,22 @@ public sealed class RecordExpenseSteps(SpecContext context)
             context.ExpenseResult.WasRecorded, "Expected the expense to be refused, but it was recorded.");
         Assert.Equal(expected, context.ExpenseResult.Refusal);
     }
+
+    /// <summary>
+    /// Makes sure a category exists, for setup. Never brings an archived one back: every scenario
+    /// gives a category its history before archiving it, so a setup step that finds the category
+    /// archived means the Givens are in the wrong order — and quietly bringing it back would make
+    /// the scenario pass for the wrong reason.
+    /// </summary>
+    internal static void EnsureCategory(Ledger ledger, string category)
+    {
+        var result = ledger.AddCategory(category);
+
+        Assert.False(result.WasRefused, $"Setting up the category \"{category}\" was refused: {result.Refusal}.");
+        Assert.NotEqual(AddCategoryOutcome.BroughtBack, result.Outcome);
+    }
+
+    private void EnsureCategory(string category) => EnsureCategory(Ledger, category);
 
     private void AssertNothingSpentOn(string category, BudgetPeriod period) =>
         Assert.Equal(Money.Zero, Ledger.SpentOn(category, period));
