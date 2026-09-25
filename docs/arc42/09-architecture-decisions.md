@@ -41,3 +41,12 @@ moved no boundary and touched no money rule. What it settled in code is how the 
 §12's category model: one ordinal name comparer, categories keyed by object rather than by string,
 result types that make "never confirmed" true by signature, and an "is shown" query left out on
 purpose. That belongs in [§8.1](08-crosscutting-concepts.md), and it is recorded there.
+
+**The assigning increment added none either.** It introduced no technology, moved no boundary and
+touched no money rule. `Assign` takes a `decimal` and converts to `Money` after validation, the
+same boundary [ADR 0003](../decisions/0003-money-representation.md) set for recording a transaction
+([§8.2](08-crosscutting-concepts.md)). What it settled is again how one class expresses
+the model: `Assign` as the only writer of a *Budget*, with `SetBudget` deleted rather than aligned,
+and the past-period setup in the specs made by moving the test clock rather than through a
+test-only door into the domain. Both are recorded in [§8.1](08-crosscutting-concepts.md). Deleting a
+scaffold is not a reversal of anything a record had decided, so there was nothing to supersede.

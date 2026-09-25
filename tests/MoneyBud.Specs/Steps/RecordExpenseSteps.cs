@@ -33,11 +33,31 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void GivenIHaveNoCategoryCalled(string category) =>
         Assert.False(Ledger.HasCategory(category), $"{category} should not be a category.");
 
+    // A budget is only ever made by assigning, so that is how this makes one: the amount comes
+    // out of that period's Unassigned, as assign-to-category.feature's header says every such
+    // Given means. A past period refuses assigning, so a budget there is assigned as of a day
+    // inside it — back when it was current, which is what the Given describes.
+    //
+    // Setup goes through the same door as anything else, so a setup assignment that would be
+    // refused, clipped or would bring a category back fails the scenario here rather than
+    // quietly making some other state.
     [Given(@"I have a budget of (\S+) euro for ""([^""]*)"" in the (current|previous|next) budget period")]
     public void GivenIHaveABudgetFor(string amount, string category, string which)
     {
         EnsureCategory(category);
-        Ledger.SetBudget(category, Ledger.Period(which), SpecParsing.MoneyAmount(amount));
+        var period = Ledger.Period(which);
+
+        var result = period.FirstDay < Ledger.CurrentPeriod.FirstDay
+            ? context.AsIfToday(period.FirstDay, () => Ledger.Assign(SpecParsing.Amount(amount), category, period))
+            : Ledger.Assign(SpecParsing.Amount(amount), category, period);
+
+        Assert.True(result.WasAssigned, $"Setting up a budget for {category} was refused: {result.Refusal}.");
+        Assert.Equal(Money.Zero, result.Shortfall);
+        Assert.False(result.CategoryBroughtBack, $"Setting up a budget brought {category} back.");
+
+        // Assigning adds. A second budget Given for the same category and period would set up
+        // the sum rather than the figure written, so say so rather than let it pass.
+        Assert.Equal(SpecParsing.MoneyAmount(amount), Ledger.BudgetFor(category, period));
     }
 
     [Given(@"I have never set a budget for ""([^""]*)""")]
@@ -127,13 +147,6 @@ public sealed class RecordExpenseSteps(SpecContext context)
     [Then(@"I should be told that an expense needs a category")]
     public void ThenIShouldBeToldAnExpenseNeedsACategory() =>
         AssertRefused(ExpenseRefusal.CategoryMissing);
-
-    [Then(@"I should be told that ""([^""]*)"" is not one of my categories")]
-    public void ThenIShouldBeToldThatIsNotOneOfMyCategories(string category)
-    {
-        AssertRefused(ExpenseRefusal.UnknownCategory);
-        Assert.False(Ledger.HasCategory(category), $"{category} should not be a category.");
-    }
 
     [Then(@"I should be told that an expense must be more than 0 euro")]
     public void ThenIShouldBeToldAnExpenseMustBeMoreThanZero() =>

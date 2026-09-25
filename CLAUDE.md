@@ -88,17 +88,17 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 282 passing: 104 scenario cases, the rest developer unit tests
+dotnet test  MoneyBud.slnx     # 350 passing: 169 scenario cases, the rest developer unit tests
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-25, after the category increment shipped green. Update this when a stage completes._
+_Last updated 2026-09-25, after the assigning increment shipped green. Update this when a stage completes._
 
-**Done: all five stages, three times — for `record-expense`, `record-income` and categories.**
-All three are built and green.
+**Done: all five stages, four times — for `record-expense`, `record-income`, categories and
+assigning.** All four are built and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -110,19 +110,22 @@ All three are built and green.
 - `features/record-income.feature` — 16 scenarios, **approved at the first gate** on 2026-09-25.
 - `features/add-category.feature` and `features/archive-category.feature`, plus five scenarios added
   to `record-expense.feature` — **approved at the first gate** on 2026-09-25.
+- `features/assign-to-category.feature` — 32 scenarios (65 cases), plus one edited scenario in
+  `record-income.feature` — **approved at the first gate** on 2026-09-25.
 - Increment 1's plan, approved at the second gate on 2026-09-24, settled the money questions
   ([ADR 0003](docs/decisions/0003-money-representation.md)), deferred persistence with a stated
   trigger ([§8.3](docs/arc42/08-crosscutting-concepts.md)), and fixed the solution shape
   ([ADR 0004](docs/decisions/0004-solution-layout.md)). Increment 2's needed **no new ADR** —
   nothing in it was architectural ([§9](docs/arc42/09-architecture-decisions.md)), and neither did
-  increment 3's. Axel **waived the plan gate** for increment 3 and said to go straight to code.
-- All three were reviewed by `spec-reviewer` and documented back into arc42.
+  increment 3's or increment 4's. Axel **waived the plan gate** for increment 3 and said to go
+  straight to code; increment 4's plan was **approved at the second gate**.
+- All four were reviewed by `spec-reviewer` and documented back into arc42.
 
 **What exists in code:** `Money` (whole cents in a `long`), `Category` and `CategoryName` (the
 name rule), `AddCategoryResult`, `BudgetPeriod`, `BudgetPeriodCalendar`, `Ledger` (which also
-archives, and whose `StartNew` seeds the default categories), and a matching pair per
-transaction — `Expense`, `ExpenseRefusal`, `RecordExpenseResult` and `Income`, `IncomeRefusal`,
-`RecordIncomeResult`.
+archives and assigns, and whose `StartNew` seeds the default categories), `AssignResult` and
+`AssignRefusal`, and a matching pair per transaction — `Expense`, `ExpenseRefusal`,
+`RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`.
 No UI, no storage, no accounts — all three deliberate, all three with their reasoning recorded.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
@@ -173,11 +176,29 @@ and one low defect, fixed. Everything is in [§12](docs/arc42/12-glossary.md); i
   scenarios start from an **empty** ledger unless they are about the first start, which is what
   proves no other scenario depends on the defaults.
 
+**Increment 4 — assigning to a category — is done and green**, on branch
+`increment-4-assigning`. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
+and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
+
+- **Assigning moves an amount; it does not set a figure.** Out of the period's *Unassigned*, onto
+  the category's *Budget*. A **negative** amount moves it back; the *Budget* floors at zero, so an
+  over-large one is **clipped and the shortfall reported**. Going *Over-assigned* is allowed.
+- **Only the current period and later ones can be assigned in.** A past period is **refused** —
+  "past is past": a forgotten plan stays unfixed, and its over-budget figure is true. Accepted
+  with that consequence shown.
+- **Assigning zero is accepted and changes nothing** — deliberately unlike a zero expense or
+  income, which would record an event that never happened.
+- **Only a positive assignment brings an archived category back.** A negative one is tidying up
+  after putting it away (how an archived category's leftover budget gets back to *Unassigned*);
+  zero plans nothing.
+- **Refusals are about the target, reported in expense order:** blank name, unknown name, finer
+  than a cent, past period. Zero and negatives are never refused *for their amount*, but a wrong
+  target still refuses them — Axel: zero "would still be canceled because of the other problems".
+- **`SetBudget` is gone.** A budget is made only by `Ledger.Assign`. The specs make a past
+  period's budget by moving the test clock into that period and assigning — no test-only door.
+
 **Settled ahead of later increments** (2026-09-25, in §12; none of it is built):
 
-- **Assigning** does not offer an archived category, and assigning to its name **brings it back**,
-  told — the same rule as recording an expense. `Ledger.SetBudget` is scaffolding that does *not*
-  bring back; the assigning increment builds the real act to the rule.
 - **When a period opens**, an archived category's last figure is **not offered back**.
 - **Which categories a period shows:** every category with history there (a budget of more than
   zero, or an expense), **plus** every category in use in the **current and future** periods,
@@ -190,10 +211,10 @@ to those. When a period view is built, implement the full rule there and rebind 
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
-  *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.
-- **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the above first,
-  or there is nothing to show.
+- **A UI**, which is what turns this into the demo ADR 0002 is about. Income, categories and
+  assigning now exist, so there is something to show.
+- **Opening a period** — offering last period's figures back and the one action that assigns them
+  in full. Settled in §12, not built.
 - **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is

@@ -53,92 +53,114 @@ around. `Ledger` holds both and keeps them apart:
 | **The plan** — a category's *Budget* for a period | `Ledger.BudgetFor(category, period)`, over budgets stored per category per period |
 | **The actual** — what was really spent | `Ledger.SpentOn(category, period)`, the sum of the `Expense` records whose date falls in that period |
 | **Where they meet** | `Ledger.RemainingFor(category, period)` — the plan minus the actual, and the **only** place the two are combined |
-| **Neither layer** — the pool a plan is made *out of* | `Ledger.UnassignedIn(period)`, over the `Income` records dated in that period. Income is not a plan and not a spend, so it sits outside both rows above rather than inside either |
+| **Neither layer** — the pool a plan is made *out of* | `Ledger.UnassignedIn(period)`: the `Income` records dated in that period, minus every *Budget* in it. Income is not a plan and not a spend, so it sits outside both rows above rather than inside either |
+| **The one act that writes the plan** | `Ledger.Assign(amount, category, period)`, which moves an amount out of *Unassigned* and onto a *Budget*. Nothing else writes a budget (*Assigning is the only way to write a plan*, below) |
 
 Three of §12's rules are structural rather than checked, which is why they need no code of their
 own:
 
-- **Recording an expense never touches a budget.** `RecordExpense` appends an `Expense` and does
-  nothing else; there is no path from it to the budgets. "Assigning spends nothing" and "spending
-  does not re-plan" are both true because neither operation can reach the other's storage.
+- **Recording an expense never touches a budget, and assigning never touches an expense.**
+  `RecordExpense` appends an `Expense` and does nothing else; `Assign` writes a budget and does
+  nothing else. "Assigning spends nothing" and "spending does not re-plan" are both true because
+  neither operation can reach the other's storage.
 - **Recording an income touches neither layer.** `RecordIncome` appends an `Income` and stops.
-  Because a budget is reachable only from `SetBudget` and an expense only from `RecordExpense`,
+  Because a budget is reachable only from `Assign` and an expense only from `RecordExpense`,
   *Recording income leaves every category's plan and spending untouched*
   ([`record-income.feature`](../../features/record-income.feature)) is a property of the wiring
   rather than an assertion anything has to uphold.
 - **A category with no budget set behaves as one budgeted at zero.** `BudgetFor` returns
-  `Money.Zero` when it finds nothing. There is no "unbudgeted" state to represent, so nothing can
-  branch on one, and a missing budget has no way to block a recording.
+  `Money.Zero` when it finds nothing, and no figure distinguishes the two, so a missing budget has
+  no way to block a recording. **One query does tell them apart**: `HasBudget` says whether
+  anything was ever assigned to a category in a period, even if it was since taken back to zero. It
+  exists so that a scenario can state *I have never set a budget* as a precondition. No figure and
+  no refusal consults it. To keep it honest, an assignment that changes nothing — zero, or a
+  negative clipped against a *Budget* already at zero — **writes nothing**, so it cannot make
+  `HasBudget` true. The clip case once did, by storing a zero; `spec-reviewer` found it, and it was
+  fixed before the increment closed.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case
-either.
+either. ***Over-assigned* follows from *Unassigned* the same way**: `IsOverAssigned(period)` is a
+negative `UnassignedIn`, derived where it is asked for and never stored, and exactly zero is every
+euro having a job rather than one too many.
 
-### `UnassignedIn` is named for the figure, not for the arithmetic it does today
+### `UnassignedIn` was named for the figure, not for the arithmetic it did then
 
 §12 defines *Unassigned* as a period's income **minus everything assigned to categories in it**.
-Nothing assigns yet, so the subtraction has nothing to subtract and the method returns the period's
-income and nothing more. It is still called `UnassignedIn`.
+When the income increment built it, nothing assigned, so the subtraction had nothing to subtract
+and the method returned the period's income and nothing more. It was called `UnassignedIn` anyway.
 
 **`IncomeIn` was the alternative and was rejected at the plan gate**, for a reason worth keeping:
 *Unassigned* is what the scenarios assert and what the user will eventually be shown, whereas "the
-period's income" is only how that figure happens to be computed while one of its two terms is
-missing. Naming the method after today's arithmetic would mean renaming it — and every call site
-and every step definition with it — at the exact moment assigning arrives and the code is already
-changing. Named after the figure, assigning subtracts from this method and nothing gets renamed.
+period's income" was only how that figure happened to be computed while one of its two terms was
+missing. Naming the method after that arithmetic would have meant renaming it — and every call site
+and every step definition with it — at the exact moment assigning arrived and the code was already
+changing.
+
+**The assigning increment bore that out.** `UnassignedIn` gained its subtraction and kept its name,
+its signature and its callers. It now subtracts **every** *Budget* in the period, **archived
+categories' included**: archiving says nothing about money ([§12](12-glossary.md)), so an archived
+category's *Budget* is still assigned money until it is taken back out.
 
 The list and the figure are deliberately two members: `IncomesIn(period)` returns the `Income`
-records, `UnassignedIn(period)` returns the amount. Only the second will change when assigning
-lands, and keeping them apart is what makes that true.
+records, `UnassignedIn(period)` returns the amount. Only the second changed when assigning landed.
+That separation mattered in one step binding as well. *Given I have recorded no income* used to
+check for an *Unassigned* of zero. That stopped meaning "no income" once a period planned before
+any income arrived could be below zero, so the step now checks for no `Income` records.
 
-### Setting a budget stands in for assigning
+### Assigning is the only way to write a plan
 
-In §12 a *Budget* is what **assigning** from the pool produces. Income and the pool now exist —
-`RecordIncome` and `UnassignedIn` — but **assigning does not**, so `Ledger.SetBudget` still writes
-the plan directly.
+In §12 a *Budget* is what **assigning** from the pool produces. `Ledger.Assign` is that act, and
+since the assigning increment it is the **only** member that writes a budget.
 
-That narrows the reason without changing the conclusion. What was missing was never income; it is
-the act that moves an amount out of *Unassigned* and into a category's *Budget*, and recording
-income does not perform it.
+**What it replaced.** For the first three increments, `Ledger.SetBudget` wrote the plan directly,
+as a scaffold for the scenarios. It took a `Money` and stored it for any period, with no pool to
+draw from, no floor and no clip. Handed an archived category, it did the thing that decided least
+and brought nothing back. That disagreed with a rule decided on 2026-09-25
+([§12](12-glossary.md), *Assigning to an archived category brings it back*). This section recorded
+the gap and said the assigning increment must **retire `SetBudget` or align it**.
 
-**That is a scaffold for the scenarios, not a model of assigning.** It is the method to re-examine
-first when assigning arrives. Assigning subtracts from *Unassigned*, may be negative, floors the
-*Budget* it writes at zero and reports what a clip held back, is refused in a past period, accepts
-zero, and — for a backed category, later — has a source it may overdraw ([§12](12-glossary.md)).
-`SetBudget` expresses none of that. It takes a `Money` and stores it, for any period, with no floor
-and no source, because no approved scenario reaches any of those rules yet. The assigning
-increment's scope is settled and leaves the source out: there are no accounts, so every category is
-unbacked ([§12](12-glossary.md), *Nothing here blocks the assigning increment*).
+**It was deleted, not aligned.** Aligned, it would have had to draw from *Unassigned*, floor, clip,
+refuse a past period and bring an archived category back. That is `Assign` under a second name.
+Left as it was, it would have been a second door able to make states the rules forbid: a budget
+made today in a past period, a budget that never left the pool, a plan for an archived category
+that stayed archived. A scenario set up through that door starts from a state the user cannot
+reach, and passing on top of it proves nothing about MoneyBud. So there is one writer, and the
+specs use it too.
 
-**It also works on an archived category, and does not bring it back. That now disagrees with a
-decided rule.** When the scaffold was written the question was open. The scaffold had to do
-*something* when handed an archived category, and it did the thing that decides least. On
-2026-09-25 the stakeholder settled it ([§12](12-glossary.md), *Assigning to an archived category
-brings it back*): an archived category is not offered for assigning, a **positive** assignment to
-its name anyway **brings it back**, with the user told, and a negative or zero one leaves it
-archived. `SetBudget` brings nothing back whatever the amount, and nothing tests any of it. This is
-a **known gap between the scaffold and the rule**, not a second rule. The assigning increment must
-build the real act to §12's rule, and then **retire `SetBudget` or align it**. Nothing may treat
-`SetBudget`'s behaviour on an archived category as meaning anything. Carry-over at period open is
-decided too: an archived category's figure is not offered back. It is unbuilt for every category,
-so there is no scaffold for it to disagree with.
-
-**Two things in approved scenarios stand in the way of simply retiring it.** Both are for the
-scenario stage to settle, not the build, because each is about what an approved *Given* means.
+**Two things in approved scenarios stood in the way of simply retiring it.** Both were about what
+an approved *Given* means. The first was settled in the approved plan, as a matter of how the
+specs produce a state; the second changed an approved scenario, so it was approved at the scenario
+gate, together with the assign scenarios themselves.
 
 - **Budgets set in a past period.** [`record-expense.feature`](../../features/record-expense.feature)
   and [`archive-category.feature`](../../features/archive-category.feature) set up budgets "in the
-  previous budget period", bound to `SetBudget`. The real act will refuse that
-  ([§12](12-glossary.md), *Assigning happens in the current budget period and later ones*). The
-  state itself is real, made back when that period was current, so the *Givens* are honest. But
-  their bindings will need some way to produce it other than assigning today.
+  previous budget period". `Assign` refuses a past period ([§12](12-glossary.md), *Assigning
+  happens in the current budget period and later ones*). The state is still real: it was made when
+  that period was current, and [`assign-to-category.feature`](../../features/assign-to-category.feature)'s
+  header now says that is what such a *Given* means. **The binding does exactly that.** It moves the
+  test clock to the first day of that period (`SpecContext.AsIfToday`), assigns through
+  `Ledger.Assign`, and puts the clock back. The rejected alternative was a test-only door into the
+  domain: a setter, or an internal member visible to the specs. Either would have been `SetBudget`
+  again under a safer-sounding name. Moving the clock needs nothing from the domain, because the
+  clock is already passed in (`TimeProvider`, [§5](05-building-block-view.md)).
 - **Budgets that never left the pool.**
   [`record-income.feature`](../../features/record-income.feature), *Recording income leaves every
-  category's plan and spending untouched*, sets €460 of budgets in the current period, records a
-  €2,000 income, and asserts *Unassigned* is €2,000. That holds only because `SetBudget` bypasses
-  the pool. Once `UnassignedIn` subtracts what was assigned, as §12 defines it, either those
-  budgets were assigned and the figure should be €1,540, or they were not and the ledger holds
-  budgets nobody assigned, which §12 has no word for.
+  category's plan and spending untouched*, set €460 of budgets, recorded a €2,000 income, and
+  asserted *Unassigned* was €2,000. That held only because `SetBudget` bypassed the pool. Either the
+  budgets were assigned and the figure is €1,540, or they were not and the ledger held budgets
+  nobody assigned, which §12 has no word for. **The first reading was taken.** The scenario now
+  states *Unassigned* is −€460 before the income and asserts €1,540 after it.
+
+**Every budget *Given* checks what it made**: that the assignment went through, that nothing was
+clipped, that no category was brought back, and that the resulting *Budget* is the figure written.
+The last check is needed because assigning **adds**. Two budget *Givens* for one category and period
+would set up their sum, and the step fails rather than let a scenario start from a figure it does
+not state. Setup goes through the same door as the scenario under test, so a setup the rules would
+refuse, clip or turn into a bring-back fails loudly instead of quietly making some other state.
+
+Carry-over at period open, which is where an archived category's figure is not offered back, is
+still unbuilt for every category (*What has no code yet*, below).
 
 ### "MoneyBud shows, it never blocks" is held by a type
 
@@ -161,8 +183,9 @@ signature, and a second rule, "every category act tells its outcome", which is c
 | `Ledger.AddCategory` → `AddCategoryResult` | Exactly **four** outcomes: `Created`, `AlreadyThere` or `BroughtBack`, each handing back the category, or **refused** with `CategoryRefusal.NameMissing` | Adding a name you already have is **not a refusal**, because the end state is already true. *Already there* and *brought back* are different outcomes because they tell the user different things. A name that trims to nothing is the only refusal |
 | `Ledger.ArchiveCategory` → `Category` | Returns the archived category, so the user can be told what was archived, spelled as MoneyBud has it. **No confirmation parameter and no third outcome** | "Archiving is never confirmed" holds **by signature**: there is nowhere to put a question. It **throws** for a name that is not one of your categories and for a category already archived. §12 defines no user-facing behaviour for either, so reaching one is a mistake in the caller, not a situation to report to the user |
 | `RecordExpenseResult.CategoryBroughtBack` | A flag on a **recorded** result. Always false on a refused one | Information after the fact, **not a third outcome and not a warning**. Recording still has exactly two shapes. This only says that recording brought an archived category back, which nothing else about recording an expense would show |
+| `Ledger.Assign` → `AssignResult` | Exactly **two** shapes: assigned, handing back the category, or **refused** for one `AssignRefusal`. Two facts ride on an assigned result: `Shortfall`, how much of a negative amount could not come back, and `CategoryBroughtBack`. Both are zero or false on a refused one | Going *Over-assigned* produces a plain assignment, because there is nowhere else for it to go. `Shortfall` is the clip being **said rather than absorbed** ([§12](12-glossary.md), *An over-large negative assignment is clipped*). Like `CategoryBroughtBack`, it is information after the fact, not a warning and not a third outcome. `CategoryBroughtBack` is only ever true for a **positive** amount, and only once every check has passed. It **throws** for a `BudgetPeriod` that is not one of the ledger's calendar periods, such as a hand-made date range. A user picks a period from the calendar and cannot reach that, so, as with archiving, it is a caller's mistake rather than a situation to report |
 
-Refusals are `ExpenseRefusal`, `IncomeRefusal` and `CategoryRefusal` **values, not messages**. The wording the user
+Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal` and `AssignRefusal` **values, not messages**. The wording the user
 sees belongs to a UI that does not exist yet ([§5](05-building-block-view.md)); putting copy in the
 domain would put it in the wrong place and would make re-wording it a domain change.
 
@@ -174,6 +197,15 @@ from its date. The reason the two differ is the plan/actual split: a future expe
 expressible as a *Budget*, while the model has no planned income at all, so future-dating is the
 only way to state an amount that is coming ([§12](12-glossary.md), *Income may be dated in the
 future; an expense may not*). `RecordIncome` therefore does not look at the date at all.
+
+**`AssignRefusal` has no `AmountNotPositive` member, for the same kind of reason.** Both
+transactions refuse zero and below, so its absence here looks like the same oversight. It is the
+rule: an assignment may be negative, which moves money back, and may be zero, which moves nothing
+([§12](12-glossary.md), *Assigning zero is accepted and moves nothing*). Its four members are about
+the **target** and the cent rule only. They are declared in the order a broken rule is reported:
+`CategoryMissing`, `UnknownCategory`, `AmountFinerThanCent`, `PeriodInPast`. That is the order
+recording an expense uses. A zero or clippable negative amount does not rescue an assignment whose
+target is wrong.
 
 ### One label rule, held by one method
 
@@ -246,7 +278,10 @@ it**. It is not missing for want of a decision any more.
 **The consequence is carried in [§11](11-risks-and-technical-debt.md).** For now the rule exists only
 in the step definitions, and only its archived half at that. They combine `HasHistoryIn` and
 `IsArchived`, and nothing in production code does. When a period view is built, it should implement
-the **full** rule, and the archive scenarios' "shown" steps should be rebound to it.
+the **full** rule, and the "shown" steps should be rebound to it. Since the assigning increment
+those steps carry two scenarios in
+[`assign-to-category.feature`](../../features/assign-to-category.feature) as well as the archive
+scenarios.
 
 ### A first start is a door of its own
 
@@ -280,15 +315,18 @@ increment shipped; `Ledger.RecordIncome` and `Ledger.UnassignedIn` now exist and
 rather than amended. *Archived* and the **default categories** left the same way when the category
 increment shipped. `Ledger.ArchiveCategory`, `Ledger.StartNew` and `Ledger.DefaultCategoryNames` now
 exist, with [`add-category.feature`](../../features/add-category.feature) and
-[`archive-category.feature`](../../features/archive-category.feature) approved. Read the absence of a §12 term from this table as "built", not as "nobody
-wrote a row for it".
+[`archive-category.feature`](../../features/archive-category.feature) approved. *Assign* and
+*Over-assigned* left when the assigning increment shipped: `Ledger.Assign` and
+`Ledger.IsOverAssigned` exist, and [`assign-to-category.feature`](../../features/assign-to-category.feature)
+is approved. Read the absence of a §12 term from this table as "built", not as "nobody wrote a row
+for it".
 
 | §12 concept | Why there is no code |
 |---|---|
 | *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* | The location dimension has not been in any increment so far ([§11](11-risks-and-technical-debt.md)) |
-| *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do |
+| *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do. This includes the **backed half of assigning**, where assigning really moves money out of a source it may overdraw. The assigning increment left it out for this reason, so every category is unbacked and `Assign` is planning only |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
-| *Assign*, *Over-assigned* | **No approved scenarios, and no code.** They are the **next increment**, and its scope is settled ([§12](12-glossary.md), *Nothing here blocks the assigning increment*). Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md): the negative assignment, the *Budget* floored at zero, the clipped shortfall, the current period and later ones only, zero accepted, and only a positive assignment bringing an archived category back. It is waiting on scenarios, not on a decision. The backed-category half of assigning, with its source, needs accounts and is **out** of the increment |
+| **Carry-over** at period opening (§12, *Budgets carry over as figures*), including that an archived category's figure is not offered back | Belongs with **period opening**, a slice of its own, and was put out of the assigning increment's scope for that reason ([§12](12-glossary.md), *Nothing here blocks the assigning increment*). Nothing acts when a period opens: a new period simply has no budgets until something is assigned |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
@@ -348,6 +386,10 @@ here:
   [`record-expense.feature`](../../features/record-expense.feature) and
   [`record-income.feature`](../../features/record-income.feature) require the user to be told about
   the **sign** — so the cent check cannot be something that fires during construction, ahead of it.
+  **`Assign` takes a `decimal` too, for the cent rule alone.** An assignment may be negative or
+  zero, so the sign argument does not reach it. But an amount finer than a cent still has to arrive
+  somewhere it can be refused as `AssignRefusal.AmountFinerThanCent`, and it has to be refused
+  *after* the category checks, which is the order reported.
 - **`Money` has no division and no multiplication by a fraction.** Those are the operations that
   would produce a value the cent rule cannot hold, and they are exactly what the features in *when
   this has to be revisited* above would need. Their absence is what makes that list enforceable

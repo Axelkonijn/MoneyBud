@@ -21,10 +21,11 @@ Each has its own record or section; this table is the map, not the reasoning.
 | **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
 
 Read together, these say one thing: **everything built so far is a domain library and its
-executable specification, and nothing else.** Two increments in — recording an expense, then
-recording an income — that is still the whole of it. Everything that would normally surround it —
-a UI, a store, a process boundary — has been deferred with a stated trigger rather than sketched,
-and adding a second capability did not put pressure on any of those deferrals.
+executable specification, and nothing else.** Four increments in — recording an expense, recording
+an income, adding and archiving categories, and assigning to them — that is still the whole of it.
+Everything that would normally surround it — a UI, a store, a process boundary — has been deferred
+with a stated trigger rather than sketched, and adding capabilities has not put pressure on any of
+those deferrals.
 
 ## How the quality goals fare
 
@@ -52,8 +53,8 @@ optional (an income's is **required**, and [§12](12-glossary.md) argues why tha
 trade); a category with no budget set records an expense like any other, so nothing has to be set
 up before spending can be recorded; and an income names no category at all, so money can be
 recorded as arriving before any decision has been made about it. Against that, the visible
-behaviour of what is built is still mostly *refusal*: five reasons an expense is rejected and
-three an income is. Refusing bad input is not the same as making entry effortless, and can easily
+behaviour of what is built is still mostly *refusal*: five reasons an expense is rejected, three an
+income is, and four an assignment is. Refusing bad input is not the same as making entry effortless, and can easily
 be its opposite. The decisions that will actually serve this goal — the
 account default, the one-action carry-over of last period's budgets ([§12](12-glossary.md)) —
 belong to later increments.

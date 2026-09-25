@@ -18,9 +18,12 @@ namespace MoneyBud.Domain;
 /// whether it is offered for new entry (arc42 §12, *A category is taken out of use, not
 /// deleted*).</para>
 ///
-/// <para>Not in this increment: accounts, assigning from the pool, and the end-of-period sweep.
-/// A budget is set here directly, standing in for the act of assigning, which has no approved
-/// scenarios yet — which is also why <see cref="UnassignedIn"/> has nothing to subtract.</para>
+/// <para>A budget is made in exactly one way, by <see cref="Assign"/>, which moves an amount out
+/// of a period's <i>Unassigned</i> and into a category's <i>Budget</i>. There is no other way to
+/// write a plan.</para>
+///
+/// <para>Not built yet: accounts, and with them backed categories and the pool account; carrying
+/// last period's figures into a new one; and the end-of-period sweep (arc42 §12).</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -157,20 +160,71 @@ public sealed class Ledger
         BudgetFor(categoryName, period).Cents > 0 || ExpensesFor(categoryName, period).Count > 0;
 
     /// <summary>
-    /// Sets a plan directly. Stands in for the act of assigning, which has no approved scenarios
-    /// yet (arc42 §8.1), and so is scaffolding: it works on an archived category too, and does
-    /// not bring it back. That is a known gap, not a rule — §12 settles that assigning to an
-    /// archived category's name brings it back, as recording an expense does. The assigning
-    /// increment builds the real act to that rule.
+    /// Assigns an amount to a category in a period, or refuses it for exactly one reason
+    /// (arc42 §12, *Assign*).
+    ///
+    /// <para>Assigning <b>moves</b> an amount; it does not set a figure. A positive amount goes
+    /// out of the period's <i>Unassigned</i> and onto the category's <i>Budget</i>. A negative one
+    /// comes back, but the <i>Budget</i> floors at zero, so at most what it holds comes back and
+    /// the rest is reported as the <see cref="AssignResult.Shortfall"/>. Zero is accepted and
+    /// moves nothing. Nothing is spent either way, and nothing about <i>Unassigned</i> is checked:
+    /// going <i>Over-assigned</i> is allowed and unwarned.</para>
+    ///
+    /// <para>The checks run in a fixed order, the same as <see cref="RecordExpense"/>'s: the
+    /// category, then the amount, then the period. See <see cref="AssignRefusal"/>. The amount
+    /// arrives as a <see cref="decimal"/> of euros so that one finer than a cent can be refused
+    /// rather than rounded.</para>
+    ///
+    /// <para>An <b>archived</b> category is not refused. Only a <b>positive</b> amount brings it
+    /// back, and only once every check has passed: a negative amount is tidying up after putting
+    /// it away, zero plans nothing, and a refused assignment did nothing at all (§12, *Only a
+    /// positive assignment brings it back*).</para>
+    ///
+    /// <para><b>Throws</b> for a period that is not one of <see cref="Calendar"/>'s own, such as a
+    /// hand-made date range. A user picks a period from the calendar and cannot reach this, so no
+    /// behaviour is defined for it; reaching it is a mistake in whatever called this.</para>
     /// </summary>
-    public void SetBudget(string categoryName, BudgetPeriod period, Money amount)
+    public AssignResult Assign(decimal amountInEuros, string? categoryName, BudgetPeriod period)
     {
-        var category = Find(categoryName)
-            ?? throw new InvalidOperationException($"There is no category called \"{categoryName}\".");
+        if (Calendar.PeriodContaining(period.FirstDay) != period)
+            throw new ArgumentException($"{period} is not a budget period.", nameof(period));
 
-        budgets[(category, period.FirstDay)] = amount;
+        if (CategoryName.Normalise(categoryName) is null)
+            return AssignResult.Refused(AssignRefusal.CategoryMissing);
+
+        if (Find(categoryName) is not { } category)
+            return AssignResult.Refused(AssignRefusal.UnknownCategory);
+
+        if (!Money.IsWholeCents(amountInEuros))
+            return AssignResult.Refused(AssignRefusal.AmountFinerThanCent);
+
+        if (period.FirstDay < CurrentPeriod.FirstDay)
+            return AssignResult.Refused(AssignRefusal.PeriodInPast);
+
+        var amount = Money.FromEuros(amountInEuros);
+        if (amount == Money.Zero)
+            return AssignResult.Assigned(category, Money.Zero, categoryBroughtBack: false);
+
+        var budget = BudgetFor(category.Name, period);
+        var shortfall = amount.IsNegative && (-amount).Cents > budget.Cents
+            ? -amount - budget
+            : Money.Zero;
+
+        // A clipped negative takes the Budget to exactly zero; everything else moves in full.
+        // Written only when it changes, so that clipping against a Budget that was already zero
+        // leaves no mark, just as assigning zero does not.
+        var newBudget = shortfall == Money.Zero ? budget + amount : Money.Zero;
+        if (newBudget != budget)
+            budgets[(category, period.FirstDay)] = newBudget;
+
+        var broughtBack = !amount.IsNegative && archived.Remove(category);
+        return AssignResult.Assigned(category, shortfall, broughtBack);
     }
 
+    /// <summary>
+    /// Whether anything was ever assigned to a category in a period — including amounts since
+    /// taken back out again. Assigning zero leaves no mark, because it changes nothing.
+    /// </summary>
     public bool HasBudget(string categoryName, BudgetPeriod period) =>
         Find(categoryName) is { } category && budgets.ContainsKey((category, period.FirstDay));
 
@@ -281,10 +335,10 @@ public sealed class Ledger
     /// <i>Unassigned</i> for a period: its income minus everything assigned to categories in it
     /// (arc42 §12).
     ///
-    /// <para>Nothing assigns yet, so the subtraction has nothing to subtract and this is the
-    /// period's income. It is named for the figure rather than for today's arithmetic because
-    /// the figure is what the scenarios assert and what the user is shown; when assigning
-    /// arrives it subtracts from this, and nothing here needs renaming.</para>
+    /// <para>Everything assigned counts, including to a category since archived: archiving says
+    /// nothing about money, so that category's <i>Budget</i> is still assigned money until it is
+    /// taken back out. The figure goes negative when more is assigned than came in, which is
+    /// <see cref="IsOverAssigned"/>.</para>
     ///
     /// <para>A period's income includes amounts <i>dated</i> later than today — future-dating is
     /// allowed and counts immediately (<see cref="IncomeRefusal"/>). This is where
@@ -292,7 +346,16 @@ public sealed class Ledger
     /// <i>Unassigned</i> covers a whole period.</para>
     /// </summary>
     public Money UnassignedIn(BudgetPeriod period) =>
-        Money.Sum(IncomesIn(period).Select(i => i.Amount));
+        Money.Sum(IncomesIn(period).Select(i => i.Amount))
+        - Money.Sum(budgets.Where(b => b.Key.PeriodStart == period.FirstDay).Select(b => b.Value));
+
+    /// <summary>
+    /// Whether more has been assigned in a period than its income: a negative <i>Unassigned</i>.
+    /// Exactly zero is every euro having a job, not over-assigned. Shown, never blocked and never
+    /// warned about — the period's counterpart of <see cref="IsOverBudget"/> (arc42 §12,
+    /// *Over-assigned*).
+    /// </summary>
+    public bool IsOverAssigned(BudgetPeriod period) => UnassignedIn(period).IsNegative;
 
     /// <summary>
     /// A label as it is stored: trimmed at the ends, left alone inside, and null when nothing

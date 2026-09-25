@@ -52,8 +52,8 @@ public sealed class SpecContext
     public RecordIncomeResult? LastIncomeResult { get; private set; }
 
     /// <summary>
-    /// Whichever attempt came last — an expense, an income, adding a category or archiving one —
-    /// as the result it was.
+    /// Whichever attempt came last — an expense, an income, an assignment, adding a category or
+    /// archiving one — as the result it was.
     ///
     /// <para>Needed because a few steps are worded without naming what was attempted, on purpose:
     /// "I should not be warned or asked to confirm" is a claim about MoneyBud rather than about
@@ -75,6 +75,9 @@ public sealed class SpecContext
     /// <summary>What came of the last attempt to add a category. Null until one was made.</summary>
     public AddCategoryResult? LastAddResult { get; private set; }
 
+    /// <summary>What came of the last attempt to assign. Null until one was made.</summary>
+    public AssignResult? LastAssignResult { get; private set; }
+
     /// <summary>The category the last archive put away. Null until one was archived.</summary>
     public Category? LastArchived { get; private set; }
 
@@ -83,6 +86,9 @@ public sealed class SpecContext
 
     public RecordIncomeResult IncomeResult =>
         LastIncomeResult ?? throw new InvalidOperationException("No income has been recorded yet.");
+
+    public AssignResult AssignResult =>
+        LastAssignResult ?? throw new InvalidOperationException("Nothing has been assigned yet.");
 
     public void Record(RecordExpenseResult result)
     {
@@ -102,6 +108,12 @@ public sealed class SpecContext
         LastAttempt = result;
     }
 
+    public void Record(AssignResult result)
+    {
+        LastAssignResult = result;
+        LastAttempt = result;
+    }
+
     public void RecordArchived(Category category)
     {
         LastArchived = category;
@@ -110,6 +122,30 @@ public sealed class SpecContext
 
     /// <summary>Moves the day the ledger considers today. See <see cref="FixedClock"/>.</summary>
     public void SetToday(DateOnly day) => clock.Now = Noon(day);
+
+    /// <summary>
+    /// Does something as it would have been done on another day, then puts the clock back
+    /// exactly where it was.
+    ///
+    /// <para>This is how a scenario gets a budget in a past period. Assigning in a past period is
+    /// refused (arc42 §12), and a Given that says "I have a budget of 400 euro in the previous
+    /// budget period" means it was assigned back when that period was current — so that is when
+    /// the setup assigns it, through the same door as every other assignment, rather than through
+    /// a setter that could make states the rules forbid.</para>
+    /// </summary>
+    public T AsIfToday<T>(DateOnly day, Func<T> action)
+    {
+        var now = clock.Now;
+        clock.Now = Noon(day);
+        try
+        {
+            return action();
+        }
+        finally
+        {
+            clock.Now = now;
+        }
+    }
 
     /// <summary>
     /// Archiving answers with the category it put away rather than with a result type — it has

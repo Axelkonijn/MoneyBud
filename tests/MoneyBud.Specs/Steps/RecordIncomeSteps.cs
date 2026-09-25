@@ -15,9 +15,12 @@ public sealed class RecordIncomeSteps(SpecContext context)
     // is this pattern's only regex construct, and without anchors Reqnroll reads the
     // whole thing as a Cucumber Expression, in which "(...)" means optional text rather
     // than a choice. The other steps carry \S or a character class, which settles it.
+    //
+    // It checks for income records, not for an Unassigned of zero: a period planned before any
+    // income arrived has none and is below zero.
     [Given(@"^I have recorded no income in the (current|previous|next) budget period$")]
     public void GivenIHaveRecordedNoIncomeIn(string which) =>
-        Assert.Equal(Money.Zero, Ledger.UnassignedIn(Ledger.Period(which)));
+        Assert.Empty(Ledger.IncomesIn(Ledger.Period(which)));
 
     [Given(@"I have already recorded (\S+) euro of income in the (current|previous|next) budget period")]
     public void GivenIHaveAlreadyRecordedIncomeIn(string amount, string which)

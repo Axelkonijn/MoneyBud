@@ -11,8 +11,9 @@ namespace MoneyBud.Specs.Steps;
 /// <para>Several feature files use these words, and that is deliberate rather than accidental
 /// duplication. "I should not be warned or asked to confirm" is a claim about MoneyBud — it
 /// shows, it never blocks (arc42 §12) — not a claim about expenses; the cent rule is stated by
-/// arc42 §8.2 about <i>amounts</i>; and a category is "brought back" by adding its name and by
-/// recording an expense against it alike. One definition serves every file, and it asks
+/// arc42 §8.2 about <i>amounts</i>; a category is "brought back" by adding its name, by
+/// recording an expense against it and by assigning to it alike; and an unknown category name is
+/// refused by recording and assigning alike. One definition serves every file, and it asks
 /// whichever attempt came last, because a scenario may have done something else during setup
 /// and presence alone would pick the wrong one.</para>
 /// </summary>
@@ -34,6 +35,10 @@ public sealed class SharedSteps(SpecContext context)
             case RecordIncomeResult income:
                 Assert.True(income.WasRecorded);
                 Assert.Null(income.Refusal);
+                break;
+            case AssignResult assigned:
+                Assert.True(assigned.WasAssigned);
+                Assert.Null(assigned.Refusal);
                 break;
             case AddCategoryResult added:
                 Assert.False(added.WasRefused);
@@ -62,6 +67,10 @@ public sealed class SharedSteps(SpecContext context)
                 Assert.False(income.WasRecorded, "Expected the income to be refused, but it was recorded.");
                 Assert.Equal(IncomeRefusal.AmountFinerThanCent, income.Refusal);
                 break;
+            case AssignResult assigned:
+                Assert.False(assigned.WasAssigned, "Expected the assignment to be refused, but it went through.");
+                Assert.Equal(AssignRefusal.AmountFinerThanCent, assigned.Refusal);
+                break;
             default:
                 throw NothingAttempted();
         }
@@ -83,9 +92,36 @@ public sealed class SharedSteps(SpecContext context)
                 Assert.True(expense.CategoryBroughtBack, "Expected the expense to bring its category back.");
                 Assert.Equal(category, expense.Expense!.Category.Name);
                 break;
+            case AssignResult assigned:
+                Assert.True(assigned.WasAssigned, $"Expected the assignment to go through, but it was refused: {assigned.Refusal}.");
+                Assert.True(assigned.CategoryBroughtBack, "Expected the assignment to bring its category back.");
+                Assert.Equal(category, assigned.Category!.Name);
+                break;
             default:
                 throw NothingAttempted();
         }
+    }
+
+    // Recording an expense and assigning both name a category, and both refuse one that is not
+    // the user's — in use or archived — without adding it.
+    [Then(@"I should be told that ""([^""]*)"" is not one of my categories")]
+    public void ThenIShouldBeToldThatIsNotOneOfMyCategories(string category)
+    {
+        switch (context.LastAttempt)
+        {
+            case RecordExpenseResult expense:
+                Assert.False(expense.WasRecorded, "Expected the expense to be refused, but it was recorded.");
+                Assert.Equal(ExpenseRefusal.UnknownCategory, expense.Refusal);
+                break;
+            case AssignResult assigned:
+                Assert.False(assigned.WasAssigned, "Expected the assignment to be refused, but it went through.");
+                Assert.Equal(AssignRefusal.UnknownCategory, assigned.Refusal);
+                break;
+            default:
+                throw NothingAttempted();
+        }
+
+        Assert.False(context.Ledger.HasCategory(category), $"{category} should not be a category.");
     }
 
     private static InvalidOperationException NothingAttempted() =>
