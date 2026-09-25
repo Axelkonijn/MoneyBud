@@ -75,12 +75,15 @@ window. A different toolkit, or a mobile head, could bind to the same view model
 - **Compiled bindings are on by default** (`AvaloniaUseCompiledBindingsByDefault`). A binding to a
   property that does not exist fails the build rather than going quietly blank at run time. That is
   most of what the window's markup can get wrong, and it is checked with no test written.
-- **Some screen behaviour now comes from the toolkit rather than from MoneyBud's code.** The
-  category box narrows its suggestions with Avalonia's own `AutoCompleteBox` filter, set to
-  *Contains* ([§12](../arc42/12-glossary.md), *Category entry is free text with suggestions*).
-  Avalonia's own text, the date picker's month and day names for example, follows the thread
-  culture, which `Program` fixes to nl-NL so that it agrees with the Dutch MoneyBud writes itself.
-  Both live in the Desktop, which has no automated tests ([§11](../arc42/11-risks-and-technical-debt.md)).
+- **The toolkit's controls are given MoneyBud's rules rather than using their own.** The category
+  box narrows its suggestions with MoneyBud's own predicate, `MoneyBudApp.SuggestionMatches`,
+  passed to the `AutoCompleteBox` as a custom filter ([§12](../arc42/12-glossary.md), *Category entry
+  is free text with suggestions*). At first it used Avalonia's built-in *Contains* filter, which
+  compares by the thread's culture and sat out of every test's reach. It was moved into the
+  presentation layer on 2026-09-25 ([ADR 0006](0006-three-source-projects.md), *Consequences*).
+  One piece of toolkit behaviour remains: Avalonia's own text, the date picker's month and day names
+  for example, follows the thread culture. `Program` fixes that to nl-NL so that it agrees with the
+  Dutch MoneyBud writes itself.
 - **Reversal is kept cheap by ADR 0006, not by this record.** Everything the screen decides is in
   the toolkit-free presentation layer. Replacing Avalonia means rewriting one window and one drawing
   control, and no scenario would change.

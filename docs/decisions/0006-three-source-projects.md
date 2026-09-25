@@ -101,9 +101,14 @@ can end up in it by accident, and the specs project does not reference the Deskt
 - **The Desktop has no automated tests, by plan.** It was checked by running it, on Windows, and by
   rendering it headless with synthetic data ([ADR 0005](0005-avalonia-ui-toolkit.md)). That is
   acceptable only while it holds nothing that decides anything, which makes **"deliberately thin" a
-  rule to keep**, not a description. **One decision already sits there:** narrowing the suggestions
-  as you type is the toolkit's `AutoCompleteBox` filter, set in the window's markup, and no scenario
-  or test covers it. Carried in [§11](../arc42/11-risks-and-technical-debt.md).
+  rule to keep**, not a description. **The rule has already been enforced once.** As first built,
+  narrowing the suggestions as you type was the toolkit's `AutoCompleteBox` *Contains* filter, set
+  in the window's markup. That was a stakeholder ruling living in the Desktop, compared by the
+  thread's culture and held by no test. It was found while this record was being written and **moved
+  into `MoneyBud.Presentation` the same day**, as `MoneyBudApp.SuggestionMatches` and
+  `SuggestionsFor`, with unit tests. The Desktop now only hands that predicate to the control as a
+  custom filter. This is what "a decision found in the Desktop moves to the presentation layer"
+  means in practice ([§11](../arc42/11-risks-and-technical-debt.md)).
 - **Every *When* step now acts through `MoneyBudApp`**, including those of the five earlier feature
   files. So the domain scenarios go through the same doors as the screen: an amount is typed text
   read by `AmountInput`, and a date left out means today

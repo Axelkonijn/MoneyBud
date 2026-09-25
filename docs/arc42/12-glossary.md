@@ -1556,16 +1556,20 @@ language.
 
 Settled by the stakeholder on 2026-09-25, after the review, over narrowing on "starts with" and over
 not narrowing at all. It settles what
-[`suggest-categories.feature`](../../features/suggest-categories.feature) left open ("whether the
-suggestions narrow as I type … is not settled"). No reasoning came with the choice. **What it
-does not change:** narrowing only filters the **offers**. What is typed is still judged as typed, so
-"Groc" is still refused as an unknown name and never completed to a suggestion (*Approved at the
-scenario gate*, below).
+[`suggest-categories.feature`](../../features/suggest-categories.feature) had left open as
+unsettled. No reasoning came with the choice. **What it does not change:** narrowing only filters
+the **offers**. What is typed is still judged as typed, so "Groc" is still refused as an unknown name
+and never completed to a suggestion (*Approved at the scenario gate*, below).
 
-**How it is built is carried as a risk.** Narrowing is the toolkit's own category-box filter,
-configured in the Desktop's window. So no scenario and no test holds it, although
-[ADR 0006](../decisions/0006-three-source-projects.md) puts the suggestions in the presentation layer
-where the scenarios run ([§11](11-risks-and-technical-debt.md)).
+**How "contains" is judged.** Case is ignored, and a run of whitespace counts as one space, as in
+the name rule (*A category name is compared case-insensitively*, above), so "vaste  l" still finds
+Vaste lasten. The comparison is ordinal, so the machine's language plays no part. Nothing typed, or
+only spaces, keeps every suggestion. What is left stays in alphabetical order.
+
+**Built** in the presentation layer as `MoneyBudApp.SuggestionMatches` and `SuggestionsFor`, and
+held by unit tests. The stakeholder did not ask for a scenario for it. It was first built as the
+toolkit's own filter in the Desktop, out of every test's reach, and was moved the same day
+([§11](11-risks-and-technical-debt.md), *Resolved*).
 
 | Rejected | Why |
 |---|---|
@@ -1625,8 +1629,9 @@ domain's to say: an assignment takes it, and an expense refuses it. So the rules
 and *Assign* are untouched. Only text now comes before them
 ([§8.2](08-crosscutting-concepts.md)).
 
-**Built** in the presentation layer as `AmountInput`, and held by unit tests. **No scenario covers
-it yet** ([§11](11-risks-and-technical-debt.md)).
+**Built** in the presentation layer as `AmountInput`, and held by unit tests. **Scenarios are being
+written** at the stakeholder's request (`features/type-an-amount.feature`), and are pending the
+scenario gate ([§11](11-risks-and-technical-debt.md)).
 
 ### Stepping between periods
 
@@ -2300,7 +2305,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What happens when MoneyBud stays open past a period boundary? | *Staying open across a period boundary* — the screen **stays on the period it showed**, which has now become the previous period, so assigning in it is refused from then on. Chosen over following today into the new period. Settled 2026-09-25; built in the UI increment |
 | How is typed text read as an amount? | *Typing an amount* — a comma or a point is the decimal mark, no thousands separator is accepted, and text that is not an amount is refused before anything is recorded. A euro sign, a true minus sign and surrounding spaces are tolerated. Ruled at the plan gate, 2026-09-25; built in the UI increment |
 | Is "2.000" two thousand or two euros? | Same section — **neither: it is refused as ambiguous**, naming both readings. Any point or comma followed by exactly three digits ending in 0 is, because both readings are whole cents and nothing downstream could catch the wrong one. "1.832" still reaches the domain and is refused as finer than a cent. Found by the spec review; settled after it on 2026-09-25; built |
-| Do the suggestions narrow as you type? | *Category entry is free text with suggestions* — **yes, on "contains"**: "schap" finds Boodschappen. Chosen over "starts with" and over not narrowing. Settles what `suggest-categories.feature` left open. Settled after the review, 2026-09-25; built, in the Desktop, and covered by no scenario ([§11](11-risks-and-technical-debt.md)) |
+| Do the suggestions narrow as you type? | *Category entry is free text with suggestions* — **yes, on "contains"**: "schap" finds Boodschappen. Chosen over "starts with" and over not narrowing. Settles what `suggest-categories.feature` left open. Case and whitespace runs are ignored, ordinally. Settled after the review, 2026-09-25; built in the presentation layer and held by unit tests, with no scenario, which the stakeholder did not ask for |
 | Is a marker that reads *Over budget* in one place and *Te veel toegewezen* in the other still "the same marker"? | *One marker for over budget and over-assigned* — **yes**: the same look, with each badge naming its own state. Confirmed after the review, 2026-09-25 |
 | How does the Overview show an archived category that is still shown? | *Where an archived category is still shown* — with a **Gearchiveerd** caption, and **no archive button**. Built that way, seen after the review, and kept by the stakeholder, 2026-09-25 |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
@@ -2384,5 +2389,7 @@ plan gate, and `spec-reviewer` reviewed the result, all on 2026-09-25. Two recor
 toolkit, [ADR 0005](../decisions/0005-avalonia-ui-toolkit.md), and the project layout,
 [ADR 0006](../decisions/0006-three-source-projects.md). The domain gained two queries and no
 behaviour. It reaches nothing about accounts, so the location dimension stays out, as before.
-**Two of the rulings it settled have no scenario yet**: how a typed amount is read, and narrowing
-suggestions as you type ([§11](11-risks-and-technical-debt.md)).
+**Two of the rulings it settled are held by unit tests rather than scenarios.** For how a typed
+amount is read, scenarios are being written and are pending the scenario gate. For narrowing
+suggestions as you type, the stakeholder did not ask for one
+([§11](11-risks-and-technical-debt.md)).

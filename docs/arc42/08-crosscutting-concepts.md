@@ -639,13 +639,20 @@ on it.
 | ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
 
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
-wording against §12, money formatting, the ring's shares, and the forms, alongside the domain's
-tests from earlier increments. ADR 0004's rule applies to them unchanged: a unit test is never the
-reason a behaviour exists.
+wording against §12, money formatting, the ring's shares, the forms, and narrowing the suggestions,
+alongside the domain's tests from earlier increments. ADR 0004's rule applies to them unchanged: a
+unit test is never the reason a behaviour exists.
 
-**That rule has an open case.** The amount-reading rules, including the ambiguity refusal, were
-ruled on by the stakeholder and are held **only** by unit tests. No scenario types "2.000". Suggestion
-narrowing is held by nothing at all ([§11](11-risks-and-technical-debt.md)).
+**Two rulings are held by unit tests alone, for now.**
 
-**At the close of the UI increment**: 489 tests passing with zero warnings. That is 251 scenario
-cases, 169 from the four earlier increments and 82 new, and 238 developer unit tests.
+- **Reading a typed amount**, including the ambiguity refusal. No scenario types "2.000" yet.
+  **Scenarios are being written** (`features/type-an-amount.feature`), and they go to the
+  stakeholder at the scenario gate before they are bound ([§11](11-risks-and-technical-debt.md)).
+- **Narrowing the suggestions as you type.** `MoneyBudApp.SuggestionMatches` and `SuggestionsFor`
+  decide it, and `FormTests` holds it. The stakeholder did not ask for a scenario for it. The Desktop
+  only passes the predicate to its category box, so the rule is in the layer the tests reach, not in
+  the toolkit.
+
+**At the close of the UI increment**: 495 tests passing with zero warnings. That is 251 scenario
+cases, 169 from the four earlier increments and 82 new, and 244 developer unit tests. The last six
+unit tests came with narrowing's move into the presentation layer.
