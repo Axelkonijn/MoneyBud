@@ -44,6 +44,11 @@ quietly disagreeing with the first ([§8.1](08-crosscutting-concepts.md)); *Over
 from it rather than stored, so the two cannot drift apart. A single, consistent number is what a
 legible display needs to have underneath it. It is not a legible display.
 
+**Scheduled, not built.** The UI increment's Overview is the first thing designed to serve this
+goal. Its ring puts each category's plan and spending in one picture, so *Remaining* is the unfilled
+part of a slice rather than a figure to look up ([§12](12-glossary.md), *The overview, and its
+ring*). Until it is built, "not yet served" stands.
+
 ### 2. Effortless entry — **not yet served**
 
 Same reason: entry happens through a UI, and there isn't one.

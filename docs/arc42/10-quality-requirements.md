@@ -15,6 +15,12 @@ to attach a stimulus and a measurable response to until a UI exists
 ([§4](04-solution-strategy.md)). Writing measurable scenarios for them against a class library
 would be measuring the wrong thing._
 
+_The UI increment is where this becomes writable, and it is at stage 2: what the UI shows is
+settled ([§12](12-glossary.md), *The user interface*), but nothing is built and **no measure has
+been agreed with the stakeholder**. How quickly an expense can be entered, or how quickly the
+Overview answers "where does my money go", are the obvious candidates. A threshold written here
+without him would be invented, so the section stays empty until one is agreed._
+
 ## 10.1 Quality Tree
 
 _Empty._

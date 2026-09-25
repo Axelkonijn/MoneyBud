@@ -50,3 +50,9 @@ the model: `Assign` as the only writer of a *Budget*, with `SetBudget` deleted r
 and the past-period setup in the specs made by moving the test clock rather than through a
 test-only door into the domain. Both are recorded in [§8.1](08-crosscutting-concepts.md). Deleting a
 scaffold is not a reversal of anything a record had decided, so there was nothing to supersede.
+
+**The UI increment is expected to add one: the desktop UI toolkit.** It is not in the index because
+it has not been decided. ADR 0002 left the toolkit open on purpose. It will be proposed at the plan
+gate and recorded then. The same gate is when to re-examine whether ADR 0004's two-project layout
+still holds once there is a UI, as [§5](05-building-block-view.md) asks. What the UI shows and does was settled first, as
+requirements, in [§12](12-glossary.md), *The user interface*. None of that depends on the toolkit.

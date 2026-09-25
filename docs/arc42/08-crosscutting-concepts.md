@@ -76,7 +76,10 @@ own:
   no refusal consults it. To keep it honest, an assignment that changes nothing — zero, or a
   negative clipped against a *Budget* already at zero — **writes nothing**, so it cannot make
   `HasBudget` true. The clip case once did, by storing a zero; `spec-reviewer` found it, and it was
-  fixed before the increment closed.
+  fixed before the increment closed. **The UI must not consult it either.** The Overview's ring
+  treats "no budget" as a *Budget* of zero, however it got there ([§12](12-glossary.md), *The
+  overview, and its ring*), so a ring built on `HasBudget` would draw a difference §12 says does
+  not exist.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case
@@ -186,8 +189,10 @@ signature, and a second rule, "every category act tells its outcome", which is c
 | `Ledger.Assign` → `AssignResult` | Exactly **two** shapes: assigned, handing back the category, or **refused** for one `AssignRefusal`. Two facts ride on an assigned result: `Shortfall`, how much of a negative amount could not come back, and `CategoryBroughtBack`. Both are zero or false on a refused one | Going *Over-assigned* produces a plain assignment, because there is nowhere else for it to go. `Shortfall` is the clip being **said rather than absorbed** ([§12](12-glossary.md), *An over-large negative assignment is clipped*). Like `CategoryBroughtBack`, it is information after the fact, not a warning and not a third outcome. `CategoryBroughtBack` is only ever true for a **positive** amount, and only once every check has passed. It **throws** for a `BudgetPeriod` that is not one of the ledger's calendar periods, such as a hand-made date range. A user picks a period from the calendar and cannot reach that, so, as with archiving, it is a caller's mistake rather than a situation to report |
 
 Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal` and `AssignRefusal` **values, not messages**. The wording the user
-sees belongs to a UI that does not exist yet ([§5](05-building-block-view.md)); putting copy in the
-domain would put it in the wrong place and would make re-wording it a domain change.
+sees belongs to the UI, which is not built yet ([§5](05-building-block-view.md)); putting copy in the
+domain would put it in the wrong place and would make re-wording it a domain change. The UI
+increment settled that the wording is **Dutch** ([§12](12-glossary.md), *The UI is in Dutch*),
+which changes nothing here: the Dutch text lives in the UI, and the domain keeps its reasons.
 
 **`IncomeRefusal` has no `DateInFuture` member, and the absence is the decision.** `ExpenseRefusal`
 has one, so the asymmetry is visible in the source and looks exactly like an oversight to anyone
@@ -282,6 +287,11 @@ the **full** rule, and the "shown" steps should be rebound to it. Since the assi
 those steps carry two scenarios in
 [`assign-to-category.feature`](../../features/assign-to-category.feature) as well as the archive
 scenarios.
+
+**A view now needs it.** The UI increment's Overview steps back and forward between periods
+([§12](12-glossary.md), *Stepping between periods*), and so it is the first thing that has to decide
+which categories each period shows. That is where the full rule gets built. Until it is, everything
+above still describes the code.
 
 ### A first start is a door of its own
 
@@ -481,6 +491,12 @@ trigger: both decisions were bought with the same argument, so both expire toget
 Two things should be settled at that point rather than drifted into: the form storage takes
 ([§7](07-deployment-view.md) lists it as open, along with where on the machine it lives), and how
 amounts are stored (§8.2, *Still open*).
+
+**Reconsidered for the UI increment, and kept** (2026-09-25). The UI starts with the default
+categories and nothing else, and loses everything on close. The stakeholder chose that over saving
+to a file and over starting with synthetic demo data ([§12](12-glossary.md), *What the UI starts
+with, and what it keeps*). The trigger above has not fired. The UI is, though, the first increment
+in which it **can** fire: until now nobody could enter anything, so nobody could mind losing it.
 
 This is a **scope** decision rather than an architectural one, which is why it lives here and not
 as a record in [`docs/decisions/`](../decisions/). MoneyBud already records "not in the first

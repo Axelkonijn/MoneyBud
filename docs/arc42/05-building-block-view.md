@@ -50,7 +50,7 @@ than by omission:
 
 | Absent | Why |
 |---|---|
-| **A user interface** | [ADR 0002](../decisions/0002-desktop-application-first.md) settles that MoneyBud is a desktop application but deliberately leaves the toolkit open, and no approved scenario needs a screen. Nothing in the domain anticipates one: refusals are reasons rather than messages precisely so that the UI can be added without the domain changing ([§8.1](08-crosscutting-concepts.md)) |
+| **A user interface** | [ADR 0002](../decisions/0002-desktop-application-first.md) settles that MoneyBud is a desktop application but deliberately leaves the toolkit open, and no approved scenario needs a screen yet. Nothing in the domain anticipates one: refusals are reasons rather than messages precisely so that the UI can be added without the domain changing ([§8.1](08-crosscutting-concepts.md)). **It is the fifth increment**, now at stage 2. What it covers is settled in [§12](12-glossary.md), *The user interface*. The toolkit is still open and will be proposed at the plan gate |
 | **Anything that stores data** | [§8.3](08-crosscutting-concepts.md) defers persistence entirely — state lives in `Ledger` for the lifetime of a run and is gone afterwards — and states what will force the decision |
 
 Adding either is the moment to re-examine whether two projects are still the right number
