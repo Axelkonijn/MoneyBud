@@ -634,7 +634,7 @@ on it.
 | Step | Acts on | Why |
 |---|---|---|
 | ***Given*** | **The ledger, directly** | Setting up is not what is under test. A budget in a past period is still made by moving the test clock and assigning ([§8.1](#81-domain-model)), so setup cannot make a state the rules forbid |
-| ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: the scenarios' amounts are all meant to reach the domain |
+| ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: those scenarios' amounts are all meant to reach the domain. The one exception is `type-an-amount.feature`, whose quoted amounts are sometimes meant not to (below) |
 | ***Then*** about **what is shown** | **The presentation layer**: the period's `PeriodOverview`, its rows, ring and lists, the suggestions, and the notice | Each is a claim about what MoneyBud shows. A period is read with `OverviewFor`, without stepping to it, so checking one period never moves the screen a later step asserts on. This is what closed the [§11](11-risks-and-technical-debt.md) row about "shown" steps bound to the ledger |
 | ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
 
@@ -643,16 +643,27 @@ wording against §12, money formatting, the ring's shares, the forms, and narrow
 alongside the domain's tests from earlier increments. ADR 0004's rule applies to them unchanged: a
 unit test is never the reason a behaviour exists.
 
-**Two rulings are held by unit tests alone, for now.**
+**Reading a typed amount has its own feature file.**
+[`type-an-amount.feature`](../../features/type-an-amount.feature) was approved at the scenario gate
+on 2026-09-26 and is bound, in `AmountSteps`. Its *When* steps quote the typed text and are the only
+ones that **do not fail** when it cannot be read, because there that is the case under test. They go
+through the same `MoneyBudApp` doors as every other *When*. A refusal that never reached the ledger
+is recorded as such, so "should not be recorded" can tell it from a domain refusal. The *Then* checks
+the reading and that a refusal was said, and for an ambiguous amount that the notice names both
+readings, but never the Dutch sentence itself. Every other feature file keeps the rule above: an
+unreadable amount fails the scenario. This closed the
+[§11](11-risks-and-technical-debt.md) row saying reading was held by unit tests alone (*Resolved*).
+One approved refusal has no scenario: "€ −50", minus after the euro sign. It is held by a unit
+test in `AmountInputTests` instead ([§12](12-glossary.md), *Typing an amount*).
 
-- **Reading a typed amount**, including the ambiguity refusal. No scenario types "2.000" yet.
-  **Scenarios are being written** (`features/type-an-amount.feature`), and they go to the
-  stakeholder at the scenario gate before they are bound ([§11](11-risks-and-technical-debt.md)).
-- **Narrowing the suggestions as you type.** `MoneyBudApp.SuggestionMatches` and `SuggestionsFor`
-  decide it, and `FormTests` holds it. The stakeholder did not ask for a scenario for it. The Desktop
-  only passes the predicate to its category box, so the rule is in the layer the tests reach, not in
-  the toolkit.
+**One ruling is held by unit tests alone: narrowing the suggestions as you type.**
+`MoneyBudApp.SuggestionMatches` and `SuggestionsFor` decide it, and `FormTests` holds it. The
+stakeholder did not ask for a scenario for it. The Desktop only passes the predicate to its category
+box, so the rule is in the layer the tests reach, not in the toolkit.
 
 **At the close of the UI increment**: 495 tests passing with zero warnings. That is 251 scenario
 cases, 169 from the four earlier increments and 82 new, and 244 developer unit tests. The last six
 unit tests came with narrowing's move into the presentation layer.
+
+**With typed amounts specified**: 574 tests passing. That is 324 scenario cases, the 251 above and
+73 from `type-an-amount.feature`'s 14 outlines, and 250 developer unit tests.

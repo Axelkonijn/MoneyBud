@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 572 passing: 324 scenario cases, 248 developer unit tests
+dotnet test  MoneyBud.slnx     # 574 passing: 324 scenario cases, 250 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
 ```
 

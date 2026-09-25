@@ -1496,7 +1496,8 @@ into this glossary rather than into a new interview round.
 was reviewed by `spec-reviewer`, all on 2026-09-25. How a typed amount is read was ruled at the plan
 gate. Five more rulings followed the review: the refusal of an ambiguous amount, how suggestions
 narrow, what the marker's badge says, the *Gearchiveerd* caption, and a refinement of
-"alphabetical". Each sits in the section it belongs to. The toolkit is
+"alphabetical". Two more came on 2026-09-26, while typed amounts got scenarios of their own: "2.0000"
+and ",50" are not amounts. Each sits in the section it belongs to. The toolkit is
 Avalonia (*The toolkit*, below). How the screen is arranged in code is in
 [§8.4](08-crosscutting-concepts.md).
 
@@ -1623,15 +1624,57 @@ draws: an ambiguous amount is **bad input**. It has two correct readings, not on
 cannot tell which was meant. Naming both readings lets the user fix it in one step, because the form
 keeps what was typed after a refusal.
 
+> **Four or more digits after the mark that are all whole cents, such as "2.0000", "12,5000" or
+> "7,00000", are not an amount.**
+
+Ruled by the stakeholder on 2026-09-26, while the scenarios were being written. **Why:** it is the
+same silent shape as "2.000". "2.0000" is whole cents, so the domain would record it as €2,00 without
+a word, and MoneyBud never shows more than two decimals, so it is not a form the user has seen on
+screen. **Why "not an amount" and not "ambiguous"**, in the documentation's reasoning: nobody writes
+a thousands group of four digits, so there is no second reading to name. There is only a reading
+that nothing downstream would catch.
+
+**"All whole cents" means every digit after the second is 0.** A four-or-more tail that is **not**
+whole cents is read as a decimal and refused by the cent rule, as "1.832" is: "12,3456", and also
+"12,3450", which is 12.345. That second one ends in 0 but is finer than a cent, so the user sees the
+cent refusal, not this one. **Past ten decimals the cent rule is never reached**: "12,34567890123" is
+refused as **not an amount**, by the reader's ten-decimal limit, which exists so that the
+conversion never rounds ([§8.2](08-crosscutting-concepts.md)). Both routes refuse it. Only what the
+user is told differs.
+
+> **A mark needs a digit before it and a digit after it.** ",50" and "12," are not amounts.
+
+Ruled by the stakeholder on 2026-09-26, **chosen over reading ",50" as 0,50**. No reasoning came with
+the choice. What it costs is small and visible: someone who types ",50" meaning fifty cents is
+refused and types "0,50". Nothing is ever recorded as something other than what was meant.
+
 **What reading an amount does not decide.** It never rounds, and it never judges a sign. "12,345" is
 read as typed and refused by the cent rule. A minus is read, and whether it is allowed is the
 domain's to say: an assignment takes it, and an expense refuses it. So the rules of *Transaction*
 and *Assign* are untouched. Only text now comes before them
 ([§8.2](08-crosscutting-concepts.md)).
 
-**Built** in the presentation layer as `AmountInput`, and held by unit tests. **Scenarios are being
-written** at the stakeholder's request (`features/type-an-amount.feature`), and are pending the
-scenario gate ([§11](11-risks-and-technical-debt.md)).
+#### Approved at the scenario gate, 2026-09-26
+
+The scenario writer made these choices in
+[`type-an-amount.feature`](../../features/type-an-amount.feature). **The stakeholder approved the
+scenarios with all of them on 2026-09-26**, so they stand as decisions. The reasoning is the
+documentation's, kept because it is why they stand.
+
+| Approved | What it rests on |
+|---|---|
+| **"−€ 50,00" is read as minus fifty, and "€ −50" is refused as not an amount** | "−€ 50,00" is exactly how MoneyBud shows a negative amount, minus sign first ([§8.2](08-crosscutting-concepts.md), *display formatting is fixed*), so a user copying what is on screen is understood. "€ −50" is a form MoneyBud never shows. The minus goes in front of everything, the euro sign in front of the number. **No scenario types "€ −50"**; a unit test in `AmountInputTests` holds the refusal. |
+| **"0,100" is refused as ambiguous**, although almost nobody means one hundred by it | The rule is applied as written. An exception for the unlikely reading would be MoneyBud guessing after all, and the refusal names "0,10", so the fix is one step |
+| **Text that cannot be read is refused for that, before the category is looked at** | The two layers of refusal run in a fixed order ([§8.2](08-crosscutting-concepts.md), [§6](06-runtime-view.md)). "abc" aimed at a name that is not a category is told it is not an amount, and is not told about the category |
+| **Text that cannot be read brings no archived category back** | Bringing back is a side-effect of **recording** (*Recording an expense against an archived category brings it back*, above), and an expense refused for another reason already brings nothing back. Unreadable text records nothing |
+| **Spaces only counts as empty**, and is refused as not an amount | Spaces around the number are tolerated. With no number, what is left is empty text |
+| **"€ 2.000,00", MoneyBud's own display form, cannot be typed back in** | It follows from *no thousands separator is accepted* (above). The cost is that a figure copied off the screen is refused. That is accepted: it is refused, with a reason, not misread |
+
+**Built** in the presentation layer as `AmountInput`, held by unit tests, and **specified by
+[`type-an-amount.feature`](../../features/type-an-amount.feature)**: 14 scenario outlines, 73 cases,
+covering expenses, incomes and assigning. Written at the stakeholder's request, **approved at the
+scenario gate on 2026-09-26**, and bound and green. That closes the [§11](11-risks-and-technical-debt.md)
+row saying no scenario held these rulings (*Resolved*).
 
 ### Stepping between periods
 
@@ -2166,7 +2209,9 @@ scenario writer's assumptions, and one consequence of staying open across a boun
 with the scenarios (*Approved at the scenario gate*, above). How a typed amount is read was ruled at
 the plan gate. Five more points were settled after the spec review: an ambiguous amount is refused,
 suggestions narrow on "contains", each marker badge names its own state, an archived category that
-is still shown is captioned, and "alphabetical" means the invariant culture's order.
+is still shown is captioned, and "alphabetical" means the invariant culture's order. Two more were
+ruled on 2026-09-26, while `type-an-amount.feature` was written: four or more whole-cent digits after
+the mark are not an amount, and a mark needs a digit on both sides.
 
 One question is **opened** by them rather than answered: whether an overdrawn account gets the
 marker *Over budget* and *Over-assigned* now have. It cannot be answered before accounts exist, and
@@ -2303,8 +2348,10 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | In what order are category suggestions listed? | *Category entry is free text with suggestions* — **alphabetically**. Chosen over the Overview's order and over the order added. Settled 2026-09-25; built in the UI increment. **Refined after the review**: alphabetical means the invariant culture's order with case ignored, so "Één" sorts among the E's, not after Z as ordinal comparison put it. Still independent of the machine's language |
 | Is anything announced when a new period begins while MoneyBud is open? | *Staying open across a period boundary* — **no**. Only the label of the period on screen changes: it stops being labelled as the current period. Chosen over a short notice. Settled 2026-09-25; built in the UI increment |
 | What happens when MoneyBud stays open past a period boundary? | *Staying open across a period boundary* — the screen **stays on the period it showed**, which has now become the previous period, so assigning in it is refused from then on. Chosen over following today into the new period. Settled 2026-09-25; built in the UI increment |
-| How is typed text read as an amount? | *Typing an amount* — a comma or a point is the decimal mark, no thousands separator is accepted, and text that is not an amount is refused before anything is recorded. A euro sign, a true minus sign and surrounding spaces are tolerated. Ruled at the plan gate, 2026-09-25; built in the UI increment |
+| How is typed text read as an amount? | *Typing an amount* — a comma or a point is the decimal mark, no thousands separator is accepted, and text that is not an amount is refused before anything is recorded. A euro sign, a true minus sign and surrounding spaces are tolerated. Ruled at the plan gate, 2026-09-25; built in the UI increment; held by `type-an-amount.feature` since the scenario gate of 2026-09-26 |
 | Is "2.000" two thousand or two euros? | Same section — **neither: it is refused as ambiguous**, naming both readings. Any point or comma followed by exactly three digits ending in 0 is, because both readings are whole cents and nothing downstream could catch the wrong one. "1.832" still reaches the domain and is refused as finer than a cent. Found by the spec review; settled after it on 2026-09-25; built |
+| Is "2.0000" an amount? | *Typing an amount* — **no**. Four or more digits after the mark that are all whole cents are not an amount: the same silent shape as "2.000", in a form MoneyBud never shows. A four-or-more tail that is not whole cents, "12,3450" included, is left to the cent rule. Ruled 2026-09-26; built, and held by `type-an-amount.feature` |
+| Is ",50" fifty cents? | Same section — **no**. A mark needs a digit on both sides, so ",50" and "12," are not amounts. Chosen over reading ",50" as 0,50. Ruled 2026-09-26; built, and held by `type-an-amount.feature` |
 | Do the suggestions narrow as you type? | *Category entry is free text with suggestions* — **yes, on "contains"**: "schap" finds Boodschappen. Chosen over "starts with" and over not narrowing. Settles what `suggest-categories.feature` left open. Case and whitespace runs are ignored, ordinally. Settled after the review, 2026-09-25; built in the presentation layer and held by unit tests, with no scenario, which the stakeholder did not ask for |
 | Is a marker that reads *Over budget* in one place and *Te veel toegewezen* in the other still "the same marker"? | *One marker for over budget and over-assigned* — **yes**: the same look, with each badge naming its own state. Confirmed after the review, 2026-09-25 |
 | How does the Overview show an archived category that is still shown? | *Where an archived category is still shown* — with a **Gearchiveerd** caption, and **no archive button**. Built that way, seen after the review, and kept by the stakeholder, 2026-09-25 |
@@ -2389,7 +2436,8 @@ plan gate, and `spec-reviewer` reviewed the result, all on 2026-09-25. Two recor
 toolkit, [ADR 0005](../decisions/0005-avalonia-ui-toolkit.md), and the project layout,
 [ADR 0006](../decisions/0006-three-source-projects.md). The domain gained two queries and no
 behaviour. It reaches nothing about accounts, so the location dimension stays out, as before.
-**Two of the rulings it settled are held by unit tests rather than scenarios.** For how a typed
-amount is read, scenarios are being written and are pending the scenario gate. For narrowing
-suggestions as you type, the stakeholder did not ask for one
-([§11](11-risks-and-technical-debt.md)).
+**One of the rulings it settled is held by unit tests rather than scenarios**: narrowing
+suggestions as you type, for which the stakeholder did not ask for one. How a typed amount is read
+was the other, until [`type-an-amount.feature`](../../features/type-an-amount.feature) was approved
+at the scenario gate on 2026-09-26 and bound, with two further rulings of that day in it
+([§11](11-risks-and-technical-debt.md), *Resolved*).

@@ -47,6 +47,8 @@ public sealed class AmountInputTests
     [InlineData("--5")]
     [InlineData("12345678901234")]
     [InlineData("2.0000")]
+    [InlineData("€ −50")]
+    [InlineData("€ -50")]
     [InlineData("12,5000")]
     [InlineData("0,01000")]
     [InlineData("1,00000000000000000000000000001")]
