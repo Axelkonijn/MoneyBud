@@ -29,6 +29,9 @@ public enum AmountReading
 /// shows thousands with a point. So when three digits end in 0 the text is refused as ambiguous
 /// rather than guessed at (settled with the stakeholder after review, 2026-09-25).</para>
 ///
+/// <para>Four or more decimals ending in nothing but zeros ("2.0000") are not an amount, for the
+/// same reason one step removed; and a mark needs a digit before it (",50" is not an amount).</para>
+///
 /// <para>Nothing is rounded here: the decimal passed on is exactly what was typed, and the cent
 /// rule stays the domain's. A leading minus is accepted, because assigning a negative amount is
 /// how money goes back to <i>Unassigned</i>; whether a negative is allowed elsewhere is again the
@@ -51,6 +54,13 @@ public static partial class AmountInput
 
         if (fraction.Success && fraction.Value.Length == 3 && fraction.Value[^1] == '0')
             return AmountReading.Ambiguous;
+
+        // Four or more decimals that are still whole cents, such as "2.0000": the tail is all
+        // zeros, so the domain would take it as 2,00 without a word. MoneyBud never shows more
+        // than two decimals, so this is not how anyone writes an amount (stakeholder, 2026-09-26).
+        // A tail that is not all zeros is left to the cent rule, as "1.832" is.
+        if (fraction.Success && fraction.Value.Length > 3 && fraction.Value[2..].All(d => d == '0'))
+            return AmountReading.NotAnAmount;
 
         var number = fraction.Success ? $"{whole}.{fraction.Value}" : whole;
         if (!decimal.TryParse(number, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out euros))

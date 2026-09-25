@@ -23,6 +23,7 @@ public sealed class AmountInputTests
     [InlineData("12,345", "12.345")]
     [InlineData("1.832", "1.832")]
     [InlineData("2.00", "2.00")]
+    [InlineData("12,3456", "12.3456")]
     [InlineData("0", "0")]
     public void Reads_what_was_typed_exactly(string typed, string euros)
     {
@@ -45,6 +46,9 @@ public sealed class AmountInputTests
     [InlineData("12e3")]
     [InlineData("--5")]
     [InlineData("12345678901234")]
+    [InlineData("2.0000")]
+    [InlineData("12,5000")]
+    [InlineData("0,01000")]
     [InlineData("1,00000000000000000000000000001")]
     public void Is_not_an_amount(string? typed) =>
         Assert.Equal(AmountReading.NotAnAmount, AmountInput.Read(typed, out _));

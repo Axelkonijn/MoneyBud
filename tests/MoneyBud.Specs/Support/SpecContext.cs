@@ -135,6 +135,15 @@ public sealed class SpecContext
         LastAttempt = new Archived(category);
     }
 
+    /// <summary>
+    /// An entry whose typed amount the screen could not read, so the ledger was never asked
+    /// (features/type-an-amount.feature). <paramref name="What"/> is "expense", "income" or
+    /// "assignment".
+    /// </summary>
+    public sealed record Unread(string Typed, string What);
+
+    public void RecordUnread(string typed, string what) => LastAttempt = new Unread(typed, what);
+
     /// <summary>Moves the day the ledger considers today. See <see cref="FixedClock"/>.</summary>
     public void SetToday(DateOnly day) => clock.Now = Noon(day);
 

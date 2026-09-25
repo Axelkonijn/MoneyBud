@@ -51,8 +51,12 @@ public sealed class AssignSteps(SpecContext context)
             $"Expected it to go through, but it was refused: {context.AssignResult.Refusal}.");
 
     [Then(@"the assignment should be refused")]
-    public void ThenTheAssignmentShouldBeRefused() =>
+    public void ThenTheAssignmentShouldBeRefused()
+    {
+        if (context.LastAttempt is SpecContext.Unread { What: "assignment" }) return;
+
         Assert.False(context.AssignResult.WasAssigned, "Expected it to be refused, but it went through.");
+    }
 
     [Then(@"I should be told of a shortfall of (\S+) euro")]
     public void ThenIShouldBeToldOfAShortfallOf(string amount) =>

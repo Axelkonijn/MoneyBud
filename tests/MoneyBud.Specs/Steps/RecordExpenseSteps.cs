@@ -152,8 +152,13 @@ public sealed class RecordExpenseSteps(SpecContext context)
             $"Expected it to be recorded, but it was refused: {context.ExpenseResult.Refusal}.");
 
     [Then(@"the expense should not be recorded")]
-    public void ThenTheExpenseShouldNotBeRecorded() =>
+    public void ThenTheExpenseShouldNotBeRecorded()
+    {
+        // Refused before the ledger was asked, because the amount could not be read.
+        if (context.LastAttempt is SpecContext.Unread { What: "expense" }) return;
+
         Assert.False(context.ExpenseResult.WasRecorded, "Expected it not to be recorded, but it was.");
+    }
 
     [Then(@"I should be told that an expense needs a category")]
     public void ThenIShouldBeToldAnExpenseNeedsACategory() =>

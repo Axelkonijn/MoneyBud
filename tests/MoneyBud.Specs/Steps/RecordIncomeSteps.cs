@@ -76,8 +76,12 @@ public sealed class RecordIncomeSteps(SpecContext context)
             $"Expected it to be recorded, but it was refused: {context.IncomeResult.Refusal}.");
 
     [Then(@"the income should not be recorded")]
-    public void ThenTheIncomeShouldNotBeRecorded() =>
+    public void ThenTheIncomeShouldNotBeRecorded()
+    {
+        if (context.LastAttempt is SpecContext.Unread { What: "income" }) return;
+
         Assert.False(context.IncomeResult.WasRecorded, "Expected it not to be recorded, but it was.");
+    }
 
     [Then(@"I should be told that an income needs a label")]
     public void ThenIShouldBeToldAnIncomeNeedsALabel() => AssertRefused(IncomeRefusal.LabelMissing);
