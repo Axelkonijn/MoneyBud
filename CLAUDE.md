@@ -173,13 +173,20 @@ and one low defect, fixed. Everything is in [§12](docs/arc42/12-glossary.md); i
   scenarios start from an **empty** ledger unless they are about the first start, which is what
   proves no other scenario depends on the defaults.
 
-**Watch out for** in later increments: **whether an archived category is shown in a period lives
-only in the step definitions.** The ledger exposes `HasHistoryIn` and `IsArchived`, not an "is
-shown" query, because whether a category *in use* is shown where it has no history is unsettled.
-When a period view is built, the archive scenarios' "should (not) be shown" steps must be rebound
-to it. Three questions surfaced that belong to later increments: is an archived category offered
-when assigning; is its figure offered back when a period opens; is a category in use shown in a
-period where it has no history.
+**Settled ahead of later increments** (2026-09-25, in §12; none of it is built):
+
+- **Assigning** does not offer an archived category, and assigning to its name **brings it back**,
+  told — the same rule as recording an expense. `Ledger.SetBudget` is scaffolding that does *not*
+  bring back; the assigning increment builds the real act to the rule.
+- **When a period opens**, an archived category's last figure is **not offered back**.
+- **Which categories a period shows:** every category with history there (a budget of more than
+  zero, or an expense), **plus** every category in use in the **current and future** periods,
+  where they can be planned for. A past period shows only what has history in it.
+
+**Watch out for:** that display rule is not implemented anywhere yet — the ledger exposes
+`HasHistoryIn` and `IsArchived`, and the archive scenarios' "should (not) be shown" steps are bound
+to those. When a period view is built, implement the full rule there and rebind those steps to it
+([§11](docs/arc42/11-risks-and-technical-debt.md)).
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 

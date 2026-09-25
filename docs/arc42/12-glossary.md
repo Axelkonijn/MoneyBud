@@ -575,9 +575,13 @@ got.
 
 ### What the state fixes
 
-- The category is **not offered when recording** something new. Not being offered is not the same
-  as being refused: an expense recorded against its name is recorded, and brings it back (*Recording
-  an expense against an archived category brings it back*, below).
+- The category is **not offered for new entry**: not when recording an expense, and not when
+  assigning. Not being offered is not the same as being refused. An expense recorded against its
+  name is recorded, and an amount assigned to it is assigned, and either brings it back (*Recording
+  an expense against an archived category brings it back* and *Assigning to an archived category
+  brings it back*, below).
+- Its last figure is **not offered back** when a new period opens (*An archived category's figure
+  is not offered back when a period opens*, below).
 - It **still owns its expenses**. Nothing is reassigned, nothing is orphaned.
 - It **still appears in every budget period where it has history** — a budget of more than zero
   or an expense in that period — with the budgets and figures it had there. **That includes the
@@ -587,7 +591,7 @@ got.
   archived (next).
 - The state is about **new entry only**. It says nothing about money.
 - It is **not permanent**: adding its name again brings the category back, and so does recording
-  an expense against it — both below.
+  an expense against it or assigning to it — all three below.
 
 Archiving applies to a category **you have and that is in use**. *Archived* is a yes-or-no state of
 an existing category, so archiving a name you do not have, or archiving a category that is already
@@ -649,6 +653,35 @@ exists to prevent. Settled by the stakeholder on 2026-09-25.
 that. The rule is about history, not about whether a period is past: a past period in which the
 category has no history does not show it either.
 
+### When any category is shown in a period: the full rule
+
+The rule above covers archived categories. It left one case open, which the category increment met
+and did not need to answer: whether a category **in use** is shown in a period where it has **no**
+history. The stakeholder settled it on 2026-09-25, and with it the whole display rule:
+
+> **A category is shown in period P if it has history in P** (a budget of more than zero, or an
+> expense) **or if it is in use and P is the current period or a later one.**
+
+| Period | A category in use with no history there | An archived category with no history there |
+|---|---|---|
+| **Past** | Not shown | Not shown |
+| **Current or future** | **Shown** | Not shown |
+
+A category with history in a period is shown there in every case.
+
+**Why the two halves differ.** The current and future periods are the ones you **plan**. Every
+category you could assign to has to be there to be assigned to, whether or not anything has
+happened to it yet. A past period is a **record of what happened**, so it shows only what has
+history there, which is the same rule already settled for an archived category. The planning reason
+does not reach an archived category, because an archived category is not offered for assigning
+(*Assigning to an archived category brings it back*, below). Naming it anyway brings it back, and
+then it is a category in use.
+
+| Rejected | Why |
+|---|---|
+| **Every period, always** | It fills every past period with rows of zeros, including periods from before the category existed. A record of what happened would then list things that did not happen, which costs legibility (goal 1) |
+| **Only with history, always** | In the period you are planning, a category would not appear until you had already assigned to it, so you could not see it in order to assign to it |
+
 ### Adding an archived category's name brings it back
 
 > **Adding a name that an archived category already carries brings that category back — history and
@@ -686,7 +719,8 @@ has can express on its own.
 **Adding its name is no longer the only way back.** When this paragraph was written it was; since
 2026-09-25 recording an expense against the category brings it back too (next). There is still no
 separate un-archive act, but the argument above now has to carry two routes instead of one, and the
-next section says how far it still does.
+next section says how far it still does. Assigning became a third route later the same day
+(*Assigning to an archived category brings it back*, below).
 
 ### Recording an expense against an archived category brings it back
 
@@ -741,6 +775,45 @@ the stakeholder on 2026-09-25**. That puts it on the same footing as *Backed cat
 So the archiving rule and the never-closes rule do **not** pull against each other, which is what
 they appeared to do before this was decided — and now that is true by decision rather than by an
 inference that turned out to rest on a route that was never there.
+
+### Assigning to an archived category brings it back
+
+> **An archived category is not offered when assigning. Assigning to its name anyway brings it
+> back** — history and all, spelled as it was — **and the user is told**, exactly as when an expense
+> is recorded against it.
+
+Settled by the stakeholder on 2026-09-25, before any assigning is built.
+
+**Why.** It is **one rule for every kind of new entry.** *Archived* means taken out of new entry,
+and naming an archived category is how you bring it back. Recording an expense and assigning are
+both new entry, so they behave the same way. This makes assigning a **third route back**, after
+adding the name and recording an expense. There is still **no separate un-archive act**: all three
+are acts the user already has, and bringing back is an announced side-effect of each. The
+reconciliation in the section above carries a third route as well as a second.
+
+| Rejected | Why |
+|---|---|
+| **Not offered, and refused** | A detour for an obvious intent. This is the reason option (a) lost for expenses, and it applies unchanged |
+| **Offered** | Archiving would then hide a category from expense entry only. That contradicts what *Archived* means, which is out of **new entry**, not out of one kind of it |
+
+**Not built.** There is no act of assigning yet. `Ledger.SetBudget` stands in for it as scaffolding
+and does **not** bring an archived category back. That is now a known gap between the scaffold and
+the decided rule, recorded in [§8.1](08-crosscutting-concepts.md).
+
+### An archived category's figure is not offered back when a period opens
+
+> **When a new budget period opens, an archived category's last figure is not offered back.** If
+> the category is brought back later, it is assigned to like any other category.
+
+*Budgets carry over as figures, not as assignments* (below) offers each category's previous figure
+back at the start of a period. For an archived category it does not. **Why:** you put the category
+away, so MoneyBud does not suggest planning for it again. Settled by the stakeholder on 2026-09-25.
+
+| Rejected | Why |
+|---|---|
+| **Offer it back** | It would plan money for a category the user archived, while leaving the category archived |
+
+**Not built.** Carry-over is not built for any category yet.
 
 ### What archiving does not settle, because it cannot yet
 
@@ -822,14 +895,14 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). Taken out of use by **archiving**, never by deleting: its history stays, and adding its name again or recording an expense against it brings it back (*A category is taken out of use, not deleted*, above). **Renaming** is not in this increment. MoneyBud ships with six **default categories** (above). |
-| **Archived** | The state of a category that has been taken out of use. It is **no longer offered when recording**, and everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by either of two acts the user already has: **adding its name** again, or **recording an expense against it** — which records the expense rather than refusing it. Either way the user is told it was brought back. There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those two acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). |
+| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning to it** (decided, not yet built). Each way, the user is told it was brought back. There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. |
 | **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
 | **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
-| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
+| **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. An **archived** category is not offered for assigning. Assigning to its name anyway **brings it back**, and the user is told (see *Assigning to an archived category brings it back* above). Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. |
 | **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. **Not in the income increment**: with no act of assigning, nothing subtracts from *Unassigned*, so it cannot go negative yet — see *Over-assigned* below. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. |
@@ -942,7 +1015,8 @@ knows whether the money really went back.
 **The figures are remembered; the money is not assigned.**
 
 When a budget period opens, each category's amount from the previous period is remembered and
-**offered back** — but nothing has been assigned yet. The pool starts whole: the period's income is
+**offered back** — but nothing has been assigned yet. An **archived** category's figure is not
+offered back (*An archived category's figure is not offered back when a period opens*, above). The pool starts whole: the period's income is
 entirely *Unassigned*, every category's *Budget* is zero until the user acts, and the *Unassigned*
 figure starts at the full income. **One action assigns last period's plan in full**, after which individual
 figures can be adjusted like any other.
@@ -1279,12 +1353,15 @@ whitespace in a name is compared, and whether archiving is confirmed and announc
 category answers are now **built**: the category increment shipped green against them. The
 *Answered* table below says where each answer lives.
 
-Two questions the category increment met are **not** filed here, because each belongs to an
-increment that has not started and neither blocks anything built. One is whether a category **in
-use** is shown in a period where it has no history, which is for the period view. The other is what
-**assigning** to an archived category does, which is for the assigning increment.
-[§8.1](08-crosscutting-concepts.md) records both, and [§11](11-risks-and-technical-debt.md) carries
-the risk the first one creates.
+The category increment met two questions it did not need to answer, and they were never filed here
+because each belonged to a later increment. The first was whether a category **in use** is shown in
+a period where it has no history. The second was what **assigning** to an archived category does.
+Both were **answered on 2026-09-25**, together with a third that belongs to the same later work:
+whether an archived category's figure is offered back when a period opens. All three are
+**decided but not built** (*When any category is shown in a period: the full rule*, *Assigning to an
+archived category brings it back*, *An archived category's figure is not offered back when a period
+opens*). [§8.1](08-crosscutting-concepts.md) and [§11](11-risks-and-technical-debt.md) record
+what the code does meanwhile.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -1384,6 +1461,9 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Does adding a name in a different capitalisation change the existing category's spelling? | Same section, *The existing spelling is kept* — **no**, for an active category, an archived one brought back by adding its name, and one brought back by recording an expense against it. Taking the new spelling would be a rename by the back door |
 | May a category be renamed? | *Renaming a category is not in this increment* — deferred with its two questions named, not rejected |
 | Which categories does MoneyBud ship with? | *The default categories* — six, Dutch, a starting set chosen to be tried. *Sparen* ships unbacked until accounts exist |
+| Is a category in use shown in a period where it has no history? | *When any category is shown in a period: the full rule* — **yes in the current and future periods**, because those are the periods you plan; **no in a past one**, which is a record of what happened. A category is shown in P if it has history in P, or if it is in use and P is current or later. Chosen over "every period, always" and "only with history, always". Settled 2026-09-25; not built |
+| What does assigning to an archived category do? | *Assigning to an archived category brings it back* — the category is **not offered**, and assigning to its name anyway **brings it back**, announced, like recording an expense. A third route back, and still no un-archive act. Chosen over refusing and over offering it. Settled 2026-09-25; not built, and `SetBudget` does not do this yet ([§8.1](08-crosscutting-concepts.md)) |
+| Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; carry-over is not built |
 | Must category names in feature files be English? | *They are Dutch because they are content* — **no**. A name is test data because it is synthetic and no scenario leans on the defaults, not because of its language. Settled 2026-09-25, loosening the earlier "English, with the rest of the specification" |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
@@ -1392,8 +1472,9 @@ expense default is wrong for cash and nothing outside MoneyBud will say so; an o
 shown exactly like an overspent budget despite being a harder fact; a clamped start day
 produces a period that is longer than its neighbours with nothing on screen explaining why; net
 worth and *Unassigned* will disagree about an expected income, because they are answering about
-different moments in time; and an archived category now has two routes back rather than one,
-which weakens the argument for having no un-archive act without overturning it. Each is
+different moments in time; and an archived category now has three routes back rather than one
+(adding its name, recording an expense, assigning), which weakens the argument for having no
+un-archive act without overturning it. Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
@@ -1415,10 +1496,12 @@ exactly as they did for the two increments before it.
 [`add-category.feature`](../../features/add-category.feature) and
 [`archive-category.feature`](../../features/archive-category.feature) are approved and pass, and
 the category scenarios in [`record-expense.feature`](../../features/record-expense.feature) pass with
-them. It left two things unsettled, and both belong to later increments. Whether a category **in
-use** is shown in a period where it has no history belongs to the period view. What **assigning** to
-an archived category does belongs to the assigning increment. §8.1 and
-[§11](11-risks-and-technical-debt.md) record what the code does about each meanwhile. Two questions arose while this model was being written up and both were
+them. It left two things unsettled that belong to later increments. The first was whether a category
+**in use** is shown in a period where it has no history, which belongs to the period view. The
+second was what **assigning** to an archived category does, which belongs to the assigning
+increment. Both were answered on 2026-09-25, along with carry-over for an archived category, and
+none of the three is built. §8.1 and [§11](11-risks-and-technical-debt.md) record what the code
+does meanwhile. Two questions arose while this model was being written up and both were
 answered the same day: what an added name does when an archived category carries it, and whether an
 archived category can be brought back at all. They turned out to be one question. Three more were
 answered on 2026-09-25, before the scenarios were written: recording an expense against an archived

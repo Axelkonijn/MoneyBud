@@ -147,10 +147,11 @@ public sealed class Ledger
     /// with no budget set behaves exactly as one budgeted at zero, so the two cannot differ
     /// here either.</para>
     ///
-    /// <para>There is deliberately no general "is shown" query beside it. Whether a category
-    /// <i>in use</i> is shown in a period where it has no history is not settled — it is a
-    /// question for the increment that builds a period view — so this ledger states the fact
-    /// the settled rule needs and does not guess at the rest.</para>
+    /// <para>There is no general "is shown" query beside it yet, because no view needs one. The
+    /// full rule is settled (§12): a category is shown in a period where it has history, and a
+    /// category <i>in use</i> is also shown in the current period and every later one, where it
+    /// can be planned for. The increment that builds a period view implements that rule; until
+    /// then this ledger states the fact the rule is built from.</para>
     /// </summary>
     public bool HasHistoryIn(string categoryName, BudgetPeriod period) =>
         BudgetFor(categoryName, period).Cents > 0 || ExpensesFor(categoryName, period).Count > 0;
@@ -158,8 +159,9 @@ public sealed class Ledger
     /// <summary>
     /// Sets a plan directly. Stands in for the act of assigning, which has no approved scenarios
     /// yet (arc42 §8.1), and so is scaffolding: it works on an archived category too, and does
-    /// not bring it back, because what assigning to an archived category should do is not
-    /// settled.
+    /// not bring it back. That is a known gap, not a rule — §12 settles that assigning to an
+    /// archived category's name brings it back, as recording an expense does. The assigning
+    /// increment builds the real act to that rule.
     /// </summary>
     public void SetBudget(string categoryName, BudgetPeriod period, Money amount)
     {

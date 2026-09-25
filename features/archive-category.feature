@@ -40,8 +40,10 @@
 #     is a yes-or-no state of a category that exists, so neither is something I can do, and no
 #     behaviour is defined for either (glossary: What the state fixes).
 #   - Renaming, assigning, accounts and the end-of-period sweep.
-#   - Budget figures carried over into a new period. They are not built, and whether an archived
-#     category's figure is offered back when a period opens is not settled.
+#   - Budget figures carried over into a new period. They are not built. It is settled that an
+#     archived category's figure is not offered back when a period opens (glossary: An archived
+#     category's figure is not offered back when a period opens); its scenarios belong with
+#     carry-over.
 
 @budget
 Feature: Archive a category

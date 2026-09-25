@@ -135,11 +135,12 @@ public sealed class CategorySteps(SpecContext context)
         }
     }
 
-    // Whether a category is shown in a period is settled for an ARCHIVED category only: exactly
-    // where it has history (arc42 §12). For a category in use, having history is enough for it to
-    // be shown whatever the unsettled part turns out to be — its figures are there — so "should be
-    // shown" asserts history for either. "Should not be shown" is only settled for an archived
-    // category, and fails loudly rather than guess if a scenario ever asks it of one in use.
+    // The full rule (arc42 §12): a category is shown in a period where it has history, and one in
+    // use is also shown in the current period and every later one. No view implements it yet, so
+    // these steps are bound to the ledger's facts and cover what the approved scenarios ask:
+    // history is enough for any category to be shown, and an ARCHIVED category without history is
+    // not. "Should not be shown" fails loudly if asked of a category in use rather than
+    // re-implement the rule here — when a period view exists, rebind both steps to it (§11).
     [Then(@"""([^""]*)"" should be shown in the (current|previous|next) budget period")]
     public void ThenShouldBeShownIn(string category, string which)
     {
@@ -154,8 +155,8 @@ public sealed class CategorySteps(SpecContext context)
     {
         Assert.True(
             Ledger.IsArchived(category),
-            $"Whether a category in use is shown where it has no history is not settled (arc42 §12); " +
-            $"this step only answers for an archived one, and {category} is not archived.");
+            $"Until a period view exists this step answers only for an archived category " +
+            $"(see the comment above), and {category} is not archived.");
         Assert.False(
             Ledger.HasHistoryIn(category, Ledger.Period(which)),
             $"{category} has history in the {which} budget period, so it is still shown there.");

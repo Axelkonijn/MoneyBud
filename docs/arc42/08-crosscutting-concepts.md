@@ -107,13 +107,17 @@ backed category, may be negative, and floors the *Budget* it writes at zero
 ([§12](12-glossary.md)). `SetBudget` expresses none of that — it takes a `Money` and stores it,
 with no floor and no source, because no approved scenario reaches any of those rules yet.
 
-**It also works on an archived category, and does not bring it back.** That is not an answer to
-what assigning to an archived category should do. The question is **not settled**: now that
-bringing a category back is a side-effect of acts the user already has (§12), assigning is an
-obvious candidate for a third such act, and nothing has decided whether it is one. The scaffold had
-to do *something* when handed an archived category, and it does the thing that decides least.
-**Nothing tests either answer.** The assigning increment has to
-settle this before it writes scenarios, not inherit whatever `SetBudget` happens to do.
+**It also works on an archived category, and does not bring it back. That now disagrees with a
+decided rule.** When the scaffold was written the question was open. The scaffold had to do
+*something* when handed an archived category, and it did the thing that decides least. On
+2026-09-25 the stakeholder settled it ([§12](12-glossary.md), *Assigning to an archived category
+brings it back*): an archived category is not offered for assigning, and assigning to its name
+anyway **brings it back**, with the user told. `SetBudget` does neither, and nothing tests either
+behaviour. This is a **known gap between the scaffold and the rule**, not a second rule. The
+assigning increment must build the real act to §12's rule, and then **retire `SetBudget` or align
+it**. Nothing may treat `SetBudget`'s behaviour on an archived category as meaning anything.
+Carry-over at period open is decided too: an archived category's figure is not offered back. It is
+unbuilt for every category, so there is no scaffold for it to disagree with.
 
 ### "MoneyBud shows, it never blocks" is held by a type
 
@@ -204,19 +208,24 @@ of their assertions.
 `AddCategory` had also returned the existing category silently. It now returns an
 `AddCategoryResult` that says which of its four outcomes happened (above).
 
-### Where an archived category is shown: the domain states the fact, not the view
+### Where a category is shown: the domain states the facts, not the view
 
-§12 settles that an archived category is shown in every period where it has history, meaning a
-budget of more than zero or an expense, the current period included. The domain exposes the two facts
-that rule needs, `Ledger.HasHistoryIn(category, period)` and `Ledger.IsArchived(category)`. It
-has **no "is shown" query**, and that is deliberate. §12 settles when an *archived* category is
-shown. It does not settle whether a category **in use** is shown in a period where it has no
-history. That question belongs to the increment that builds a period view, and an `IsShownIn`
-written now would have to guess at it.
+[§12](12-glossary.md) now settles the **whole** display rule (*When any category is shown in a
+period: the full rule*). A category is shown in period P if it has history in P (a budget of more
+than zero, or an expense), **or** if it is in use and P is the current period or a later one. The
+domain exposes the facts that rule needs: `Ledger.HasHistoryIn(category, period)`,
+`Ledger.IsArchived(category)` and `Ledger.CurrentPeriod`. It has **no "is shown" query**.
 
-**The consequence is carried in [§11](11-risks-and-technical-debt.md).** For now the "shown" rule
-exists only in the step definitions. They combine the two facts, and nothing in production code
-does. When a period view is built, nothing forces it to use `HasHistoryIn`.
+**Why there is no such query, then and now.** When the category increment was built, the reason was
+that the rule was **unsettled**. §12 had decided only the archived half, and an `IsShownIn` would
+have had to guess whether a category in use is shown where it has no history. That was answered on
+2026-09-25, so the reason has changed. The query is now **not built yet, because no view needs
+it**. It is not missing for want of a decision any more.
+
+**The consequence is carried in [§11](11-risks-and-technical-debt.md).** For now the rule exists only
+in the step definitions, and only its archived half at that. They combine `HasHistoryIn` and
+`IsArchived`, and nothing in production code does. When a period view is built, it should implement
+the **full** rule, and the archive scenarios' "shown" steps should be rebound to it.
 
 ### A first start is a door of its own
 
@@ -258,7 +267,7 @@ wrote a row for it".
 | *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* | The location dimension has not been in any increment so far ([§11](11-risks-and-technical-debt.md)) |
 | *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
-| *Assign*, *Over-assigned* | **No approved scenarios, and no code.** Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md) — the source, the negative assignment, the *Budget* floored at zero, the clipped shortfall — and is waiting on scenarios, not on a decision. Only the backed-category half of assigning needs accounts; the rest is specifiable today |
+| *Assign*, *Over-assigned* | **No approved scenarios, and no code.** Recording income fills the pool and stops there, so the income increment reached neither: nothing subtracts from `UnassignedIn`, and it has therefore never gone negative, which is the only way *Over-assigned* could arise. `Ledger.SetBudget` is the scaffold standing in for assigning (above). The model is settled in [§12](12-glossary.md) — the source, the negative assignment, the *Budget* floored at zero, the clipped shortfall, and assigning to an archived category bringing it back — and is waiting on scenarios, not on a decision. Only the backed-category half of assigning needs accounts; the rest is specifiable today |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
