@@ -18,7 +18,8 @@
 #   - It is not permanent. Adding its name brings it back, history and all, spelled as it was,
 #     and I am told it was brought back rather than created. There is no separate un-archive
 #     act. Recording an expense against it brings it back too; that is specified in
-#     record-expense.feature, because recording is what does it.
+#     record-expense.feature, because recording is what does it. So does assigning a positive
+#     amount to it, specified in assign-to-category.feature.
 #
 # Archiving says nothing about money. A category archived with part of its budget unspent keeps
 # that budget: nothing returns to Unassigned, and no figure changes.

@@ -5,14 +5,15 @@
 #
 # Scope of this capability, per the income increment: an income has an amount, a date and a
 # label. It has **no category** — it lands *Unassigned* and is given a purpose later, by
-# assigning, which does not exist yet and is not specified here. It has no account either — the
+# assigning, which is specified in assign-to-category.feature, not here. It has no account either — the
 # location dimension is not built (accepted gap, arc42 §11), the same gap an expense has.
 #
 # Unassigned is a figure on the purpose dimension, not a category and not a place (glossary:
 # Unassigned). For one budget period it is that period's income minus everything assigned to
-# categories in it. Because there is no assigning yet, nothing subtracts from it in this
-# capability, so it never goes negative and the state *Over-assigned* is unreachable here — no
-# scenario below asserts it.
+# categories in it. Recording income only ever adds to it. Assigning subtracts from it, and can
+# take it below zero into *Over-assigned* (assign-to-category.feature). One scenario below starts
+# from a period whose budgets were assigned before any income arrived, so it starts below zero;
+# none asserts the over-assigned state itself.
 #
 # Step phrasing: every step that concerns a budget period names it the same way — "in the
 # current budget period", "in the previous budget period", "in the next budget period" — even
@@ -28,7 +29,8 @@ Feature: Record an income
   # Recording an income and what it does to Unassigned
   #
   # Income forms a pool. Every euro of it is Unassigned until it is given a purpose, and
-  # giving it one is a separate act that does not exist yet (glossary: Unassigned, Assign).
+  # giving it one is a separate act, assigning (assign-to-category.feature; glossary: Unassigned,
+  # Assign).
   # ----------------------------------------------------------------------------------
 
   Scenario: The first income of a period fills an empty pool
@@ -102,7 +104,7 @@ Feature: Record an income
   #
   # Income arrives on the pool; a Budget is a plan; an expense is the actual. Recording income
   # moves money into Unassigned and touches neither layer of any category — only assigning
-  # does that, and it does not exist yet (glossary: "The second distinction: plan and actual").
+  # does that (assign-to-category.feature; glossary: "The second distinction: plan and actual").
   # ----------------------------------------------------------------------------------
 
   Scenario: Recording income leaves every category's plan and spending untouched
@@ -110,8 +112,9 @@ Feature: Record an income
     And I have already spent 150 euro on "Groceries" in the current budget period
     And I have a budget of 60 euro for "Hobby" in the current budget period
     And I have recorded no income in the current budget period
+    And Unassigned in the current budget period is -460 euro
     When I record an income of 2000 euro labelled "Salaris september"
-    Then Unassigned in the current budget period should be 2000 euro
+    Then Unassigned in the current budget period should be 1540 euro
     And the budget for "Groceries" in the current budget period should still be 400 euro
     And the remaining "Groceries" budget in the current budget period should still be 250 euro
     And the budget for "Hobby" in the current budget period should still be 60 euro
