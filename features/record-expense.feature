@@ -4,8 +4,10 @@
 #
 # Scope of this capability, per the first increment: an expense has an amount, a date,
 # a label and a category. It has no account — the location dimension is not in the first
-# increment (accepted risk, arc42 §11). Creating a category and setting its budget belong
-# to other capabilities and appear here only as setup.
+# increment (accepted risk, arc42 §11). Adding or archiving a category and setting its budget
+# belong to other capabilities and appear here only as setup — with one exception: recording
+# an expense against an archived category brings that category back, and that is specified
+# here, because recording is what does it.
 #
 # Step phrasing: every step that concerns a budget period names it the same way — "in the
 # current budget period", "in the previous budget period", "in the next budget period" —
@@ -176,6 +178,36 @@ Feature: Record an expense
     And the remaining "Groceries" budget in the current budget period should be 382 euro
 
   # ----------------------------------------------------------------------------------
+  # Which category an expense counts against
+  #
+  # A category name is compared the same way wherever it is compared: trim the ends, count a
+  # run of spaces inside the name as one, then ignore case (glossary: "A category name is
+  # compared case-insensitively and stored as typed, trimmed"). Confirmed by the stakeholder
+  # for recording as well as for adding, as a rule in its own right. So an expense for
+  # "  groceries " counts against Groceries — and recording never adds a category, so
+  # Groceries is still the only one of that name, spelled as it was.
+  #
+  # The quotation marks in the table are part of the step, so the name really does start or
+  # end with spaces. "should list X once, and no other spelling of it" is explained in
+  # add-category.feature.
+  # ----------------------------------------------------------------------------------
+
+  Scenario Outline: An expense counts against my category however I capitalise or space its name
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have already spent 150 euro on "Groceries" in the current budget period
+    When I record an expense of 25 euro for <typed>
+    Then the expense should be recorded
+    And the remaining "Groceries" budget in the current budget period should be 225 euro
+    And the categories offered for a new expense should list "Groceries" once, and no other spelling of it
+
+    Examples:
+      | typed           |
+      | "groceries"     |
+      | "GROCERIES"     |
+      | "  Groceries  " |
+      | "  groceries "  |
+
+  # ----------------------------------------------------------------------------------
   # Input that is refused — in every case nothing is recorded and no budget moves
   #
   # Two rules can reject the same amount: -12.345 is both not more than zero and finer
@@ -187,6 +219,17 @@ Feature: Record an expense
     Given I have a budget of 400 euro for "Groceries" in the current budget period
     And I have already spent 150 euro on "Groceries" in the current budget period
     When I try to record an expense of 25 euro without naming a category
+    Then the expense should not be recorded
+    And I should be told that an expense needs a category
+    And the remaining "Groceries" budget in the current budget period should still be 250 euro
+
+  # A category name that trims to nothing is no name, whether it is being added or recorded
+  # against (glossary: "The rule holds wherever a name is compared"). So this is the scenario
+  # above reached by a different route, and it is told the same thing.
+  Scenario: A category name of nothing but spaces names no category
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have already spent 150 euro on "Groceries" in the current budget period
+    When I try to record an expense of 25 euro for "   "
     Then the expense should not be recorded
     And I should be told that an expense needs a category
     And the remaining "Groceries" budget in the current budget period should still be 250 euro
@@ -270,8 +313,11 @@ Feature: Record an expense
     And the remaining "Groceries" budget in the current budget period should be 280 euro
 
   # An expense records money already spent, so no expense may be dated in the future. This
-  # covers a date later in the current period as well as one in a period still to come;
-  # known future costs are what recurring transactions are for, in a later increment.
+  # covers a date later in the current period as well as one in a period still to come.
+  # A known future cost already has a place in the model: planning to spend is what a Budget
+  # is, so a future-dated expense would say the same thing twice, on the wrong layer — the
+  # actual layer would then hold money that has not moved (glossary: "Income may be dated in
+  # the future; an expense may not").
   Scenario Outline: An expense cannot be dated in the future
     Given my budget periods are one month long
     And I have a budget of 400 euro for "Groceries" in the current budget period
@@ -285,3 +331,77 @@ Feature: Record an expense
       | day                                     |
       | tomorrow                                |
       | the first day of the next budget period |
+
+  # ----------------------------------------------------------------------------------
+  # An expense against an archived category
+  #
+  # A budget period ends but never closes, so an expense can be remembered weeks late — a
+  # receipt found in a coat pocket — after its category has been archived. An archived category
+  # is not OFFERED for a new expense, but not being offered is not the same as being refused:
+  # an expense recorded against its name is recorded, the category is brought back, history
+  # and all and spelled as it was, and I am told it was brought back (glossary: "Recording an
+  # expense against an archived category brings it back"). From then on it is in use again like
+  # any other. The late receipt is the case that raised it, but the rule does not depend on the
+  # expense's date.
+  #
+  # Being told matters more here than when adding its name: adding at least shows that I want
+  # the category, and recording an expense does not, so being told is the only thing that says a
+  # category I put away is back in my list. Being told is not being warned: nothing is asked
+  # first, and the expense goes through in one act.
+  #
+  # Bringing back is a side-effect of RECORDING. An expense refused for any other reason records
+  # nothing, so it brings nothing back and the category stays archived. Confirmed by the
+  # stakeholder.
+  #
+  # A name that is neither one of my categories nor an archived one is still refused, unchanged:
+  # that is "An expense must name a category I actually have", above.
+  # ----------------------------------------------------------------------------------
+
+  Scenario Outline: An expense against an archived category is recorded and brings the category back, whatever its date
+    Given my budget periods are one month long
+    And I have a budget of 60 euro for "Hobby" in the previous budget period
+    And I have a budget of 60 euro for "Hobby" in the current budget period
+    And I have not yet spent anything on "Hobby" in either budget period
+    And I have archived the category "Hobby"
+    When I record an expense of 12.50 euro for "Hobby" dated on <day>
+    Then the expense should be recorded
+    And I should be told that "Hobby" was brought back
+    And I should not be warned or asked to confirm
+    And the categories offered for a new expense should include "Hobby"
+    And the remaining "Hobby" budget in the previous budget period should be <remaining previous> euro
+    And the remaining "Hobby" budget in the current budget period should be <remaining current> euro
+
+    Examples:
+      | day                                        | remaining previous | remaining current |
+      | the last day of the previous budget period | 47.50              | 60.00             |
+      | today                                      | 60.00              | 47.50             |
+
+  Scenario: An expense against an archived category in another spelling brings it back spelled as it was
+    Given I have a budget of 60 euro for "Hobby" in the current budget period
+    And I have not yet spent anything on "Hobby" in the current budget period
+    And I have archived the category "Hobby"
+    When I record an expense of 12.50 euro for "  hobby "
+    Then the expense should be recorded
+    And I should be told that "Hobby" was brought back
+    And the categories offered for a new expense should list "Hobby" once, and no other spelling of it
+    And the remaining "Hobby" budget in the current budget period should be 47.50 euro
+
+  # The table carries the rest of the "told" step, because each refusal is told its own reason —
+  # the same reasons, in the same words, as the refusal scenarios above. What the rows share is
+  # the rule under test: nothing recorded, so nothing brought back.
+  Scenario Outline: An expense that is refused for another reason leaves its category archived
+    Given I have a budget of 60 euro for "Hobby" in the current budget period
+    And I have already spent 20 euro on "Hobby" in the current budget period
+    And I have archived the category "Hobby"
+    When I try to record an expense of <amount> euro for "Hobby" dated on <day>
+    Then the expense should not be recorded
+    And I should be told that <reason>
+    And the categories offered for a new expense should not include "Hobby"
+    And the remaining "Hobby" budget in the current budget period should still be 40 euro
+
+    Examples:
+      | amount | day      | reason                                   |
+      | 0.00   | today    | an expense must be more than 0 euro      |
+      | -12.50 | today    | an expense must be more than 0 euro      |
+      | 12.345 | today    | an amount cannot be finer than a cent    |
+      | 12.50  | tomorrow | an expense cannot be dated in the future |

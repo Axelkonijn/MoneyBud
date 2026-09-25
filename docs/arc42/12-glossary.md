@@ -379,10 +379,25 @@ merely unassigned. The two are related, not equal. What happens when they disagr
 
 **Not in the first increment**, which has no accounts and therefore no backed categories.
 
-## A category name is compared case-insensitively and stored exactly as typed
+## A category name is compared case-insensitively and stored as typed, trimmed
 
 > **"boodschappen" finds "Boodschappen".** Every comparison between category names ignores case;
 > the name is kept with the capitalisation the user typed.
+>
+> **"  Hobby  " is stored as "Hobby"**, and is the same category as "hobby". Surrounding whitespace
+> is stripped before anything else happens. **A name that trims to nothing is refused** — a
+> category must have a name.
+>
+> **"Vaste  lasten", with a double space, is the same category as "Vaste lasten".** When names are
+> compared, any run of inner whitespace counts as one space. The name is still **stored as typed**,
+> inner spacing included.
+
+So a comparison is **trim the ends, treat every run of inner whitespace as one space, then compare
+ignoring case**. What is stored is **the trimmed text as typed**: its capitalisation and its inner
+spacing are kept. The heading of this section first read "stored exactly as typed". The whitespace
+half was settled by the stakeholder on 2026-09-25, after the case half had been written up, and
+"exactly" stopped being true. The inner-whitespace part was settled later the same day, while the
+scenarios were being reviewed.
 
 **Why compare without case.** Nobody means two categories that differ only in case. A capitalisation
 slip — "hobby" one evening and "Hobby" the next — would otherwise create a second category and
@@ -396,27 +411,70 @@ would buy nothing and would show the user a word they did not write. "Boodschapp
 is spelled; MoneyBud has no business rendering it back in lower case merely because a lower-case
 spelling once matched it.
 
+**Why trim, and why that is not the same as folding case.** Surrounding whitespace is an accident of
+typing or pasting, and on a category name it is a worse accident than on a label, because a name is
+**compared**: "Hobby " with a trailing space would otherwise be a second Hobby, which is the same
+silently split pot the case rule exists to prevent, reached by a keystroke nobody can see. Unlike
+capitalisation, nobody *meant* the space, so there is nothing to keep — it is discarded, not merely
+ignored for the comparison.
+
+**Why inner whitespace is ignored for comparison, but kept.** "Vaste  lasten" and "Vaste lasten"
+look identical on screen. If they were two categories, a stray second space would split one pot's
+spending silently across two rows that nobody can tell apart. That is the failure the trimming and
+case rules exist to prevent, reached by a keystroke nobody can see. Unlike the edges, though, the
+inside of a name is the user's own writing, so the spacing is ignored for the decision and **kept**
+for display, the way capitalisation is.
+
+| Rejected | Why |
+|---|---|
+| **Inner text untouched, so two categories** | The literal consequence of this section as first written ("inner text is left alone"). It was never chosen, it simply followed. It allows exactly the invisible duplicate this section exists to prevent |
+
+**Why a blank name is refused.** A name that trims to nothing is not a name, and a category without
+one could not be offered, found or told apart from anything. This is the income label's shape
+exactly: **trimming is the rule and refusing blank is its consequence**, because something has to
+trim `"   "` in order to judge it blank (*A label is trimmed*, below). It is *not* the expense
+label's shape, where a blank result is accepted as "no label" — an expense can do without a label,
+and a category cannot do without a name.
+
 **This is the same shape as the label rule**, and the parallel is worth stating because it is what
 makes both easy to remember. *A label is trimmed, and that is what makes "blank" mean anything*
 (below) and this rule both separate **what MoneyBud normalises in order to decide whether two things
 are the same** from **what it keeps in order to show the user**. In both, MoneyBud normalises exactly
 as much as the decision needs and does not tidy the user's text beyond that.
 
-They differ in one place, and the difference has a reason rather than being an inconsistency:
+They agree about whitespace at the edges and differ about everything that is only compared. The
+difference has a reason rather than being an inconsistency: a name is compared, and a label never
+is.
 
-| | What is normalised for the decision | What is kept |
-|---|---|---|
-| **Label** | Whitespace at the edges | The **trimmed** text. Surrounding whitespace is an accident of typing or pasting — nobody intended it, so nothing is lost by discarding it |
-| **Category name** | Case | The text **as typed**. Capitalisation *is* intended — it is how the user writes the word — so it is kept |
+| | Whitespace at the edges | Inner whitespace | Case | What is stored |
+|---|---|---|---|---|
+| **Label** | Normalised **and discarded**. Nobody intended it, so nothing is lost | Not normalised. Nothing is ever compared against a label | Not normalised, for the same reason | The **trimmed** text, inner spacing as typed |
+| **Category name** | Normalised **and discarded**, for the same reason | Normalised **for the decision only**: any run counts as one space. Kept for display | Normalised **for the decision only**, and kept for display. Capitalisation *is* intended: it is how the user writes the word | The **trimmed** text **as typed**, capitalisation and inner spacing included |
 
-Inner text is untouched by both rules. MoneyBud does not tidy the user's prose.
+**What is stored keeps its inner text, under both rules.** `"Vaste  lasten"` keeps its double space
+as a category name, exactly as it would as a label. MoneyBud does not tidy the user's prose. This
+sentence first read "Inner text is untouched by both rules". That is still true of **what is
+stored**, and still true of labels, which nothing compares. It is **no longer true of how category
+names are compared**: inner whitespace runs are collapsed for that.
+
+**The rule holds wherever a name is compared, not only when one is added.** Recording an expense
+against "  groceries " records it against Groceries. This was first inferred from "every comparison"
+above and was then **confirmed by the stakeholder on 2026-09-25**, as a rule in its own right rather
+than an inference. It **changes current behaviour**: today that expense is refused as naming a
+category the user does not have ([§8.1](08-crosscutting-concepts.md)). And an expense whose category
+name trims to nothing has named no category, so it takes the existing refusal for that
+([`features/record-expense.feature`](../../features/record-expense.feature), *An expense must name
+a category*) — a name that trims to nothing is no name, whether it is being added or recorded
+against. No approved scenario spells a category with surrounding spaces or as spaces alone; this
+is what those scenarios will be written against.
 
 **This is a correction, not a new rule.** Category names are case-**sensitive** today: `Ledger` keys
 its categories with `StringComparer.Ordinal`. Nothing chose that — it arrived with the first
 increment's scaffold, where no approved scenario ever spelled one category two ways, so the choice
 was never visible enough to be made. It is recorded here as something decided rather than inherited,
 and [§8.1](08-crosscutting-concepts.md) carries the fact that the code disagrees until the category
-increment is built.
+increment is built. **The whitespace half is a correction of the same kind**: `Ledger.AddCategory`
+neither trims a name nor refuses a blank one today, for the same reason — nothing ever asked it to.
 
 ### Adding a name you already have gives back the category you already have
 
@@ -432,6 +490,16 @@ Under case-insensitive matching they may also be looking at a capitalisation the
 is a second small thing to be confused by. Saying so costs one sentence and removes both — quality
 goal 1 again.
 
+**The existing spelling is kept.** Adding "boodschappen" when "Boodschappen" exists hands back
+"Boodschappen", spelled as it was; the new capitalisation is not taken. Spacing works the same way:
+adding "Vaste  lasten" when "Vaste lasten" exists hands back "Vaste lasten", and says it was already
+there. Settled by the stakeholder on
+2026-09-25, and it holds the same way when the existing category is **archived** (below) and when it
+is brought back by recording an expense against it (also below). **Why:** you get the category that
+already had the name, as it was. Taking the new capitalisation would change a category's name as a
+side-effect of adding one — a **rename by the back door**, and renaming is deliberately not in this
+increment (*Renaming a category is not in this increment*, below).
+
 **Derived, and not contradicted.** This was worked out from legibility plus *shows, never blocks*
 rather than from anything the interviews say in so many words, written up in full so that it could be
 contradicted, and put to the stakeholder. It was not contradicted. That puts it on the same footing
@@ -443,8 +511,9 @@ argument is that the end state is **already true**; for an archived category it 
 asked for a category they can record against, and there is not one. So the reasoning here does not
 reach that case, and it gets its own answer in *Adding an archived category's name brings it back*
 (below). The two rules land in the same place — the user ends up holding the category that already
-had the name, and is told — but they get there by different arguments, and they say different things
-to the user: *already there* in one case, **brought back** in the other.
+had the name, **spelled as it already was**, and is told — but they get there by different
+arguments, and they say different things to the user: *already there* in one case, **brought back**
+in the other.
 
 ### Renaming a category is not in this increment
 
@@ -458,8 +527,9 @@ It is cheap to add later and nothing settled here forecloses it.
 ## A category is taken out of use, not deleted
 
 > **Removing a category takes it out of new entry. Its history stays.** It is no longer offered when
-> recording. Its expenses, its budgets in past periods and its place in those periods' figures all
-> remain exactly as they were, and past periods still show it.
+> recording. Its expenses, its budgets and its place in every period's figures all remain exactly
+> as they were, and **every budget period in which it has history still shows it — including the
+> current one** (*Where an archived category is still shown*, below).
 
 The wish is round 1's, and it names both ways out of a category you do not use:
 *"Ook moet een categorie op nul kunnen staan, voor als het niet voor jou geldt. Of kun je hem er
@@ -492,7 +562,7 @@ that it is not. The state needs a word that says **put away, not thrown away**.
 |---|---|
 | **Removed**, **Deleted** | They say the record is gone, which is the one thing that is not true |
 | **Closed** | Collides head-on with *Ending versus closing a budget period* (below), where this glossary already fixes *closed* to mean "nothing may be recorded against it any more" and then says **MoneyBud has no such state**. Reusing the word for a state that does exist would make the sharpest distinction in this document unreadable |
-| **Hidden** | Describes a display rather than a state — and gets the display wrong, because an archived category is still shown in past periods |
+| **Hidden** | Describes a display rather than a state — and gets the display wrong, because an archived category is still shown in every period where it has history |
 | **Retired** | The runner-up, and a good fit for "no longer in service, past service stands". Rejected because this glossary already uses *retired* for a **term** that was withdrawn (*One figure, not two*, below), so the word would carry two meanings in one document |
 
 *Archived* was put to the stakeholder as a recommendation with the table above as its argument, and
@@ -502,16 +572,85 @@ got.
 
 ### What the state fixes
 
-- The category is **not offered when recording** something new.
+- The category is **not offered when recording** something new. Not being offered is not the same
+  as being refused: an expense recorded against its name is recorded, and brings it back (*Recording
+  an expense against an archived category brings it back*, below).
 - It **still owns its expenses**. Nothing is reassigned, nothing is orphaned.
-- It **still appears in past periods**, with the budgets and figures it had.
+- It **still appears in every budget period where it has history** — a budget of more than zero
+  or an expense in that period — with the budgets and figures it had there. **That includes the
+  current period.** A period in which it has no history does not show it (*Where an archived
+  category is still shown*, below).
+- Archiving is **never confirmed first**, and the user is **told afterwards** that the category was
+  archived (next).
 - The state is about **new entry only**. It says nothing about money.
-- It is **not permanent**: adding the name again brings the category back, next.
+- It is **not permanent**: adding its name again brings the category back, and so does recording
+  an expense against it — both below.
+
+Archiving applies to a category **you have and that is in use**. *Archived* is a yes-or-no state of
+an existing category, so archiving a name you do not have, or archiving a category that is already
+archived, is not something the user can do, and **no user-facing behaviour is defined for either**.
+
+### Archiving is announced, never confirmed
+
+> **Archiving never asks for confirmation. Afterwards, the user is told the category was archived.**
+
+**Why no confirmation.** A confirmation protects against losing something, and archiving loses
+nothing. It destroys no record, and adding the name undoes it. Asking first would be MoneyBud
+second-guessing an act that cannot hurt, which is the opposite of *shows, never blocks* (*Shown,
+never enforced*, below) and adds friction for no protection (quality goal 2,
+[§1.2](01-introduction-and-goals.md)). Settled by the stakeholder on 2026-09-25.
+
+| Rejected | Why |
+|---|---|
+| **Confirm only when the category has history** | Still a question guarding against a loss that does not happen. History survives archiving, so a category with two years behind it has exactly as little to lose as one with none |
+| **Confirm always** | The same, and it charges the interview's own easy case too: an unused default that does not apply to you |
+
+**Why tell the user afterwards.** Every category act tells its outcome: **created**, **already
+there**, **brought back**, and now **archived**. An act that silently did something would be the one
+exception, and the user would have to look to find out whether it worked (quality goal 1). Also
+settled on 2026-09-25.
+
+**Being told is not being warned.** The message is information after the fact, never a question
+first. This is what separates it from the rejected confirmations: those ask before, and this only
+reports after. Like the other outcomes, what is fixed is **that** the user is told, not the wording.
+
+### Where an archived category is still shown
+
+> **An archived category is shown in every budget period where it has history — a budget of more
+> than zero or an expense in that period — including the current one.** An archived category with **no** history
+> in a period does not appear in that period.
+
+Archiving takes a category out of **new entry**. It does not take it out of any period's figures.
+So a category archived halfway through the current period, while it has a budget or expenses in
+that period, is still shown in the current period. An unused default that was archived — the
+interview's own case — has no history anywhere, and appears nowhere.
+
+**A budget of 0 with nothing spent is not history.** An archived category whose only trace in a
+period is a zero budget does not appear in that period. This follows from *Budget* (terms table):
+a category with no budget set behaves exactly as one budgeted at zero. So a zero budget with nothing
+spent is indistinguishable from no budget, and it would be odd for an invisible difference to decide
+whether a row appears. Derived from that rule, then **confirmed by the stakeholder on 2026-09-25**.
+So "history" in a period means **a budget of more than zero, or at least one expense**.
+
+**Why.** A period's figures have to add up on screen. If an archived category vanished from the
+current period, the expenses recorded against it earlier in that period would still exist and still
+count, but nothing would show them, and the period's spending would stop adding up to what the user
+knows they spent. That is the legibility failure quality goal 1 ([§1.2](01-introduction-and-goals.md))
+exists to prevent. Settled by the stakeholder on 2026-09-25.
+
+| Rejected | Why |
+|---|---|
+| **Past periods only** | This section used to say only that past periods still show an archived category, which reads as this rule. From the moment of archiving the category would vanish from the current period. Its expenses there would still exist and would go unshown, which is the failure described above |
+
+**"Past periods still show it" was never the whole rule.** Earlier wording in this glossary said only
+that. The rule is about history, not about whether a period is past: a past period in which the
+category has no history does not show it either.
 
 ### Adding an archived category's name brings it back
 
 > **Adding a name that an archived category already carries brings that category back — history and
-> all — and MoneyBud says it was brought back rather than created.**
+> all — and MoneyBud says it was brought back rather than created.** It comes back **spelled as it
+> was**: adding "hobby" brings back "Hobby", not a "hobby" (*The existing spelling is kept*, above).
 
 *Adding a name you already have gives back the category you already have* (above) does not reach
 this case, because its argument is that the end state is already true and here it is not. This rule
@@ -541,19 +680,64 @@ concept**, and the reason it gives there carries here unchanged: a second act wo
 learn, two places in the interface and two sets of scenarios, for something an act the user already
 has can express on its own.
 
-### A late expense against an archived category — derived, not separately decided
+**Adding its name is no longer the only way back.** When this paragraph was written it was; since
+2026-09-25 recording an expense against the category brings it back too (next). There is still no
+separate un-archive act, but the argument above now has to carry two routes instead of one, and the
+next section says how far it still does.
+
+### Recording an expense against an archived category brings it back
 
 A budget period **ends but never closes** (below), so an expense can be remembered weeks late — a
 receipt found in a coat pocket. If its category has been archived in the meantime, that category is
 not among the ones offered.
 
-**This needs no rule of its own.** It follows from the rule above: recording against the category
-means adding its name, which brings it back, which is one action and not a special case. The user is
-told the category was brought back, exactly as they would be in any other route to it.
+> **An expense recorded against an archived category's name is recorded, and the category is
+> brought back** — history and all, spelled as it was, exactly as when its name is added — **and
+> MoneyBud says it was brought back.** From then on the category is in use again like any other.
+
+The late receipt is the case that raised it, but **the rule does not depend on the expense's date**:
+an expense dated today against an archived category's name does exactly the same.
+
+**A name that is neither one of your categories nor an archived one is still refused**, unchanged
+([`features/record-expense.feature`](../../features/record-expense.feature), *An expense must name a
+category I actually have*). This rule is about archived names only.
+
+**This is a decision, and it replaces a derivation that was wrong.** This subsection first read *"A
+late expense against an archived category — derived, not separately decided"*, and argued that the
+case needed no rule of its own: recording against the category "means adding its name, which brings
+it back". **That route does not exist.** Recording an expense never adds a category — an expense
+naming a category you do not have is *refused*, not created, and an approved scenario says so. The
+derivation had quietly assumed that naming a category while recording is the same act as adding
+one, and it is not. So the case was put to the stakeholder as a real question, with three answers:
+
+| Option | What happens | Verdict |
+|---|---|---|
+| **(a) Refuse, then add** | The expense is refused, the user is told the category is archived, adds its name to bring it back, and records again | **Rejected.** This was the recommendation put to him, on the ground that it keeps adding the name as the only way back. Against it: it charges two actions for one obvious intent, and the late receipt is exactly where that friction costs: entering a forgotten expense is already a chore, and a refusal turns it into a detour (quality goal 2, [§1.2](01-introduction-and-goals.md)) |
+| **(b) Record, and bring back** | The expense is recorded, the category is brought back, and the user is told it was brought back | **Taken** |
+| **(c) Record, and leave archived** | The expense is recorded against the category, which stays archived | **Rejected** — an archived category silently collecting new expenses contradicts what *Archived* means: taken out of **new entry**. And the user would not know the category was being used again, so its spending would accumulate under a category they believe is put away — the legibility failure goal 1 exists to prevent |
+
+**What this costs, stated plainly.** There are now **two routes back**: adding the name, and recording
+an expense against it. That softens the *one gesture over a second named concept* argument in the
+section above, which was made when there was one. **The reconciliation is that there is still no
+separate *un-archive* act.** Both routes are acts the user already has, and bringing back is a
+side-effect of each — never a thing done on its own, and **always announced**. What the preference
+was protecting against was a second *concept* to learn; a second *occasion* on which the same thing
+happens is a smaller cost, and it was accepted for the friction it saves.
+
+**Being told matters more here than on the add route.** Adding a name at least shows the intent to
+have the category; recording an expense does not, so the message is the only thing that tells the
+user a category they put away is back in their list.
+
+**A refused expense brings nothing back.** Bringing back is a side-effect of recording. If the
+expense is refused for any other reason — its amount is not more than zero, is finer than a cent, or
+its date is in the future — nothing is recorded, and **the category stays archived**. This was first
+written here as a **derivation**, stated so that it could be contradicted, and was **confirmed by
+the stakeholder on 2026-09-25**. That puts it on the same footing as *Backed categories accumulate*
+(above): a derivation that now stands, with the reasoning kept because it is why it stands.
 
 So the archiving rule and the never-closes rule do **not** pull against each other, which is what
-they appeared to do before the bring-back rule was decided. This is written up as a **derivation**
-so that a later reader can see it was checked rather than assumed.
+they appeared to do before this was decided — and now that is true by decision rather than by an
+inference that turned out to rest on a route that was never there.
 
 ### What archiving does not settle, because it cannot yet
 
@@ -618,8 +802,8 @@ whose eventual behaviour differs from the behaviour it has now.
 |---|---|
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
-| **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is compared **case-insensitively** and stored exactly as typed, so there are never two categories differing only in case — and adding a name that already exists hands back the category that already has it, with the user told so (see *A category name is compared case-insensitively* above). Taken out of use by **archiving**, never by deleting: its history stays, and adding its name again brings it back (*A category is taken out of use, not deleted*, above). **Renaming** is not in this increment. MoneyBud ships with six **default categories** (above). |
-| **Archived** | The state of a category that has been taken out of use. It is **no longer offered when recording**, and everything it already owns stays: its expenses, its budgets in past periods, and its place in those periods' figures. Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**: adding the category's name again **brings it back**, history and all, with the user told it was brought back rather than created. There is no separate act of un-archiving, for the same reason there is no separate act of unassigning. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. No code and no scenarios ([§8.1](08-crosscutting-concepts.md)). |
+| **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). Taken out of use by **archiving**, never by deleting: its history stays, and adding its name again or recording an expense against it brings it back (*A category is taken out of use, not deleted*, above). **Renaming** is not in this increment. MoneyBud ships with six **default categories** (above). |
+| **Archived** | The state of a category that has been taken out of use. It is **no longer offered when recording**, and everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by either of two acts the user already has: **adding its name** again, or **recording an expense against it** — which records the expense rather than refusing it. Either way the user is told it was brought back. There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those two acts, always announced. Only a category in use can be archived. Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. No code and no scenarios ([§8.1](08-crosscutting-concepts.md)). |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the English names in the feature files, which are synthetic test data — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
@@ -1067,9 +1251,12 @@ yet*).
 
 Everything else that has ever stood here has been answered, including the questions that arose while
 the first increment was being built, the one raised by future-dated income rather than by an
-interview, and the two raised by the category model — what an added name does when an archived
+interview, and the ones raised by the category model — what an added name does when an archived
 category carries it, and whether an archived category can be brought back at all, which turned out to
-be one question with one answer. The *Answered* table below says where each answer lives.
+be one question with one answer; and then, on 2026-09-25, what recording an expense against an
+archived category does, how whitespace around a category name is treated, whose spelling wins
+when a name is added again, in which periods an archived category is still shown, how inner
+whitespace in a name is compared, and whether archiving is confirmed and announced. The *Answered* table below says where each answer lives.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -1153,22 +1340,31 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | May an income be dated in the future, when an expense may not? | *Income may be dated in the future; an expense may not* — yes, and the asymmetry follows from the plan/actual split |
 | Are *Unassigned* and *Left to assign* two figures or one? | *One figure, not two* — one, named *Unassigned*; *Left to assign* retired |
 | What is a negative *Unassigned* called? | *Over-assigned* — the third member of the family with *Over budget* and *Overdrawn* |
-| May a category be removed, and what happens to its history? | *A category is taken out of use, not deleted* — it is **archived**: out of new entry, history intact, still shown in past periods |
+| May a category be removed, and what happens to its history? | *A category is taken out of use, not deleted* — it is **archived**: out of new entry, history intact, still shown wherever it has history (next row) |
+| In which periods is an archived category still shown? | *Where an archived category is still shown* — in **every period where it has history** (a budget or an expense), **including the current one**, and in no period where it has none. Decided 2026-09-25 over "past periods only", which would leave current-period expenses unshown. This replaces "still shown in past periods", which the earlier answer said |
+| Does a budget of 0 count as history? | Same section — **no**, not when nothing is spent. A zero budget behaves exactly like no budget (*Budget*), so it cannot decide whether a row appears. Derived, then **confirmed** by the stakeholder on 2026-09-25 |
+| Does archiving ask for confirmation, and is the user told? | *Archiving is announced, never confirmed* — **never asked**, because it destroys nothing and adding the name undoes it. The user is **told afterwards**, like every other category act (created, already there, brought back, archived). Chosen over confirming always and over confirming only when there is history. Settled 2026-09-25 |
 | What is that state called? | Same section — ***Archived***, chosen over *Removed*, *Closed*, *Hidden* and *Retired*, the decisive one being that *Closed* is already spent on a period state MoneyBud deliberately has not got |
-| What happens when the user adds a name an **archived** category carries, and can an archived category be brought back at all? | *Adding an archived category's name brings it back* — one question with one answer. It comes back with its history and the user is told it was **brought back** rather than created; there is no separate act of un-archiving, on the same argument that leaves assigning without a separate "unassign" |
-| What about an expense remembered late, whose category has since been archived? | *A late expense against an archived category* — nothing extra. It is **derived** from the rule above: recording against the category means adding its name, which brings it back |
-| Are category names case-sensitive? | *A category name is compared case-insensitively and stored exactly as typed* — compared without case, kept as typed. A **correction**: the code is case-sensitive by accident, not by decision ([§8.1](08-crosscutting-concepts.md)) |
-| What happens when the user adds a name they already have? | Same section — they get the existing category back, and are told so. Derived and not contradicted. It does **not** answer the archived case, which is open above |
+| What happens when the user adds a name an **archived** category carries, and can an archived category be brought back at all? | *Adding an archived category's name brings it back* — one question with one answer. It comes back with its history and the user is told it was **brought back** rather than created; there is no separate act of un-archiving, on the same argument that leaves assigning without a separate "unassign". Adding the name was the only way back when this was answered; recording an expense is now a second (next row) |
+| What about an expense remembered late, whose category has since been archived? | *Recording an expense against an archived category brings it back* — the expense is **recorded**, the category is **brought back** and the user is told so. A **decision**, chosen over refusing and over recording while leaving it archived. It **replaces** an earlier answer here — "nothing extra", derived on the assumption that recording against a category means adding its name, which it does not: an expense naming a category you do not have is refused. It leaves two routes back and still no separate un-archive act |
+| Does an expense that is refused for another reason still bring its archived category back? | Same section — **no**. Bringing back is a side-effect of recording, so where nothing is recorded the category stays archived. Derived, then **confirmed** by the stakeholder on 2026-09-25 |
+| Are category names case-sensitive? | *A category name is compared case-insensitively and stored as typed, trimmed* — compared without case, kept as typed. A **correction**: the code is case-sensitive by accident, not by decision ([§8.1](08-crosscutting-concepts.md)) |
+| What about whitespace around a category name, and a blank one? | Same section — **trimmed** at the ends, so "  Hobby  " is "Hobby" and the same category as "hobby"; a name that trims to nothing is **refused**. The label rule's whitespace half, with the required income label's consequence |
+| What about whitespace inside a category name? | Same section — **ignored for comparison, kept as typed**. Any run of inner whitespace counts as one space, so "Vaste  lasten" is the same category as "Vaste lasten", and adding it hands back the existing one spelled as it was. Chosen over "inner text untouched, so two categories", which was only the literal consequence of the first wording. Settled 2026-09-25. This answer first said "inner text left alone", which is still true of what is stored |
+| Does trimming and ignoring case apply when recording an expense against a name, or only when adding one? | Same section — **both**. Recording against "  groceries " records against Groceries. **Confirmed** by the stakeholder on 2026-09-25, not only inferred from "every comparison". It changes current behaviour, which refuses that expense as naming an unknown category ([§8.1](08-crosscutting-concepts.md)) |
+| What happens when the user adds a name they already have? | Same section — they get the existing category back, and are told so. Derived and not contradicted. It does **not** answer the archived case, which *Adding an archived category's name brings it back* answers separately |
+| Does adding a name in a different capitalisation change the existing category's spelling? | Same section, *The existing spelling is kept* — **no**, for an active category, an archived one brought back by adding its name, and one brought back by recording an expense against it. Taking the new spelling would be a rename by the back door |
 | May a category be renamed? | *Renaming a category is not in this increment* — deferred with its two questions named, not rejected |
 | Which categories does MoneyBud ship with? | *The default categories* — six, Dutch, a starting set chosen to be tried. *Sparen* ships unbacked until accounts exist |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
-**Four** of these answers were taken with their drawbacks visible rather than resolved: the
+**Five** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
 shown exactly like an overspent budget despite being a harder fact; a clamped start day
-produces a period that is longer than its neighbours with nothing on screen explaining why; and net
+produces a period that is longer than its neighbours with nothing on screen explaining why; net
 worth and *Unassigned* will disagree about an expected income, because they are answering about
-different moments in time. Each is
+different moments in time; and an archived category now has two routes back rather than one,
+which weakens the argument for having no un-archive act without overturning it. Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
@@ -1188,4 +1384,13 @@ duplicate rule, archiving and bringing back, the default set — and it reaches 
 so backed categories, the pool account and the sweep stay out of scope exactly as they did for the
 two increments before it. Two questions arose while this model was being written up and both were
 answered the same day: what an added name does when an archived category carries it, and whether an
-archived category can be brought back at all. They turned out to be one question.
+archived category can be brought back at all. They turned out to be one question. Three more were
+answered on 2026-09-25, before the scenarios were written: recording an expense against an archived
+category records it and brings the category back — **overturning** a derivation that had assumed a
+route that does not exist — category names are trimmed and a blank one refused, and adding a name
+again keeps the existing spelling. Answered the same day: a refused expense brings nothing back,
+trimming and ignoring case apply when recording as well as when adding, and an archived category is
+shown in every period where it has history, the current one included. Four more were answered while
+the scenarios were being reviewed. Inner whitespace in a name is ignored for comparison and kept as
+typed. Archiving is never confirmed first. The user is told afterwards that a category was archived.
+A zero budget with nothing spent is not history.

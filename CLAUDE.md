@@ -95,7 +95,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-25, after the income increment shipped green. Update this when a stage completes._
+_Last updated 2026-09-25, after the category scenarios were approved. Update this when a stage completes._
 
 **Done: all five stages, twice — for `record-expense` and for `record-income`.** Both are built
 and green.
@@ -141,32 +141,38 @@ one made of spaces. That is why `record-expense.feature` grew two scenarios.
 
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Creating and removing a category** — the next increment. **Stage 1 is done**: Axel settled it
-  on 2026-09-25 and it is recorded in [§12](docs/arc42/12-glossary.md). **Stage 3, the scenarios,
-  is next and carries the first gate.** What was settled:
+- **Adding and archiving a category** — the current increment, on branch
+  `increment-3-categories`. **Stages 1–3 are done and the scenarios are approved** (2026-09-25):
+  `features/add-category.feature`, `features/archive-category.feature`, and five new scenarios in
+  `features/record-expense.feature`. Axel waived a separate plan gate for this one and said to go
+  on to code. Everything is in [§12](docs/arc42/12-glossary.md); in outline:
     - **Removing a category takes it out of new entry; its history stays.** The state is called
-      **Archived** — not *deleted*, because nothing is: its expenses and its past budgets remain
-      and past periods still show it. Never destroys a record, never blocks — and the interview's
-      actual case, a default category that does not apply to you, has no history at all.
-    - **Adding the name of an archived category brings it back, history and all**, and MoneyBud
-      says it was brought back rather than created. So there is **no separate un-archive act**,
-      for the same reason there is no separate unassign act — one gesture rather than a second
-      named concept. This also settles the late-expense case by derivation: recording against an
-      archived category means bringing it back, which is one action, not a special case.
-    - **Names are compared case-insensitively and stored exactly as typed** — the same shape as
-      the label rule. This is a **correction**: `Ledger` keys categories with
-      `StringComparer.Ordinal` today, so names are case-sensitive by accident, not by decision.
-    - **Adding a name you already have** returns the category you already have, and MoneyBud says
-      so rather than silently doing nothing. Derived and put to Axel; not contradicted. Note the
-      argument behind it — "the end state you wanted is already true" — **does not** reach the
-      archived case, which is why that needed its own decision above.
+      **Archived** — not *deleted*, because nothing is. Archiving **never asks for confirmation**
+      and **says afterwards** that it was archived. An archived category is **shown in every
+      period where it has history** — a budget of more than zero, or an expense — **the current
+      period included**, and nowhere else. A zero budget with nothing spent is not history.
+    - **Two routes back, and still no un-archive act.** Adding an archived category's name brings
+      it back, history and all. So does **recording an expense against it**: the expense is
+      recorded, the category comes back, and MoneyBud says so. That was **decided**, overturning an
+      earlier derivation that assumed recording could add a category — it cannot; an unknown name
+      is refused. An expense refused for another reason brings nothing back.
+    - **Category names: trim the ends, count a run of inner spaces as one, ignore case** — for
+      every comparison, adding and recording alike. Stored trimmed, otherwise as typed. A name
+      that trims to nothing is refused. This is a **correction**: `Ledger` keys categories with
+      `StringComparer.Ordinal` today, so names are compared exactly by accident, not by decision.
+    - **Adding a name you already have** returns that category, **spelled as it already was**, and
+      says it was already there. Taking the new spelling would be a rename by the back door.
+    - **Archiving a name you don't have, or archiving twice, are non-cases** — Axel's ruling: you
+      can only archive a category you have that is in use. No behaviour is specified for either.
     - **Renaming is not in this increment** — deferred, not rejected.
     - **The default categories are Boodschappen, Huur, Hobby, Sparen, Verzekeringen,
       Abonnementen** — Axel's own list, "enough to get an idea and test". They are **Dutch**
       where the feature files use English names; those are synthetic test data, these are
       user-facing content. **`Sparen` is unbacked for now** and becomes account-backed when the
       location dimension arrives — not an oversight.
-  In code it is only test scaffolding: `Ledger.AddCategory` with no user-facing behaviour.
+  Three questions surfaced that belong to later increments, not this one: is an archived category
+  offered when assigning; is its figure offered back when a period opens; is an active category
+  shown in a period where it has no history.
 - **Assigning to a category** — the real act behind `Ledger.SetBudget`, and what makes
   *Unassigned* move. Its model is already settled in §12; it needs scenarios, not decisions.
 - **A UI**, which is what turns this into the demo ADR 0002 is about. It needs the above first,
