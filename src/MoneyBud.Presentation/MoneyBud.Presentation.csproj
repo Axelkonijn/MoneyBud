@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- CS8524 flags a switch over an enum for not handling values outside the enum's names.
+         Tekst's refusal switches deliberately have no fallback arm, so that CS8509 fires when the
+         domain gains a refusal reason without Dutch wording. Silencing only the unnamed-value
+         warning keeps that one working. -->
+    <NoWarn>$(NoWarn);CS8524</NoWarn>
+  </PropertyGroup>
+
+  <!-- No UI toolkit, on purpose (ADR 0006): everything the screen decides lives here, so the
+       scenarios can be run against it without a window, and a second UI could sit on it. -->
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyBud.Domain\MoneyBud.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

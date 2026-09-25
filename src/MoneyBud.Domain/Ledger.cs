@@ -127,14 +127,40 @@ public sealed class Ledger
 
     /// <summary>
     /// The categories offered when recording something new: every category that is not archived,
-    /// in the order they were added. No order is specified (arc42 §12 has no ordering rule);
-    /// this one is merely stable.
+    /// in the order they were added. The UI suggests them alphabetically (arc42 §12, *Category
+    /// entry is free text with suggestions*); that is how they are shown, so it is the UI's to do.
     /// </summary>
     public IReadOnlyList<Category> CategoriesOffered =>
         categoriesInOrderAdded.Where(c => !archived.Contains(c)).ToList();
 
     public IReadOnlyList<Category> ArchivedCategories =>
         categoriesInOrderAdded.Where(archived.Contains).ToList();
+
+    /// <summary>
+    /// Every category, in use and archived alike, in the order it was first added. Bringing a
+    /// category back does not add it again, so it keeps its place — the tie order the Overview
+    /// sorts by (arc42 §12, *The order of categories and slices*).
+    /// </summary>
+    public IReadOnlyList<Category> Categories => categoriesInOrderAdded.ToList();
+
+    /// <summary>
+    /// The categories a period shows, in the order they were added (arc42 §12, *When any category
+    /// is shown in a period: the full rule*): every category with history there, and every
+    /// category <i>in use</i> in the current period and every later one, where it can be planned
+    /// for. A past period shows only what has history in it, and an archived category is shown
+    /// only where it has history.
+    ///
+    /// <para>"Current" is read from the clock on every call, so a period that was current becomes
+    /// past the moment the next one begins, with nothing rebuilt around it.</para>
+    /// </summary>
+    public IReadOnlyList<Category> CategoriesShownIn(BudgetPeriod period)
+    {
+        var plannable = period.FirstDay >= CurrentPeriod.FirstDay;
+
+        return categoriesInOrderAdded
+            .Where(c => (plannable && !archived.Contains(c)) || HasHistoryIn(c.Name, period))
+            .ToList();
+    }
 
     /// <summary>Whether the name is one of the user's categories — in use or archived.</summary>
     public bool HasCategory(string name) => Find(name) is not null;
@@ -150,11 +176,7 @@ public sealed class Ledger
     /// with no budget set behaves exactly as one budgeted at zero, so the two cannot differ
     /// here either.</para>
     ///
-    /// <para>There is no general "is shown" query beside it yet, because no view needs one. The
-    /// full rule is settled (§12): a category is shown in a period where it has history, and a
-    /// category <i>in use</i> is also shown in the current period and every later one, where it
-    /// can be planned for. The increment that builds a period view implements that rule; until
-    /// then this ledger states the fact the rule is built from.</para>
+    /// <para>The whole rule, of which this is one half, is <see cref="CategoriesShownIn"/>.</para>
     /// </summary>
     public bool HasHistoryIn(string categoryName, BudgetPeriod period) =>
         BudgetFor(categoryName, period).Cents > 0 || ExpensesFor(categoryName, period).Count > 0;
@@ -284,6 +306,10 @@ public sealed class Ledger
         expenses.Add(expense);
         return RecordExpenseResult.Recorded(expense, broughtBack);
     }
+
+    /// <summary>Every expense dated in a period, whatever its category, in the order recorded.</summary>
+    public IReadOnlyList<Expense> ExpensesIn(BudgetPeriod period) =>
+        expenses.Where(e => period.Contains(e.Date)).ToList();
 
     public IReadOnlyList<Expense> ExpensesFor(string categoryName, BudgetPeriod period) =>
         Find(categoryName) is { } category

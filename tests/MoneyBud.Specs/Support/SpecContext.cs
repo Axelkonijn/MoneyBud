@@ -1,4 +1,5 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 
 namespace MoneyBud.Specs.Support;
 
@@ -25,9 +26,22 @@ public sealed class SpecContext
 
     private readonly FixedClock clock = new(Noon(Today));
 
+    private MoneyBudApp? app;
+
     public SpecContext() => Ledger = new Ledger(clock);
 
     public Ledger Ledger { get; private set; }
+
+    /// <summary>
+    /// MoneyBud as the user meets it: the screen over <see cref="Ledger"/>. Every <c>When</c>
+    /// step acts through this, never on the ledger directly, so each scenario — the domain ones
+    /// included — goes through the same doors the Desktop uses. <c>Given</c> steps set up the
+    /// ledger directly: setting up is not what is under test.
+    ///
+    /// <para>Made on first use, so that it opens on whatever period is current once the Givens
+    /// have fixed today, as MoneyBud opens on the current period when it starts.</para>
+    /// </summary>
+    public MoneyBudApp App => app ??= new MoneyBudApp(Ledger);
 
     /// <summary>
     /// A MoneyBud used for the first time, through the same door the app will use.
@@ -43,6 +57,7 @@ public sealed class SpecContext
                 "Starting MoneyBud for the first time must come before any other setup.");
 
         Ledger = Ledger.StartNew(clock);
+        app = null;
     }
 
     /// <summary>What came of the last attempt to record an expense. Null until one was made.</summary>

@@ -55,6 +55,11 @@ public sealed class RecordIncomeSteps(SpecContext context)
     public void WhenIRecordAnIncomeLabelledAndDated(string amount, string label, string date) =>
         Record(amount, label, date);
 
+    // Leaving the date as it starts out: today, whatever period is on screen.
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" without giving a date")]
+    public void WhenIRecordAnIncomeLabelledWithoutGivingADate(string amount, string label) =>
+        Record(amount, label, date: null);
+
     [When(@"I (?:record|try to record) an income of (\S+) euro without a label")]
     public void WhenIRecordAnIncomeWithoutALabel(string amount) =>
         Record(amount, label: null, date: null);
@@ -100,8 +105,10 @@ public sealed class RecordIncomeSteps(SpecContext context)
 
     // ----------------------------------------------------------------- Shared
 
+    // Through the screen, as RecordExpenseSteps does, and for the same reasons.
     private void Record(string amount, string? label, string? date) =>
-        context.Record(Ledger.RecordIncome(SpecParsing.Amount(amount), label, Ledger.Date(date)));
+        context.Record(context.App.RecordIncome(amount, label, date is null ? null : Ledger.Date(date))
+            ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
 
     private void AssertRefused(IncomeRefusal expected)
     {

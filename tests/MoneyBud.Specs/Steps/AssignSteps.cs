@@ -1,4 +1,5 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
 using Reqnroll;
 
@@ -31,7 +32,12 @@ public sealed class AssignSteps(SpecContext context)
     // record" are: they differ only in what the scenario expects next.
     [When(@"I (?:assign|try to assign) (\S+) euro to ""([^""]*)"" in the (current|previous|next) budget period")]
     public void WhenIAssign(string amount, string category, string which) =>
-        context.Record(Ledger.Assign(SpecParsing.Amount(amount), category, Ledger.Period(which)));
+        Assign(amount, category, Ledger.Period(which));
+
+    // Leaving the period as it starts out, which is the period on screen (step-between-periods.feature).
+    [When(@"I (?:assign|try to assign) (\S+) euro to ""([^""]*)"" without naming a budget period")]
+    public void WhenIAssignWithoutNamingAPeriod(string amount, string category) =>
+        Assign(amount, category, period: null);
 
     // ------------------------------------------------------------------- Then
 
@@ -65,13 +71,18 @@ public sealed class AssignSteps(SpecContext context)
     // alternation is the only regex construct here.
     [Then(@"^the (current|previous|next) budget period should be shown as over-assigned$")]
     public void ThenThePeriodShouldBeShownAsOverAssigned(string which) =>
-        Assert.True(Ledger.IsOverAssigned(Ledger.Period(which)), $"The {which} period should be over-assigned.");
+        Assert.Equal(Marker.Over, context.App.OverviewFor(Ledger.Period(which)).UnassignedMarker);
 
     [Then(@"^the (current|previous|next) budget period should not be shown as over-assigned$")]
     public void ThenThePeriodShouldNotBeShownAsOverAssigned(string which) =>
-        Assert.False(Ledger.IsOverAssigned(Ledger.Period(which)), $"The {which} period should not be over-assigned.");
+        Assert.Equal(Marker.None, context.App.OverviewFor(Ledger.Period(which)).UnassignedMarker);
 
     // ----------------------------------------------------------------- Shared
+
+    // Through the screen, with the amount as typed.
+    private void Assign(string amount, string category, BudgetPeriod? period) =>
+        context.Record(context.App.Assign(amount, category, period)
+            ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
 
     private void AssertRefused(AssignRefusal expected)
     {

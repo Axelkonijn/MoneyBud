@@ -53,14 +53,14 @@ public sealed class CategorySteps(SpecContext context)
     public void WhenIAddACategory(string name)
     {
         before = Snapshot();
-        context.Record(Ledger.AddCategory(name));
+        context.Record(context.App.AddCategory(name));
     }
 
     [When(@"I archive the category ""([^""]*)""")]
     public void WhenIArchiveTheCategory(string category)
     {
         before = Snapshot();
-        context.RecordArchived(Ledger.ArchiveCategory(category));
+        context.RecordArchived(context.App.ArchiveCategory(category));
     }
 
     // ------------------------------------------------------------------- Then
@@ -99,29 +99,36 @@ public sealed class CategorySteps(SpecContext context)
         Assert.Equal(archived, archivedNow);
     }
 
-    [Then(@"the categories offered for a new expense should include ""([^""]*)""")]
+    // "Offered" is what the screen suggests (suggest-categories.feature). Recording an expense
+    // and assigning are suggested the same list, so both wordings read the one list.
+
+    [Then(@"the categories offered for (?:a new expense|assigning) should include ""([^""]*)""")]
     public void ThenTheCategoriesOfferedShouldInclude(string category) =>
-        Assert.Contains(category, OfferedNames());
+        Assert.Contains(category, Suggested());
 
-    [Then(@"the categories offered for a new expense should not include ""([^""]*)""")]
+    [Then(@"the categories offered for (?:a new expense|assigning) should not include ""([^""]*)""")]
     public void ThenTheCategoriesOfferedShouldNotInclude(string category) =>
-        Assert.DoesNotContain(OfferedNames(), name => CategoryName.Comparer.Equals(name, category));
+        Assert.DoesNotContain(Suggested(), name => CategoryName.Comparer.Equals(name, category));
 
-    [Then(@"the categories offered for a new expense should list ""([^""]*)"" once, and no other spelling of it")]
+    [Then(@"the categories offered for (?:a new expense|assigning) should list ""([^""]*)"" once, and no other spelling of it")]
     public void ThenTheCategoriesOfferedShouldListOnce(string category)
     {
-        var matching = OfferedNames().Where(name => CategoryName.Comparer.Equals(name, category));
+        var matching = Suggested().Where(name => CategoryName.Comparer.Equals(name, category));
 
         Assert.Equal([category], matching);
     }
 
-    [Then(@"the categories offered for a new expense should be exactly these, in any order:")]
+    [Then(@"^the categories offered for (?:a new expense|assigning) should be exactly these, in any order:$")]
     public void ThenTheCategoriesOfferedShouldBeExactly(Table table)
     {
         var expected = table.Rows.Select(row => row["category"]).Order(StringComparer.Ordinal);
 
-        Assert.Equal(expected, OfferedNames().Order(StringComparer.Ordinal));
+        Assert.Equal(expected, Suggested().Order(StringComparer.Ordinal));
     }
+
+    [Then(@"^the categories offered for (?:a new expense|assigning) should be exactly these, in this order:$")]
+    public void ThenTheCategoriesOfferedShouldBeExactlyInOrder(Table table) =>
+        Assert.Equal(table.Rows.Select(row => row["category"]), Suggested());
 
     [Then(@"no category should have a budget or any spending in the current budget period")]
     public void ThenNoCategoryShouldHaveABudgetOrAnySpending()
@@ -135,34 +142,22 @@ public sealed class CategorySteps(SpecContext context)
         }
     }
 
-    // The full rule (arc42 §12): a category is shown in a period where it has history, and one in
-    // use is also shown in the current period and every later one. No view implements it yet, so
-    // these steps are bound to the ledger's facts and cover what the approved scenarios ask:
-    // history is enough for any category to be shown, and an ARCHIVED category without history is
-    // not. "Should not be shown" fails loudly if asked of a category in use rather than
-    // re-implement the rule here — when a period view exists, rebind both steps to it (§11).
+    // Whether the period's Overview lists the category — the full display rule (arc42 §12), as
+    // the screen applies it. Letter for letter: the name as MoneyBud shows it.
     [Then(@"""([^""]*)"" should be shown in the (current|previous|next) budget period")]
-    public void ThenShouldBeShownIn(string category, string which)
-    {
-        Assert.True(Ledger.HasCategory(category), $"{category} should be one of my categories.");
-        Assert.True(
-            Ledger.HasHistoryIn(category, Ledger.Period(which)),
-            $"{category} should be shown in the {which} budget period, so it needs history there.");
-    }
+    public void ThenShouldBeShownIn(string category, string which) =>
+        Assert.Contains(category, ShownNames(which));
 
     [Then(@"""([^""]*)"" should not be shown in the (current|previous|next) budget period")]
-    public void ThenShouldNotBeShownIn(string category, string which)
-    {
-        Assert.True(
-            Ledger.IsArchived(category),
-            $"Until a period view exists this step answers only for an archived category " +
-            $"(see the comment above), and {category} is not archived.");
-        Assert.False(
-            Ledger.HasHistoryIn(category, Ledger.Period(which)),
-            $"{category} has history in the {which} budget period, so it is still shown there.");
-    }
+    public void ThenShouldNotBeShownIn(string category, string which) =>
+        Assert.DoesNotContain(ShownNames(which), name => CategoryName.Comparer.Equals(name, category));
 
     // ----------------------------------------------------------------- Shared
+
+    private IReadOnlyList<string> Suggested() => context.App.CategorySuggestions;
+
+    private IEnumerable<string> ShownNames(string which) =>
+        context.App.OverviewFor(Ledger.Period(which)).Rows.Select(r => r.Name);
 
     private string[] OfferedNames() => Ledger.CategoriesOffered.Select(c => c.Name).ToArray();
 

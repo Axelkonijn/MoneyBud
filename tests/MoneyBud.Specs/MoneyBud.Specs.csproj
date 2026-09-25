@@ -28,12 +28,12 @@
        they stay findable without knowing anything about the solution layout. Linking them in
        is what lets Reqnroll generate from them where they are. -->
   <ItemGroup>
-    <ReqnrollFeatureFile Include="..\..\features\**\*.feature"
-                         Link="Features\%(RecursiveDir)%(Filename)%(Extension)" />
+    <ReqnrollFeatureFile Include="..\..\features\**\*.feature" Link="Features\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\MoneyBud.Domain\MoneyBud.Domain.csproj" />
+    <ProjectReference Include="..\..\src\MoneyBud.Presentation\MoneyBud.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,4 +1,5 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
 using Reqnroll;
 
@@ -132,6 +133,12 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void WhenIRecordAnExpenseWithoutNamingACategory(string amount) =>
         Record(amount, category: null, label: null, date: null);
 
+    // Leaving the date as it starts out, which is today whatever period is on screen
+    // (step-between-periods.feature). Every variant above that names no date means the same.
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" without giving a date")]
+    public void WhenIRecordAnExpenseLabelledWithoutGivingADate(string amount, string category, string label) =>
+        Record(amount, category, label, date: null);
+
     // ------------------------------------------------------------------- Then
 
     [Then(@"the expense should be recorded")]
@@ -174,17 +181,19 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void ThenShouldBeShownAsOverBudget(string category) =>
         ThenShouldBeShownAsOverBudgetIn(category, "current");
 
+    // Shown means on the period's Overview: the category's row is there, and carries the marker.
     [Then(@"""([^""]*)"" should be shown as over budget in the (current|previous|next) budget period")]
-    public void ThenShouldBeShownAsOverBudgetIn(string category, string which) =>
-        Assert.True(
-            Ledger.IsOverBudget(category, Ledger.Period(which)),
-            $"{category} should be shown as over budget.");
+    public void ThenShouldBeShownAsOverBudgetIn(string category, string which)
+    {
+        var row = RowOf(category, which);
+        Assert.True(row is not null, $"{category} should be shown in the {which} budget period.");
+        Assert.Equal(Marker.Over, row.Marker);
+    }
 
+    // Holds as well when the category is not listed at all: nothing is shown as over budget then.
     [Then(@"""([^""]*)"" should not be shown as over budget")]
     public void ThenShouldNotBeShownAsOverBudget(string category) =>
-        Assert.False(
-            Ledger.IsOverBudget(category, Ledger.CurrentPeriod),
-            $"{category} should not be shown as over budget.");
+        Assert.NotEqual(Marker.Over, RowOf(category, "current")?.Marker);
 
     [Then(@"my ""([^""]*)"" spending in the (current|previous|next) budget period should include (\d+) expenses of (\S+) euro")]
     public void ThenMySpendingShouldIncludeNExpensesOf(
@@ -212,9 +221,15 @@ public sealed class RecordExpenseSteps(SpecContext context)
 
     // ----------------------------------------------------------------- Shared
 
+    private CategoryRow? RowOf(string category, string which) =>
+        context.App.OverviewFor(Ledger.Period(which)).Rows.SingleOrDefault(r => r.Name == category);
+
+    // Through the screen, with the amount as typed. A date the step does not name is left out
+    // rather than filled in here, so that the screen's own default is what decides it.
     private void Record(string amount, string? category, string? label, string? date) =>
-        context.Record(Ledger.RecordExpense(
-            SpecParsing.Amount(amount), category, Ledger.Date(date), label));
+        context.Record(context.App.RecordExpense(
+            amount, category, label, date is null ? null : Ledger.Date(date))
+            ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
 
     private void AssertRefused(ExpenseRefusal expected)
     {
