@@ -176,8 +176,8 @@ and one low defect, fixed. Everything is in [§12](docs/arc42/12-glossary.md); i
   scenarios start from an **empty** ledger unless they are about the first start, which is what
   proves no other scenario depends on the defaults.
 
-**Increment 4 — assigning to a category — is done and green**, on branch
-`increment-4-assigning`, **pushed but not yet merged into `main`** — Axel decides when. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
+**Increment 4 — assigning to a category — is done and green**, built on branch
+`increment-4-assigning` and merged into `main`. Settled with Axel on 2026-09-25; `spec-reviewer` found no faked scenario
 and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
 
 - **Assigning moves an amount; it does not set a figure.** Out of the period's *Unassigned*, onto
