@@ -19,6 +19,13 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
 {
     public Marker Marker => Remaining.IsNegative ? Marker.Over : Marker.None;
 
+    /// <summary>
+    /// Which slice of the ring is this category's, counting from the first clockwise; null when
+    /// it has none. Rows and slices share one order and the budgeted rows come first, so this is
+    /// simply the row's place — it lets a list show each row in its slice's colour.
+    /// </summary>
+    public int? SliceIndex { get; init; }
+
     public bool IsOverBudget => Marker == Marker.Over;
     public string BudgetText => Tekst.Euro(Budget);
     public string SpentText => Tekst.Euro(Spent);
@@ -77,11 +84,16 @@ public sealed record PeriodOverview(
 
         var incomes = ledger.IncomesIn(period);
         var unassigned = ledger.UnassignedIn(period);
+        var ring = Ring.Of(rows, unassigned, hasIncome: incomes.Count > 0);
+
+        rows = rows
+            .Select((row, i) => row with { SliceIndex = row.Budget.Cents > 0 && !ring.IsEmpty ? i : null })
+            .ToList();
 
         return new PeriodOverview(
             period,
             rows,
-            Ring.Of(rows, unassigned, hasIncome: incomes.Count > 0),
+            ring,
             unassigned,
             NewestFirst(ledger.ExpensesIn(period), e => e.Date)
                 .Select(e => new ExpenseLine(e.Date, e.Category.Name, e.Label, e.Amount))

@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/MoneyBud.Desktop/MoneyBud.Desktop.csproj" />
     <Project Path="src/MoneyBud.Domain/MoneyBud.Domain.csproj" />
     <Project Path="src/MoneyBud.Presentation/MoneyBud.Presentation.csproj" />
   </Folder>

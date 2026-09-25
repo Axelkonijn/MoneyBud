@@ -1,0 +1,235 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:p="using:MoneyBud.Presentation"
+        xmlns:d="using:MoneyBud.Desktop"
+        x:Class="MoneyBud.Desktop.MainWindow"
+        x:DataType="p:MoneyBudApp"
+        Title="MoneyBud"
+        Width="1320" Height="820" MinWidth="1000" MinHeight="640"
+        Background="#F6F7F9">
+
+  <!-- Income on the left, the plan in the middle, expenses on the right: the stakeholder's own
+       picture of the screen (arc42 §12). Every word shown comes from Tekst. -->
+
+  <Window.Styles>
+    <Style Selector="TextBlock.heading">
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#5C6670" />
+    </Style>
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="16" />
+      <Setter Property="BorderBrush" Value="#E2E6EA" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+    <Style Selector="Border.marker">
+      <Setter Property="Background" Value="#C0392B" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="5,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.marker > TextBlock">
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontSize" Value="11" />
+    </Style>
+    <Style Selector="TextBox, AutoCompleteBox, CalendarDatePicker">
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+  </Window.Styles>
+
+  <DockPanel Margin="16">
+
+    <!-- The period on screen, and stepping. -->
+    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,14">
+      <Button Grid.Column="0" Command="{Binding StepBackCommand}"
+              Content="{x:Static p:Tekst.PreviousPeriod}" />
+      <StackPanel Grid.Column="1" HorizontalAlignment="Center" Orientation="Horizontal" Spacing="10">
+        <TextBlock Text="{Binding PeriodTitle}" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <Border IsVisible="{Binding ShowsCurrentPeriod}" Background="#E8F4F1" CornerRadius="10"
+                Padding="8,2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding PeriodLabel}" FontSize="12" Foreground="#1F6F63" />
+        </Border>
+      </StackPanel>
+      <Button Grid.Column="2" Command="{Binding StepForwardCommand}"
+              Content="{x:Static p:Tekst.NextPeriod}" />
+    </Grid>
+
+    <!-- What MoneyBud said about the last thing done. -->
+    <Border DockPanel.Dock="Bottom" Margin="0,14,0,0" CornerRadius="6" Padding="12,8"
+            IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}"
+            Background="{Binding Notice.IsRefusal, Converter={x:Static d:NoticeBackground.Instance}, FallbackValue={x:Null}}">
+      <TextBlock Text="{Binding Notice.Text, FallbackValue=''}" TextWrapping="Wrap" />
+    </Border>
+
+    <Grid ColumnDefinitions="*,16,2*,16,*">
+
+      <!-- ======================= Income ======================= -->
+      <Border Grid.Column="0" Classes="card">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Incomes}" />
+          <StackPanel DockPanel.Dock="Top" DataContext="{Binding IncomeForm}" x:DataType="p:IncomeForm">
+            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
+            <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
+            <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
+                                HorizontalAlignment="Stretch" />
+            <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordIncome}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
+          </StackPanel>
+          <Separator DockPanel.Dock="Top" Margin="0,14" />
+          <Grid>
+            <TextBlock Classes="caption" Text="{x:Static p:Tekst.NoIncomes}"
+                       IsVisible="{Binding !Overview.Incomes.Count}" />
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding Overview.Incomes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="p:IncomeLine">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding DateText}" Classes="caption" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </DockPanel>
+      </Border>
+
+      <!-- ======================= The plan ======================= -->
+      <Border Grid.Column="2" Classes="card">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Overview}" />
+
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="260,*" Margin="0,0,0,12">
+            <Panel Width="240" Height="240">
+              <d:RingControl Ring="{Binding Overview.Ring}" />
+              <TextBlock Text="{Binding Overview.RingHint}" IsVisible="{Binding Overview.Ring.IsEmpty}"
+                         TextWrapping="Wrap" TextAlignment="Center" Width="130"
+                         HorizontalAlignment="Center" VerticalAlignment="Center" Classes="caption" />
+            </Panel>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" Margin="12,0,0,0">
+              <TextBlock Text="{x:Static p:Tekst.Unassigned}" Classes="caption" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="{Binding Overview.UnassignedText}" FontSize="26" FontWeight="SemiBold" />
+                <Border Classes="marker" IsVisible="{Binding Overview.IsOverAssigned}">
+                  <TextBlock Text="{x:Static p:Tekst.OverAssigned}" />
+                </Border>
+              </StackPanel>
+
+              <!-- Assigning: its period starts as the one on screen and can be moved on its own. -->
+              <StackPanel DataContext="{Binding AssignForm}" x:DataType="p:AssignForm" Margin="0,10,0,0">
+                <Grid ColumnDefinitions="*,8,*">
+                  <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
+                  <AutoCompleteBox Grid.Column="2" Text="{Binding Category}"
+                                   PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="StartsWith"
+                                   MinimumPrefixLength="0"
+                                   ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
+                </Grid>
+                <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
+                  <Button Content="‹" Command="{Binding EarlierPeriodCommand}" />
+                  <TextBlock Grid.Column="1" Text="{Binding PeriodTitle}" VerticalAlignment="Center"
+                             HorizontalAlignment="Center" />
+                  <Button Grid.Column="2" Content="›" Command="{Binding LaterPeriodCommand}" />
+                  <Button Grid.Column="4" Content="{x:Static p:Tekst.Assign}" Command="{Binding SubmitCommand}"
+                          Classes="accent" />
+                </Grid>
+              </StackPanel>
+            </StackPanel>
+          </Grid>
+
+          <!-- Adding a category. -->
+          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,12,0,0"
+                DataContext="{Binding CategoryForm}" x:DataType="p:CategoryForm">
+            <TextBox Text="{Binding Name}" PlaceholderText="{x:Static p:Tekst.Category}" Margin="0" />
+            <Button Grid.Column="2" Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.AddCategory}" />
+          </Grid>
+
+          <!-- One row per category the period shows, in the ring's order. -->
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,0,0,4">
+            <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static p:Tekst.Category}" />
+            <TextBlock Grid.Column="2" Classes="caption" Text="{x:Static p:Tekst.Budget}" TextAlignment="Right" />
+            <TextBlock Grid.Column="3" Classes="caption" Text="{x:Static p:Tekst.Spent}" TextAlignment="Right" />
+            <TextBlock Grid.Column="4" Classes="caption" Text="{x:Static p:Tekst.Remaining}" TextAlignment="Right" />
+          </Grid>
+          <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding Overview.Rows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="p:CategoryRow">
+                  <Grid ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,3">
+                    <Ellipse Width="10" Height="10" VerticalAlignment="Center"
+                             Fill="{Binding SliceIndex, Converter={x:Static d:SliceColours.Swatch}}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      <TextBlock Text="{x:Static p:Tekst.Archived}" Classes="caption"
+                                 IsVisible="{Binding IsArchived}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="2" Text="{Binding BudgetText}" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="{Binding SpentText}" TextAlignment="Right" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="4" Text="{Binding RemainingText}" TextAlignment="Right" VerticalAlignment="Center" />
+                    <Border Grid.Column="5" Classes="marker" IsVisible="{Binding IsOverBudget}"
+                            HorizontalAlignment="Center">
+                      <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
+                    </Border>
+                    <Button Grid.Column="6" HorizontalAlignment="Right" Padding="8,2" FontSize="12"
+                            Content="{x:Static p:Tekst.Archive}" IsVisible="{Binding !IsArchived}"
+                            Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).ArchiveCommand}"
+                            CommandParameter="{Binding Name}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+
+      <!-- ======================= Expenses ======================= -->
+      <Border Grid.Column="4" Classes="card">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Expenses}" />
+          <StackPanel DockPanel.Dock="Top" DataContext="{Binding ExpenseForm}" x:DataType="p:ExpenseForm">
+            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
+            <AutoCompleteBox Text="{Binding Category}" PlaceholderText="{x:Static p:Tekst.Category}"
+                             FilterMode="StartsWith" MinimumPrefixLength="0"
+                             ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
+            <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
+            <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
+                                HorizontalAlignment="Stretch" />
+            <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordExpense}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
+          </StackPanel>
+          <Separator DockPanel.Dock="Top" Margin="0,14" />
+          <Grid>
+            <TextBlock Classes="caption" Text="{x:Static p:Tekst.NoExpenses}"
+                       IsVisible="{Binding !Overview.Expenses.Count}" />
+            <ScrollViewer>
+              <ItemsControl ItemsSource="{Binding Overview.Expenses}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="p:ExpenseLine">
+                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+                      <StackPanel>
+                        <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Label}" IsVisible="{Binding Label, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                        <TextBlock Text="{Binding DateText}" Classes="caption" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </DockPanel>
+      </Border>
+    </Grid>
+  </DockPanel>
+</Window>

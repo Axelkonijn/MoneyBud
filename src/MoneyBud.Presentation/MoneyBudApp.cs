@@ -95,7 +95,15 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// and by the Desktop on a timer, so the current-period label moves when a period ends.
     /// Changes nothing itself.
     /// </summary>
-    public void Refresh() => OnPropertyChanged(string.Empty);
+    public void Refresh()
+    {
+        // An empty name means "everything" to most listeners; the named ones are for any that
+        // only listen by name.
+        OnPropertyChanged(string.Empty);
+        foreach (var name in (string[])[nameof(ShownPeriod), nameof(ShowsCurrentPeriod), nameof(PeriodTitle),
+                                        nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions)])
+            OnPropertyChanged(name);
+    }
 
     // ------------------------------------------------------------------ acts
 
