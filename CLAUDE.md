@@ -44,7 +44,7 @@ quietly.
 
 | Path | Contents |
 |---|---|
-| `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones |
+| `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones. Feedback given in English is translated, and the round says so at the top |
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
@@ -245,10 +245,29 @@ untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
 **Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
 category's last figure is **not offered back**.
 
+**In progress: the first feedback round, on branch `feedback-round-1`.** Axel ran the demo on
+2026-09-26 in a guided session. **Stage 1 is done**: his feedback is captured, approved by him, in
+[`docs/stakeholder/2026-09-26-demo-feedback.md`](docs/stakeholder/2026-09-26-demo-feedback.md).
+**The next step is stage 2** — `arc42-keeper` records it in §12 — then scenarios (gate), plan
+(gate), build. Three changes, all small:
+
+- **The category box empties after every entry**, expense and assign alike. Today it keeps what
+  was *typed* ("groc") rather than the suggestion picked, which is a bug on top of the wish.
+- **The ring becomes the centrepiece** of the middle column, rows below it; **hovering a slice
+  shows** its category, Budget, Uitgegeven and Resterend; **small budgets get a minimum slice
+  width**, so they and their fill stay visible. That minimum **changes an approved rule** — the
+  ring was exactly proportional — so `overview.feature` goes back through the scenario gate, and
+  the plan proposes the minimum.
+- **Field order: the "what" before the amount.** Expense: Omschrijving → Categorie → Bedrag →
+  Datum. Income: Omschrijving → Bedrag → Datum. Assigning: Categorie → Bedrag.
+
+The field order and the emptying box are window and form behaviour: unit tests, not scenarios.
+Axel's remark that the date stays on today after stepping to another month is an **observation,
+not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
+Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
 
-- **Demo it to Axel and gather feedback** — the point of ADR 0002. That feedback may reorder
-  everything below.
 - **Opening a period** — offering last period's figures back and the one action that assigns them
   in full. Settled in §12, not built.
 - **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
