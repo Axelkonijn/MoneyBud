@@ -66,9 +66,26 @@ public sealed class AssignSteps(SpecContext context)
     public void ThenIShouldNotBeToldOfAnyShortfall() =>
         Assert.Equal(Money.Zero, context.AssignResult.Shortfall);
 
+    // Taking a plan over is assigning, and meets the same refusal in a past period
+    // (take-over-a-plan.feature).
     [Then(@"I should be told that nothing can be assigned in a past budget period")]
-    public void ThenIShouldBeToldNothingCanBeAssignedInAPastPeriod() =>
+    public void ThenIShouldBeToldNothingCanBeAssignedInAPastPeriod()
+    {
+        if (context.LastAttempt is TakeOverPlanResult takeOver)
+        {
+            Assert.False(takeOver.WasTakenOver, "Expected the take-over to be refused, but it went through.");
+            Assert.Equal(AssignRefusal.PeriodInPast, takeOver.Refusal);
+
+            // Nothing else on screen says so: the redraw after the act has already taken the
+            // offer away, so the notice is the whole of being told.
+            var notice = context.App.Notice ?? throw new InvalidOperationException("Nothing was said.");
+            Assert.True(notice.IsRefusal);
+            Assert.Equal(Tekst.Refusal(AssignRefusal.PeriodInPast, category: null), notice.Text);
+            return;
+        }
+
         AssertRefused(AssignRefusal.PeriodInPast);
+    }
 
     [Then(@"I should be told that an assignment needs a category")]
     public void ThenIShouldBeToldAnAssignmentNeedsACategory() =>

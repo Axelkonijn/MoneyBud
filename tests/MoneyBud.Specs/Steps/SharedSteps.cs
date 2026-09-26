@@ -65,6 +65,10 @@ public sealed class SharedSteps(SpecContext context)
                 // As archiving: the category it deleted, or a throw for a non-case.
                 Assert.NotNull(deleted.Category);
                 break;
+            case TakeOverPlanResult takenOver:
+                Assert.True(takenOver.WasTakenOver);
+                Assert.Null(takenOver.Refusal);
+                break;
             default:
                 throw NothingAttempted();
         }

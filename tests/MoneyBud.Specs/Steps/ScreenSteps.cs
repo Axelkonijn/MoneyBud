@@ -52,12 +52,22 @@ public sealed class ScreenSteps(SpecContext context)
 
     // The clock moves on and MoneyBud is not restarted. Refresh is what the Desktop's timer calls;
     // it only tells the screen to look again, so the step does exactly what the running app does.
-    [When(@"the next budget period begins while MoneyBud is open")]
+    //
+    // Anchored, so that it cannot also be read as the start of the step below.
+    [When(@"^the next budget period begins while MoneyBud is open$")]
     public void WhenTheNextBudgetPeriodBeginsWhileMoneyBudIsOpen()
+    {
+        WhenTheNextBudgetPeriodBeginsBeforeTheOverviewIsNextDrawn();
+        App.Refresh();
+    }
+
+    // The same, stopped before the timer's redraw: what was on screen is still there, such as a
+    // button that takes a plan over (take-over-a-plan.feature).
+    [When(@"^the next budget period begins while MoneyBud is open, before the Overview is next drawn$")]
+    public void WhenTheNextBudgetPeriodBeginsBeforeTheOverviewIsNextDrawn()
     {
         _ = App;
         context.SetToday(Ledger.Calendar.Next(Ledger.CurrentPeriod).FirstDay);
-        App.Refresh();
     }
 
     // ------------------------------------------------------------------- Then: stepping
@@ -303,22 +313,34 @@ public sealed class ScreenSteps(SpecContext context)
     // ------------------------------------------------------------------- Then: rows
 
     // Checks the columns the table has: only the names and their order, or the figures and the
-    // marker as well.
+    // marker as well, or the grey plan figure — "none" for a row that shows none at all
+    // (take-over-a-plan.feature).
     [Then(@"^the categories shown in the (current|previous|next) budget period should be exactly these, in this order:$")]
     public void ThenTheCategoriesShownShouldBeExactly(string which, Table table)
     {
         var rows = OverviewOf(which).Rows;
         Assert.Equal(table.Rows.Select(r => r["category"]), rows.Select(r => r.Name));
 
-        if (!table.ContainsColumn("budget")) return;
-
         foreach (var (expected, actual) in table.Rows.Zip(rows))
         {
-            Assert.Equal(SpecParsing.MoneyAmount(expected["budget"]), actual.Budget);
-            Assert.Equal(SpecParsing.MoneyAmount(expected["spent"]), actual.Spent);
-            Assert.Equal(SpecParsing.MoneyAmount(expected["remaining"]), actual.Remaining);
-            Assert.Equal(YesNo(expected["over budget"]) ? Marker.Over : Marker.None, actual.Marker);
+            if (table.ContainsColumn("budget"))
+            {
+                Assert.Equal(SpecParsing.MoneyAmount(expected["budget"]), actual.Budget);
+                Assert.Equal(SpecParsing.MoneyAmount(expected["spent"]), actual.Spent);
+                Assert.Equal(SpecParsing.MoneyAmount(expected["remaining"]), actual.Remaining);
+                Assert.Equal(YesNo(expected["over budget"]) ? Marker.Over : Marker.None, actual.Marker);
+            }
+
+            if (table.ContainsColumn("plan"))
+                AssertPlanFigure(expected["plan"] is "none" ? null : SpecParsing.MoneyAmount(expected["plan"]), actual);
         }
+    }
+
+    /// <summary>The row's grey figure, both as a figure and as what the row shows.</summary>
+    internal static void AssertPlanFigure(Money? expected, CategoryRow row)
+    {
+        Assert.Equal(expected, row.PlanFigure);
+        Assert.Equal(expected is { } figure ? Tekst.PlanFigure(figure) : null, row.PlanText);
     }
 
     // ------------------------------------------------------------------- Then: lists

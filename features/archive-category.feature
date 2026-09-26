@@ -47,10 +47,9 @@
 #   - Renaming, archived categories included (rename-a-category.feature); deleting
 #     (delete-a-category.feature); assigning, apart from bringing back; accounts; and the
 #     end-of-period sweep.
-#   - Budget figures carried over into a new period. They are not built. It is settled that an
-#     archived category's figure is not offered back when a period opens (glossary: An archived
-#     category's figure is not offered back when a period opens); its scenarios belong with
-#     carry-over.
+#   - Budget figures carried over into a new period. That an archived category's figure is not
+#     offered back when a period opens (glossary: An archived category's figure is not offered
+#     back when a period opens) is specified with carry-over, in take-over-a-plan.feature.
 
 @budget
 Feature: Archive a category

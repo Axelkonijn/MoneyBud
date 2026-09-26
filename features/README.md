@@ -61,7 +61,8 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Nineteen feature files exist. All nineteen are approved and bound, and every scenario in them passes.
+Twenty feature files exist. All twenty are approved and bound, and every scenario in them passes.
+The latest, `take-over-a-plan.feature`, was built with the opening-a-period increment.
 The first demo feedback round's scenarios, all of `point-at-a-slice.feature` and the new
 scenarios in `overview.feature`, were approved at the scenario gate on 2026-09-26.
 
@@ -76,12 +77,18 @@ in a temporary folder of each scenario's own, and so does every other scenario (
 same increment edited one comment each in `overview.feature` and `step-between-periods.feature`,
 approved with them.
 
+The opening-a-period increment's file, `take-over-a-plan.feature`, was **approved at the scenario
+gate on 2026-09-26**, with the stakeholder's rulings on the questions it raised applied: the
+take-over asks for no confirmation, a one-cent plan in one period is what the next period is
+offered, and while a plan is offered the rows are in order of their plan figures. Its steps are in
+`TakeOverSteps.cs`, and a `plan` column was added to `overview.feature`'s categories-table step.
+
 | Capability | File |
 |---|---|
 | Recording | `record-expense.feature`, `record-income.feature` |
 | Correcting | `change-an-entry.feature`, `remove-an-entry.feature` |
 | Categories | `add-category.feature`, `archive-category.feature`, `rename-a-category.feature`, `delete-a-category.feature` |
-| Planning | `assign-to-category.feature` |
+| Planning | `assign-to-category.feature`, `take-over-a-plan.feature` |
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

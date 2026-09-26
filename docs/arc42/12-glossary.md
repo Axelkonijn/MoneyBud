@@ -1050,7 +1050,11 @@ away, so MoneyBud does not suggest planning for it again. Settled by the stakeho
 |---|---|
 | **Offer it back** | It would plan money for a category the user archived, while leaving the category archived |
 
-**Not built.** Carry-over is not built for any category yet.
+**Detailed on 2026-09-26, and built** in the opening-a-period increment (*Opening a period*, below).
+An archived category's figure is not offered, and it does not make an earlier period count as having
+a plan to offer either. `Ledger.PlanOfferedIn` reads "archived" at the moment it is asked, so
+archiving a category and bringing it back change the offer at once
+([§8.1](08-crosscutting-concepts.md)).
 
 ### Deleting a category that has no history anywhere
 
@@ -1227,7 +1231,9 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
 | **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
 | **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Possible in the **current budget period and any later one**; assigning in a **past** period is **refused** (*Assigning happens in the current budget period and later ones*, above). **Assigning zero** is accepted and changes nothing, unlike a zero expense or income, which is refused (*Assigning zero is accepted and moves nothing*, above). Refused only for its **target** or its cents, never for being zero or negative. The refusals, in the order the first one broken is reported, are: a name that trims to nothing, a name that is not one of your categories, an amount finer than a cent, and a past period. That is the same order recording an expense uses. An otherwise acceptable zero or clippable negative is still refused if its target is wrong (*When an assignment is refused*, above). An **archived** category is not offered for assigning. Assigning a **positive** amount to its name anyway **brings it back**, and the user is told; a negative or zero assignment leaves it archived (see *Assigning to an archived category brings it back* above). Built in the assigning increment for **unbacked** categories, which is every category while there are no accounts: `Ledger.Assign`, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature) ([§8.1](08-crosscutting-concepts.md)). The backed half, the real transfer, is not built. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
-| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
+| **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back rather than applied — see below. Since 2026-09-26 that is settled in detail, and it is built: a current or later period whose every *Budget* is zero is offered the plan of the latest earlier period that has one, and can **take it over** (*Opening a period*, below). A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
+| **Take over (a plan)** | The one act that assigns an earlier period's plan in full. It is **offered** in the current period and every later one while every *Budget* there is zero, a budget taken back to zero included and an archived category's budget counting, and only then. It acts on the **period on screen**, never on a period the assign form has been stepped to. The plan offered is that of the **latest earlier period that has a plan**: a *Budget* of more than zero for a category not archived now, however small, one cent included. Taking it over assigns each of that period's figures, for categories not archived, even past *Unassigned*, which may leave the period *Over-assigned*. It is **not confirmed first**, and a notice names the period it went into. Not offered in a past period: past a boundary it disappears quietly at the next refresh, and pressing it before then is refused like any past-period assignment. No undo: a take-over is corrected row by row by negative assignments. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as `Ledger.TakeOverPlan`, which assigns each figure through `Ledger.Assign`, with the offer worked out by `Ledger.PlanOfferedIn` ([§8.1](08-crosscutting-concepts.md)). On screen it is *Plan overnemen*. |
+| **Remembered figure** | A category's *Budget* in the plan being offered: what taking it over would assign to it. Shown in grey on the category's row, labelled *plan* ("plan: € 400,00"), *only while the plan is offered*, and gone once the period has a plan. It is not a comparison between months. A category archived now, or whose figure in that period is zero, is not part of the plan, and its row shows no label. While the plan is offered, the rows are **ordered by this figure**, largest first, ties in order added, so nothing jumps on taking it over. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as a `PlanFigure` in the `PlanOffer` and `CategoryRow.PlanFigure` on screen ([§8.4](08-crosscutting-concepts.md)). |
 | **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). The marker's badge reads *Te veel toegewezen*. Built in the UI increment. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). |
 | **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; built in the corrections increment. |
@@ -1375,6 +1381,375 @@ figures can be adjusted like any other.
 Carrying figures rather than assignments follows from a *Budget* being a plan (above). There is no
 money sitting in a category to carry anywhere; there is only last period's intention, which is a
 good first guess at this period's.
+
+**Refined on 2026-09-26, and since built.** "The previous period" and "last period's plan" above now
+mean **the latest earlier period that has a plan**, which is the previous period whenever that one
+was planned. When the plan is offered, how it is shown and what taking it over does were settled
+the same day (*Opening a period*, next), and built in the opening-a-period increment. The wording
+above is left as it was written. It is still right in the ordinary month, and what was believed is
+part of the record.
+
+### Opening a period
+
+The rulings for the next increment, settled with the stakeholder on 2026-09-26. Like the
+persistence round, they were answers to multiple-choice questions, each put to him with a
+recommendation, and they went straight into this glossary rather than into a new interview round.
+**He took the recommended option every time but once** (*The offer is a button, and a figure on
+each row*, below). **The reasoning given with each ruling is the documentation's.** It was offered
+with the recommended option as the argument for it, and he chose that option without adding
+reasons of his own. Where he chose otherwise, that is said.
+
+**Nine rulings came first, and five follow-ups the same day.** Writing the nine up left five
+points open. They were put to him as multiple-choice questions on 2026-09-26, and he took the
+recommendation on all four questions. The fifth point was stated in a question and he did not
+contest it, so it is recorded as confirmed. Each follow-up sits in the subsection it belongs to,
+marked *follow-up*. **Three more came at the scenario gate**, the same day, on assumptions the
+scenario writer raised. He took the recommendation on all three. They are marked *gate*.
+
+**Settled, specified and built.**
+[`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), 19 scenarios and 23 cases,
+was **approved at the scenario gate on 2026-09-26**, with the three gate rulings. The plan was
+approved at the plan gate the same day, and the increment was built to it and is green. The domain
+works out the offer with `Ledger.PlanOfferedIn` and takes it over with `Ledger.TakeOverPlan`, which
+assigns through `Ledger.Assign` and writes no budget of its own ([§8.1](08-crosscutting-concepts.md)).
+The screen holds the offer in `PeriodOverview` and acts through `MoneyBudApp.TakeOverPlan`
+([§8.4](08-crosscutting-concepts.md)). No record was written for it
+([§9](09-architecture-decisions.md)), and nothing new is kept. What the plan and the build chose
+where the rulings are silent is under *Taking a plan over: chosen in the build, not put to the
+stakeholder* (below).
+
+> **In the current period and every later one, while every *Budget* in the period is zero,
+> MoneyBud offers the plan of the latest earlier period that has one.** The offer is a button in
+> the assign area that names that period and the plan's total, and each category row shows, in
+> grey, the figure it would take over. **Taking the plan over assigns every figure in full**, even
+> past *Unassigned*, and a notice names the period it went into. The first amount assigned, by hand
+> or by taking the plan over, ends the offer, and taking every budget back to zero brings it back.
+> There is no undo.
+
+An example, with synthetic figures. August was planned: Boodschappen €400, Huur €900, Hobby €150.
+September went by unplanned. It is 1 October, nothing is assigned in October, and the salary is not
+in yet. October offers August's plan: a button reading *"Plan van augustus 2026 overnemen
+(€ 1.450,00)"*, and *"plan: € 400,00"* in grey on the Boodschappen row, and so on. Taking it over
+sets the three budgets to 400, 900 and 150, *Niet toegewezen* shows −€ 1.450,00 with the marker
+until the salary is recorded, and a notice says the plan went into October. The offer and the grey
+figures are gone.
+
+**A state, not an event, in the documentation's reading.** Nothing has to happen at the moment a
+period begins. The offer is there whenever a current or later period has no plan and an earlier one
+has, and gone otherwise. That fits the rest of the model, in which a period ends but nothing ever
+closes it (*Ending versus closing a budget period*, above), and nothing is announced when one begins
+(*Staying open across a period boundary*, below).
+
+#### The offer stands only while the period has no plan
+
+> **The plan is offered only while nothing is assigned in the period.** The first assignment, by
+> hand or through the offer, makes the offer disappear.
+
+**Why.** Offered only to a period with no plan, taking it over has one meaning: this period's plan
+becomes that one. Once something has been planned by hand, every way of combining the two needs a
+rule the user would have to learn.
+
+| Rejected | Why |
+|---|---|
+| **Always offered, topping each category up to at least its remembered figure** | Hard to explain, and it partly overwrites what was planned by hand: a category assigned more than its remembered figure keeps its own, one assigned less is raised |
+| **Always offered, adding on top** | Taking it twice doubles the plan |
+
+#### "Nothing is assigned" means every *Budget* is zero
+
+> **A period has no plan while every *Budget* in it is zero, however it got there.** Assign €100,
+> take it back with −100, and the offer is back.
+
+**Why.** There is no separate "never budgeted" state (*Budget*, terms table; *"A Budget of zero"
+means zero*, below). A budget taken back to zero is the same as one never made.
+
+| Rejected | Why |
+|---|---|
+| **Once anything was assigned, the offer is gone for good** | MoneyBud would have to remember a difference it deliberately remembers nowhere else |
+
+**So this must not be decided by `Ledger.HasBudget`**, the one query that can tell "never assigned"
+from "assigned, then taken back to zero". It is the third place that query must not reach, after
+the ring and deleting a category ([§8.1](08-crosscutting-concepts.md)). The same goes for whether an
+earlier period has a plan (next but one). **Built that way**: `Ledger.PlanOfferedIn` reads whether
+the figures are above zero and never calls `HasBudget`.
+
+**What follows, derived rather than asked.** Assigning zero, and a negative assignment clipped
+against a *Budget* already at zero, change no figure (*Assigning zero is accepted and moves
+nothing*, above), so neither ends the offer.
+
+> **An archived category's *Budget* counts.** A period in which an archived category still holds a
+> *Budget* above zero is not empty, and gets no offer until that budget is taken back.
+
+*Follow-up*, 2026-09-26. **Why:** it is still assigned money. *Unassigned* subtracts it
+(*Over-assigned*, below), and a budget above zero is history that keeps the category shown (*Where
+an archived category is still shown*, above). Taking it back is already how an archived category's
+leftover budget returns to *Unassigned* (*Only a positive assignment brings it back*, above), and
+once it is back the offer appears.
+
+| Rejected | Why |
+|---|---|
+| **Ignore archived categories when deciding whether the period is empty** | The offer would show while money was already assigned in the period, so "empty" would mean two things: no plan for the offer, and something assigned for *Unassigned* |
+
+#### The plan offered is the latest earlier one
+
+> **The plan offered is that of the latest earlier period that has a plan**, not only the period
+> immediately before. **The offer names that period**, so it is visible when the plan is not last
+> month's.
+
+**Why.** A skipped month costs nothing. A month nobody planned, a holiday or a month MoneyBud was not
+opened, would otherwise leave nothing to offer, and the month after it would be planned from
+scratch.
+
+| Rejected | Why |
+|---|---|
+| **The previous period only** | After one skipped month, nothing is offered |
+
+**"Earlier" is earlier than the period the offer is for**, not earlier than today, in the
+documentation's reading. A future period can be offered the current period's plan, or another future
+period's. The search has no limit: MoneyBud looks back until it finds a plan or runs out of periods.
+**Built without a search at all**: budgets are stored against their period's first day, so the
+source is simply the latest first day before this period that carries a qualifying *Budget*
+([§8.1](08-crosscutting-concepts.md)). The effect is the ruling's, however far back that is.
+
+#### What counts as having a plan
+
+> **An earlier period has a plan only if it has a *Budget* of more than zero for a category that is
+> not archived now.** If it has none, MoneyBud keeps looking further back. If no earlier period
+> qualifies, there is no offer.
+
+**Why.** A period whose only budgets belong to archived categories has nothing to offer, because an
+archived category's figure is not offered back (*An archived category's figure is not offered back
+when a period opens*, above).
+
+| Rejected | Why |
+|---|---|
+| **Take that period as the source anyway, and offer nothing** | After a clear-out, the offer is lost until a month is planned by hand |
+
+> **Any *Budget* above zero makes a plan, however small.** That cost is accepted.
+
+*Gate*, 2026-09-26. Assign €0,01 in October by mistake, and November is offered October's one-cent
+plan instead of September's. **Why:** the button shows the source period and the total, so the
+mistake is visible, and taking October back to zero brings September's plan back into the offer. No
+extra rule is needed.
+
+| Rejected | Why |
+|---|---|
+| **A further rule, such as a threshold on how much of the plan must be covered** | A number nobody picked, which would have to be designed and explained |
+
+**What it means.**
+
+- **An archived category's figure is skipped**, the existing ruling, and it cannot make a period
+  count as planned either.
+- **A category whose remembered figure is zero is not part of the plan.** Taking the plan over
+  leaves its *Budget* at zero. That includes a category added since the source period.
+- **"Archived now" is read when the offer is shown**, in the documentation's reading: archive a
+  category and an earlier period may stop counting as planned; bring it back and it counts again.
+- **Figures follow the category, not its name**, in the documentation's reading. A category renamed
+  since is offered under its new name, because renaming changes only the label (*Renaming a
+  category*, above). A deleted category cannot be in a plan: a *Budget* above zero is history, and a
+  category with history cannot be deleted.
+
+#### Offered in the current period and later ones
+
+> **The plan is offered in the current period and later ones**, where assigning is allowed. **A past
+> period shows no offer**, because a past plan cannot be changed.
+
+| Rejected | Why |
+|---|---|
+| **The current period only** | A future period would have to be planned by hand until it became current |
+| **Shown in every period, and refused in a past one, like the assign form** | The offer is an offer, not a form through which to reach a refusal |
+
+**Why this differs from the assign form, which a past period does show.** The assign form is shown
+in a past period and refuses there (*Defaults, and entering while another period is shown*, below).
+That was chosen so that the past-period refusal can be reached
+from the screen at all, the UI's scope being everything the domain does. That reason does not reach
+the offer. The assign form already reaches the refusal, and in a past period a take-over could do
+nothing else.
+
+> **If MoneyBud stays open past a period boundary, the offer and the grey figures disappear quietly
+> at the next refresh.** Nothing is announced. **Pressing the button before the refresh is refused**,
+> like any assignment in a past period.
+
+*Follow-up*, 2026-09-26. The screen stays on the period it showed, which becomes a past period at
+the boundary (*Staying open across a period boundary*, below). **Why:** it is what the *Huidige
+periode* label already does, and what a category in use with no history already does when it drops
+off that period. For up to a minute the button can still be on screen, and pressing it then meets
+the past-period refusal, which is the only thing a take-over in a past period could do.
+
+| Rejected | Why |
+|---|---|
+| **A notice that the offer has gone** | Nothing is announced at a period boundary anywhere else, and the stakeholder ruled that out for the boundary itself |
+
+#### The offer is a button, and a figure on each row
+
+> **A button in the assign area names the period whose plan is offered and the plan's total**, for
+> example *"Plan van augustus 2026 overnemen (€ 1.450,00)"*. **Each category row also shows, in grey,
+> the figure it would take over**: *"plan: € 400,00"*.
+
+**Here he did not take the recommendation.** It was the button alone, with its total: less to read.
+He chose the grey figure on each row as well. The reason, as that option put it when he chose it:
+**you can see what you are taking over before you take it.**
+
+| Rejected | Why |
+|---|---|
+| **The button alone, with the total** (the recommendation) | Less to read, but the figures cannot be seen before they are taken over |
+| **A line in the message bar** | A notice from any entry would push it away. The bar holds one thing at a time (*Chosen in the build, not put to the stakeholder*, under *An entry can be changed or removed*, below) |
+
+**The wording is copy; the terms are display terms.** *Plan overnemen* and *plan* were proposed
+here, kept as proposed by the plan, and are now rows of *Dutch display terms* (below), which a test
+holds `Tekst` to. The button's text is built from the *Plan overnemen* constant, so the table's words
+are the words on the button. The sentence around them is copy. The period is named the way MoneyBud
+names any period, "augustus 2026", so the year that the example put to him left out is part of the
+name.
+
+> **The grey figure is labelled *plan*: "plan: € 400,00".**
+
+*Follow-up*, 2026-09-26. The example he first chose from read *"vorige: € 400,00"*, and this
+replaces it. **Why:** it matches the button's word *Plan*, it is true whichever period the figure
+came from, and it cannot be confused with *Vorige periode*, the button that steps back a period.
+
+| Rejected | Why |
+|---|---|
+| ***vorige*** (what he first saw) | Wrong after a skipped month, when the plan is older than the previous period, and it clashes with the step button |
+| **The month on every row, "augustus: € 400,00"** | It repeats what the button already says, and lengthens every row |
+
+> **The button takes the plan into the period on screen**, not into the period the assign form has
+> been stepped to.
+
+*Follow-up*, 2026-09-26. The assign form has a period of its own, which starts at the period on
+screen and can be stepped away from it (*Defaults, and entering while another period is shown*,
+below). **Why the screen's:** the button belongs with the grey figures, which are on the rows of the
+period on screen, so the two can never disagree. The form's own period governs *Toewijzen* only.
+
+| Rejected | Why |
+|---|---|
+| **The assign form's period** | The grey figures would describe one period while the button acted on another |
+
+**Which rows carry a figure.** Every category in the plan offered is in use, and the period is
+current or later, so every one of them has a row (*When any category is shown in a period: the full
+rule*, above).
+
+> **A row whose category is not in the plan shows no label**, not "plan: € 0,00".
+
+*Confirmed*, 2026-09-26: stated in a follow-up question, and not contested. **Why:** nothing would be
+taken over for it (*What counts as having a plan*, above).
+
+#### The figure on each row goes with the offer
+
+> **The grey figures are shown only while the plan is offered.** Once the period has a plan, the rows
+> look as they do now.
+
+**Why.** The figure shows what you would take over. It is not a month-on-month comparison.
+
+| Rejected | Why |
+|---|---|
+| **Keep it all period, for comparison** | A wider row for good, and a step towards comparing months, which the stakeholder floated early on (*"misschien ook met andere maanden"*, [the follow-up interview](../stakeholder/2026-09-24-verdieping.md)) and which is not this increment |
+
+> **While the plan is offered, the category rows are ordered by their grey figure**, largest first,
+> ties in the order the categories were added. A row with no grey figure counts as zero.
+
+*Gate*, 2026-09-26. This **extends** *The order of categories and slices* (below) for as long as the
+offer stands. That rule orders by *Budget*, and with every *Budget* zero it falls back to the order
+added. **Why:** it is the order the rows will have once the plan is taken over. The taken-over
+*Budgets* equal the grey figures, so after taking over the rows are already in *Budget* order and
+nothing jumps.
+
+| Rejected | Why |
+|---|---|
+| **Order added**, as the existing rule gives with every *Budget* zero | The rows would jump when the plan is taken over |
+
+**The ring is not affected**, checked against *The overview, and its ring* (below). While the plan is
+offered every *Budget* is zero, so no category has a slice. The ring is **all *Niet toegewezen*** if
+the period has income, and the **empty ring** with its hint if it has none. It cannot be
+*Over-assigned*, because nothing is assigned. Either way there is nothing to put in order.
+
+#### Taking the plan over assigns it in full
+
+> **Taking the plan over assigns every figure in full, even when *Unassigned* is smaller.**
+> Afterwards a notice says the plan was taken over and names the period it went into.
+
+On the 1st, before the salary is recorded, taking over €1.450 leaves *Niet toegewezen* at
+−€ 1.450,00 with the marker until the salary arrives.
+
+**Why.** MoneyBud shows, it never blocks (*Shown, never enforced*, below), and assigning by hand may
+already go *Over-assigned*.
+
+| Rejected | Why |
+|---|---|
+| **Only up to *Unassigned*** | It needs an order and a rule for splitting, and it stops being "in full" |
+| **Refuse until there is enough** | The only place MoneyBud would block over-assigning |
+
+**This does not undo *Budgets carry over as figures***, although it can look as if it does. That
+section rejected a period that **starts** *Over-assigned*, with last period's assignments already in
+place before any income. Here the period still starts whole. It goes *Over-assigned* only when the
+user takes the plan over, visibly and marked, and it stops being so when the income is recorded. The
+difference is who acted, and that the user can see the result of acting.
+
+**Why the notice names the period.** Taking a plan over can happen in a future period as well as the
+current one, and the name is what shows a take-over made in the wrong one (next).
+
+**What follows, derived rather than asked.** Taking over brings no archived category back, because
+no archived category's figure is in the plan. It touches no expense. It is one act, with one notice.
+
+> **Taking the plan over does not ask for confirmation.**
+
+*Gate*, 2026-09-26. **Why:** only removing an entry asks, because it destroys a record (*Removing an
+entry asks first*, above). Taking a plan over loses nothing, since the period had no plan, and the
+notice names the period it went into. That is the principle "confirm only where a record is lost",
+giving the same answer it gives for archiving and deleting a category.
+
+| Rejected | Why |
+|---|---|
+| **Ask first, with the question in the message bar** | A second act that asks, over something that can be corrected, and one extra click every month |
+
+#### No undo, and no act to clear a plan
+
+> **A plan taken over cannot be undone in one step, and there is no act to clear a period's plan.**
+> Taken over in the wrong period, it is corrected row by row with negative assignments.
+
+**Why.** A negative assignment is how a *Budget* is lowered anyway (*An amount may be assigned
+negatively*, above), and the notice naming the period makes the mistake visible. Undo can be a wish
+of its own later.
+
+| Rejected, for now | Why |
+|---|---|
+| **A *Plan leegmaken* act** | A new act with rules of its own to settle: whether it asks first, and what it does to archived categories |
+
+**The cost, accepted:** undoing a take-over by hand is one negative assignment per category in the
+plan. Once every *Budget* is back to zero, the offer is back (*"Nothing is assigned" means every
+Budget is zero*, above), so the period ends up as it started.
+
+#### Taking a plan over: chosen in the build, not put to the stakeholder
+
+The rulings above settle what is offered, when, and what taking it over does. A few visible details
+they leave open were settled later, some by the plan and some while building. **Only the second
+kind are the build's readings rather than rulings**, and either kind can be put to the stakeholder
+if he reacts to it. None contradicts a ruling.
+
+**Proposed by the plan and approved at the plan gate, 2026-09-26, and built that way:**
+
+- **The button sits directly under the assign form**, shown only while a plan is offered. That is
+  "in the assign area" made exact.
+- **The grey figure sits under the *Budget* figure** on each row, not in a column of its own.
+- **The notice reads** *"Plan van augustus 2026 overgenomen in oktober 2026: € 1.450,00
+  toegewezen."* It names the period the plan came from, the period it went into and the total.
+  The period it went into is named **even when it is the period on screen**, because the name is
+  what shows a take-over made in the wrong period (*Taking the plan over assigns it in full*,
+  above). The wording is copy.
+
+**Chosen in the build:**
+
+| Reading | Why it was built this way |
+|---|---|
+| **The *Budget* column is wider**, 104 px where it was 86, in the header and on every row | The grey figure shares the *Budget* figure's column, and "plan: € 1.450,00" is longer than a *Budget* figure alone. Widening that column is what "no column of its own" leaves. No reason beyond fitting the figure was recorded; this is the documentation's reading of the change |
+| **A refused take-over says what a refused assignment in a past period says**: *"In een voorbije periode kan niets meer worden toegewezen."* It does not mention the plan | The ruling is that pressing the button after a boundary "is refused like any past-period assignment", and it is the same refusal reason, `AssignRefusal.PeriodInPast`, so it has the same sentence. A sentence of its own would be a second wording of one rule. The refusal is shown in the message bar like any other, and the redraw after it takes the button away |
+
+**Not a reading, although it could look like one: the row order while a plan is offered.** Rows
+without a grey figure come after rows with one, and that is the gate ruling itself, under which a
+row with no grey figure counts as zero (*The figure on each row goes with the offer*, above). What
+the build chose is only how: one sort for the rows at all times, by *Budget*, then plan figure, then
+order added. While a plan is offered every *Budget* is zero, so the plan figure decides. With no
+offer no row has a plan figure, so the second key changes nothing
+([§8.4](08-crosscutting-concepts.md)).
 
 ## Income carries a label, and it is required
 
@@ -2752,6 +3127,10 @@ the list, and its slice around the ring, whenever its *Budget* passes another's.
   in the order they were added, and bringing one back does not append it.
 - **Not fixed:** where around the ring the first slice starts, and where the *Unassigned* figure
   sits among the rows. The rule places the *Unassigned* **slice**, and says nothing about rows.
+- **Extended while an earlier plan is offered** (scenario gate, 2026-09-26; built). The rows are
+  then ordered by their grey plan figure instead, largest first, ties in order added, a row without
+  one counting as zero, so nothing jumps when the plan is taken over. The ring is unaffected, because
+  while the offer stands no category has a slice (*Opening a period*, above).
 
 ### A period's entries are listed newest first
 
@@ -3343,6 +3722,8 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Remove (an entry) | Verwijderen |
 | Rename (a category) | Hernoemen |
 | Delete (a category) | Verwijderen |
+| Take over (a plan) | Plan overnemen |
+| Remembered figure | plan |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -3359,7 +3740,7 @@ row, fails the test suite until the code follows. Keep this section's heading an
 exactly as they are, because the test finds the table by them. The marker badges, the *Gearchiveerd*
 caption and the *Niet teruggezet* notice all use terms from this table. No word was added for them.
 
-**The last four rows came with the corrections increment** (2026-09-26). By this table's own
+**The four rows from *Change* to *Delete* came with the corrections increment** (2026-09-26). By this table's own
 precedent, an act's button label is a display term: *Archiveren*, *Toewijzen* and *Categorie
 toevoegen* are here. So the acts settled in *An entry can be changed or removed*, *Renaming a
 category* and *Deleting a category that has no history anywhere* (above) needed rows: *Change* (an
@@ -3378,6 +3759,21 @@ terms table), because in English "removing a category" already means archiving i
 *Opslaan* and *Annuleren* are the form's controls, not terms of the model, and nothing like them is
 in the table. `Tekst` has them as constants all the same, beside the table's terms, and so is
 *Weet je het zeker?*, which is copy. None of the three is held to this table.
+
+**The last two rows came with opening a period.** Proposed on 2026-09-26 and held out of the table
+until the build, by the same precedent as the corrections increment's four rows: adding a row fails
+`TekstTests` until `Tekst` has the constant. The plan kept them as proposed, and they went in with
+the build that added the constants. How each appears:
+
+| English (this project) | As it appears |
+|---|---|
+| Take over (a plan) | The button: *"Plan van augustus 2026 overnemen (€ 1.450,00)"*. The period's name and the total are filled in, and the sentence around the term is copy |
+| Remembered figure | In grey on a category row: *"plan: € 400,00"*. No label on a row whose category is not in the plan |
+
+**The second row first read *vorige***, as in the example the stakeholder first saw. He ruled for
+*plan* in a follow-up on 2026-09-26: it is true whichever period the figure came from, and it cannot
+be confused with *Vorige periode*, the step button (*The offer is a button, and a figure on each
+row*, above). The two rows share the word *Plan*, which is deliberate.
 
 ## Open questions
 
@@ -3404,8 +3800,7 @@ whether an archived category's figure is offered back when a period opens. All t
 **decided** (*When any category is shown in a period: the full rule*, *Assigning to an archived
 category brings it back*, *An archived category's figure is not offered back when a period opens*).
 The assigning one was **built** in the assigning increment, and the display rule in the UI increment
-([§8.1](08-crosscutting-concepts.md)). Carry-over is not built, and §8.1 records what the code does
-meanwhile.
+([§8.1](08-crosscutting-concepts.md)). Carry-over was built last, in the opening-a-period increment.
 
 Four more were answered on 2026-09-25 for the **assigning increment**: what it covers, which periods
 can be assigned in, whether a negative assignment brings an archived category back, and what
@@ -3460,7 +3855,7 @@ question below without answering it.
 Ten more were answered on 2026-09-26 for the **persistence increment** (*What MoneyBud keeps*,
 above): why keep data now, what is kept, when it is saved, where it lives, what happens when it
 cannot be read, backups, one set of data or several, protection, whether a new version must read an
-older one's demo data, and whether MoneyBud shows where its data is. None is built. What a first
+older one's demo data, and whether MoneyBud shows where its data is. All of it is built. What a first
 start does was not asked again and stands. None of them touches the question below. Six follow-ups
 were answered the same day: what the screen does when the data cannot be read, what a failed save
 does, a second start while MoneyBud is open, what "everything" covers, what the unreadable-data
@@ -3470,6 +3865,18 @@ closing does not ask. Eight more came while the scenarios were being written: th
 beside other messages, MoneyBud retries by itself, recovery is announced once, closing makes a last
 attempt, a save that works says nothing, an interrupted save never damages the previous one, empty
 data is unreadable, and the defaults come only with a first start.
+
+Nine more were answered on 2026-09-26 for **opening a period** (*Opening a period*, above): when the
+plan is offered, what "nothing assigned" means, which earlier period it comes from, what counts as
+having a plan, in which periods it is offered, how it is shown, how long the figure on each row
+stays, what taking it over does when *Unassigned* is smaller, and whether it can be undone. They
+left five points open, and all five were settled in follow-ups the same day: the button acts on the
+period on screen, an archived category's budget makes a period not empty, the offer goes quietly at
+a boundary, the grey figure is labelled *plan*, and a row not in the plan shows no label. Three more
+were ruled at the scenario gate, on the scenario writer's assumptions: taking over is not confirmed,
+any *Budget* above zero makes a plan however small, and while the plan is offered the rows are
+ordered by their plan figure. `take-over-a-plan.feature` was approved with them. All of it is built,
+and none of it touches the question below.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -3585,7 +3992,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | In which budget periods can an amount be assigned? | *Assigning happens in the current budget period and later ones, never in a past one* — current and later, future ones without limit. It matches the display rule's split between planned periods and past records, and keeps assigning out of the sweep's territory. A past-period assignment is **refused**: first derived, then confirmed. Chosen over "any period, since periods never close" and over moving the assignment into the current period. The cost, that a forgotten plan cannot be fixed after its period, was accepted: "past is past". Settled 2026-09-25; built in the assigning increment |
 | Which refusal is reported when an assignment breaks several rules, and is a zero or clippable negative still refused for a wrong target? | *When an assignment is refused* — blank name, then unknown name, then finer than a cent, then past period, the same order as recording an expense. **Yes**: the amount rules and the target rules are separate, so 0 or −500 in a past period is refused, not accepted or clipped. Settled 2026-09-25; built in the assigning increment |
 | What does the assigning increment cover? | *Nothing here blocks the assigning increment* — assigning in current and later periods, *Over-assigned*, the clipped shortfall and bringing back. Backed categories, the pool account, one-action carry-over, the sweep and any UI are out, each for its own reason. Settled 2026-09-25; built to that scope |
-| Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; carry-over is not built |
+| Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; built with carry-over in the opening-a-period increment |
 | Must category names in feature files be English? | *They are Dutch because they are content* — **no**. A name is test data because it is synthetic and no scenario leans on the defaults, not because of its language. Settled 2026-09-25, loosening the earlier "English, with the rest of the specification" |
 | What does the UI cover? | *It covers what the domain does, and nothing more* — everything the domain already does, in the stakeholder's words "all that is currently working on the backend", all three routes back included. No editing or deleting of a transaction, because the domain has neither; that consequence was **accepted** by the stakeholder for the demo, and correcting entries becomes its own later increment ([§11](11-risks-and-technical-debt.md)). Settled 2026-09-25; built in the UI increment. **That later increment was settled on 2026-09-26** (*An entry can be changed or removed*), and built the same day, so the UI now covers correcting too |
 | Is the category box a pick-list or free text? | *Category entry is free text with suggestions* — **free text**, suggesting the offered categories and accepting any name. Chosen over a pick-list alone, which would put two routes back and the unknown-name refusal out of reach. "Not offered" means not suggested. Settled 2026-09-25; built in the UI increment |
@@ -3667,8 +4074,25 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What does "everything is kept" cover? | *Everything is kept, for good* — **the ledger only**: categories, archived or not, budgets, expenses and incomes. Screen state is not kept (the period shown, a half-typed entry, a waiting question, a rename in progress), so MoneyBud always opens on the current period. Settled 2026-09-26; built |
 | Does the unreadable-data message say where the data is? | *Where the data is, is written in the README* — **no**: no path and no pointer to the README, only that the data cannot be read. Confirms the literal reading of the ruling before it. Chosen over pointing to the README and over naming the path in this message alone. Settled 2026-09-26; built |
 | Does it matter that real use may start before accounts exist? | *Real use before accounts* — in the stakeholder's words, *"I dont really see how this is relevant"*: he will try it out before accounts, and does not mind the saves being deleted when accounts arrive. So saved data may be dropped **at least up to and including the accounts increment**, extending *Demo data may not survive a new version*. The vanishing sweep money stays accepted as it was. Answered 2026-09-26 |
+| When is an earlier plan offered back? | *The offer stands only while the period has no plan* — **only while nothing is assigned in the period**. The first assignment, by hand or by taking the plan over, ends the offer. Chosen over always offering it and topping each category up to its remembered figure, which is hard to explain and partly overwrites a hand-made plan, and over always offering it and adding on top, which doubles the plan if taken twice. Settled 2026-09-26; built |
+| What does "nothing assigned" mean for the offer? | *"Nothing is assigned" means every Budget is zero* — **every *Budget* in the period is zero**, however it got there, so taking €100 back after assigning it brings the offer back. There is no separate "never budgeted" state, so this is never decided by `Ledger.HasBudget`. Chosen over the offer going for good once anything was assigned, which would need a difference MoneyBud remembers nowhere else. Settled 2026-09-26; built |
+| Which earlier period's plan is offered? | *The plan offered is the latest earlier one* — **the latest earlier period that has a plan**, not only the one before, so a skipped month costs nothing. The offer **names that period**. Chosen over the previous period only, which offers nothing after a skipped month. Settled 2026-09-26; built |
+| What counts as an earlier period having a plan? | *What counts as having a plan* — **a *Budget* of more than zero for a category not archived now**. Otherwise MoneyBud looks further back, and with no qualifying period there is no offer. An archived category's figure is skipped, and a category with a remembered figure of zero is not part of the plan. Chosen over taking that period anyway and offering nothing, which would lose the offer after a clear-out. Settled 2026-09-26; built |
+| In which periods is the plan offered? | *Offered in the current period and later ones* — **the current period and later ones**, where assigning is allowed; never in a past one, whose plan cannot be changed. Chosen over the current period only, and over showing it everywhere and refusing it in a past period as the assign form does: the offer is an offer, not a form through which to reach a refusal. Settled 2026-09-26; built |
+| How is the offer shown? | *The offer is a button, and a figure on each row* — **a button in the assign area naming the source period and the total, and a grey figure on each category row** (labelled *plan* since a follow-up, next rows), so you can see what you are taking over before you take it. **The stakeholder chose this over the recommendation**, the button alone, which is less to read but hides the figures. Also chosen over a line in the message bar, which a notice would push away. Settled 2026-09-26; built |
+| Does the grey figure stay once the period has a plan? | *The figure on each row goes with the offer* — **no**: it is shown only while the plan is offered. It shows what would be taken over, not a month-on-month comparison. Chosen over keeping it all period, which widens every row for good and edges towards comparing months, not this increment. Settled 2026-09-26; built |
+| What does taking the plan over do when *Unassigned* is smaller? | *Taking the plan over assigns it in full* — **it assigns everything anyway**, which can leave the period *Over-assigned*, marked, until the income is recorded. A notice names the period the plan went into. MoneyBud shows, it never blocks. Chosen over assigning only up to *Unassigned*, which needs an order and a splitting rule, and over refusing until there is enough, the only place MoneyBud would block over-assigning. Settled 2026-09-26; built |
+| Can taking a plan over be undone? | *No undo, and no act to clear a plan* — **no**, and there is no act to clear a plan. A take-over in the wrong period is corrected row by row with negative assignments; the notice naming the period makes the mistake visible. Undo can be its own wish later. A *Plan leegmaken* act was rejected for now, as a new act with rules of its own to settle. Settled 2026-09-26; built |
+| Which period does the take-over button act on? | *The offer is a button, and a figure on each row* — **the period on screen**, not the assign form's stepped period. The button belongs with the grey figures, which are the screen's period, so the two never disagree; the form's own period governs *Toewijzen* only. Chosen over the assign form's period, under which the figures would describe one period and the button act on another. Follow-up, 2026-09-26; built |
+| Does an archived category's budget stop a period counting as empty? | *"Nothing is assigned" means every Budget is zero* — **yes**: a *Budget* above zero held by an archived category is still assigned money, which *Unassigned* subtracts and which counts as history. Taking it back is already how its leftover returns to *Unassigned*. Chosen over ignoring archived categories, which would show the offer with money already assigned and make "empty" mean two things. Follow-up, 2026-09-26; built |
+| What happens to the offer when MoneyBud stays open past a period boundary? | *Offered in the current period and later ones* — **it and the grey figures disappear quietly at the next refresh**, like the *Huidige periode* label, and pressing the button before then is refused like any past-period assignment. Chosen over a notice, since nothing is announced at a period boundary anywhere else. Follow-up, 2026-09-26; built |
+| How is the grey figure labelled? | *The offer is a button, and a figure on each row* — **"plan: € 400,00"**. It matches the button's *Plan*, is true whichever period the figure came from, and cannot be confused with the *Vorige periode* step button. Chosen over *vorige*, which the stakeholder first saw and which is wrong after a skipped month, and over the month on every row, which repeats the button and lengthens every row. Follow-up, 2026-09-26; built |
+| Does a row not in the plan show "plan: € 0,00"? | Same section — **no, it shows no label**, because nothing would be taken over for it. Stated in a follow-up question and not contested: confirmed, 2026-09-26; built |
+| Does taking a plan over ask for confirmation? | *Taking the plan over assigns it in full* — **no**. Only removing an entry asks, because it destroys a record; taking over loses nothing, and the notice names the period. Chosen over asking first through the message-bar question, which would be a second asking act over something correctable, and one extra click every month. Ruled at the scenario gate, 2026-09-26; built |
+| Does a tiny *Budget* make a period a plan? | *What counts as having a plan* — **yes, any *Budget* above zero, however small**, accepted with its cost: €0,01 assigned in October by mistake means November is offered October's one-cent plan rather than September's. The button shows the source period and total, and taking October back to zero restores September's. Chosen over a threshold on how much of the plan must be covered, a number nobody picked. Ruled at the scenario gate, 2026-09-26; built |
+| In what order are the rows while a plan is offered? | *The figure on each row goes with the offer* — **by their plan figure**, largest first, ties in order added, a row without one counting as zero. That is their order after taking over, so nothing jumps. It extends *The order of categories and slices* while the offer stands. The ring is unaffected: with every *Budget* zero it is all *Niet toegewezen* or the empty ring. Chosen over order added, under which the rows would jump on taking over. Ruled at the scenario gate, 2026-09-26; built |
 
-**Seven** of these answers were taken with their drawbacks visible rather than resolved: the
+**Eight** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
 shown exactly like an overspent budget despite being a harder fact (since the marker revision of
 2026-09-25, this one is open again on the account side, see *Assigning may overdraw the pool
@@ -3676,10 +4100,12 @@ account*); the demo cannot correct a wrong entry except by starting over (a cost
 applies**: corrections were settled and built on 2026-09-26); a clamped start day
 produces a period that is longer than its neighbours with nothing on screen explaining why; net
 worth and *Unassigned* will disagree about an expected income, because they are answering about
-different moments in time; and an archived category now has three routes back rather than one
+different moments in time; an archived category now has three routes back rather than one
 (adding its name, recording an expense, assigning a positive amount), which weakens the argument for having no
-un-archive act without overturning it; and a plan forgotten in a period that has since ended cannot
-be fixed, so that period shows over budget for good ("past is past"). Each is
+un-archive act without overturning it; a plan forgotten in a period that has since ended cannot
+be fixed, so that period shows over budget for good ("past is past"); and a plan taken over into
+the wrong period can be undone only row by row, one negative assignment per category (settled
+2026-09-26, and built). Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
 
@@ -3705,8 +4131,8 @@ them. It left two things unsettled that belong to later increments. The first wa
 **in use** is shown in a period where it has no history, which belongs to the period view. The
 second was what **assigning** to an archived category does, which belongs to the assigning
 increment. Both were answered on 2026-09-25, along with carry-over for an archived category. The
-assigning answer has since been built, and so has the display rule. Carry-over has not, and §8.1
-records what the code does meanwhile. Two questions arose while this model was being written up and both were
+assigning answer has since been built, and so has the display rule, and carry-over was built last,
+in the opening-a-period increment. Two questions arose while this model was being written up and both were
 answered the same day: what an added name does when an archived category carries it, and whether an
 archived category can be brought back at all. They turned out to be one question. Three more were
 answered on 2026-09-25, before the scenarios were written: recording an expense against an archived
@@ -3774,3 +4200,15 @@ led to one new ruling, *When the data's folder cannot be reached*, with a scenar
 after the gate; one confirmed reading, that "touches nothing" means the data file; and one correction
 to this glossary: "saved again" is said on the save line, not as an ordinary notice. It reaches nothing
 about accounts, and the stored form may change when accounts arrive (*Real use before accounts*).
+
+**Nothing here blocked opening a period, and it is built.** Its nine rulings, five follow-ups and
+three gate rulings are in *Opening a period* (above), all of 2026-09-26. The follow-ups closed every
+point the nine had left open.
+[`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), 19 scenarios and 23 cases,
+was approved at the scenario gate the same day, with the three gate rulings, and the plan at the plan
+gate. `spec-reviewer` reviewed the result and found no faked scenario and no domain defect. It added
+no record ([§9](09-architecture-decisions.md)), and it keeps nothing new. It reaches nothing about
+accounts or the sweep. A plan offered is a plan, and taking it over is assigning, which already
+existed: `Ledger.TakeOverPlan` calls `Ledger.Assign` once per figure. What the plan and the build
+chose beyond the rulings is in *Taking a plan over: chosen in the build, not put to the stakeholder*
+(above).

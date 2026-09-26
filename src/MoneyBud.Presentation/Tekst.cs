@@ -48,6 +48,8 @@ public static class Tekst
     public const string Change = "Wijzigen";
     public const string Remove = "Verwijderen";
     public const string Rename = "Hernoemen";
+    public const string TakeOverPlan = "Plan overnemen";
+    public const string Plan = "plan";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -246,6 +248,32 @@ public static class Tekst
 
     private static string Describe(Domain.Income income) =>
         $"{Income} {Quoted(income.Label)} van {Euro(income.Amount)}";
+
+    // ------------------------------------------------------------------ opening a period
+
+    /// <summary>
+    /// The button that takes a plan over: the term <see cref="TakeOverPlan"/> with the period the
+    /// plan comes from between its words, and the total after — "Plan van augustus 2026 overnemen
+    /// (€ 1.450,00)". The sentence around the term is copy (§12, *Dutch display terms*).
+    /// </summary>
+    public static string TakeOverPlanButton(PlanOffer offer)
+    {
+        // Built from the term itself, so that the words the glossary's table fixes are the words
+        // on the button.
+        var term = TakeOverPlan.Split(' ', 2);
+        return $"{term[0]} van {PeriodName(offer.From)} {term[1]} ({Euro(offer.Total)})";
+    }
+
+    /// <summary>The grey figure on a category row while a plan is offered: "plan: € 400,00".</summary>
+    public static string PlanFigure(Money figure) => $"{Plan}: {Euro(figure)}";
+
+    /// <summary>
+    /// Said once a plan is taken over. It always names the period the plan went into, even when
+    /// that is the period on screen: a plan taken over in the wrong period shows by that name
+    /// (§12, *Taking the plan over assigns it in full*).
+    /// </summary>
+    public static string PlanTakenOver(PlanOffer plan, BudgetPeriod into) =>
+        $"Plan van {PeriodName(plan.From)} overgenomen in {PeriodName(into)}: {Euro(plan.Total)} toegewezen.";
 
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>
     public static string WentInto(BudgetPeriod period) => $"Dit staat in {PeriodName(period)}.";

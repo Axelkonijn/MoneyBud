@@ -41,6 +41,8 @@ public sealed partial class TekstTests
         ["Remove (an entry)"] = [Tekst.Remove],
         ["Rename (a category)"] = [Tekst.Rename],
         ["Delete (a category)"] = [Tekst.Delete],
+        ["Take over (a plan)"] = [Tekst.TakeOverPlan],
+        ["Remembered figure"] = [Tekst.Plan],
     };
 
     [Fact]
