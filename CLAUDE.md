@@ -274,6 +274,36 @@ Axel's remark that the date stays on today after stepping to another month is an
 not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
 Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
 
+**Increment 6 — correcting things — is at stage 5, not started**, on branch
+`increment-6-corrections`. Stages 1–3 ran on 2026-09-26: rulings in §12 (*An entry can be
+changed or removed*, *Renaming a category*, *Deleting a category that has no history anywhere*),
+four feature files approved at the first gate (`change-an-entry`, `remove-an-entry`,
+`rename-a-category`, `delete-a-category`; 73 scenarios, 127 cases, unbound). The plan was
+**approved at the second gate** the same day; Axel asked to wait for his "continue" before
+building. The plan, in outline:
+
+- **Domain.** `Expense`/`Income` get a ledger-issued id, so one of two identical entries can be
+  changed in place and keep its list position. `Category` becomes a class with identity and a
+  domain-only settable `Name`, so a rename is one assignment plus re-keying the name index (§8.1
+  note, no ADR). Recording's checks extracted into one private check per transaction, shared with
+  changing. New: `ChangeExpense`/`ChangeIncome` (changed / unchanged / refused; bring-back only when
+  the category changed *onto* an archived one), `RemoveExpense`/`RemoveIncome`, `RenameCategory`
+  (renamed / unchanged / refused: blank or taken), `CanDelete` (no expense, no budget > 0 in any
+  period — **not** `HasBudget`), `DeleteCategory` (also drops zero budgets). Unreachable misuse
+  throws, like `ArchiveCategory`.
+- **Presentation.** List rows carry their entry; clicking loads it into the form (*Wijzigen*,
+  with Opslaan/Annuleren/Verwijderen). Amount loaded via new `AmountInput.Format` ("2000,00"),
+  unit-tested to read back identically. Form empties after a change, cancel or confirmed removal;
+  keeps text and stays editing after a refusal. The confirmation is a pending question on
+  `MoneyBudApp` with Confirm/Decline, **shown inline in the message bar** (Axel). **Stepping
+  period drops an edit in progress** and declines a pending question (Axel); clicking another row
+  loads that one. Rename state on `MoneyBudApp`; `CategoryRow` gains `CanDelete`. `Tekst` gains
+  the copy and Wijzigen/Verwijderen/Hernoemen, with §12's table rows added in the same commit.
+- **Tests.** Step definitions for all 127 cases through `MoneyBudApp`; unit tests for `Format`
+  round-trip, form states, identity, rename re-keying, delete cleanup, `TekstTests`.
+- **Order:** domain → steps per feature → presentation → Desktop → headless check →
+  `spec-reviewer` → docs (§8.1, §12 as built, this file, test counts).
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Axel
 said on 2026-09-26 that it is time to **move on to new slices**, so the next session starts at
 **stage 1 of the next one**: a conversation with Axel, not a delegation.
