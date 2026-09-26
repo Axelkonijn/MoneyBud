@@ -72,8 +72,8 @@ Feature: Step between budget periods
   # Opening and stepping
   # ----------------------------------------------------------------------------------
 
-  # Nothing is kept when MoneyBud closes, so for now every start is a first start (glossary: "What
-  # the UI starts with, and what it keeps").
+  # A first start, with no kept data. With kept data MoneyBud opens on the current period too,
+  # whichever period was on screen when it closed (keep-data.feature).
   Scenario: MoneyBud opens on the current budget period
     When I start using MoneyBud for the first time
     Then the Overview should show the current budget period

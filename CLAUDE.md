@@ -48,7 +48,7 @@ quietly.
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
-| `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
+| `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
 | `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
 
 The stakeholder material is Dutch and the documentation is English. `docs/arc42/12-glossary.md`
@@ -89,24 +89,26 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 785 passing: 467 scenario cases, 318 developer unit tests
-dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
+dotnet test  MoneyBud.slnx     # 901 passing: 531 scenario cases, 370 developer unit tests
+dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-26, after increment 6 (corrections) was built, tried by Axel and merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-26, after increment 7 (persistence) was built, tried by Axel and merged into `main`. Update this when a stage completes._
 
-**Done: all five stages, six times — for `record-expense`, `record-income`, categories,
-assigning, the desktop UI and correcting things.** All six are built and green.
+**Done: all five stages, seven times — for `record-expense`, `record-income`, categories,
+assigning, the desktop UI, correcting things and keeping data.** All seven are built and green;
+all seven tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
   interview round.
-- arc42 §1–§5, §7, §8, §9, §11 and §12 filled. §6 and §10 are empty *with their reasons written
-  down* — there is one building block that does anything, and nothing user-facing to measure.
+- arc42 §1–§9, §11 and §12 filled; §6 since the persistence increment, which gave start-up, saving
+  and closing a runtime worth drawing. §10 is empty *with its reason written down* — no measure has
+  been agreed.
 - `features/record-expense.feature` — 21 scenarios, **approved at the first gate**. Two were added
   later, when label trimming was settled during the income increment.
 - `features/record-income.feature` — 16 scenarios, **approved at the first gate** on 2026-09-25.
@@ -134,10 +136,12 @@ archives and assigns, and whose `StartNew` seeds the default categories), `Assig
 `RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`. Since increment 6:
 entries carry a ledger-issued `Id`, `Category` is a class with identity, and there are
 `ChangeExpenseResult`, `ChangeIncomeResult` (with `ChangeOutcome`) and `RenameCategoryResult`
-(with `RenameOutcome`, `RenameRefusal`).
-In `MoneyBud.Presentation`: `MoneyBudApp` (the screen, including the one `Question`), `PeriodOverview`
-and `Ring`, the entry forms (with their *Wijzigen* state), `AmountInput` and `Tekst`. No storage and
-no accounts — both deliberate, with their reasoning recorded.
+(with `RenameOutcome`, `RenameRefusal`). Since increment 7: `LedgerSnapshot`, `Ledger.ToSnapshot` and
+`FromSnapshot`, and the `ILedgerStore` port (with `Claim` and `LoadResult`).
+In `MoneyBud.Presentation`: `MoneyBudApp` (the screen, including the one `Question` and the save
+line), `MoneyBudStart`, `PeriodOverview` and `Ring`, the entry forms (with their *Wijzigen* state),
+`AmountInput` and `Tekst`. In `MoneyBud.Storage`: `LedgerJson` and `FileLedgerStore`. No accounts
+— deliberate, with its reasoning recorded.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -304,19 +308,48 @@ README updated; no ADR. In outline:
 - **Headless check** of the real window passed: row click loads, Opslaan changes, Verwijderen asks in
   the bar, the rename box writes back, delete shows only on a row with no history.
 
+**Increment 7 — keeping data — is done and green**, built on branch `increment-7-persistence` and
+merged into `main` after Axel tried it on 2026-09-26: "It seems perfect". All five stages ran on 2026-09-26. Stage 1 was a long run of
+multiple-choice questions: 28 rulings, in §12 *What MoneyBud keeps* and the §8.3 table.
+Three feature files — `keep-data`, `start-moneybud`, `carry-on-when-saving-fails`, 37 scenarios,
+64 cases (one row added after the gate, with Axel's approval, for ruling 28) — were **approved at the first gate**, the plan at the second; ADR 0007. `spec-reviewer`
+found no faked scenario and five low defects, all fixed. In outline:
+
+- **Axel's shape:** "demo now, real soon" — still a demo, and saved data may be dropped by any
+  version **up to and including accounts**, so no migration is owed before then. Everything (the
+  ledger only, not screen state) kept indefinitely, **saved after every change**, no save button,
+  one set of data, no reset, no backups (his job), no password. Location fixed and **only in the
+  README**, not shown by MoneyBud. Unreadable data — damaged, **blank**, newer version, or a folder
+  that cannot be reached — **says so, touches nothing, closes**; a saved *empty budget* is valid.
+  A second start says MoneyBud is already open. A failed save **carries on**, shows a lasting
+  "not saved" line until a save works (retried by every change and once a minute), says once that
+  all is saved again, and closing makes one last attempt without asking. An interrupted save never
+  damages the previous one, and the next start says nothing.
+- **Built as:** one JSON file, whole ledger per save, cents as integers, `"version": 1`, written to
+  a `.tmp` and renamed over; a lock file claimed before loading; categories keyed by position per
+  save (never by name), entry ids and `lastEntryId` kept; `Ledger.FromSnapshot` re-checks every rule.
+  The save line is its own element beside the notice and the question — a second markup test holds it.
+- **Tests use the real store** in a temp folder per scenario. Saving is made impossible by a folder
+  at the `.tmp` path; "interrupted" rebuilds the post-crash disk state — an approved simulation.
+
+**Watch out for:** only an act that *changes* the ledger saves — `Tell(changed:)`. Adding a name
+already there, assigning 0 and a negative clipped against a zero budget are said but not saved; a
+new no-op act must pass `changed: false`, or a failing disk shows a false "not saved".
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. The
-next session starts at **stage 1 of persistence**: a conversation with Axel, not a delegation.
-Questions already foreseen for it: what is kept and for how long (everything, or a fresh start per
-year), and where the data file lives — the repo is public, so real data must never land in it.
+next session starts at **stage 1 of opening a period**: a conversation with Axel, not a delegation.
+Much of it is already settled in §12 (a period opens with last period's figures *remembered but not
+assigned*, one action assigns them in full, an archived category's last figure is not offered back),
+so stage 1 is mostly confirming that and finding what is still open — for instance what "last
+period's figures" means when the previous period had no budget, and how the offer is shown.
+Put questions to Axel as multiple choice with a recommendation (`AskUserQuestion`); that worked well
+for persistence.
 
 Order agreed with Axel on 2026-09-26:
 
 1. **Correcting things — done** (increment 6, above).
-2. **Persistence — start here** — deliberately *after* corrections. While nothing is kept, closing
-   MoneyBud discards every mistake; once data is kept, an uncorrectable typo is permanent. §8.3's
-   trigger has not fired; Axel is choosing to do it next. §8.3 now also lists what storage must
-   settle about identity: entry ids are a per-run counter, and a category's name is no longer its key.
-3. **Opening a period** — offering last period's figures back and the one action that assigns them
+2. **Persistence — done** (increment 7, above).
+3. **Opening a period — start here** — offering last period's figures back and the one action that assigns them
    in full. Settled in §12, not built. After persistence, because it matters once MoneyBud is used
    across real months.
 4. **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.

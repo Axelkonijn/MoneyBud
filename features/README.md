@@ -61,19 +61,27 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Sixteen feature files exist. Twelve are approved and bound, and every scenario in them passes.
+Nineteen feature files exist. All nineteen are approved and bound, and every scenario in them passes.
 The first demo feedback round's scenarios, all of `point-at-a-slice.feature` and the new
 scenarios in `overview.feature`, were approved at the scenario gate on 2026-09-26.
 
 The corrections increment's four files — `change-an-entry.feature`, `remove-an-entry.feature`,
 `rename-a-category.feature` and `delete-a-category.feature` — were **approved at the scenario
-gate on 2026-09-26**. They have no step definitions yet; those come with the build.
+gate on 2026-09-26** and are bound since that increment was built.
+
+The persistence increment's three files — `keep-data.feature`, `start-moneybud.feature` and
+`carry-on-when-saving-fails.feature` — were **approved at the scenario gate on 2026-09-26** and are
+bound since that increment was built, in `KeepingSteps`. They keep data through the real file store,
+in a temporary folder of each scenario's own, and so does every other scenario (arc42 §8.4). The
+same increment edited one comment each in `overview.feature` and `step-between-periods.feature`,
+approved with them.
 
 | Capability | File |
 |---|---|
 | Recording | `record-expense.feature`, `record-income.feature` |
-| Correcting | `change-an-entry.feature`, `remove-an-entry.feature` — approved, not yet bound |
-| Categories | `add-category.feature`, `archive-category.feature`; `rename-a-category.feature`, `delete-a-category.feature` — approved, not yet bound |
+| Correcting | `change-an-entry.feature`, `remove-an-entry.feature` |
+| Categories | `add-category.feature`, `archive-category.feature`, `rename-a-category.feature`, `delete-a-category.feature` |
 | Planning | `assign-to-category.feature` |
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
+| Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

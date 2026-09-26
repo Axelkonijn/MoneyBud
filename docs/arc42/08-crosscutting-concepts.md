@@ -6,7 +6,8 @@ know regardless of which part of the system they're touching.
 
 ---
 
-_§8.1 to §8.4 are filled in. §8.4 arrived with the UI._
+_§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
+built, since 2026-09-26._
 
 ## 8.1 Domain Model
 
@@ -92,7 +93,10 @@ own:
   uses `HasBudget` to show that a budget taken back to zero is still stored, and that deleting the
   category takes it away. **This stays a watch-out.** A query that can tell
   apart two states §12 says are one is safe only while nothing a user sees is built on it. If a
-  view ever wants it, revisit §12 first. **The corrections increment added a second place it must
+  view ever wants it, revisit §12 first. **Since the persistence increment the distinction is also
+  kept on disk**: a stored budget of zero is written and read back, so `HasBudget` answers the same
+  after a restart. That keeps a restart from changing any answer, and it means the file, too, holds
+  a difference §12 says the user never sees. **The corrections increment added a second place it must
   not reach**: whether a category can be deleted. §12 settles that on figures alone, a budget of more
   than zero or an expense in any period, and rejected the rule `HasBudget` would give
   ([§12](12-glossary.md), *Deleting a category that has no history anywhere*). **Built that way:**
@@ -288,8 +292,10 @@ values**, and nothing needed one: entries were only ever added. Changing and rem
   screen may hold an older copy than the ledger's. Lookup is by id, not by the whole value, so it
   still reaches the right entry.
 
-**The id is not shown and means nothing to the user.** It is a per-run counter, which is enough
-while nothing is kept ([§8.3](#83-persistence) says what that means for storage).
+**The id is not shown and means nothing to the user.** It was a per-run counter while nothing was
+kept. Since the persistence increment the ids are kept, and so is the last id issued, so the counter
+carries on across restarts and an id is never issued twice ([§8.3](#83-persistence),
+[ADR 0007](../decisions/0007-keeping-the-ledger.md)).
 
 ### One category name rule, held by one comparer
 
@@ -329,8 +335,10 @@ but in the ledger would leave the index pointing at a name the category no longe
 setter `internal` keeps the only writer next to the index it has to keep in step.
 
 **No record was written for this** ([§9](09-architecture-decisions.md)), as the plan said. It
-changes how one type expresses §12's model and moves no boundary. It does matter to storage,
-though, and [§8.3](#83-persistence) says why.
+changes how one type expresses §12's model and moves no boundary. It did matter to storage,
+though. Budgets and expenses could not be kept against a category's name, so the file gives each
+category a key of its own, made at every save, and the domain needed no id for it
+([§8.3](#83-persistence), *Answered by the plan*).
 
 **Whether a category is archived is not on `Category`.** It is the ledger's set of archived
 categories. Archiving is a fact about how the ledger uses a category, not about the category, and
@@ -432,8 +440,9 @@ for it".
 
 **This section should be written before the first line of money-handling code.** Money decisions
 are quietly expensive to reverse once data exists, and a budgeting app that gets them wrong is
-wrong in ways that are hard to notice. Four rules are settled below. Two questions are still open,
-and are listed at the end rather than guessed at.
+wrong in ways that are hard to notice. The rules below are settled, how amounts are stored among
+them since the persistence increment. One question is still open, and is listed at the end rather
+than guessed at.
 
 ### Decided: amounts are a whole number of cents
 
@@ -589,21 +598,162 @@ him, not an assumption that merely went uncontradicted — see [§2](02-architec
 which records both the decision and the fact that this record needed it settled. A second currency
 reopens it — see *when this has to be revisited* above.
 
+### Decided: on disk, an amount is a whole number of cents, as a JSON integer
+
+Settled at the persistence increment's plan gate on 2026-09-26, and built
+([ADR 0007](../decisions/0007-keeping-the-ledger.md)). Until then this was the first row of *Still
+open*, below.
+
+- **What is written is `Money.Cents`**, as a JSON integer: `"cents": 3215` for €32,15. It is exactly
+  what `Money` holds, so writing converts nothing, and reading is `Money.FromCents` of an integer. No
+  decimal text is written or parsed, so the stored form has no decimal mark, no culture and nothing
+  to round.
+- **Reading is strict about it.** `"cents": 12.5`, a fraction of a cent, is not read and rounded.
+  It makes the whole file unreadable. So is `"cents": "3215"`, cents written as text. An unreadable
+  file is met by the ruled response: say so, touch nothing, close ([§12](12-glossary.md), *When the
+  data cannot be read*). So the stored form cannot be a way around the cent rule.
+- **Signs follow the rules in code.** Entries are stored as positive magnitudes, and budgets as
+  zero or more. `Ledger.FromSnapshot` refuses a kept entry of zero or less and a negative budget, as
+  unreadable, because the running ledger could never have made either ([§8.1](#81-domain-model)).
+- **There is no currency field on disk either**, for the reason there is none in code (below).
+
+**Why integers and not decimal text.** Text such as `"32.15"` would bring the parse back that
+[ADR 0003](../decisions/0003-money-representation.md) keeps at the boundary, now at the file, with
+its own questions about marks, precision and rounding. An integer of cents has none of them. JSON
+numbers are read here with `GetInt64`, which refuses a fraction rather than truncating it.
+
+**What would reopen it.** The same things that reopen the whole-cents rule (*When this has to be
+revisited*, above). If MoneyBud ever computes an amount finer than a cent, the file has nowhere to
+put it, and that is deliberate. The stored form **may change freely between versions until the
+switch to real use**, at least up to and including the accounts increment
+([§12](12-glossary.md), *Demo data may not survive a new version*, *Real use before accounts*).
+
 ### Still open
 
-Neither of the following has been decided. They are listed so that it is clear they were considered
-and left open, not overlooked.
+The following has not been decided. It is listed so that it is clear it was considered and left
+open, not overlooked.
 
 | Question | Note |
 |---|---|
-| How amounts are stored | Open **because [§8.3](#83-persistence) defers persistence as a whole**, not because it was overlooked. [ADR 0003](../decisions/0003-money-representation.md) settles representation in code; nothing is written to disk in any increment so far, so there is nothing yet for a storage format to be wrong about |
-| Period boundaries and timezones | The start day of a budget period is configurable (see [§12](12-glossary.md)); how that interacts with timezones is undecided, and `Ledger.Today` reads local time in the meantime as a stand-in rather than an answer. A **second, separate** question about the same boundary — which day a period starts in a month too short to contain the configured start day — **is now settled**, in [§12](12-glossary.md) rather than here, because it is about the calendar and not about money: the start day clamps to the month's last day |
+| Period boundaries and timezones | The start day of a budget period is configurable (see [§12](12-glossary.md)); how that interacts with timezones is undecided, and `Ledger.Today` reads local time in the meantime as a stand-in rather than an answer. A **second, separate** question about the same boundary — which day a period starts in a month too short to contain the configured start day — **is now settled**, in [§12](12-glossary.md) rather than here, because it is about the calendar and not about money: the start day clamps to the month's last day. **Storing adds nothing to the timezone question**: dates are kept as `yyyy-MM-dd`, with no time and no zone, which is the day the ledger already holds ([ADR 0007](../decisions/0007-keeping-the-ledger.md)) |
 
 ## 8.3 Persistence
 
-**Nothing is stored. State lives in memory for the lifetime of a run, and is gone when the
-application exits.** This is a deliberate deferral with its reasoning recorded, not an unmade
-decision.
+**MoneyBud keeps its data. Settled with the stakeholder on 2026-09-26, and built the same day** in
+the persistence increment. Its storage choices are [ADR 0007](../decisions/0007-keeping-the-ledger.md):
+one JSON file in the user's local application data, written whole after every change, in a project
+of its own. Its three feature files, `keep-data.feature`, `start-moneybud.feature` and
+`carry-on-when-saving-fails.feature`, are approved and bound.
+
+Through the first six increments this section recorded a **deferral**, with a trigger. That record is kept
+below (*How this section read until 2026-09-26*), because the reasoning is still the reason nothing
+was stored until then.
+
+### Not the trigger firing
+
+The trigger was the first time the stakeholder is asked to re-enter data he would mind re-entering.
+**It had not fired.** He chose to build persistence next anyway: "demo now, real soon". Keeping
+data saves re-entering it between sessions, MoneyBud is still a demo, and he expects to switch to
+real use not long after persistence is built ([§12](12-glossary.md), *Why now: demo now, real
+soon*).
+
+**Why after corrections, deliberately** (order agreed 2026-09-26). While nothing is kept, closing
+MoneyBud discards every mistake. Once data is kept, a typo that cannot be corrected is permanent. So
+correcting came first.
+
+**What does not expire yet.** The trigger was shared with [ADR 0002](../decisions/0002-desktop-application-first.md):
+both were "bought with the same argument", that the demo's data is throwaway. That argument still
+holds, because the kept data is still demo data (*Demo data may not survive a new version*, below).
+So ADR 0002 was **not** reopened by this increment, and neither were the other things that wait for
+the demo to stop being a demo ([§11](11-risks-and-technical-debt.md)). Keeping data and real use
+used to be expected together; the stakeholder has separated them. **Nothing before accounts has to
+plan around the switch to real use.** He ruled the same day that his saved data may be dropped at
+least up to and including the accounts increment ([§12](12-glossary.md), *Real use before
+accounts*).
+
+### What the stakeholder ruled
+
+In full, with the reasoning and what was rejected, in [§12](12-glossary.md), *What MoneyBud keeps*.
+In outline, with what each means for whoever builds it, and **how it was built**, checked against
+the code at the close of the increment:
+
+| Ruling | What it means for the build, and how it is built |
+|---|---|
+| **Everything is kept**, as one continuous history, indefinitely. No fresh start per year | Nothing is pruned or archived by age. Periods never close, so there is no boundary to cut at. **Built:** `Ledger.ToSnapshot` takes every category, budget, expense and income, and nothing anywhere removes kept data by age |
+| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
+| **Saved automatically after every change.** No save button. **A save that works says nothing** | Every act that changes the ledger ends with the data written. There is no save act and no "save now" state to offer, and no notice for a save that succeeds. **Built:** `MoneyBudApp.Tell` calls `Keep` after every act that went through **and changed the ledger** (`Tell(changed:)`). Adding a name already there, assigning zero and a negative assignment clipped in full against a *Budget* of zero are said but not saved. A refusal, an unchanged save and a declined question never reach `Tell`. A save that works sets nothing the screen shows, unless it ends a failure (below). The scenario "offer no act for saving" lists every command of the screen and the forms in full, and checks every `Command` binding in the window's markup against them |
+| **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
+| **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
+| **A fixed place in the user's profile**, never chosen by the user, always outside the repository | The location is derived from the user's profile, **never** from the working directory. `dotnet run --project src/MoneyBud.Desktop` runs inside a working copy of the public repository, so a relative path would put data exactly where it must never be. `.gitignore` is a second line, not the protection. **Built:** `FileLedgerStore.DefaultFolder` is `Environment.SpecialFolder.LocalApplicationData` plus `MoneyBud`, which is `%LOCALAPPDATA%\MoneyBud` on Windows. A folder that is not a full path is refused as unreachable, so a relative path cannot be used even by mistake. `.gitignore` lists `moneybud.json`, `moneybud.json.tmp` and `moneybud.lock`. A unit test holds that the folder is outside the repository |
+| **Unreadable data, damaged or written by a newer version: say so, touch nothing, and close.** Never start empty instead. The message says only that the data cannot be read: no path, no pointer to the README | A load that fails must leave nothing able to save over the file, and no screen to enter anything into. Automatic saving is what makes an empty start dangerous here. **Built:** `MoneyBudStart.Start` returns `Refused(CannotRead)` for a file `LedgerJson` cannot read and for kept data `Ledger.FromSnapshot` refuses. No `MoneyBudApp` is made, so nothing can save. The Desktop shows *"MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd."* in a small window, and closing it closes MoneyBud. The message is copy in `Tekst`, not a display term. **"Touches nothing" means the data file**, as the stakeholder confirmed (2026-09-26): the claim, which comes before loading, may make the folder if it is missing and the lock file beside the data, and that is MoneyBud's own bookkeeping. Creating nothing at all was rejected, because it would mean checking the data before taking the lock, which leaves a window in which two MoneyBuds start at once |
+| **A folder that cannot be reached at all is met the same way** (ruled 2026-09-26, during review): a profile that is not there, a folder MoneyBud may not open, a *file* standing where the folder should be | Say it cannot read the data, touch nothing, close. **Rejected:** starting empty and showing "not saved", because if the real data came back, the first save that worked would write the empty start over it. **Built:** `FileLedgerStore.TryClaim` returns `Claim.Unreachable`, and `MoneyBudStart` turns it into `Refused(CannotRead)`, the same message as above. Held by a `cannot be reached` row in `start-moneybud.feature`'s "cannot read" outline, added after the scenario gate with the stakeholder's approval (§8.4) |
+| **A second start while MoneyBud is open is refused**: it says MoneyBud is already open, and closes | Only one process may hold the data. Two would overwrite each other's saves. **Built:** `TryClaim` opens `moneybud.lock` exclusively and holds it until `Close`. It is claimed **before** loading. A second start gets `Claim.HeldElsewhere`, and `MoneyBudStart` returns `Refused(AlreadyOpen)`: *"MoneyBud is al geopend."* The operating system lets go of the lock when a process dies, so a crash never blocks the next start |
+| **Backups are not MoneyBud's job** | One set of data, and no copies kept by MoneyBud. **Built:** there is one data file and nothing copies it. The one extra file a save makes, `moneybud.json.tmp`, is renamed away, not kept |
+| **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
+| **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
+| **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read |
+| **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
+
+**Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
+with the six default categories and nothing else (`Ledger.StartNew`, [§8.1](#81-domain-model)).
+
+### Answered by the plan
+
+These were **technical decisions, not stakeholder rulings**, and none of the rulings above answered
+them. Until the plan they stood here as *Left for the plan*. The persistence increment's plan
+answered all four at its gate on 2026-09-26, and [ADR 0007](../decisions/0007-keeping-the-ledger.md)
+records them with their reasoning:
+
+- **The form storage takes, and the exact folder.** One JSON file, `moneybud.json`, written whole on
+  every save with the runtime's `System.Text.Json`, and read strictly. SQLite was rejected: it needs
+  a package, it saves change by change where the rulings want one save to catch up everything, and
+  it is opaque to the user who backs it up. The folder is `%LOCALAPPDATA%\MoneyBud`, local rather
+  than roaming ([§7](07-deployment-view.md)).
+- **How amounts are stored.** Whole cents, as JSON integers, and a fraction or cents as text make the
+  file unreadable ([§8.2](#82-money-handling)).
+- **How identity is stored.** The question as it stood: an entry's `Id` was a counter that started
+  again at every run, and a category's **name is no longer an identity** since renaming, so a store
+  keyed by name would turn a rename into a broken link or a silent reassignment. **The answer:**
+  entry ids are kept, and so is `lastEntryId`, so an id is never issued twice. A category gets a key
+  **only in the file**: its place in the order added, from 1, made afresh at every save. Budgets and
+  expenses refer to it, never to the name. The domain gained no id, because `Category` already has
+  object identity and every file is the whole ledger. Lists are kept in the ledger's order, so ties
+  and newest-first survive a restart. `Ledger.FromSnapshot` re-checks every rule the running ledger
+  keeps.
+- **Where storage sits in the solution.** A fourth project, `MoneyBud.Storage`, that references the
+  domain only. The domain holds `LedgerSnapshot` and the `ILedgerStore` port. The presentation layer
+  holds all the behaviour and knows the store only through the port. The Desktop wires the two
+  together ([§5](05-building-block-view.md); ADR 0007 amends [ADR 0006](../decisions/0006-three-source-projects.md)).
+
+**The period start day is not stored.** The calendar is fixed at the 1st, and
+[§11](11-risks-and-technical-debt.md)'s start-day row still applies. One consequence is new: a
+budget is kept against its period's first day, and `FromSnapshot` refuses a budget on a day that
+starts no period. So a start day changed in code would make an existing file unreadable rather than
+misread.
+
+**What the rulings changed about the cost of these choices.** The deferral argued that the costly
+part of storage is the shape that accounts will need, and that choosing a shape early commits it
+when least is known (third bullet below). Ruling that demo data need not survive a new version makes
+the demo's storage cheap to change: a wrong shape costs a fresh start, not a migration. **That now
+reaches through the accounts increment.** This section first warned that real use might start
+before accounts, so that accounts would arrive against data that had to be carried across. The
+stakeholder answered that he does not mind his saves being deleted when accounts are added
+([§12](12-glossary.md), *Real use before accounts*). So the shape accounts need can be settled when
+accounts are built, as the deferral wanted, without a migration. **The build used that freedom
+openly.** The format is version 1, has no way to read anything older, and has nothing in it for
+accounts. The version field is there so that a later format is met by "cannot read" rather than
+misread ([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
+
+### How this section read until 2026-09-26
+
+Kept as written, because it records why nothing was stored for six increments and what was
+expected to end that. One paragraph, on how identity is stored, moved up to *Left for the plan*,
+now *Answered by the plan*, above.
+
+> **Nothing is stored. State lives in memory for the lifetime of a run, and is gone when the
+> application exits.** This is a deliberate deferral with its reasoning recorded, not an unmade
+> decision.
 
 **Why.**
 
@@ -632,13 +782,8 @@ Two things should be settled at that point rather than drifted into: the form st
 ([§7](07-deployment-view.md) lists it as open, along with where on the machine it lives), and how
 amounts are stored (§8.2, *Still open*).
 
-**A third since the corrections increment: how identity is stored.** Two kinds of identity exist in
-memory and neither survives a restart as it is ([§8.1](#81-domain-model)). An entry's `Id` is a
-counter that starts again at every run. A category's identity is its **object**, and since renaming
-its **name is no longer an identity**: a renamed category keeps its budgets and expenses, and its old
-name can be taken by a new category. So a store that keyed budgets or expenses by category name
-would turn a rename into a broken link or a silent reassignment. Whatever form storage takes, a
-category needs a stored key of its own, and an entry an id that survives being saved and loaded.
+A third was added by the corrections increment: how identity is stored (since answered, under
+*Answered by the plan*, above).
 
 **Reconsidered for the UI increment, and kept** (2026-09-25). The UI starts with the default
 categories and nothing else, and loses everything on close. The stakeholder chose that over saving
@@ -659,6 +804,12 @@ This is a **scope** decision rather than an architectural one, which is why it l
 as a record in [`docs/decisions/`](../decisions/). MoneyBud already records "not in the first
 increment" in the section the thing belongs to — [§12](12-glossary.md) does it for accounts, the
 pool account, backed categories and the sweep — and none of those got a record of their own either.
+
+**The deferral ended on 2026-09-26, without the trigger firing** (*Not the trigger firing*, above).
+The stakeholder's rulings are scope and requirements too, so they live here and in
+[§12](12-glossary.md) rather than in a record. The technical choices under *Left for the plan* were
+the part that might need one, and they got one:
+[ADR 0007](../decisions/0007-keeping-the-ledger.md) (*Answered by the plan*, above).
 
 ## 8.4 The presentation layer
 
@@ -683,8 +834,10 @@ period is labelled *Huidige periode* is worked out on every read.
 hold a figure that has since changed ([§6](06-runtime-view.md)). `MoneyBudApp.Refresh` changes
 nothing. It raises property changes so that whatever is bound looks again. Every act calls it.
 
-**The Desktop also calls it once a minute**, and that is the only thing that moves the *Huidige
-periode* label when a period ends while MoneyBud is open. The consequence, stated so it is not
+**The Desktop also calls it once a minute**, through `MoneyBudApp.Tick`, and that is the only thing
+that moves the *Huidige periode* label when a period ends while MoneyBud is open. Since the
+persistence increment `Tick` first retries a save that failed, if one did (*Keeping the ledger*,
+below). The consequence, stated so it is not
 rediscovered: **for up to a minute after a period boundary the screen can be out of date.** The label
 can still read *Huidige periode*, and in-use categories with no history can still be listed in a
 period that has just become past. An assignment made in that minute is refused as past, because the
@@ -774,6 +927,60 @@ How the presentation layer holds them:
   and a waiting question, and keeps a new entry; a change saved, *Annuleren*, or another row loaded
   drops a waiting question. `MoneyBudApp`'s stepping and each act do the dropping, so the rules are
   in the layer the tests reach.
+- **A question and a notice are never shown together.** The rule was chosen in the build, not
+  ruled by the stakeholder ([§12](12-glossary.md), *Chosen in the build, not put to the
+  stakeholder*), and it still holds between the removal question and an ordinary notice. **The save
+  line is not either of them**, and stands beside both (*Keeping the ledger*, below). The
+  persistence increment made room for it with a line of its own, rather than by bending this rule.
+
+### Keeping the ledger: when to save, the save line, and starting
+
+The rulings are in [§12](12-glossary.md), *What MoneyBud keeps*. The storage choices are
+[ADR 0007](../decisions/0007-keeping-the-ledger.md). **Everything about keeping that the user meets
+is decided here**, in the presentation layer. The store only writes and reads a file, and the
+Desktop only wires them together. The runtime order is drawn in [§6](06-runtime-view.md).
+
+- **`MoneyBudStart.Start` decides whether MoneyBud opens.** It claims the store, loads it, and
+  returns `Opened` with the screen, or `Refused` with one `StartRefusal`: `CannotRead` or
+  `AlreadyOpen`. A folder that cannot be reached, a file that cannot be read and kept data that
+  breaks a domain rule all become `CannotRead`. `Refused.Text` is the sentence the Desktop shows.
+  The two sentences, *"MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd."* and
+  *"MoneyBud is al geopend."*, are copy in `Tekst`, not display terms, so §12's table does not hold
+  them.
+- **Only an act that changed the ledger saves.** Every act that goes through ends in
+  `Tell(text, landedIn, changed)`, which calls `Keep` only when `changed` is true. Adding a name
+  already there, assigning zero, and a negative assignment clipped in full against a *Budget* of
+  zero pass `changed: false`. A refusal, an unchanged save and a declined question never reach
+  `Tell`. **As first built, every act that went through saved.** `spec-reviewer` found that such an
+  act could then show "not saved" about a change that never happened, and `Tell(changed:)` was the
+  fix. A first start saves nothing until the first change, which is the same rule seen from the
+  start: nothing has changed yet.
+- **`Keep` saves the whole ledger** (`Ledger.ToSnapshot`) and notes the result in two fields.
+  `IsUnsaved` is whether the last save failed and none has worked since. `savedAgain` is whether the
+  save that just worked ended a failure.
+- **`SaveLine` is what the save line says**, worked out from those two: *"Je wijzigingen zijn niet
+  opgeslagen. MoneyBud probeert het opnieuw."* while `IsUnsaved`, *"Alles is weer opgeslagen."*
+  after the save that ends it, and otherwise nothing. **It is its own property, not a `Notice`**,
+  and the window shows it as a line of its own under the notice and the question. So "not saved"
+  stands beside both, as ruled. **So does "saved again"**: it too is said on the save line, not as an
+  ordinary notice. It can stand beside the question, when the minute's retry works while a question
+  waits. The one-message rule between the question and an ordinary notice is untouched.
+- **What clears what.** "Not saved" is cleared only by a save that works. Stepping, acts and
+  questions leave it. "Saved again" is cleared by the next thing the user does that says something
+  or deliberately says nothing, by asking the removal question, and by stepping.
+- **`Tick` retries.** The Desktop's once-a-minute timer calls it. It retries only while something
+  is unsaved, then refreshes. So "MoneyBud itself, now and then" in the ruling is **once a minute**,
+  and on a healthy disk the timer writes nothing.
+- **`Close` makes the last attempt**, only if something is unsaved, asks nothing whatever comes of
+  it, and disposes the store. The Desktop calls it from the window's `Closed` event.
+- **The save line's colour follows `IsUnsaved`** through the notice's own background converter:
+  the refusal colour for "not saved", the ordinary one for "saved again". That is drawing, bound to a
+  flag this layer decides.
+
+**A second markup test holds the save line's place.** `WindowMarkupTests` checks that the save line
+is a sibling of the notice and the question in `MainWindow.axaml`, so that it cannot be moved into
+their place without a test failing. It widens the markup exception below, and was approved at the
+plan gate on the same terms.
 
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
@@ -786,10 +993,12 @@ slice is looked up afresh on every read. So a pointed slice can never show a fig
 changed ("Nothing is cached", above). Stepping clears the share. The rulings are in
 [§12](12-glossary.md), *Hovering a slice shows its figures*.
 
-### One test reads the window's markup
+### Tests that read the window's markup
 
 **The Desktop has no automated tests, by plan** ([ADR 0006](../decisions/0006-three-source-projects.md),
-[§11](11-risks-and-technical-debt.md)), **with one exception.** The order of a form's fields is a
+[§11](11-risks-and-technical-debt.md)), **with one exception, which now holds two things.** The
+second, since the persistence increment, is that the save line is a sibling of the notice and the
+question (*Keeping the ledger*, above). The first, described here, is older. The order of a form's fields is a
 stakeholder ruling ([§12](12-glossary.md), *The fields ask what before how much*), and it can live
 only in `MainWindow.axaml`. `WindowMarkupTests` reads that file as XML text, through
 `Support/Repository`, the same helper `TekstTests` uses to read §12. It checks the fields each form
@@ -811,6 +1020,29 @@ licence to leave a decision in the window because a text test could reach it. A 
 | ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: those scenarios' amounts are all meant to reach the domain. The one exception is `type-an-amount.feature`, whose quoted amounts are sometimes meant not to (below). **A correction goes one step further in, through the form**: the step clicks the entry's row, changes the one field it names as the user would type it, and saves the form. So every *saved with nothing changed* scenario loads an entry and saves it back, and proves that what a form loads can be read again. A removal presses *Verwijderen*, checks that a question is waiting while the entry is still listed, and answers it |
 | ***Then*** about **what is shown** | **The presentation layer**: the period's `PeriodOverview`, its rows, ring and lists, the suggestions, and the notice | Each is a claim about what MoneyBud shows. A period is read with `OverviewFor`, without stepping to it, so checking one period never moves the screen a later step asserts on. This is what closed the [§11](11-risks-and-technical-debt.md) row about "shown" steps bound to the ledger |
 | ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
+| **Keeping, starting and closing** | **The real `FileLedgerStore`**, in a temporary folder of the scenario's own, through `MoneyBudStart.Start` and `MoneyBudApp.Close`, the doors the Desktop uses | Since the persistence increment, **every** scenario keeps its data for real, not only the three persistence files. What the *Givens* set up is saved when the screen first opens, as data MoneyBud already had. What happens *around* MoneyBud is done to the folder, as it would happen on a disk (below). Nothing in product code knows it is being tested |
+
+**How the persistence scenarios reach the disk** (`SpecContext`, `KeepingSteps`):
+
+- **"Saving is not possible"** puts a directory where `moneybud.json.tmp` goes. Opening the temporary
+  file then fails as a full disk or a missing profile would, and `TrySave` reports `false` by its
+  own code path. "Possible again" removes the directory.
+- **"MoneyBud is interrupted while saving"** is a **simulation, approved as one at the plan gate.**
+  A real save cannot be cut part-way from a test. The step rebuilds the disk state such a cut leaves,
+  by the store's own design: the data file as it was before the last save, restored from what the
+  store held before saving, and half of the new file in `moneybud.json.tmp`. It then drops MoneyBud
+  without closing: no last attempt, and the lock let go as the operating system lets go of a dead
+  process. That the store never writes the data file in place is held by `StorageTests`, not by the
+  scenario.
+- **"A while passes with nothing done"** is one call to `Tick`, which is what the Desktop's timer
+  makes once a minute.
+- **"MoneyBud should offer no act for saving / starting over"** lists every command of the screen and
+  of the four forms **in full**, and checks every `Command` binding in `MainWindow.axaml` against
+  that list. A new act, one to save or to start over, fails the step until someone looks at it.
+  `spec-reviewer` found the first version of this step too weak, and it was strengthened to this.
+- **Unreadable data** is written into the folder by the step: a file cut off mid-document, a blank
+  file, or a file whose version is one higher. The *Then* checks the file byte for byte afterwards,
+  and that no temporary file was made.
 
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
@@ -819,8 +1051,27 @@ fields (`WindowMarkupTests`, above), alongside the domain's tests from earlier i
 corrections increment added `CorrectionTests`, for what the scenarios cannot see: entry ids, a
 change keeping its id and place, a stale copy still finding its entry, re-keying on a rename, a
 deleted category's zero budgets going with it, and the non-cases that throw. It also added that
-`AmountInput.Format` reads back to the same amount, and the forms' *Wijzigen* state. ADR 0004's rule
-applies to them unchanged: a unit test is never the reason a behaviour exists.
+`AmountInput.Format` reads back to the same amount, and the forms' *Wijzigen* state. The persistence
+increment added `StorageTests`: that everything the ledger holds comes back from the format exactly;
+that ids carry on after loading; that anything but a whole version-1 document is unreadable, a
+fraction of a cent and cents as text included; that kept data breaking any domain rule is refused,
+a budget in the calendar's last month among them; that a failed save leaves the kept file byte for
+byte; that half a save left in the temporary file is never read and is overwritten; the lock; an
+unreachable folder; that the default folder is the local application data and never the
+repository; and which acts save. It also added a second test to `WindowMarkupTests`, for the save
+line. ADR 0004's rule applies to them unchanged: a unit test is never the reason a behaviour exists.
+
+**A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
+was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
+it was held only by `StorageTests`. That test checks that the store reports such a folder as
+unreachable, for a folder under a file, a relative path and an empty one. By ADR 0004's rule a
+scenario was missing, so **the stakeholder approved adding one row, `cannot be reached`, to the
+approved "cannot read" outline** (2026-09-26). The file's header says it was added after the first
+approval, with his approval. The step makes the folder unreachable for real: a directory stands at
+the `moneybud.lock` path, so the claim fails with access denied. The data file holds valid data and
+is compared byte for byte afterwards. **A mutation check confirmed the row bites**: turning
+`Claim.Unreachable` into `AlreadyOpen` in `MoneyBudStart` fails exactly that row
+([§12](12-glossary.md), *When the data's folder cannot be reached*).
 
 **Reading a typed amount has its own feature file.**
 [`type-an-amount.feature`](../../features/type-an-amount.feature) was approved at the scenario gate
@@ -854,3 +1105,10 @@ cases, 16 more than the 324 above, from `point-at-a-slice.feature` and the new s
 **At the close of the corrections increment**: 785 tests passing with zero warnings. That is 467
 scenario cases, the 340 above and 127 from the four corrections feature files, and 318 developer
 unit tests, 38 more than above.
+
+**At the close of the persistence increment**: 901 tests passing with zero warnings. That is 531
+scenario cases, the 467 above and 64 from the three persistence feature files' 37 scenarios, and 370
+developer unit tests, 52 more than above. One of the 64 cases is the `cannot be reached` row added
+after review, which took the count from 900 to 901. A headless run of the real window, outside the repository, also showed
+the question and "not saved" together, "saved again" after a retry, a second start refused, a damaged
+file left untouched, and the file holding what was entered.

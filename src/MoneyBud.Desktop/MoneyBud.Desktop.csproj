@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MoneyBud.Presentation\MoneyBud.Presentation.csproj" />
+    <ProjectReference Include="..\MoneyBud.Storage\MoneyBud.Storage.csproj" />
   </ItemGroup>
 
 </Project>

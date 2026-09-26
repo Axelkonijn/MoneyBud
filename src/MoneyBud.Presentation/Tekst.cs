@@ -67,6 +67,19 @@ public static class Tekst
     public const string NoExpenses = "Geen uitgaven in deze periode";
     public const string NoIncomes = "Geen inkomsten in deze periode";
 
+    // ------------------------------------------------------------------ keeping (§12, *What MoneyBud keeps*)
+
+    // The line for saving. A save that works says nothing; only one that fails, and the one that
+    // ends a failure, are said.
+    public const string NotSaved = "Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw.";
+    public const string SavedAgain = "Alles is weer opgeslagen.";
+
+    // Said when MoneyBud does not start. The first names no place and points nowhere: it only
+    // says the data cannot be read, and that nothing was changed (§12).
+    public const string CannotRead = "MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd.";
+    public const string AlreadyOpen = "MoneyBud is al geopend.";
+    public const string Ok = "OK";
+
     // ------------------------------------------------------------------ amounts
 
     private static readonly NumberFormatInfo DutchNumbers = new()

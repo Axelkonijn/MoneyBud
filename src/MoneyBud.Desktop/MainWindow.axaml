@@ -101,6 +101,14 @@
               Background="{Binding Notice.IsRefusal, Converter={x:Static d:NoticeBackground.Instance}, FallbackValue={x:Null}}">
         <TextBlock Text="{Binding Notice.Text, FallbackValue=''}" TextWrapping="Wrap" />
       </Border>
+      <!-- The line for saving, beside the notice and the question rather than in their place: that
+           changes are not saved, for as long as they are not, and then once that all is saved
+           again (arc42 §12). -->
+      <Border CornerRadius="6" Padding="12,8"
+              IsVisible="{Binding SaveLine, Converter={x:Static ObjectConverters.IsNotNull}}"
+              Background="{Binding IsUnsaved, Converter={x:Static d:NoticeBackground.Instance}}">
+        <TextBlock Text="{Binding SaveLine, FallbackValue=''}" TextWrapping="Wrap" />
+      </Border>
     </StackPanel>
 
     <Grid ColumnDefinitions="*,16,2*,16,*">

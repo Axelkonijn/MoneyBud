@@ -15,7 +15,8 @@ later ask "why on earth is it like this?".
 | [0003](../decisions/0003-money-representation.md) | How money is represented in code | Accepted, amended same day | 2026-09-24 |
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
-| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1. Dated note, 2026-09-26: one test reads the Desktop's markup | 2026-09-25 |
+| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006 | 2026-09-26 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -30,11 +31,35 @@ replaced by ADR 0006 when the UI arrived. Its other three decisions stand, so th
 is not the ADR 0003 kind of amendment: a decision *did* change, so a new record carries it and the
 old one keeps what was believed.
 
-Not every decision gets a record. **Persistence is still deferred — nothing is stored, state lives
-in memory for the lifetime of a run** — and that is written up in
-[§8.3](08-crosscutting-concepts.md) rather than here, because it is a scope decision rather than an
+Not every decision gets a record. **Persistence was deferred for six increments** — nothing stored,
+state in memory for the lifetime of a run — and that was written up in
+[§8.3](08-crosscutting-concepts.md) rather than here, because it was a scope decision rather than an
 architectural one. It is noted in this section so that a reader scanning the index does not
 conclude it was never decided.
+
+**On 2026-09-26 the deferral ended, and still no record was written.** The stakeholder ruled what is
+kept, when it is saved, where it lives, and what happens when it cannot be read. Those are
+requirements, recorded in [§8.3](08-crosscutting-concepts.md) and [§12](12-glossary.md), *What
+MoneyBud keeps*. When that was written, the architectural part had not been decided: the form
+storage takes, how amounts and identity are stored, and where storage sits in the solution. They
+were left to the persistence increment's plan, which is where a record might come from. One did
+(next paragraph).
+
+**The persistence increment added one: ADR 0007**, approved at its plan gate on 2026-09-26 and
+built the same day. It answers all four of §8.3's questions for the plan. It chooses one JSON file,
+written whole on every save, over SQLite. It puts that file in the user's local application data,
+never relative to the working directory. It saves through a temporary file, a flush and a rename,
+and allows one MoneyBud at a time through an exclusive lock claimed before loading. It keeps entry
+ids and gives categories a key that exists only in the file. And it adds a fourth project,
+`MoneyBud.Storage`, behind a port in the domain. Each of those is costly to reverse once data is
+real, and several would draw a "why on earth" without their reasoning, which is this section's test
+for a record.
+
+**It amends ADR 0006 rather than superseding it.** 0006's decision was the split between domain,
+presentation and desktop, and all three keep the roles it gave them. What changed is the count and
+two reference lists. That is closer to 0006's own dated note of the first demo, which qualified a
+consequence without reversing the decision, than to 0004's decision 1, which was replaced. So 0006
+carries a second dated note that points to 0007, and its body is unchanged.
 
 **The income increment added no record, and that is the expected outcome**, not an omission. It
 introduced no technology, moved no boundary ([§5](05-building-block-view.md)) and reopened no money
@@ -87,3 +112,5 @@ and incomes gained a ledger-issued id. That is how the domain expresses renaming
 place, not a choice between architectures, so it is in [§8.1](08-crosscutting-concepts.md). Its
 consequence for storage, that a category's name can no longer serve as its key, is carried in
 [§8.3](08-crosscutting-concepts.md) for the persistence increment, where it may well need a record.
+It became one of the questions that increment's plan had to settle, and ADR 0007 answers it: a
+category gets a key that exists only in the file, and the domain gained no id.

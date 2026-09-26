@@ -4,8 +4,9 @@ namespace MoneyBud.Domain;
 /// Everything MoneyBud knows: the categories, what was budgeted for each in each period, the
 /// expenses recorded against them, and the income recorded into each period.
 ///
-/// <para>Nothing is stored. State lives here for the lifetime of a run and is gone afterwards —
-/// a deliberate deferral, with its reasoning and its trigger in arc42 §8.3.</para>
+/// <para>The ledger knows nothing of files. What it holds goes out as a <see cref="LedgerSnapshot"/>
+/// (<see cref="ToSnapshot"/>) and comes back in as one (<see cref="FromSnapshot"/>); keeping the
+/// snapshot between runs is an <see cref="ILedgerStore"/>'s job (arc42 §8.3, ADR 0007).</para>
 ///
 /// <para>The two layers of §12 meet in exactly one place, <see cref="RemainingFor"/>. Budgets are
 /// the plan; expenses are the actual; recording an expense never touches a budget.</para>
@@ -72,6 +73,127 @@ public sealed class Ledger
         var ledger = new Ledger(clock, calendar);
         foreach (var name in DefaultCategoryNames) ledger.AddCategory(name);
         return ledger;
+    }
+
+    /// <summary>
+    /// Everything this ledger holds, as plain data to be kept. Categories are keyed by their
+    /// place in the order added, so budgets and expenses point at a category rather than at a
+    /// name (<see cref="LedgerSnapshot"/>).
+    /// </summary>
+    public LedgerSnapshot ToSnapshot()
+    {
+        var keys = new Dictionary<Category, int>();
+        foreach (var category in categoriesInOrderAdded) keys.Add(category, keys.Count + 1);
+
+        return new LedgerSnapshot(
+            categoriesInOrderAdded.Select(c => new CategorySnapshot(keys[c], c.Name, archived.Contains(c))).ToList(),
+            budgets.Select(b => new BudgetSnapshot(keys[b.Key.Category], b.Key.PeriodStart, b.Value)).ToList(),
+            expenses.Select(e => new ExpenseSnapshot(e.Id, e.Amount, e.Date, keys[e.Category], e.Label)).ToList(),
+            incomes.Select(i => new IncomeSnapshot(i.Id, i.Amount, i.Date, i.Label)).ToList(),
+            lastEntryId);
+    }
+
+    /// <summary>
+    /// A ledger holding exactly what a snapshot holds, as it was when the snapshot was taken.
+    ///
+    /// <para>Kept data is checked against every rule the ledger keeps while it runs, because it
+    /// was read from outside MoneyBud and could have been changed there. <b>Throws</b>
+    /// <see cref="InvalidDataException"/> for any that is broken — a name the name rule does not
+    /// store, two names the rule counts as one, a budget or an expense pointing at no category, a
+    /// budget below zero or outside a period's first day, an entry of zero or less, an income
+    /// without a label, an id used twice or beyond the last one issued. Data like that cannot be
+    /// read (arc42 §12, <i>When the data cannot be read</i>).</para>
+    ///
+    /// <para>Dates are not checked against today. An expense cannot be <i>recorded</i> in the
+    /// future, but one recorded today is still valid kept data if the clock is later turned
+    /// back.</para>
+    /// </summary>
+    public static Ledger FromSnapshot(
+        LedgerSnapshot snapshot, TimeProvider clock, BudgetPeriodCalendar? calendar = null)
+    {
+        var ledger = new Ledger(clock, calendar);
+        var byKey = new Dictionary<int, Category>();
+
+        if (snapshot.LastEntryId < 0)
+            throw Invalid("the last entry id issued is below zero");
+
+        foreach (var kept in snapshot.Categories)
+        {
+            if (kept.Name is null || CategoryName.Normalise(kept.Name) != kept.Name)
+                throw Invalid($"category {kept.Key} has a name that is not stored as the name rule stores it");
+            if (byKey.ContainsKey(kept.Key))
+                throw Invalid($"category key {kept.Key} is used twice");
+            if (ledger.categories.ContainsKey(kept.Name))
+                throw Invalid($"\"{kept.Name}\" is two categories under the name rule");
+
+            var category = new Category(kept.Name);
+            byKey.Add(kept.Key, category);
+            ledger.categories.Add(kept.Name, category);
+            ledger.categoriesInOrderAdded.Add(category);
+            if (kept.IsArchived) ledger.archived.Add(category);
+        }
+
+        foreach (var kept in snapshot.Budgets)
+        {
+            var category = CategoryFor(kept.Category);
+            if (kept.Amount.IsNegative)
+                throw Invalid($"a budget for \"{category.Name}\" is below zero");
+            if (!StartsAPeriod(kept.PeriodStart))
+                throw Invalid($"a budget for \"{category.Name}\" starts on {kept.PeriodStart}, which starts no period");
+            if (!ledger.budgets.TryAdd((category, kept.PeriodStart), kept.Amount))
+                throw Invalid($"\"{category.Name}\" has two budgets for the period starting {kept.PeriodStart}");
+        }
+
+        var ids = new HashSet<int>();
+
+        foreach (var kept in snapshot.Expenses)
+        {
+            CheckEntry(kept.Id, kept.Amount);
+            if (kept.Label is not null && NormaliseLabel(kept.Label) != kept.Label)
+                throw Invalid($"expense {kept.Id} has a label that is not stored as labels are");
+            ledger.expenses.Add(new Expense(kept.Id, kept.Amount, kept.Date, CategoryFor(kept.Category), kept.Label));
+        }
+
+        foreach (var kept in snapshot.Incomes)
+        {
+            CheckEntry(kept.Id, kept.Amount);
+            if (kept.Label is null || NormaliseLabel(kept.Label) != kept.Label)
+                throw Invalid($"income {kept.Id} has no label, or one not stored as labels are");
+            ledger.incomes.Add(new Income(kept.Id, kept.Amount, kept.Date, kept.Label));
+        }
+
+        ledger.lastEntryId = snapshot.LastEntryId;
+        return ledger;
+
+        // A period in the last month of the calendar has no end the calendar can name, so a day
+        // there starts no period — rather than failing the whole start with something other than
+        // "cannot be read".
+        bool StartsAPeriod(DateOnly day)
+        {
+            try
+            {
+                return ledger.Calendar.PeriodContaining(day).FirstDay == day;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return false;
+            }
+        }
+
+        Category CategoryFor(int key) =>
+            byKey.TryGetValue(key, out var category) ? category : throw Invalid($"there is no category {key}");
+
+        void CheckEntry(int id, Money amount)
+        {
+            if (id < 1 || id > snapshot.LastEntryId)
+                throw Invalid($"entry id {id} was never issued");
+            if (!ids.Add(id))
+                throw Invalid($"entry id {id} is used twice");
+            if (amount.Cents <= 0)
+                throw Invalid($"entry {id} is not more than zero");
+        }
+
+        static InvalidDataException Invalid(string what) => new($"The kept ledger cannot be read: {what}.");
     }
 
     public BudgetPeriodCalendar Calendar { get; }

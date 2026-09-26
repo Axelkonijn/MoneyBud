@@ -4,14 +4,18 @@ namespace MoneyBud.Specs.Support;
 public static class Repository
 {
     public static string ReadText(params string[] path) =>
-        File.ReadAllText(Path.Combine([Root(), .. path]));
+        File.ReadAllText(Path.Combine([Root, .. path]));
 
-    private static string Root()
+    /// <summary>The folder that holds MoneyBud.slnx.</summary>
+    public static string Root
     {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "MoneyBud.slnx")))
-            directory = directory.Parent;
+        get
+        {
+            var directory = new DirectoryInfo(AppContext.BaseDirectory);
+            while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "MoneyBud.slnx")))
+                directory = directory.Parent;
 
-        return directory?.FullName ?? throw new InvalidOperationException("Could not find the repository root.");
+            return directory?.FullName ?? throw new InvalidOperationException("Could not find the repository root.");
+        }
     }
 }

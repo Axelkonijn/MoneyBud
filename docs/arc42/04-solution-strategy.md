@@ -17,16 +17,18 @@ Each has its own record or section; this table is the map, not the reasoning.
 | **Deployment form** | A desktop application: one process on the user's own machine, no server, no network | [ADR 0002](../decisions/0002-desktop-application-first.md), [§7](07-deployment-view.md) |
 | **UI toolkit** | Avalonia 12 with its Fluent theme, and CommunityToolkit.Mvvm for the view models. Chosen partly because it keeps the deferred mobile wish reachable | [ADR 0005](../decisions/0005-avalonia-ui-toolkit.md) |
 | **Money** | A signed `Money` value type over a whole number of cents; sub-cent amounts refused rather than rounded; direction carried by the transaction type; no currency field | [ADR 0003](../decisions/0003-money-representation.md), [§8.2](08-crosscutting-concepts.md) |
-| **Decomposition** | Three source projects: the domain; a **presentation layer with no UI toolkit**, holding everything the screen decides; and a thin Avalonia desktop. One specification project runs the scenarios against the first two, with no window | [ADR 0006](../decisions/0006-three-source-projects.md), which supersedes the "two projects" of [ADR 0004](../decisions/0004-solution-layout.md); [§5](05-building-block-view.md) |
-| **Persistence** | None. State lives in memory for the lifetime of a run | [§8.3](08-crosscutting-concepts.md) |
+| **Decomposition** | Four source projects: the domain; a **presentation layer with no UI toolkit**, holding everything the screen decides; a thin Avalonia desktop; and, since the persistence increment, a storage project that knows the domain and nothing else. One specification project runs the scenarios against all but the desktop, with no window | [ADR 0006](../decisions/0006-three-source-projects.md), which supersedes the "two projects" of [ADR 0004](../decisions/0004-solution-layout.md) and is amended by [ADR 0007](../decisions/0007-keeping-the-ledger.md); [§5](05-building-block-view.md) |
+| **Persistence** | **One JSON file, `moneybud.json`, in the user's local application data**, written whole after every change that alters the ledger, through a temporary file and a rename, and held by one MoneyBud at a time. Amounts are whole cents, and categories are linked by a key that exists only in the file. Its own project, `MoneyBud.Storage`, behind a port in the domain. Settled with the stakeholder and built on 2026-09-26 | [ADR 0007](../decisions/0007-keeping-the-ledger.md), [§8.3](08-crosscutting-concepts.md), [§12](12-glossary.md) |
 | **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
 
 Read together, these say: **a domain library, a screen over it, and an executable specification
 that reaches both.** For four increments the first and third were the whole of it. The fifth added
 the screen and split it in two. What the screen *decides* sits in a layer the scenarios can run
 without a window. What it *draws* sits in a thin toolkit project that nothing tests automatically.
-A store and a second process are still deferred with a stated trigger rather than sketched
-([§8.3](08-crosscutting-concepts.md)).
+A second process is still deferred. A store is no longer deferred: the persistence increment added
+one, in a project of its own. The domain defines what is kept and the port it is kept through. The
+presentation layer decides when to save and what to say about it. The storage project only writes
+and reads the file ([ADR 0007](../decisions/0007-keeping-the-ledger.md), [§8.3](08-crosscutting-concepts.md)).
 
 ## How the quality goals fare
 
@@ -85,7 +87,9 @@ one-action carry-over of last period's budgets ([§12](12-glossary.md)).
 
 - **`MoneyBud.Domain` still depends on nothing but the base class library.** It has no UI toolkit,
   no storage library and no ambient clock. The UI increment's two packages went into the new projects
-  instead ([ADR 0006](../decisions/0006-three-source-projects.md)).
+  instead ([ADR 0006](../decisions/0006-three-source-projects.md)). Keeping data added a port and a
+  snapshot to the domain and no file handling. The file is in `MoneyBud.Storage`, which adds no
+  package ([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
 - **The toolkit is at the edge.** Everything the screen decides is in `MoneyBud.Presentation`, which
   has no reference to Avalonia. Replacing the toolkit, or adding a mobile head, means a new window,
   and no scenario would change.
@@ -103,17 +107,23 @@ one-action carry-over of last period's budgets ([§12](12-glossary.md)).
   do not reach `Money` ([§8.2](08-crosscutting-concepts.md)).
 
 The caveat is smaller, but it stands: adaptability of the **software** is served; adaptability of
-the **data**, which [§1.2](01-introduction-and-goals.md) names in the same breath, is served only
-within a run. Since the corrections increment, an entry can be changed or removed and a category
-renamed without starting over, which is where the user met the gap first
-([§11](11-risks-and-technical-debt.md), *Resolved*). But nothing is stored, so what was adjusted is
-gone when MoneyBud closes. Recurring entries, the other thing that goal names, do not exist yet.
+the **data**, which [§1.2](01-introduction-and-goals.md) names in the same breath, was served only
+within a run until the persistence increment. Since the corrections increment, an entry can be
+changed or removed and a category renamed without starting over, which is where the user met the gap
+first ([§11](11-risks-and-technical-debt.md), *Resolved*). Since the persistence increment, what
+was adjusted is kept when MoneyBud closes ([§8.3](08-crosscutting-concepts.md)). What remains is
+narrower: the kept data may not survive a new version until the switch to real use, by ruling
+([§12](12-glossary.md), *Demo data may not survive a new version*). Recurring entries, the other
+thing that goal names, do not exist yet.
 
 ### 4. Local operation — **served, and trivially so**
 
-One process on one machine, no server, no network dependency, nothing written anywhere
+One process on one machine, no server, no network dependency
 ([ADR 0002](../decisions/0002-desktop-application-first.md), [§7](07-deployment-view.md)). The UI
-changed nothing here. This is the easiest of the four to satisfy today and the easiest to give away
+changed nothing here. Keeping data writes one file, and keeps it local: one set of data in the
+user's **local** application data on that machine, deliberately not the roaming profile, protected
+by the login, and backed up, if at all, by the user outside MoneyBud
+([ADR 0007](../decisions/0007-keeping-the-ledger.md), [§8.3](08-crosscutting-concepts.md)). This is the easiest of the four to satisfy today and the easiest to give away
 later: desktop/mobile sync, deferred rather than rejected in [§3.2](03-context-and-scope.md), is the
 thing that would put pressure on it. It should be an explicit trade when that arrives, not a drift.
 
