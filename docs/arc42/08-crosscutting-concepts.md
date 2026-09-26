@@ -462,8 +462,16 @@ only floating-point numbers in MoneyBud, and they are not money.** No amount is 
 slice's size and fill is a `Money`, read from the domain, and the shares are derived from those for
 drawing only. So the "never `double` for money" rule and the premise of the whole-cents rule above
 (amounts are entered, never computed) both stand. A share that is off in the ninth decimal moves a
-pixel, not a cent. The one scenario that checks shares asserts that they close the circle to nine
-places.
+pixel, not a cent. Every scenario that checks what a ring adds up to also asserts that its shares
+close the circle, to nine places.
+
+**Since the first demo the shares depart from the sizes on purpose.** Every slice is drawn at least
+`Ring.MinimumSweep`, 2% of the ring, and `Ring.Sweeps` shares out the rest
+([§12](12-glossary.md), *Every slice has a minimum width*). That changes only the drawing. A slice's
+size is still its `Money`, and the sizes still add up to the income. The shares are further from the
+amounts than before, which is exactly why they are not money. The minimum is decided there and
+nowhere else: `RingControl` used to floor a slice's sweep with a hidden `Math.Max` of its own, and
+that has been removed.
 
 ### Decided: amounts are positive magnitudes, and direction comes from the transaction type
 
@@ -558,6 +566,11 @@ in which it **can** fire: until now nobody could enter anything, so nobody could
 with `Ledger.StartNew`, and it is gone when the window closes. The trigger above is now reachable
 and has not fired.
 
+**Raised at the first demo, and still not fired** (2026-09-26). The stakeholder named keeping data as
+missing and deferred it in the same sentence: *"Maar dat komt later."* That names a gap. It does not
+say he minded re-entering anything, and that is what the trigger waits for
+([§12](12-glossary.md), *What the UI starts with, and what it keeps*).
+
 This is a **scope** decision rather than an architectural one, which is why it lives here and not
 as a record in [`docs/decisions/`](../decisions/). MoneyBud already records "not in the first
 increment" in the section the thing belongs to — [§12](12-glossary.md) does it for accounts, the
@@ -598,11 +611,12 @@ Nothing is announced either way, which is what §12 asks.
 
 These are visible to the user and were chosen in the build. They are recorded here so that they are
 not mistaken for rulings. None contradicts a ruling, and any of them can be put to the stakeholder
-if he reacts to it.
+if he reacts to it. He reacted to one at the first demo, and part of the first row is now his
+ruling.
 
 | Behaviour | Why it was built this way |
 |---|---|
-| **A form clears after its entry goes through, and keeps what was typed after a refusal** | A refusal is corrected in place, not retyped. A cleared form after success shows that it went through. The assign form clears only its amount, and keeps its category and period |
+| **A form clears after its entry goes through, and keeps what was typed after a refusal** | A refusal is corrected in place, not retyped. A cleared form after success shows that it went through. As first built, the expense form kept its category after success, and the assign form cleared only its amount, keeping its category and period. **The category half has since been ruled by the stakeholder** at the first demo, 2026-09-26: the category box empties after success too ([§12](12-glossary.md), *Category entry is free text with suggestions*). Now built, so that half is a ruling and no longer a build choice. The assign form still keeps its period, which follows the screen |
 | **Every date starts empty, and empty means today** | §12's default ("an entry's date defaults to today, whatever period is on screen"), built so the date never follows the period on screen. The picker shows *Vandaag* until a date is chosen |
 | **The assign form's period follows the screen when it steps, and can be moved on its own** | §12's "assigning defaults to the period on screen", plus a way to name another period without moving the screen, which is how an assignment lands elsewhere |
 | **Stepping clears the last notice** | A notice is about the last thing done. After stepping it would sit beside a period it may not describe |
@@ -629,6 +643,34 @@ have silenced exactly the case that matters.
 That covers the date picker's month and day names, for example. MoneyBud's own text does not depend
 on it.
 
+### Pointing at the ring: the Desktop hands over a share, and nothing more
+
+`RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
+When the pointer is off the band it passes nothing. It hands that to `MoneyBudApp.PointAt`, and
+that is all it does. `Ring.SliceAt` decides which slice is at that share. `PointedSlice`,
+`PointedRow` and `RingCentreShowsUnassigned` decide what the ring's hole shows. What is drawn
+highlighted is the slice `PointedSlice` names. The app holds the **share**, not the slice, so the
+slice is looked up afresh on every read. So a pointed slice can never show a figure that has since
+changed ("Nothing is cached", above). Stepping clears the share. The rulings are in
+[§12](12-glossary.md), *Hovering a slice shows its figures*.
+
+### One test reads the window's markup
+
+**The Desktop has no automated tests, by plan** ([ADR 0006](../decisions/0006-three-source-projects.md),
+[§11](11-risks-and-technical-debt.md)), **with one exception.** The order of a form's fields is a
+stakeholder ruling ([§12](12-glossary.md), *The fields ask what before how much*), and it can live
+only in `MainWindow.axaml`. `WindowMarkupTests` reads that file as XML text, through
+`Support/Repository`, the same helper `TekstTests` uses to read §12. It checks the fields each form
+lays out, in order: down a stack in the order written, and across a grid by `Grid.Column`. It starts
+no window and references no Avalonia, so the specs project still does not reference the Desktop.
+**Approved at the plan gate on 2026-09-26 as a small departure** from ADR 0006. `spec-reviewer`
+found that it first ordered by position in the file rather than by column. That was fixed.
+
+**What it does not change.** Everything else the Desktop does is still checked only by running it.
+Reading markup as text is a narrow tool: it checks what is written, not what is drawn. It is not a
+licence to leave a decision in the window because a text test could reach it. A decision that
+*can* live in `MoneyBud.Presentation` still goes there.
+
 ### How the scenarios are run
 
 | Step | Acts on | Why |
@@ -639,8 +681,9 @@ on it.
 | ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
 
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
-wording against §12, money formatting, the ring's shares, the forms, and narrowing the suggestions,
-alongside the domain's tests from earlier increments. ADR 0004's rule applies to them unchanged: a
+wording against §12, money formatting, the ring's shares and its minimum width, the forms,
+narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
+fields (`WindowMarkupTests`, above), alongside the domain's tests from earlier increments. ADR 0004's rule applies to them unchanged: a
 unit test is never the reason a behaviour exists.
 
 **Reading a typed amount has its own feature file.**
@@ -667,3 +710,7 @@ unit tests came with narrowing's move into the presentation layer.
 
 **With typed amounts specified**: 574 tests passing. That is 324 scenario cases, the 251 above and
 73 from `type-an-amount.feature`'s 14 outlines, and 250 developer unit tests.
+
+**After the first demo's rulings**: 620 tests passing with zero warnings. That is 340 scenario
+cases, 16 more than the 324 above, from `point-at-a-slice.feature` and the new scenarios in
+`overview.feature`, and 280 developer unit tests, 30 more than above.

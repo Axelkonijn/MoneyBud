@@ -5,19 +5,32 @@
 #
 # WHICH categories the Overview lists is the display rule, specified in
 # show-categories-in-a-period.feature. The ring decides only which of those categories get a
-# slice. Stepping from one period to another is in step-between-periods.feature.
+# slice. Stepping from one period to another is in step-between-periods.feature. What pointing at
+# a slice shows is in point-at-a-slice.feature.
 #
 # The domain behaviour behind every figure here is already specified in the five earlier feature
 # files and is not restated: recording, assigning, archiving, Remaining, Unassigned, Over budget
 # and Over-assigned. The Givens use their grammar and mean what those files say they mean.
 #
-# How the ring is drawn, settled by the stakeholder on 2026-09-25:
-#   - One slice per category with a Budget above zero. It is sized to that Budget and filled in as
-#     far as the category has been spent, so the unfilled part is its Remaining. Exactly zero
-#     Remaining is a completely filled slice, and it is NOT over budget.
+# How the ring is drawn, settled by the stakeholder on 2026-09-25 and revised by him at the first
+# demo on 2026-09-26:
+#   - One slice per category with a Budget above zero. Its size is that Budget, and it is filled
+#     in as far as the category has been spent, so the unfilled part is its Remaining. Exactly
+#     zero Remaining is a completely filled slice, and it is NOT over budget.
 #   - Unassigned above zero is a slice of its own. So, unless the period is Over-assigned, the
-#     whole ring is the period's income. That holds only because archived categories' budgets are
-#     slices too: Unassigned subtracts them.
+#     slices' sizes add up to the period's income. That holds only because archived categories'
+#     budgets are slices too: Unassigned subtracts them.
+#   - REVISED 2026-09-26: every slice, the Unassigned slice included, is drawn at least a minimum
+#     width, so that a small budget, and how far it has been spent, stay visible (glossary: "Every
+#     slice has a minimum width"). So the ring is no longer drawn exactly in proportion. The
+#     slices' SIZES are unchanged, and still add up to the income: only how wide each is drawn
+#     departs from them. A slice is filled in as far as its own Budget has been spent, as a share
+#     of the slice as drawn. The minimum creates no slice: a Budget of zero still gets none.
+#     THERE IS NO MINIMUM FILL (ruled by the stakeholder, 2026-09-26). "Stay visible" is about
+#     the slice's width, not its fill. The fill stays exact, so a tiny amount spent can look like
+#     nothing spent. Pointing at the slice shows the exact figure (point-at-a-slice.feature).
+#     Until this revision every slice was drawn exactly in proportion, and the second point above
+#     read "the whole ring is the period's income". That is now true of the sizes, not the drawing.
 #   - An overspent slice stays budget-sized, is drawn completely filled, and is marked as over
 #     budget. It never grows. The slice is the plan, and overspending does not change the plan.
 #   - A category with a Budget of zero gets no slice, however the zero came about: never assigned,
@@ -44,21 +57,39 @@
 #
 # The marker is information, never a warning (glossary: "One marker for over budget and
 # over-assigned"). What is fixed is what is drawn, what is marked, and the order. Colours, the
-# marker's form and the layout are not fixed, and nothing below asserts them.
+# marker's form and the layout are not fixed, and nothing below asserts them. Nor does anything
+# below name how wide the minimum slice width is, or say what happens when minimums leave too
+# little room for the other slices. The plan proposes both, and they are settled at the plan
+# gate. The ring's size and its place on the screen are fixed in the glossary ("The Overview's
+# layout") and stay out of these scenarios.
 #
 # Reading the steps:
 #   - "the ring for the current budget period" is the ring the Overview shows when that period is
 #     the one on screen.
 #   - "should have exactly these category slices, in this order" lists every category slice, in
-#     the ring's order, and no other. SIZE is the slice's size in euro, which is its Budget; the
-#     ring draws each slice in proportion to the ring's total. FILLED is how much of the slice is
-#     drawn filled in: what has been spent, and never more than the size. OVER BUDGET says whether
-#     the slice is marked.
+#     the ring's order, and no other. SIZE is the slice's size in euro, which is its Budget. It is
+#     a figure, not how wide the slice is drawn: since 2026-09-26 a small slice is drawn wider
+#     than its share of the ring. FILLED is how much of the slice is filled in, in euro: what has
+#     been spent, and never more than the size. OVER BUDGET says whether the slice is marked.
 #   - "should have no category slices" means the table above would be empty.
 #   - "should have an Unassigned slice of X euro" and "should have no Unassigned slice" are about
 #     Unassigned's own slice. "the Unassigned slice should be the last slice in the ring ..."
 #     asserts its place.
-#   - "should add up to X euro" is the total of every slice, Unassigned's included.
+#   - "should add up to X euro" is the total of every slice's SIZE, Unassigned's included. It also
+#     means that the slices as drawn go once round the ring exactly, with no gap and no overlap.
+#     It does not mean that each is drawn in proportion to its size.
+#   - "every slice in the ring ... should be drawn at least the minimum slice width" means every
+#     slice, the Unassigned slice included, takes up at least the minimum share of the ring. The
+#     minimum is not named here. The step reads it from where the screen keeps it, so the
+#     scenario holds for whatever width is approved at the plan gate.
+#   - "the "X" slice ... should be drawn wider than its share of the ring's total" (and the same
+#     for the Unassigned slice) means it takes up more of the ring than its SIZE divided by what
+#     the ring adds up to. This needs no number: it is the departure from exact proportion itself.
+#     The scenarios use it only for slices far too small to see at their own share (one cent, or
+#     one euro, of 2000 euro), which any visible minimum must widen.
+#   - "the "X" slice ... should be drawn N% filled" is how much of the slice, AS DRAWN, is filled
+#     in. It is FILLED divided by SIZE, so a widened slice is filled in the same proportion as it
+#     would be at its own size.
 #   - "should be empty, with a hint that there is no income in it" is the empty ring. The hint's
 #     wording is copy, not a term; what is fixed is what it says.
 #   - "X should have no slice in the ring for ..." is the one-category form of what the table
@@ -306,6 +337,81 @@ Feature: See where my money goes on the Overview
     And the ring for the current budget period should add up to 50 euro
     And Unassigned in the current budget period should be -50 euro
     And the current budget period should be shown as over-assigned
+
+  # ----------------------------------------------------------------------------------
+  # Every slice is drawn at least a minimum width
+  #
+  # Revised by the stakeholder at the first demo, 2026-09-26. Small budgets could hardly be seen
+  # in the ring, let alone whether anything had been spent against them. He chose a minimum width
+  # over keeping the ring exact and over putting names beside it, and ruled that the minimum
+  # applies to every slice, the Unassigned slice included. The exact figures are still in the
+  # rows, and at the slice itself when it is pointed at (point-at-a-slice.feature).
+  #
+  # No scenario here has more than three slices, so there is always room for every minimum. What
+  # happens when minimums leave the other slices too little room is for the plan, and nothing
+  # here asserts it.
+  # ----------------------------------------------------------------------------------
+
+  # One cent of 2000 euro is one two-hundred-thousandth of the ring, far too thin to see. Both the
+  # one-cent budget and the one cent of Unassigned are widened, and their sizes are still one cent.
+  Scenario: A one-cent budget and one cent of Unassigned are each drawn at least the minimum width
+    Given I have already recorded 2000 euro of income in the current budget period
+    And I have a budget of 1999.98 euro for "Groceries" in the current budget period
+    And I have a budget of 0.01 euro for "Hobby" in the current budget period
+    Then the ring for the current budget period should have exactly these category slices, in this order:
+      | category  | size    | filled | over budget |
+      | Groceries | 1999.98 | 0.00   | no          |
+      | Hobby     | 0.01    | 0.00   | no          |
+    And the ring for the current budget period should have an Unassigned slice of 0.01 euro
+    And the ring for the current budget period should add up to 2000 euro
+    And every slice in the ring for the current budget period should be drawn at least the minimum slice width
+    And the "Hobby" slice in the ring for the current budget period should be drawn wider than its share of the ring's total
+    And the Unassigned slice in the ring for the current budget period should be drawn wider than its share of the ring's total
+
+  # The stakeholder's second complaint: whether anything had been spent against a small budget.
+  # One euro of 2000 is too thin to see at its own share, so the slice is widened, and its fill is
+  # a share of the slice as drawn. A quarter spent is a quarter filled, however wide the slice is
+  # drawn.
+  Scenario Outline: A widened slice is filled in as far as its budget has been spent
+    Given I have already recorded 2000 euro of income in the current budget period
+    And I have a budget of 1 euro for "Hobby" in the current budget period
+    And I have already spent <spent> euro on "Hobby" in the current budget period
+    Then the ring for the current budget period should have exactly these category slices, in this order:
+      | category | size | filled   | over budget |
+      | Hobby    | 1.00 | <filled> | <over>      |
+    And the "Hobby" slice in the ring for the current budget period should be drawn wider than its share of the ring's total
+    And the "Hobby" slice in the ring for the current budget period should be drawn <drawn>% filled
+    And the ring for the current budget period should have an Unassigned slice of 1999 euro
+    And the ring for the current budget period should add up to 2000 euro
+
+    Examples: within budget
+      | spent | filled | over | drawn |
+      | 0.25  | 0.25   | no   | 25    |
+
+    Examples: exactly on budget, so filled completely and not over budget
+      | spent | filled | over | drawn |
+      | 1.00  | 1.00   | no   | 100   |
+
+    Examples: over budget, so filled completely and marked
+      | spent | filled | over | drawn |
+      | 1.01  | 1.00   | yes  | 100   |
+
+  # Over-assigned, the ring is the budgets only (above), and the minimum applies to them just the
+  # same. The sizes add up to more than the income, as they do in any over-assigned ring.
+  Scenario: In an over-assigned ring, a one-cent budget is still drawn at least the minimum width
+    Given I have already recorded 1500 euro of income in the current budget period
+    And I have a budget of 1500 euro for "Groceries" in the current budget period
+    And I have a budget of 0.01 euro for "Hobby" in the current budget period
+    Then the ring for the current budget period should have no Unassigned slice
+    And the ring for the current budget period should have exactly these category slices, in this order:
+      | category  | size    | filled | over budget |
+      | Groceries | 1500.00 | 0.00   | no          |
+      | Hobby     | 0.01    | 0.00   | no          |
+    And the ring for the current budget period should add up to 1500.01 euro
+    And Unassigned in the current budget period should be -0.01 euro
+    And the current budget period should be shown as over-assigned
+    And every slice in the ring for the current budget period should be drawn at least the minimum slice width
+    And the "Hobby" slice in the ring for the current budget period should be drawn wider than its share of the ring's total
 
   # ----------------------------------------------------------------------------------
   # The empty ring

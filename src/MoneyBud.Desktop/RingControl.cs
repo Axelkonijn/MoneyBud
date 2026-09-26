@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Media;
 using MoneyBud.Presentation;
 
@@ -13,13 +14,24 @@ namespace MoneyBud.Desktop;
 /// spent laid over it in full colour, so what is left of the plan is the pale part. An overspent
 /// slice is full and gets an outer edge in the marker's colour. <i>Unassigned</i> is the grey last
 /// slice. An empty ring is a grey outline; the hint is text laid over it by the window.</para>
+///
+/// <para>Pointing: the control turns where the pointer is into a share of the ring, or nothing
+/// when it is off the band, and hands it to <see cref="MoneyBudApp.PointAt"/>, which decides which
+/// slice that is. The slice it names comes back as <see cref="Pointed"/> and is drawn
+/// highlighted.</para>
 /// </summary>
 public sealed class RingControl : Control
 {
     public static readonly StyledProperty<Ring?> RingProperty =
         AvaloniaProperty.Register<RingControl, Ring?>(nameof(Ring));
 
-    static RingControl() => AffectsRender<RingControl>(RingProperty);
+    public static readonly StyledProperty<RingSlice?> PointedProperty =
+        AvaloniaProperty.Register<RingControl, RingSlice?>(nameof(Pointed));
+
+    public static readonly StyledProperty<MoneyBudApp?> AppProperty =
+        AvaloniaProperty.Register<RingControl, MoneyBudApp?>(nameof(App));
+
+    static RingControl() => AffectsRender<RingControl>(RingProperty, PointedProperty);
 
     public Ring? Ring
     {
@@ -27,17 +39,64 @@ public sealed class RingControl : Control
         set => SetValue(RingProperty, value);
     }
 
-    private const double Thickness = 0.28;
+    public RingSlice? Pointed
+    {
+        get => GetValue(PointedProperty);
+        set => SetValue(PointedProperty, value);
+    }
+
+    public MoneyBudApp? App
+    {
+        get => GetValue(AppProperty);
+        set => SetValue(AppProperty, value);
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        App?.PointAt(ShareAt(e.GetPosition(this)));
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        App?.PointAt(null);
+    }
+
+    /// <summary>The share of the ring, clockwise from the top, under a point on the band; null off it.</summary>
+    private double? ShareAt(Point point)
+    {
+        var (centre, outer, inner) = Measures();
+        var dx = point.X - centre.X;
+        var dy = point.Y - centre.Y;
+        var distance = Math.Sqrt(dx * dx + dy * dy);
+        if (outer <= 0 || distance < inner || distance > outer + HighlightEdge) return null;
+
+        var share = (Math.Atan2(dy, dx) + Math.PI / 2) / (2 * Math.PI);
+        return share < 0 ? share + 1 : share;
+    }
+
+    private (Point Centre, double Outer, double Inner) Measures()
+    {
+        var size = Math.Min(Bounds.Width, Bounds.Height);
+        var outer = size / 2 - 10;
+        return (new Point(Bounds.Width / 2, Bounds.Height / 2), outer, outer * (1 - Thickness));
+    }
+
+    private const double Thickness = 0.24;
+
+    // How far the slice pointed at stands out past the ring; still part of the slice to point at.
+    private const double HighlightEdge = 4;
     private const double GapShare = 0.004;
 
     public override void Render(DrawingContext context)
     {
-        var size = Math.Min(Bounds.Width, Bounds.Height);
-        if (size <= 0) return;
+        // Transparent, but drawn, so the whole control answers the pointer: the gaps and the
+        // centre as well as the band, which is how pointing at nothing is noticed.
+        context.FillRectangle(Brushes.Transparent, new Rect(Bounds.Size));
 
-        var centre = new Point(Bounds.Width / 2, Bounds.Height / 2);
-        var outer = size / 2 - 6;
-        var inner = outer * (1 - Thickness);
+        var (centre, outer, inner) = Measures();
+        if (outer <= 0) return;
 
         if (Ring is not { IsEmpty: false } ring)
         {
@@ -54,17 +113,20 @@ public sealed class RingControl : Control
             var slice = ring.Slices[i];
             var colour = slice.IsUnassigned ? SliceColours.Unassigned : SliceColours.ForSlice(i);
             var start = slice.Start + gap / 2;
-            var sweep = Math.Max(slice.Sweep - gap, 0.0005);
+            var sweep = Math.Max(slice.Sweep - gap, 0);
+            var pointed = slice == Pointed;
+            var edge = pointed ? HighlightEdge : 0;
 
-            context.DrawGeometry(new SolidColorBrush(colour, 0.28), null, Band(centre, outer, inner, start, sweep));
+            context.DrawGeometry(new SolidColorBrush(colour, pointed ? 0.45 : 0.28), null,
+                Band(centre, outer + edge, inner, start, sweep));
 
             if (slice.FilledShare > 0)
                 context.DrawGeometry(new SolidColorBrush(colour), null,
-                    Band(centre, outer, inner, start, sweep * slice.FilledShare));
+                    Band(centre, outer + edge, inner, start, sweep * slice.FilledShare));
 
             if (slice.Marker == Marker.Over)
                 context.DrawGeometry(SliceColours.OverBrush, null,
-                    Band(centre, outer + 5, outer + 1, start, sweep));
+                    Band(centre, outer + edge + 5, outer + edge + 1, start, sweep));
         }
     }
 

@@ -27,6 +27,7 @@ public sealed class FormTests
         Assert.Equal((new DateOnly(2026, 3, 15), "Boodschappen", "Markt", Money.FromCents(1250)),
             (expense.Date, expense.Category, expense.Label, expense.Amount));
         Assert.Null(form.Amount);
+        Assert.Null(form.Category);
         Assert.Null(form.Label);
         Assert.False(app.Notice!.IsRefusal);
     }
@@ -42,7 +43,38 @@ public sealed class FormTests
 
         Assert.Empty(app.Overview.Expenses);
         Assert.Equal("12,345", form.Amount);
+        Assert.Equal("Boodschappen", form.Category);
         Assert.True(app.Notice!.IsRefusal);
+    }
+
+    // The category box empties with the rest of its form, but only once the act went through
+    // (arc42 §12, first demo).
+    [Fact]
+    public void An_assignment_that_goes_through_empties_the_category_box()
+    {
+        var form = app.AssignForm;
+        form.Amount = "50";
+        form.Category = "hobby";
+
+        form.SubmitCommand.Execute(null);
+
+        Assert.Equal(Money.FromCents(5000), app.Ledger.BudgetFor("Hobby", app.ShownPeriod));
+        Assert.Null(form.Amount);
+        Assert.Null(form.Category);
+    }
+
+    [Fact]
+    public void A_refused_assignment_keeps_its_category_to_be_corrected()
+    {
+        var form = app.AssignForm;
+        form.Amount = "50";
+        form.Category = "Hobbie";
+
+        form.SubmitCommand.Execute(null);
+
+        Assert.True(app.Notice!.IsRefusal);
+        Assert.Equal("50", form.Amount);
+        Assert.Equal("Hobbie", form.Category);
     }
 
     [Fact]

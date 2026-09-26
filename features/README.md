@@ -61,12 +61,14 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Eleven feature files exist, and every scenario in all of them passes:
+Twelve feature files exist, and every scenario in all of them passes. The first demo feedback
+round's scenarios, all of `point-at-a-slice.feature` and the new scenarios in `overview.feature`,
+were approved at the scenario gate on 2026-09-26 and are bound.
 
 | Capability | File |
 |---|---|
 | Recording | `record-expense.feature`, `record-income.feature` |
 | Categories | `add-category.feature`, `archive-category.feature` |
 | Planning | `assign-to-category.feature` |
-| The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature` |
+| The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
 | Typing | `type-an-amount.feature` — the one file whose amounts are quoted text as typed, not numbers |

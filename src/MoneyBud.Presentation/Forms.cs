@@ -26,6 +26,7 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
         if (result is not { WasRecorded: true }) return;
 
         Amount = null;
+        Category = null;
         Label = null;
         Date = null;
     }
@@ -88,6 +89,7 @@ public sealed partial class AssignForm : ObservableObject
         if (result is not { WasAssigned: true }) return;
 
         Amount = null;
+        Category = null;
     }
 }
 

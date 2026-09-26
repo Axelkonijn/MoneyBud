@@ -183,6 +183,105 @@ public sealed class ScreenSteps(SpecContext context)
     public void ThenShouldHaveNoSlice(string category, string which) =>
         Assert.DoesNotContain(RingOf(which).CategorySlices, s => s.Category == category);
 
+    // ------------------------------------------------------------------- Then: how slices are drawn
+
+    // The minimum is read from where the screen keeps it, so these hold for the width approved at
+    // the plan gate; "wider than its share" is the guard that a minimum of zero cannot pass.
+    [Then(@"^every slice in the ring for the (current|previous|next) budget period should be drawn at least the minimum slice width$")]
+    public void ThenEverySliceShouldBeDrawnAtLeastTheMinimum(string which)
+    {
+        var ring = RingOf(which);
+        Assert.NotEmpty(ring.Slices);
+        Assert.All(ring.Slices, s => Assert.True(s.Sweep >= Ring.MinimumSweep - 1e-12,
+            $"{s.Category ?? "Unassigned"} is drawn at {s.Sweep:P3}, under the minimum of {Ring.MinimumSweep:P0}."));
+    }
+
+    [Then(@"^the ""([^""]*)"" slice in the ring for the (current|previous|next) budget period should be drawn wider than its share of the ring's total$")]
+    public void ThenTheSliceShouldBeDrawnWiderThanItsShare(string category, string which) =>
+        AssertDrawnWiderThanItsShare(RingOf(which), CategorySlice(which, category));
+
+    [Then(@"^the Unassigned slice in the ring for the (current|previous|next) budget period should be drawn wider than its share of the ring's total$")]
+    public void ThenTheUnassignedSliceShouldBeDrawnWiderThanItsShare(string which)
+    {
+        var ring = RingOf(which);
+        AssertDrawnWiderThanItsShare(ring, ring.UnassignedSlice ?? throw new InvalidOperationException("There is no Unassigned slice."));
+    }
+
+    [Then(@"^the ""([^""]*)"" slice in the ring for the (current|previous|next) budget period should be drawn (\d+)% filled$")]
+    public void ThenTheSliceShouldBeDrawnFilled(string category, string which, int percent) =>
+        Assert.Equal(percent / 100.0, CategorySlice(which, category).FilledShare, precision: 9);
+
+    private static void AssertDrawnWiderThanItsShare(Ring ring, RingSlice slice)
+    {
+        var share = (double)slice.Size.Cents / ring.Total.Cents;
+        Assert.True(slice.Sweep > share,
+            $"{slice.Category ?? "Unassigned"} is drawn at {slice.Sweep:P3}, no wider than its share of {share:P3}.");
+    }
+
+    private RingSlice CategorySlice(string which, string category) =>
+        RingOf(which).CategorySlices.SingleOrDefault(s => s.Category == category)
+        ?? throw new InvalidOperationException($"\"{category}\" has no slice.");
+
+    // ------------------------------------------------------------------- pointing at a slice
+
+    // Points through MoneyBudApp, at the middle of the slice's share of the ring on screen, so the
+    // app's own SliceAt decides which slice that is.
+    [When(@"^I point at the ""([^""]*)"" slice in the ring for the (current|previous|next) budget period$")]
+    public void WhenIPointAtTheSlice(string category, string which)
+    {
+        ShowOnScreen(which);
+        var slice = App.Overview.Ring.CategorySlices.SingleOrDefault(s => s.Category == category)
+            ?? throw new InvalidOperationException($"\"{category}\" has no slice to point at.");
+        App.PointAt(slice.Start + slice.Sweep / 2);
+    }
+
+    [When(@"^I point at the Unassigned slice in the ring for the (current|previous|next) budget period$")]
+    public void WhenIPointAtTheUnassignedSlice(string which)
+    {
+        ShowOnScreen(which);
+        var slice = App.Overview.Ring.UnassignedSlice
+            ?? throw new InvalidOperationException("There is no Unassigned slice to point at.");
+        App.PointAt(slice.Start + slice.Sweep / 2);
+    }
+
+    [Then(@"^the slice pointed at should show these figures:$")]
+    public void ThenTheSlicePointedAtShouldShowTheseFigures(Table table)
+    {
+        var expected = table.Rows.Single();
+        var row = App.PointedRow ?? throw new InvalidOperationException("No category slice is pointed at.");
+
+        Assert.False(App.RingCentreShowsUnassigned);
+        Assert.Equal(
+            (expected["category"], SpecParsing.MoneyAmount(expected["budget"]), SpecParsing.MoneyAmount(expected["spent"]),
+             SpecParsing.MoneyAmount(expected["remaining"]), YesNo(expected["over budget"]) ? Marker.Over : Marker.None),
+            (row.Name, row.Budget, row.Spent, row.Remaining, row.Marker));
+    }
+
+    [Then(@"^the slice pointed at should show Unassigned of (\S+) euro$")]
+    public void ThenTheSlicePointedAtShouldShowUnassigned(string amount)
+    {
+        var slice = App.PointedSlice ?? throw new InvalidOperationException("Nothing is pointed at.");
+
+        Assert.True(slice.IsUnassigned, "The Unassigned slice should be pointed at.");
+        Assert.True(App.RingCentreShowsUnassigned, "The ring's centre should show Unassigned.");
+        Assert.Equal(SpecParsing.MoneyAmount(amount), App.Overview.Unassigned);
+    }
+
+    [Then(@"^the slice pointed at should show that its category is archived$")]
+    public void ThenTheSlicePointedAtShouldShowArchived() =>
+        Assert.True(App.PointedRow?.IsArchived, "The slice pointed at should show that its category is archived.");
+
+    [Then(@"^the slice pointed at should not show that its category is archived$")]
+    public void ThenTheSlicePointedAtShouldNotShowArchived() =>
+        Assert.False(App.PointedRow?.IsArchived ?? throw new InvalidOperationException("No category slice is pointed at."));
+
+    private void ShowOnScreen(string which)
+    {
+        var period = Ledger.Period(which);
+        while (App.ShownPeriod.FirstDay > period.FirstDay) App.StepBack();
+        while (App.ShownPeriod.FirstDay < period.FirstDay) App.StepForward();
+    }
+
     [Then(@"^Unassigned in the (current|previous|next) budget period should be marked the same way as a category that is over budget$")]
     public void ThenUnassignedShouldBeMarkedLikeOverBudget(string which)
     {

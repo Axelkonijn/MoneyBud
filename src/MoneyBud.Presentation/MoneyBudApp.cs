@@ -92,6 +92,43 @@ public sealed partial class MoneyBudApp : ObservableObject
     private static readonly StringComparer Alphabetical =
         StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, ignoreCase: true);
 
+    // ------------------------------------------------------------------ pointing at the ring
+
+    private double? pointedAt;
+
+    /// <summary>
+    /// Points at the ring on screen, at a share of it read clockwise from the top, or at nothing
+    /// (arc42 §12, <i>Hovering a slice shows its figures</i>). The Desktop only turns where the
+    /// pointer is into that share.
+    /// </summary>
+    public void PointAt(double? share)
+    {
+        pointedAt = share;
+        foreach (var name in PointingNames) OnPropertyChanged(name);
+    }
+
+    /// <summary>
+    /// The slice pointed at in the ring on screen, or null. Worked out afresh from the Overview,
+    /// so it never shows a figure that has since changed.
+    /// </summary>
+    public RingSlice? PointedSlice => pointedAt is { } share ? Overview.Ring.SliceAt(share) : null;
+
+    /// <summary>
+    /// The row of the category slice pointed at, which the ring's centre shows: everything the
+    /// row shows. Null when nothing is pointed at, or the <i>Unassigned</i> slice is.
+    /// </summary>
+    public CategoryRow? PointedRow => PointedSlice?.Row;
+
+    /// <summary>
+    /// Whether the ring's centre shows <i>Niet toegewezen</i> and its figure: while no category
+    /// slice is pointed at, which is also what pointing at the <i>Unassigned</i> slice shows. An
+    /// empty ring shows its hint there instead.
+    /// </summary>
+    public bool RingCentreShowsUnassigned => PointedRow is null && !Overview.Ring.IsEmpty;
+
+    private static readonly string[] PointingNames =
+        [nameof(PointedSlice), nameof(PointedRow), nameof(RingCentreShowsUnassigned)];
+
     [ObservableProperty]
     public partial Notice? Notice { get; private set; }
 
@@ -108,6 +145,7 @@ public sealed partial class MoneyBudApp : ObservableObject
         ShownPeriod = period;
         AssignForm.Period = period;
         Notice = null;
+        pointedAt = null;
         Refresh();
     }
 
@@ -122,7 +160,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         // only listen by name.
         OnPropertyChanged(string.Empty);
         foreach (var name in (string[])[nameof(ShownPeriod), nameof(ShowsCurrentPeriod), nameof(PeriodTitle),
-                                        nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions)])
+                                        nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions),
+                                        ..PointingNames])
             OnPropertyChanged(name);
     }
 

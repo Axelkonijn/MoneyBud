@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using MoneyBud.Domain;
 using MoneyBud.Presentation;
+using MoneyBud.Specs.Support;
 
 namespace MoneyBud.Specs.Unit;
 
@@ -100,7 +101,7 @@ public sealed partial class TekstTests
 
     private static Dictionary<string, string> DisplayTermsTable()
     {
-        var glossary = File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "arc42", "12-glossary.md"));
+        var glossary = Repository.ReadText("docs", "arc42", "12-glossary.md");
         var section = glossary[glossary.IndexOf("\n## Dutch display terms", StringComparison.Ordinal)..];
         section = section[..section.IndexOf("\n## ", 5, StringComparison.Ordinal)];
 
@@ -127,15 +128,6 @@ public sealed partial class TekstTests
                 ? $"{part} {sharedEnd}"
                 : part)
             .ToArray();
-    }
-
-    private static string RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "MoneyBud.slnx")))
-            directory = directory.Parent;
-
-        return directory?.FullName ?? throw new InvalidOperationException("Could not find the repository root.");
     }
 
     private static void AssertWorded(IEnumerable<string> sentences)

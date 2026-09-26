@@ -44,7 +44,7 @@ quietly.
 
 | Path | Contents |
 |---|---|
-| `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones |
+| `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones. Feedback given in English is translated, and the round says so at the top |
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 574 passing: 324 scenario cases, 250 developer unit tests
+dotnet test  MoneyBud.slnx     # 620 passing: 340 scenario cases, 280 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
 ```
 
@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the UI increment shipped green and was merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-26, after the first feedback round was built, tried by Axel and merged into `main`. Update this when a stage completes._
 
 **Done: all five stages, five times — for `record-expense`, `record-income`, categories,
 assigning and the desktop UI.** All five are built and green.
@@ -245,10 +245,39 @@ untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
 **Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
 category's last figure is **not offered back**.
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
+**The first feedback round is done and green, built on branch `feedback-round-1` and merged into
+`main`.** Axel ran the result himself on 2026-09-26: "it looks great". Axel ran the demo on 2026-09-26 in a guided session; his feedback is in
+[`docs/stakeholder/2026-09-26-demo-feedback.md`](docs/stakeholder/2026-09-26-demo-feedback.md).
+All five stages ran the same day: rulings in §12, scenarios **approved at the first gate**
+(`overview.feature` revised, `point-at-a-slice.feature` new), the plan **approved at the second**,
+and `spec-reviewer` found no faked scenario and three low defects, all fixed. What the plan
+settled: the minimum is **2%** of the ring (`Ring.MinimumSweep`); smaller slices are widened and
+the rest give way in proportion, so a larger slice is never narrower and *Unassigned* counts like
+any other; past 50 slices all are drawn equal. A slice's details show **in the ring's hole**,
+which otherwise shows *Niet toegewezen*. The field order is held by a unit test that **reads
+`MainWindow.axaml`** — an approved exception to the untested Desktop. The "groc" defect did not
+reproduce in a headless run (a picked suggestion does reach the form); the box now empties
+either way. Three changes, all small:
 
-- **Demo it to Axel and gather feedback** — the point of ADR 0002. That feedback may reorder
-  everything below.
+- **The category box empties after every entry that goes through**, expense and assign alike;
+  a refusal keeps it, like every other field.
+- **The ring becomes the centrepiece** of the middle column, rows below it; **hovering a slice
+  shows** everything its row does — category, Budget, Uitgegeven, Resterend, the marker,
+  *Gearchiveerd* — and the *Niet toegewezen* slice shows its figure; **every slice, Unassigned
+  included, gets a minimum width**. That minimum **revised an approved rule** — the ring was
+  exactly proportional. **The fill stays exact**: no minimum fill.
+- **Field order: the "what" before the amount.** Expense: Omschrijving → Categorie → Bedrag →
+  Datum. Income: Omschrijving → Bedrag → Datum. Assigning: Categorie → Bedrag.
+
+The field order and the emptying box are window and form behaviour: unit tests, not scenarios.
+Axel's remark that the date stays on today after stepping to another month is an **observation,
+not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
+Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
+
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Axel
+said on 2026-09-26 that it is time to **move on to new slices**, so the next session starts at
+**stage 1 of the next one**: a conversation with Axel, not a delegation.
+
 - **Opening a period** — offering last period's figures back and the one action that assigns them
   in full. Settled in §12, not built.
 - **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
