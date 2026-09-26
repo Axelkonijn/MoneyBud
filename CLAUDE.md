@@ -278,9 +278,21 @@ Correcting entries and keeping data are acknowledged as missing and **explicitly
 said on 2026-09-26 that it is time to **move on to new slices**, so the next session starts at
 **stage 1 of the next one**: a conversation with Axel, not a delegation.
 
-- **Opening a period** — offering last period's figures back and the one action that assigns them
-  in full. Settled in §12, not built.
-- **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
+Order agreed with Axel on 2026-09-26:
+
+1. **Correcting things — start here.** Changing and removing an income or an expense; renaming
+   a category (deferred in increment 3, not rejected); possibly deleting a category that was
+   **never used**. Archiving stays the answer for a category with history — deleting it would
+   rewrite past periods. Stage 1 must put the knock-on cases to Axel, not settle them quietly:
+   removing an income that leaves a period over-assigned, a changed date that moves an expense
+   into another period, and a correction in a period whose leftovers are later swept.
+2. **Persistence** — deliberately *after* corrections. While nothing is kept, closing MoneyBud
+   discards every mistake; once data is kept, an uncorrectable typo is permanent. §8.3's trigger
+   has not fired; Axel is choosing to do it next.
+3. **Opening a period** — offering last period's figures back and the one action that assigns them
+   in full. Settled in §12, not built. After persistence, because it matters once MoneyBud is used
+   across real months.
+4. **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
