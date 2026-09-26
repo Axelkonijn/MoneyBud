@@ -26,20 +26,43 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
     /// </summary>
     public int? SliceIndex { get; init; }
 
+    /// <summary>
+    /// Whether the row carries the delete button: the category has no history in any period
+    /// (arc42 §12, *Deleting a category that has no history anywhere*). The archive button is a
+    /// separate act and stays, so nothing is decided for the user.
+    /// </summary>
+    public bool CanDelete { get; init; }
+
+    /// <summary>Whether this row's name is being renamed, and so shows a text box in its place.</summary>
+    public bool IsRenaming { get; init; }
+
     public bool IsOverBudget => Marker == Marker.Over;
     public string BudgetText => Tekst.Euro(Budget);
     public string SpentText => Tekst.Euro(Spent);
     public string RemainingText => Tekst.Euro(Remaining);
 }
 
-public sealed record ExpenseLine(DateOnly Date, string Category, string? Label, Money Amount)
+/// <summary>
+/// An expense's row in the period's list. It carries the expense itself, because clicking the row
+/// is how that expense is picked to be changed or removed (arc42 §12, *On screen: picking an entry
+/// to correct*), and two identical rows are still two expenses.
+/// </summary>
+public sealed record ExpenseLine(Expense Entry)
 {
+    public DateOnly Date => Entry.Date;
+    public string Category => Entry.Category.Name;
+    public string? Label => Entry.Label;
+    public Money Amount => Entry.Amount;
     public string DateText => Tekst.DayName(Date);
     public string AmountText => Tekst.Euro(Amount);
 }
 
-public sealed record IncomeLine(DateOnly Date, string Label, Money Amount)
+/// <summary>An income's row in the period's list, carrying the income for the reason <see cref="ExpenseLine"/> does.</summary>
+public sealed record IncomeLine(Income Entry)
 {
+    public DateOnly Date => Entry.Date;
+    public string Label => Entry.Label;
+    public Money Amount => Entry.Amount;
     public string DateText => Tekst.DayName(Date);
     public string AmountText => Tekst.Euro(Amount);
 }
@@ -67,7 +90,8 @@ public sealed record PeriodOverview(
     /// <summary>What an empty ring says instead of being blank. Null when there is a ring to draw.</summary>
     public string? RingHint => Ring.IsEmpty ? Tekst.EmptyRing : null;
 
-    public static PeriodOverview Of(Ledger ledger, BudgetPeriod period)
+    /// <param name="renaming">The name of the category being renamed, if any, whose row shows a text box.</param>
+    public static PeriodOverview Of(Ledger ledger, BudgetPeriod period, string? renaming = null)
     {
         // The display rule decides which categories are listed, in the order they were added.
         // Sorting by Budget is stable, so equal budgets — every zero among them — keep that
@@ -78,7 +102,11 @@ public sealed record PeriodOverview(
                 ledger.BudgetFor(c.Name, period),
                 ledger.SpentOn(c.Name, period),
                 ledger.RemainingFor(c.Name, period),
-                ledger.IsArchived(c.Name)))
+                ledger.IsArchived(c.Name))
+            {
+                CanDelete = ledger.CanDelete(c.Name),
+                IsRenaming = c.Name == renaming,
+            })
             .OrderByDescending(r => r.Budget.Cents)
             .ToList();
 
@@ -95,12 +123,8 @@ public sealed record PeriodOverview(
             rows,
             ring,
             unassigned,
-            NewestFirst(ledger.ExpensesIn(period), e => e.Date)
-                .Select(e => new ExpenseLine(e.Date, e.Category.Name, e.Label, e.Amount))
-                .ToList(),
-            NewestFirst(incomes, i => i.Date)
-                .Select(i => new IncomeLine(i.Date, i.Label, i.Amount))
-                .ToList());
+            NewestFirst(ledger.ExpensesIn(period), e => e.Date).Select(e => new ExpenseLine(e)).ToList(),
+            NewestFirst(incomes, i => i.Date).Select(i => new IncomeLine(i)).ToList());
     }
 
     /// <summary>

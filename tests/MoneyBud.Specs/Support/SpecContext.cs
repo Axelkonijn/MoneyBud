@@ -135,10 +135,41 @@ public sealed class SpecContext
         LastAttempt = new Archived(category);
     }
 
+    public void Record(ChangeExpenseResult result) => LastAttempt = result;
+
+    public void Record(ChangeIncomeResult result) => LastAttempt = result;
+
+    public void Record(RenameCategoryResult result) => LastAttempt = result;
+
+    public void RecordDeleted(Category category) => LastAttempt = new Deleted(category);
+
+    /// <summary>
+    /// An entry was removed, after the user confirmed. <paramref name="What"/> is "expense" or
+    /// "income"; <paramref name="Asked"/> and <paramref name="Said"/> are the question put first
+    /// and what MoneyBud said afterwards.
+    /// </summary>
+    public sealed record Removed(string What, string Asked, string Said);
+
+    /// <summary>The user was asked whether to remove an entry, and said no.</summary>
+    public sealed record Declined(string What);
+
+    public void RecordRemoved(string what, string asked, string said) => LastAttempt = new Removed(what, asked, said);
+
+    public void RecordDeclined(string what) => LastAttempt = new Declined(what);
+
+    /// <summary>
+    /// Whether the last removal asked first: a question was waiting while the entry was still
+    /// there. Null until something was removed or declined.
+    /// </summary>
+    public bool? AskedFirst { get; set; }
+
+    /// <summary>Deleting answers with the category it deleted, so this wraps it, as <see cref="Archived"/> does.</summary>
+    public sealed record Deleted(Category Category);
+
     /// <summary>
     /// An entry whose typed amount the screen could not read, so the ledger was never asked
-    /// (features/type-an-amount.feature). <paramref name="What"/> is "expense", "income" or
-    /// "assignment".
+    /// (features/type-an-amount.feature). <paramref name="What"/> is "expense", "income",
+    /// "assignment" or "change".
     /// </summary>
     public sealed record Unread(string Typed, string What);
 

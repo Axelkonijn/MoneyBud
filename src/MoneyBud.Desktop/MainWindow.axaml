@@ -41,6 +41,30 @@
     <Style Selector="TextBox, AutoCompleteBox, CalendarDatePicker">
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
+    <!-- A row in a transaction list: clicking it loads the entry into its form (arc42 §12). -->
+    <Style Selector="Button.entry">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="6,4" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <!-- The small buttons under a category's name. -->
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#1F6F63" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <!-- The badge that says a form is changing an entry rather than recording one. -->
+    <Style Selector="Border.editing">
+      <Setter Property="Background" Value="#FFF4E0" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="8,2" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
   </Window.Styles>
 
   <DockPanel Margin="16">
@@ -60,12 +84,24 @@
               Content="{x:Static p:Tekst.NextPeriod}" />
     </Grid>
 
-    <!-- What MoneyBud said about the last thing done. -->
-    <Border DockPanel.Dock="Bottom" Margin="0,14,0,0" CornerRadius="6" Padding="12,8"
-            IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}"
-            Background="{Binding Notice.IsRefusal, Converter={x:Static d:NoticeBackground.Instance}, FallbackValue={x:Null}}">
-      <TextBlock Text="{Binding Notice.Text, FallbackValue=''}" TextWrapping="Wrap" />
-    </Border>
+    <!-- What MoneyBud said about the last thing done, and the one question it asks: whether to
+         remove an entry, answered here in the message bar. -->
+    <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0" Spacing="6">
+      <Border CornerRadius="6" Padding="12,8" Background="#FFF4E0" IsVisible="{Binding IsAsking}">
+        <Grid ColumnDefinitions="*,12,Auto">
+          <TextBlock Text="{Binding Question.Text, FallbackValue=''}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+            <Button Content="{x:Static p:Tekst.Remove}" Command="{Binding ConfirmCommand}" Classes="accent" />
+            <Button Content="{x:Static p:Tekst.Cancel}" Command="{Binding DeclineCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+      <Border CornerRadius="6" Padding="12,8"
+              IsVisible="{Binding Notice, Converter={x:Static ObjectConverters.IsNotNull}}"
+              Background="{Binding Notice.IsRefusal, Converter={x:Static d:NoticeBackground.Instance}, FallbackValue={x:Null}}">
+        <TextBlock Text="{Binding Notice.Text, FallbackValue=''}" TextWrapping="Wrap" />
+      </Border>
+    </StackPanel>
 
     <Grid ColumnDefinitions="*,16,2*,16,*">
 
@@ -74,12 +110,21 @@
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Incomes}" />
           <StackPanel DockPanel.Dock="Top" DataContext="{Binding IncomeForm}" x:DataType="p:IncomeForm">
+            <Border Classes="editing" IsVisible="{Binding IsEditing}">
+              <TextBlock Text="{x:Static p:Tekst.Change}" FontSize="12" />
+            </Border>
             <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
-            <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordIncome}"
+            <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
+            <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
+              <Button Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" Margin="0,0,4,0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Content="{x:Static p:Tekst.Remove}" Command="{Binding RemoveCommand}" Margin="4,0,0,0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            </UniformGrid>
           </StackPanel>
           <Separator DockPanel.Dock="Top" Margin="0,14" />
           <Grid>
@@ -89,13 +134,16 @@
               <ItemsControl ItemsSource="{Binding Overview.Incomes}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="p:IncomeLine">
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                      <StackPanel>
-                        <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding DateText}" Classes="caption" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
-                    </Grid>
+                    <Button Classes="entry" CommandParameter="{Binding}"
+                            Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).EditIncomeCommand}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding DateText}" Classes="caption" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
@@ -175,8 +223,10 @@
             <Button Grid.Column="2" Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.AddCategory}" />
           </Grid>
 
-          <!-- One row per category the period shows, in the ring's order. -->
-          <Grid Grid.Row="3" ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,0,0,4">
+          <!-- One row per category the period shows, in the ring's order. Under each name, its
+               acts: Hernoemen always, Archiveren while in use, Verwijderen only when it has no
+               history anywhere — two separate buttons, so nothing is decided for the user. -->
+          <Grid Grid.Row="3" ColumnDefinitions="18,*,86,86,92,90" Margin="0,0,0,4">
             <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static p:Tekst.Category}" />
             <TextBlock Grid.Column="2" Classes="caption" Text="{x:Static p:Tekst.Budget}" TextAlignment="Right" />
             <TextBlock Grid.Column="3" Classes="caption" Text="{x:Static p:Tekst.Spent}" TextAlignment="Right" />
@@ -186,13 +236,36 @@
             <ItemsControl ItemsSource="{Binding Overview.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="p:CategoryRow">
-                  <Grid ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,3">
+                  <Grid ColumnDefinitions="18,*,86,86,92,90" Margin="0,3">
                     <Ellipse Width="10" Height="10" VerticalAlignment="Center"
                              Fill="{Binding SliceIndex, Converter={x:Static d:SliceColours.Swatch}}" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                      <TextBlock Text="{x:Static p:Tekst.Archived}" Classes="caption"
-                                 IsVisible="{Binding IsArchived}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Spacing="1">
+                      <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsRenaming}">
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        <TextBlock Text="{x:Static p:Tekst.Archived}" Classes="caption"
+                                   IsVisible="{Binding IsArchived}" VerticalAlignment="Center" />
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" IsVisible="{Binding !IsRenaming}">
+                        <Button Classes="link" Content="{x:Static p:Tekst.Rename}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).StartRenameCommand}"
+                                CommandParameter="{Binding Name}" />
+                        <Button Classes="link" Content="{x:Static p:Tekst.Archive}" IsVisible="{Binding !IsArchived}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).ArchiveCommand}"
+                                CommandParameter="{Binding Name}" />
+                        <Button Classes="link" Content="{x:Static p:Tekst.Delete}" IsVisible="{Binding CanDelete}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).DeleteCommand}"
+                                CommandParameter="{Binding Name}" />
+                      </StackPanel>
+
+                      <!-- Renaming: the name becomes a box, which starts out holding it. -->
+                      <TextBox IsVisible="{Binding IsRenaming}" Margin="0,0,8,0"
+                               Text="{Binding $parent[Window].((p:MoneyBudApp)DataContext).NewName}" />
+                      <StackPanel Orientation="Horizontal" IsVisible="{Binding IsRenaming}">
+                        <Button Classes="link" Content="{x:Static p:Tekst.Save}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).RenameCommand}" />
+                        <Button Classes="link" Content="{x:Static p:Tekst.Cancel}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CancelRenameCommand}" />
+                      </StackPanel>
                     </StackPanel>
                     <TextBlock Grid.Column="2" Text="{Binding BudgetText}" TextAlignment="Right" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="3" Text="{Binding SpentText}" TextAlignment="Right" VerticalAlignment="Center" />
@@ -201,10 +274,6 @@
                             HorizontalAlignment="Center">
                       <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
                     </Border>
-                    <Button Grid.Column="6" HorizontalAlignment="Right" Padding="8,2" FontSize="12"
-                            Content="{x:Static p:Tekst.Archive}" IsVisible="{Binding !IsArchived}"
-                            Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).ArchiveCommand}"
-                            CommandParameter="{Binding Name}" />
                   </Grid>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
@@ -218,6 +287,9 @@
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Expenses}" />
           <StackPanel DockPanel.Dock="Top" DataContext="{Binding ExpenseForm}" x:DataType="p:ExpenseForm">
+            <Border Classes="editing" IsVisible="{Binding IsEditing}">
+              <TextBlock Text="{x:Static p:Tekst.Change}" FontSize="12" />
+            </Border>
             <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
             <AutoCompleteBox Text="{Binding Category}" PlaceholderText="{x:Static p:Tekst.Category}"
                              FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}" MinimumPrefixLength="0"
@@ -225,8 +297,14 @@
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
-            <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordExpense}"
+            <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
+            <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
+              <Button Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" Margin="0,0,4,0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+              <Button Content="{x:Static p:Tekst.Remove}" Command="{Binding RemoveCommand}" Margin="4,0,0,0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+            </UniformGrid>
           </StackPanel>
           <Separator DockPanel.Dock="Top" Margin="0,14" />
           <Grid>
@@ -236,14 +314,17 @@
               <ItemsControl ItemsSource="{Binding Overview.Expenses}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate x:DataType="p:ExpenseLine">
-                    <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
-                      <StackPanel>
-                        <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
-                        <TextBlock Text="{Binding Label}" IsVisible="{Binding Label, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                        <TextBlock Text="{Binding DateText}" Classes="caption" />
-                      </StackPanel>
-                      <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
-                    </Grid>
+                    <Button Classes="entry" CommandParameter="{Binding}"
+                            Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).EditExpenseCommand}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel>
+                          <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
+                          <TextBlock Text="{Binding Label}" IsVisible="{Binding Label, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          <TextBlock Text="{Binding DateText}" Classes="caption" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
+                      </Grid>
+                    </Button>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>

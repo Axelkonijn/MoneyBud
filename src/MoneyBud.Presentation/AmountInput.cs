@@ -70,6 +70,23 @@ public static partial class AmountInput
         return AmountReading.Read;
     }
 
+    /// <summary>
+    /// An amount written the way this class reads it back, for loading an entry into its form:
+    /// "2000,00" — a comma and two decimals, with no thousands separator and no euro sign.
+    ///
+    /// <para>Not the way MoneyBud <i>shows</i> an amount. "€ 2.000,00" is not an amount here,
+    /// and "2.000" would be refused as ambiguous, so an entry loaded in that form could not be
+    /// saved unchanged — which is never refused (arc42 §12, *Changes and renames are announced*,
+    /// "a consequence for the build"). Two decimals always, so no amount can end in a mark and
+    /// three digits.</para>
+    /// </summary>
+    public static string Format(Domain.Money amount)
+    {
+        var cents = Math.Abs(amount.Cents);
+        return string.Create(CultureInfo.InvariantCulture,
+            $"{(amount.IsNegative ? "-" : "")}{cents / 100},{cents % 100:00}");
+    }
+
     /// <summary>For an ambiguous amount, the two things it could have meant, as MoneyBud would show them.</summary>
     public static (string AsThousands, string AsDecimal) Readings(string typed)
     {

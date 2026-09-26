@@ -202,7 +202,11 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // Holds as well when the category is not listed at all: nothing is shown as over budget then.
     [Then(@"""([^""]*)"" should not be shown as over budget")]
     public void ThenShouldNotBeShownAsOverBudget(string category) =>
-        Assert.NotEqual(Marker.Over, RowOf(category, "current")?.Marker);
+        ThenShouldNotBeShownAsOverBudgetIn(category, "current");
+
+    [Then(@"""([^""]*)"" should not be shown as over budget in the (current|previous|next) budget period")]
+    public void ThenShouldNotBeShownAsOverBudgetIn(string category, string which) =>
+        Assert.NotEqual(Marker.Over, RowOf(category, which)?.Marker);
 
     [Then(@"my ""([^""]*)"" spending in the (current|previous|next) budget period should include (\d+) expenses of (\S+) euro")]
     public void ThenMySpendingShouldIncludeNExpensesOf(
@@ -240,8 +244,17 @@ public sealed class RecordExpenseSteps(SpecContext context)
             amount, category, label, date is null ? null : Ledger.Date(date))
             ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
 
+    // A change is refused in recording's words (change-an-entry.feature), so these steps answer
+    // for the change when that is what was just done, and for the last recording otherwise.
     private void AssertRefused(ExpenseRefusal expected)
     {
+        if (context.LastAttempt is ChangeExpenseResult changed)
+        {
+            Assert.True(changed.WasRefused, "Expected the change to be refused, but it went through.");
+            Assert.Equal(expected, changed.Refusal);
+            return;
+        }
+
         Assert.False(
             context.ExpenseResult.WasRecorded, "Expected the expense to be refused, but it was recorded.");
         Assert.Equal(expected, context.ExpenseResult.Refusal);

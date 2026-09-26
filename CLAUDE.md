@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 620 passing: 340 scenario cases, 280 developer unit tests
+dotnet test  MoneyBud.slnx     # 785 passing: 467 scenario cases, 318 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
 ```
 
@@ -97,10 +97,10 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the first feedback round was built, tried by Axel and merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-26, after increment 6 (corrections) was built and reviewed, on its branch and not yet merged. Update this when a stage completes._
 
-**Done: all five stages, five times — for `record-expense`, `record-income`, categories,
-assigning and the desktop UI.** All five are built and green.
+**Done: all five stages, six times — for `record-expense`, `record-income`, categories,
+assigning, the desktop UI and correcting things.** All six are built and green.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -131,10 +131,13 @@ assigning and the desktop UI.** All five are built and green.
 name rule), `AddCategoryResult`, `BudgetPeriod`, `BudgetPeriodCalendar`, `Ledger` (which also
 archives and assigns, and whose `StartNew` seeds the default categories), `AssignResult` and
 `AssignRefusal`, and a matching pair per transaction — `Expense`, `ExpenseRefusal`,
-`RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`.
-In `MoneyBud.Presentation`: `MoneyBudApp` (the screen), `PeriodOverview` and `Ring`, the entry
-forms, `AmountInput` and `Tekst`. No storage and no accounts — both deliberate, with their
-reasoning recorded.
+`RecordExpenseResult` and `Income`, `IncomeRefusal`, `RecordIncomeResult`. Since increment 6:
+entries carry a ledger-issued `Id`, `Category` is a class with identity, and there are
+`ChangeExpenseResult`, `ChangeIncomeResult` (with `ChangeOutcome`) and `RenameCategoryResult`
+(with `RenameOutcome`, `RenameRefusal`).
+In `MoneyBud.Presentation`: `MoneyBudApp` (the screen, including the one `Question`), `PeriodOverview`
+and `Ring`, the entry forms (with their *Wijzigen* state), `AmountInput` and `Tekst`. No storage and
+no accounts — both deliberate, with their reasoning recorded.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -234,8 +237,8 @@ after Z), both fixed. All in [§12](docs/arc42/12-glossary.md), *The user interf
   *reachable*: the first time Axel minds re-entering data, storage is due.
 
 **Watch out for:** `Ledger.HasBudget` can tell "never assigned" from "assigned, then taken back
-to zero", although §12 says there is no separate "unbudgeted" state. Only test code uses it — two
-setup steps, the first-start check and one unit test — and the ring deliberately does not. If a
+to zero", although §12 says there is no separate "unbudgeted" state. Only test code uses it — setup
+steps, the first-start check and unit tests — and the ring and `CanDelete` deliberately do not. If a
 screen ever needs it, revisit §12 first ([§8.1](docs/arc42/08-crosscutting-concepts.md)).
 
 **Watch out for:** `MoneyBud.Desktop` must **decide nothing**. Narrowing the suggestions was once
@@ -274,51 +277,44 @@ Axel's remark that the date stays on today after stepping to another month is an
 not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
 Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
 
-**Increment 6 — correcting things — is at stage 5, not started**, on branch
-`increment-6-corrections`. Stages 1–3 ran on 2026-09-26: rulings in §12 (*An entry can be
-changed or removed*, *Renaming a category*, *Deleting a category that has no history anywhere*),
-four feature files approved at the first gate (`change-an-entry`, `remove-an-entry`,
-`rename-a-category`, `delete-a-category`; 73 scenarios, 127 cases, unbound). The plan was
-**approved at the second gate** the same day; Axel asked to wait for his "continue" before
-building. The plan, in outline:
+**Increment 6 — correcting things — is done and green**, on branch `increment-6-corrections`,
+**not yet merged**. Stages 1–4 ran on 2026-09-26 (rulings in §12, four feature files approved at
+the first gate — `change-an-entry`, `remove-an-entry`, `rename-a-category`, `delete-a-category`,
+73 scenarios, 127 cases — and the plan approved at the second); built on Axel's "continue" the same
+day. `spec-reviewer` found no faked scenario and one low defect (stepping wiped a *new* entry being
+typed; now only an entry being changed is dropped), fixed. arc42 §4, §5, §6, §8, §9, §11, §12 and the
+README updated; no ADR. In outline:
 
-- **Domain.** `Expense`/`Income` get a ledger-issued id, so one of two identical entries can be
-  changed in place and keep its list position. `Category` becomes a class with identity and a
-  domain-only settable `Name`, so a rename is one assignment plus re-keying the name index (§8.1
-  note, no ADR). Recording's checks extracted into one private check per transaction, shared with
-  changing. New: `ChangeExpense`/`ChangeIncome` (changed / unchanged / refused; bring-back only when
-  the category changed *onto* an archived one), `RemoveExpense`/`RemoveIncome`, `RenameCategory`
-  (renamed / unchanged / refused: blank or taken), `CanDelete` (no expense, no budget > 0 in any
-  period — **not** `HasBudget`), `DeleteCategory` (also drops zero budgets). Unreachable misuse
-  throws, like `ArchiveCategory`.
-- **Presentation.** List rows carry their entry; clicking loads it into the form (*Wijzigen*,
-  with Opslaan/Annuleren/Verwijderen). Amount loaded via new `AmountInput.Format` ("2000,00"),
-  unit-tested to read back identically. Form empties after a change, cancel or confirmed removal;
-  keeps text and stays editing after a refusal. The confirmation is a pending question on
-  `MoneyBudApp` with Confirm/Decline, **shown inline in the message bar** (Axel). **Stepping
-  period drops an edit in progress** and declines a pending question (Axel); clicking another row
-  loads that one. Rename state on `MoneyBudApp`; `CategoryRow` gains `CanDelete`. `Tekst` gains
-  the copy and Wijzigen/Verwijderen/Hernoemen, with §12's table rows added in the same commit.
-- **Tests.** Step definitions for all 127 cases through `MoneyBudApp`; unit tests for `Format`
-  round-trip, form states, identity, rename re-keying, delete cleanup, `TekstTests`.
-- **Order:** domain → steps per feature → presentation → Desktop → headless check →
-  `spec-reviewer` → docs (§8.1, §12 as built, this file, test counts).
+- **Domain.** Entries have a ledger-issued id; a change replaces the entry in place, so it keeps its
+  place. `Category` has identity and a domain-only `Name` setter, so a rename is one assignment plus
+  re-keying the name index. Recording's checks are shared with changing (`CheckExpense`,
+  `CheckIncome`); **an unchanged save is recognised before the checks**, so it cannot be refused.
+  Bring-back follows a category *change* only. `CanDelete` reads expenses and budgets > 0 — **not
+  `HasBudget`** — and `DeleteCategory` drops zero budgets too. Unreachable misuse throws.
+- **Presentation.** Rows carry their entry; clicking loads it into the form's *Wijzigen* state
+  (Opslaan / Annuleren / Verwijderen). `AmountInput.Format` loads "2000,00", unit-tested to read back
+  identically. Removing asks via `MoneyBudApp.Question`, shown in the message bar; **a question and
+  a notice are never shown together** — anything said next drops the question. Stepping drops an
+  entry being changed, a rename in progress and a waiting question, and keeps a new entry being typed.
+- **Built, not put to Axel** (§12, *Chosen in the build, not put to the stakeholder*): a rename
+  rewrites the category box of the expense and assign forms when it names the old name (else an
+  unchanged save could fail); the archive button moved under the category name beside Hernoemen and
+  Verwijderen; the question's answers are Verwijderen/Annuleren; a rename box open during the
+  once-a-minute refresh loses focus (text kept) — known, not fixed.
+- **Headless check** of the real window passed: row click loads, Opslaan changes, Verwijderen asks in
+  the bar, the rename box writes back, delete shows only on a row with no history.
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Axel
-said on 2026-09-26 that it is time to **move on to new slices**, so the next session starts at
-**stage 1 of the next one**: a conversation with Axel, not a delegation.
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Once
+Axel has tried increment 6 and it is merged, the next session starts at **stage 1 of persistence**:
+a conversation with Axel, not a delegation.
 
 Order agreed with Axel on 2026-09-26:
 
-1. **Correcting things — start here.** Changing and removing an income or an expense; renaming
-   a category (deferred in increment 3, not rejected); possibly deleting a category that was
-   **never used**. Archiving stays the answer for a category with history — deleting it would
-   rewrite past periods. Stage 1 must put the knock-on cases to Axel, not settle them quietly:
-   removing an income that leaves a period over-assigned, a changed date that moves an expense
-   into another period, and a correction in a period whose leftovers are later swept.
-2. **Persistence** — deliberately *after* corrections. While nothing is kept, closing MoneyBud
-   discards every mistake; once data is kept, an uncorrectable typo is permanent. §8.3's trigger
-   has not fired; Axel is choosing to do it next.
+1. **Correcting things — done** (increment 6, above).
+2. **Persistence — start here** — deliberately *after* corrections. While nothing is kept, closing
+   MoneyBud discards every mistake; once data is kept, an uncorrectable typo is permanent. §8.3's
+   trigger has not fired; Axel is choosing to do it next. §8.3 now also lists what storage must
+   settle about identity: entry ids are a per-run counter, and a category's name is no longer its key.
 3. **Opening a period** — offering last period's figures back and the one action that assigns them
    in full. Settled in §12, not built. After persistence, because it matters once MoneyBud is used
    across real months.

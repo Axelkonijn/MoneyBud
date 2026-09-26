@@ -68,6 +68,12 @@ own:
   *Recording income leaves every category's plan and spending untouched*
   ([`record-income.feature`](../../features/record-income.feature)) is a property of the wiring
   rather than an assertion anything has to uphold.
+- **Correcting an entry touches no budget either.** `ChangeExpense`, `ChangeIncome`,
+  `RemoveExpense` and `RemoveIncome` rewrite or drop one entry in its list and stop, apart from a
+  change bringing an archived category back. So removing or lowering an income that leaves its
+  period *Over-assigned* needs nothing to allow it: no budget moves to match, and none could, which
+  is why a past period left that way stays that way ([§12](12-glossary.md), *An entry in a past
+  period can be corrected*).
 - **A category with no budget set behaves as one budgeted at zero.** `BudgetFor` returns
   `Money.Zero` when it finds nothing, and no figure distinguishes the two, so a missing budget has
   no way to block a recording. **One query does tell them apart**: `HasBudget` says whether
@@ -82,13 +88,19 @@ own:
   does not exist. `PeriodOverview` and `Ring` read `BudgetFor` and nothing else, and no production
   code calls `HasBudget` at all. **Only the specs use it**: the *I have never set a budget* and
   *I have set no budget* *Givens*, and one *Then*, the first-start check that no category has a
-  budget or any spending, plus one unit test. **This stays a watch-out.** A query that can tell
+  budget or any spending, plus two unit tests. The second came with the corrections increment: it
+  uses `HasBudget` to show that a budget taken back to zero is still stored, and that deleting the
+  category takes it away. **This stays a watch-out.** A query that can tell
   apart two states §12 says are one is safe only while nothing a user sees is built on it. If a
-  view ever wants it, revisit §12 first. **The corrections increment adds a second place it must
+  view ever wants it, revisit §12 first. **The corrections increment added a second place it must
   not reach**: whether a category can be deleted. §12 settles that on figures alone, a budget of more
   than zero or an expense in any period, and rejected the rule `HasBudget` would give
-  ([§12](12-glossary.md), *Deleting a category that has no history anywhere*). Settled 2026-09-26;
-  not built.
+  ([§12](12-glossary.md), *Deleting a category that has no history anywhere*). **Built that way:**
+  `Ledger.CanDelete` reads the expenses and the budgets of more than zero directly, and
+  deliberately does not call `HasBudget`. So a category assigned to and then taken back to zero can
+  be deleted, as an approved scenario asserts. Its stored budgets of zero are not history, and
+  `DeleteCategory` drops them with it, so nothing of a deleted category is left behind for
+  `HasBudget` or anything else to find.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case
@@ -197,7 +209,20 @@ signature, and a second rule, "every category act tells its outcome", which is c
 | `RecordExpenseResult.CategoryBroughtBack` | A flag on a **recorded** result. Always false on a refused one | Information after the fact, **not a third outcome and not a warning**. Recording still has exactly two shapes. This only says that recording brought an archived category back, which nothing else about recording an expense would show |
 | `Ledger.Assign` → `AssignResult` | Exactly **two** shapes: assigned, handing back the category, or **refused** for one `AssignRefusal`. Two facts ride on an assigned result: `Shortfall`, how much of a negative amount could not come back, and `CategoryBroughtBack`. Both are zero or false on a refused one | Going *Over-assigned* produces a plain assignment, because there is nowhere else for it to go. `Shortfall` is the clip being **said rather than absorbed** ([§12](12-glossary.md), *An over-large negative assignment is clipped*). Like `CategoryBroughtBack`, it is information after the fact, not a warning and not a third outcome. `CategoryBroughtBack` is only ever true for a **positive** amount, and only once every check has passed. It **throws** for a `BudgetPeriod` that is not one of the ledger's calendar periods, such as a hand-made date range. A user picks a period from the calendar and cannot reach that, so, as with archiving, it is a caller's mistake rather than a situation to report |
 
-Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal` and `AssignRefusal` **values, not messages**. The wording the user
+**The corrections increment held its acts the same way**, and added one thing the others did not
+have: an outcome that is **neither success to announce nor refusal**.
+
+| Member | Its shape | What the shape holds |
+|---|---|---|
+| `Ledger.ChangeExpense` → `ChangeExpenseResult`, `Ledger.ChangeIncome` → `ChangeIncomeResult` | **Three** shapes: `ChangeOutcome.Changed`, `ChangeOutcome.Unchanged`, each handing back the entry as it now is, or **refused** for one of **recording's own** reasons, `ExpenseRefusal` or `IncomeRefusal`. `ChangeExpenseResult.CategoryBroughtBack` rides on a changed result, as on a recorded one | Reusing recording's refusal types is "a change is judged as if recorded now" ([§12](12-glossary.md)) said by a signature: there is no refusal a change can have that recording cannot. **`Unchanged` is not a refusal and not a warning.** It exists only because a change is announced and a save with nothing changed is not, so the screen has to tell them apart. **An unchanged save is recognised before any check runs**, so it cannot be refused by construction, whatever the rules have come to say about the entry since. `CategoryBroughtBack` is true only when the change moved an expense **onto** an archived category, never for fixing one already on it. Both **throw** for an entry that is not in the ledger, such as one already removed: an entry is changed from its row, so the user cannot reach that |
+| `Ledger.RemoveExpense`, `Ledger.RemoveIncome` → nothing | **No confirmation parameter and no result**. The question is asked by the screen, and these are called only once the user has said yes | Removing **is** confirmed ([§12](12-glossary.md), *Removing an entry asks first*), unlike archiving. The confirmation lives in `MoneyBudApp` ([§8.4](#84-the-presentation-layer)) and not in the domain, because it is a question put to a person, and a domain method cannot wait for an answer. Both **throw** for an entry not in the ledger |
+| `Ledger.RenameCategory` → `RenameCategoryResult` | **Three** shapes: `RenameOutcome.Renamed`, carrying the category and its `OldName` as it was stored, `RenameOutcome.Unchanged`, or **refused** with `RenameRefusal.NameMissing` or `NameTaken` | A new **spelling** of the category's own name is `Renamed`, not `Unchanged`. Only the name exactly as stored changes nothing, and that is quiet, like an unchanged entry. `OldName` is on the result because the announcement says what the category was called, and the category itself no longer knows. **Throws** for a name that is not one of your categories: a category is renamed from its row |
+| `Ledger.CanDelete`, `Ledger.DeleteCategory` → `Category` | A query, and an act that returns the deleted category so that it can be named. **No confirmation parameter** | "Deleting is never confirmed" holds by signature, as archiving does. `DeleteCategory` **throws** for an unknown name and for a category with history, because the delete button is offered only where `CanDelete` is true |
+
+Every "throws" in this increment is one of §12's non-cases: something the screen offers no way to
+do. None of them is a refusal the user could meet.
+
+Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal`, `AssignRefusal` and, since the corrections increment, `RenameRefusal` **values, not messages**. The wording the user
 sees belongs to the UI; putting copy in the domain would put it in the wrong place and would make
 re-wording it a domain change. The UI increment settled that the wording is **Dutch**
 ([§12](12-glossary.md), *The UI is in Dutch*), and built it that way. Every Dutch sentence is in
@@ -231,11 +256,40 @@ halves disagreeing about what a label is. The code holds that as one private `Le
 that both `RecordExpense` and `RecordIncome` call. There is no second place a label could be
 normalised differently.
 
+**Changing an entry reuses the same checks rather than repeating them.** The corrections increment
+extracted recording's checks into one private method per transaction, `CheckExpense` and
+`CheckIncome`, and recording and changing both call them. So a change is refused on exactly
+recording's rules, in recording's order, and a rule added to recording later reaches changing
+without anyone remembering to add it twice ([§12](12-glossary.md), *A changed entry is judged as if
+it were recorded now*).
+
 **This changed the expense side, not only the income side.** An expense's label is now trimmed too,
 and one that trims to nothing becomes no label — which an expense is allowed to have. What differs
 between the two transactions is only what each does with an empty result: an income refuses it, an
 expense accepts it. That is a difference in the requirement, not in what a label *is*, and keeping
 it to one method is what stops it becoming two.
+
+### An entry has an id, issued by the ledger
+
+Since the corrections increment, `Expense` and `Income` each carry an `Id`, issued by the `Ledger`
+from one counter when the entry is recorded. **Before that, an entry had no identity beyond its
+values**, and nothing needed one: entries were only ever added. Changing and removing need to say
+*which* entry, and values cannot:
+
+- **Two identical entries are two entries.** Removing one of them must leave the other, and
+  approved scenarios in [`remove-an-entry.feature`](../../features/remove-an-entry.feature) say so,
+  for expenses and incomes both.
+- **A change is a rewrite in place.** `ChangeExpense` and `ChangeIncome` find the entry by its id and
+  replace it where it stands in the ledger's list, keeping the id. The list is in the order
+  recorded, so a changed entry keeps its place among entries on the same date, which the approved
+  scenarios require ([§12](12-glossary.md), *A change overwrites the entry*). Removing and re-adding
+  would have put it last.
+- **A stale copy still finds its entry.** `Expense` and `Income` are immutable records, so the
+  screen may hold an older copy than the ledger's. Lookup is by id, not by the whole value, so it
+  still reaches the right entry.
+
+**The id is not shown and means nothing to the user.** It is a per-run counter, which is enough
+while nothing is kept ([§8.3](#83-persistence) says what that means for storage).
 
 ### One category name rule, held by one comparer
 
@@ -259,6 +313,24 @@ archived set all hold the `Category` itself. So once a name has been found, no s
 comparison can disagree with the first. Every `Ledger` member that takes a name goes through one
 private `Find`, so every spelling the rule matches is accepted everywhere. Recording against
 "  groceries " records against Groceries.
+
+**Since the corrections increment, `Category` has identity.** It was a record, compared by value.
+It is now a class, compared by reference, and its `Name` can be set only inside the
+domain. A category is one thing that has a name, where before it effectively *was* its name. That
+is what makes a rename cheap and complete. `Ledger.RenameCategory` is one assignment to `Name` plus
+re-keying the ledger's name index: the category is taken out under its old name and put back under
+the new one. Every budget and expense already holds the instance, so every period, past ones
+included, shows the new name with nothing else touched. That is [§12](12-glossary.md)'s *Past
+periods show the new name everywhere*, and *nothing has to remember old names*, as a property of the
+wiring. It is also why the old name is free at once: the index is the only thing that held it.
+
+**Why the setter is domain-only.** The name index is keyed by the name, so a name changed anywhere
+but in the ledger would leave the index pointing at a name the category no longer has. Keeping the
+setter `internal` keeps the only writer next to the index it has to keep in step.
+
+**No record was written for this** ([§9](09-architecture-decisions.md)), as the plan said. It
+changes how one type expresses §12's model and moves no boundary. It does matter to storage,
+though, and [§8.3](#83-persistence) says why.
 
 **Whether a category is archived is not on `Category`.** It is the ledger's set of archived
 categories. Archiving is a fact about how the ledger uses a category, not about the category, and
@@ -560,6 +632,14 @@ Two things should be settled at that point rather than drifted into: the form st
 ([§7](07-deployment-view.md) lists it as open, along with where on the machine it lives), and how
 amounts are stored (§8.2, *Still open*).
 
+**A third since the corrections increment: how identity is stored.** Two kinds of identity exist in
+memory and neither survives a restart as it is ([§8.1](#81-domain-model)). An entry's `Id` is a
+counter that starts again at every run. A category's identity is its **object**, and since renaming
+its **name is no longer an identity**: a renamed category keeps its budgets and expenses, and its old
+name can be taken by a new category. So a store that keyed budgets or expenses by category name
+would turn a rename into a broken link or a silent reassignment. Whatever form storage takes, a
+category needs a stored key of its own, and an entry an id that survives being saved and loaded.
+
 **Reconsidered for the UI increment, and kept** (2026-09-25). The UI starts with the default
 categories and nothing else, and loses everything on close. The stakeholder chose that over saving
 to a file and over starting with synthetic demo data ([§12](12-glossary.md), *What the UI starts
@@ -611,6 +691,15 @@ period that has just become past. An assignment made in that minute is refused a
 domain reads the clock itself. Any act refreshes at once, so the refusal also corrects the label.
 Nothing is announced either way, which is what §12 asks.
 
+**A second consequence, since the corrections increment, known and not fixed.** The minute's refresh
+rebuilds the category rows, and with them a rename box that is open. **The box loses keyboard
+focus.** What was typed is kept, because it lives in `MoneyBudApp.NewName` and not in the box, so
+the cost is clicking back into it, at most once a minute. It is listed with the build's other
+readings in [§12](12-glossary.md), *Chosen in the build, not put to the stakeholder*. It was left as
+it is. In the documentation's reading, a fix would either put focus handling in the Desktop or make
+the timer refresh less than everything, and the first is the kind of logic the Desktop is meant not
+to collect ([§11](11-risks-and-technical-debt.md)).
+
 ### Decided while building, not put to the stakeholder
 
 These are visible to the user and were chosen in the build. They are recorded here so that they are
@@ -626,6 +715,14 @@ ruling.
 | **Stepping clears the last notice** | A notice is about the last thing done. After stepping it would sit beside a period it may not describe |
 | **A period is named by its month, "maart 2026", or by its first and last day when it is not a calendar month** | Every period starts on the 1st in this increment, so the second form is not reachable yet. It exists so that a configurable start day would not produce a wrong month name ([§11](11-risks-and-technical-debt.md), the start-day row) |
 | **Amounts are shown as "€ 1.832,45" and "−€ 20,00"** | [§8.2](#82-money-handling), *display formatting is fixed* |
+
+**The corrections increment's choices are in [§12](12-glossary.md), not in this table.** What the
+form does around a correction was proposed by the plan and approved at the plan gate, so it is a
+ruling (*On screen: picking an entry to correct*). Six further choices were made in the build and
+not put to the stakeholder: a rename rewriting the category box, stepping cancelling a rename,
+which acts drop a waiting question, the archive button's new place, the question's two answers, and
+the rename box losing focus on the minute's refresh. They sit in §12, *Chosen in the build, not put
+to the stakeholder*, beside the rulings each one fills in.
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -646,6 +743,37 @@ have silenced exactly the case that matters.
 **The toolkit's own text follows the thread culture**, which the Desktop's `Program` fixes to nl-NL.
 That covers the date picker's month and day names, for example. MoneyBud's own text does not depend
 on it.
+
+### Correcting: a second state for the forms, and the one question
+
+The rulings are in [§12](12-glossary.md), *An entry can be changed or removed* and what follows it.
+How the presentation layer holds them:
+
+- **A row carries its entry.** `ExpenseLine` and `IncomeLine` hold the `Expense` or `Income`
+  itself, not a copy of its figures. Clicking a row calls `MoneyBudApp.EditExpense` or
+  `EditIncome`, which loads that entry into its form.
+- **The entry forms have a *Wijzigen* state.** `ExpenseForm` and `IncomeForm` hold the entry being
+  changed in `Editing`, and `IsEditing` and `SubmitText` follow from it, so the submit button reads
+  *Opslaan* instead of recording. `Load` fills the fields as the user would type them, the amount
+  through `AmountInput.Format` ([§12](12-glossary.md), *Changes and renames are announced*, "a
+  consequence for the build"). `Save`, `Remove`, `Cancel` and `Clear` are the rest of it. Saving
+  reads the fields by the same rules as recording, `AmountInput` included, because it is the same
+  form.
+- **The question is held by `MoneyBudApp`, not by a dialog.** `Question` is the text waiting for an
+  answer, and the act to do on a yes is held beside it. **The ledger is not called until
+  `Confirm`**, so nothing is removed while the question stands. `Decline` drops the question and
+  says nothing. There is only ever one question, because removing is the only act that asks
+  ([§8.1](#81-domain-model) says why the domain has no confirmation of its own). The Desktop shows it
+  in the message bar, where a notice would be.
+- **Renaming is state on `MoneyBudApp`**: `Renaming` names the category whose row shows a text box,
+  `NewName` holds what is typed in it, and `StartRename`, `SaveRename` and `CancelRename` move
+  between the two. The row learns which one it is from `CategoryRow.IsRenaming`, and whether to
+  offer *Verwijderen* from `CategoryRow.CanDelete`, which reads `Ledger.CanDelete`. So which buttons
+  a row shows is decided here, and the Desktop only binds to it.
+- **What drops what** is in [§12](12-glossary.md): stepping drops an entry being changed, a rename
+  and a waiting question, and keeps a new entry; a change saved, *Annuleren*, or another row loaded
+  drops a waiting question. `MoneyBudApp`'s stepping and each act do the dropping, so the rules are
+  in the layer the tests reach.
 
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
@@ -680,15 +808,19 @@ licence to leave a decision in the window because a text test could reach it. A 
 | Step | Acts on | Why |
 |---|---|---|
 | ***Given*** | **The ledger, directly** | Setting up is not what is under test. A budget in a past period is still made by moving the test clock and assigning ([§8.1](#81-domain-model)), so setup cannot make a state the rules forbid |
-| ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: those scenarios' amounts are all meant to reach the domain. The one exception is `type-an-amount.feature`, whose quoted amounts are sometimes meant not to (below) |
+| ***When*** | **`MoneyBudApp`, for every feature file**, the five that predate the UI included | So every scenario goes through the doors the Desktop uses. An amount arrives as the text in the scenario, read by `AmountInput`. A date the step does not name is left out, so the screen's own default decides it. A *When* whose amount is not read as one **fails the scenario** rather than passing as a refusal: those scenarios' amounts are all meant to reach the domain. The one exception is `type-an-amount.feature`, whose quoted amounts are sometimes meant not to (below). **A correction goes one step further in, through the form**: the step clicks the entry's row, changes the one field it names as the user would type it, and saves the form. So every *saved with nothing changed* scenario loads an entry and saves it back, and proves that what a form loads can be read again. A removal presses *Verwijderen*, checks that a question is waiting while the entry is still listed, and answers it |
 | ***Then*** about **what is shown** | **The presentation layer**: the period's `PeriodOverview`, its rows, ring and lists, the suggestions, and the notice | Each is a claim about what MoneyBud shows. A period is read with `OverviewFor`, without stepping to it, so checking one period never moves the screen a later step asserts on. This is what closed the [§11](11-risks-and-technical-debt.md) row about "shown" steps bound to the ledger |
 | ***Then*** about **figures and refusals** | **The domain** | A *Budget*, a *Remaining* or an *Unassigned* is a domain figure, and the rows show the same figures. A refusal is asserted as its **reason**, never as its Dutch sentence, because the sentence is copy |
 
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
-fields (`WindowMarkupTests`, above), alongside the domain's tests from earlier increments. ADR 0004's rule applies to them unchanged: a
-unit test is never the reason a behaviour exists.
+fields (`WindowMarkupTests`, above), alongside the domain's tests from earlier increments. The
+corrections increment added `CorrectionTests`, for what the scenarios cannot see: entry ids, a
+change keeping its id and place, a stale copy still finding its entry, re-keying on a rename, a
+deleted category's zero budgets going with it, and the non-cases that throw. It also added that
+`AmountInput.Format` reads back to the same amount, and the forms' *Wijzigen* state. ADR 0004's rule
+applies to them unchanged: a unit test is never the reason a behaviour exists.
 
 **Reading a typed amount has its own feature file.**
 [`type-an-amount.feature`](../../features/type-an-amount.feature) was approved at the scenario gate
@@ -718,3 +850,7 @@ unit tests came with narrowing's move into the presentation layer.
 **After the first demo's rulings**: 620 tests passing with zero warnings. That is 340 scenario
 cases, 16 more than the 324 above, from `point-at-a-slice.feature` and the new scenarios in
 `overview.feature`, and 280 developer unit tests, 30 more than above.
+
+**At the close of the corrections increment**: 785 tests passing with zero warnings. That is 467
+scenario cases, the 340 above and 127 from the four corrections feature files, and 318 developer
+unit tests, 38 more than above.

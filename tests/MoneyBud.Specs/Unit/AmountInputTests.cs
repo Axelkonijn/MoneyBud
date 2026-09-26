@@ -55,6 +55,29 @@ public sealed class AmountInputTests
     public void Is_not_an_amount(string? typed) =>
         Assert.Equal(AmountReading.NotAnAmount, AmountInput.Read(typed, out _));
 
+    // What an entry's form is loaded with must read back as exactly the amount it was, or saving
+    // the entry unchanged could be refused (arc42 §12). The cases are the ones display would get
+    // wrong: thousands, which "2.000" would make ambiguous, and whole euros, which "2000" would
+    // leave without the decimals that keep a mark away from three digits.
+    [Theory]
+    [InlineData(200000, "2000,00")]
+    [InlineData(150000, "1500,00")]
+    [InlineData(183245, "1832,45")]
+    [InlineData(3215, "32,15")]
+    [InlineData(1, "0,01")]
+    [InlineData(10, "0,10")]
+    [InlineData(0, "0,00")]
+    [InlineData(-2000, "-20,00")]
+    [InlineData(999999999999999, "9999999999999,99")]
+    public void A_formatted_amount_reads_back_as_the_same_amount(long cents, string formatted)
+    {
+        var amount = MoneyBud.Domain.Money.FromCents(cents);
+
+        Assert.Equal(formatted, AmountInput.Format(amount));
+        Assert.Equal(AmountReading.Read, AmountInput.Read(AmountInput.Format(amount), out var euros));
+        Assert.Equal(amount, MoneyBud.Domain.Money.FromEuros(euros));
+    }
+
     // Two readings, both whole cents: two thousand the Dutch way, or two euros. Refused rather
     // than guessed, because nothing further down could tell the wrong one.
     [Theory]

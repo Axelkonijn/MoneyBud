@@ -97,6 +97,8 @@ public sealed class ScreenSteps(SpecContext context)
             case ("expense", RecordExpenseResult { WasRecorded: true }):
             case ("income", RecordIncomeResult { WasRecorded: true }):
             case ("assignment", AssignResult { WasAssigned: true }):
+            case ("expense", ChangeExpenseResult { Outcome: ChangeOutcome.Changed }):
+            case ("income", ChangeIncomeResult { Outcome: ChangeOutcome.Changed }):
                 break;
             default:
                 throw new InvalidOperationException($"The last thing done was not a successful {what}.");

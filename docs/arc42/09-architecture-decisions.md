@@ -79,3 +79,11 @@ order of form fields can live only in the window's markup, so one test now reads
 text, and the Desktop is no longer entirely untested. That was approved at the plan gate as a small
 departure. It is recorded as a dated note on ADR 0006 and in [§8.4](08-crosscutting-concepts.md),
 not as a superseding record, because the three-project split stands.
+
+**The corrections increment added none** (2026-09-26), and its approved plan said so in advance. It
+introduced no technology, moved no boundary and touched no money rule. The one change that looks
+structural is that `Category` became a class with identity instead of a record, and that expenses
+and incomes gained a ledger-issued id. That is how the domain expresses renaming and changing in
+place, not a choice between architectures, so it is in [§8.1](08-crosscutting-concepts.md). Its
+consequence for storage, that a category's name can no longer serve as its key, is carried in
+[§8.3](08-crosscutting-concepts.md) for the persistence increment, where it may well need a record.

@@ -16,6 +16,8 @@ is wasted effort — pick the ones where the collaboration is non-obvious.
 This section became writable with the fifth increment, when a second building block that does
 something arrived ([§5](05-building-block-view.md)). One interaction is worth drawing. Every act the
 user can take follows its shape, so it is not repeated for income, assigning or categories.
+Changing an entry and renaming a category follow it too. **Removing an entry is the one exception**,
+described in words after the diagram, because it is the only act split across two presses.
 
 ## Recording an expense through the screen
 
@@ -80,3 +82,16 @@ so that the *Huidige periode* label follows the clock when a period ends while M
 the form makes ([§8.4](08-crosscutting-concepts.md)). The window and the form's clearing are the
 only parts of this diagram that no scenario runs through. The form's clearing has unit tests of its
 own.
+
+## Removing an entry: two presses, one call to the ledger
+
+Since the corrections increment. Pressing *Verwijderen* on a loaded entry calls
+`MoneyBudApp.AskToRemove`, which puts up a `Question` and holds the removal to be done beside it.
+**Nothing reaches the ledger at this point**, and the Overview still lists the entry. The second
+press answers the question. `Confirm` drops the question, calls `Ledger.RemoveExpense` or
+`RemoveIncome`, empties the form if it still holds that entry, and announces the removal. `Decline`
+drops the question, calls nothing, and says nothing. Stepping, loading another row, saving a change
+or *Annuleren* drop a waiting question the same way, without calling the ledger. So the domain never
+sees a removal the user did not confirm, and has no confirmation of its own
+([§8.1](08-crosscutting-concepts.md), [§8.4](08-crosscutting-concepts.md)). The removal scenarios
+run both presses, and check that the question is waiting while the entry is still listed.

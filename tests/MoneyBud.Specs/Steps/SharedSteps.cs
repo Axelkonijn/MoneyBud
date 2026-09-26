@@ -25,7 +25,10 @@ public sealed class SharedSteps(SpecContext context)
     {
         // There is no warning to assert the absence of. None of the result types has anywhere to
         // put one or an outcome between done and refused, so asserting that the act simply went
-        // through is what "not warned or asked to confirm" amounts to.
+        // through is what "not warned or asked to confirm" amounts to. The one question MoneyBud
+        // can ask is whether to remove an entry, and none may be waiting.
+        Assert.False(context.App.IsAsking, $"Expected no question, but MoneyBud asked: {context.App.Question?.Text}");
+
         switch (context.LastAttempt)
         {
             case RecordExpenseResult expense:
@@ -49,6 +52,19 @@ public sealed class SharedSteps(SpecContext context)
                 // one is the whole of "it went through".
                 Assert.NotNull(archived.Category);
                 break;
+            case ChangeExpenseResult changed:
+                Assert.False(changed.WasRefused);
+                break;
+            case ChangeIncomeResult changed:
+                Assert.False(changed.WasRefused);
+                break;
+            case RenameCategoryResult renamed:
+                Assert.False(renamed.WasRefused);
+                break;
+            case SpecContext.Deleted deleted:
+                // As archiving: the category it deleted, or a throw for a non-case.
+                Assert.NotNull(deleted.Category);
+                break;
             default:
                 throw NothingAttempted();
         }
@@ -70,6 +86,12 @@ public sealed class SharedSteps(SpecContext context)
             case AssignResult assigned:
                 Assert.False(assigned.WasAssigned, "Expected the assignment to be refused, but it went through.");
                 Assert.Equal(AssignRefusal.AmountFinerThanCent, assigned.Refusal);
+                break;
+            case ChangeExpenseResult changed:
+                Assert.Equal(ExpenseRefusal.AmountFinerThanCent, changed.Refusal);
+                break;
+            case ChangeIncomeResult changed:
+                Assert.Equal(IncomeRefusal.AmountFinerThanCent, changed.Refusal);
                 break;
             default:
                 throw NothingAttempted();
@@ -97,13 +119,18 @@ public sealed class SharedSteps(SpecContext context)
                 Assert.True(assigned.CategoryBroughtBack, "Expected the assignment to bring its category back.");
                 Assert.Equal(category, assigned.Category!.Name);
                 break;
+            case ChangeExpenseResult changed:
+                Assert.Equal(ChangeOutcome.Changed, changed.Outcome);
+                Assert.True(changed.CategoryBroughtBack, "Expected the change to bring the category back.");
+                Assert.Equal(category, changed.Expense!.Category.Name);
+                break;
             default:
                 throw NothingAttempted();
         }
     }
 
-    // Recording an expense and assigning both name a category, and both refuse one that is not
-    // the user's — in use or archived — without adding it.
+    // Recording an expense, changing one and assigning all name a category, and all refuse one
+    // that is not the user's — in use or archived — without adding it.
     [Then(@"I should be told that ""([^""]*)"" is not one of my categories")]
     public void ThenIShouldBeToldThatIsNotOneOfMyCategories(string category)
     {
@@ -116,6 +143,9 @@ public sealed class SharedSteps(SpecContext context)
             case AssignResult assigned:
                 Assert.False(assigned.WasAssigned, "Expected the assignment to be refused, but it went through.");
                 Assert.Equal(AssignRefusal.UnknownCategory, assigned.Refusal);
+                break;
+            case ChangeExpenseResult changed:
+                Assert.Equal(ExpenseRefusal.UnknownCategory, changed.Refusal);
                 break;
             default:
                 throw NothingAttempted();

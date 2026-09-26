@@ -695,7 +695,11 @@ archived one therefore only in a period where it has history and is shown.
 | **Merge the two categories** | It would silently rewrite both histories |
 | **The old name in old periods** | MoneyBud would have to remember every name a category has had, and one category would read differently depending on the period on screen |
 
-**Settled, not built.**
+**Built in the corrections increment**, 2026-09-26: `Ledger.RenameCategory`, specified by
+[`rename-a-category.feature`](../../features/rename-a-category.feature). "Past periods show the new
+name" needs no code of its own. A category is one object that everything holds, so a rename is one
+assignment ([§8.1](08-crosscutting-concepts.md)). What the screen does around a rename that the
+rulings above do not say is in *Chosen in the build, not put to the stakeholder* (below).
 
 ## A category is taken out of use, not deleted
 
@@ -1121,8 +1125,13 @@ cannot be reached. It stays archived, and adding its name brings it back.
 | **One remove button, with MoneyBud picking delete or archive** | It decides for the user |
 | **Ask first, like removing an entry** | A confirmation guards against a loss, and nothing is lost |
 
-**Settled, not built.** On screen the act is *Verwijderen*, the same word as removing an entry
-(*Dutch display terms*, below).
+**Built in the corrections increment**, 2026-09-26: `Ledger.CanDelete` and `Ledger.DeleteCategory`,
+specified by [`delete-a-category.feature`](../../features/delete-a-category.feature). `CanDelete`
+reads the figures directly, expenses and budgets of more than zero, and **not** `HasBudget`, as
+this section requires. A category's budgets of zero are not history, so they go with it when it is
+deleted ([§8.1](08-crosscutting-concepts.md)). On screen the act is *Verwijderen*, the same word as
+removing an entry (*Dutch display terms*, below), and its button shows only on the row of a
+category that `CanDelete`.
 
 ### What archiving does not settle, because it cannot yet
 
@@ -1207,10 +1216,10 @@ whose eventual behaviour differs from the behaviour it has now.
 |---|---|
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
-| **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). A category with history is taken out of use by **archiving**, never by deleting: its history stays, and adding its name again, recording an expense against it or assigning a positive amount to it brings it back (*A category is taken out of use, not deleted*, above). A category with **no history in any period** can instead be **deleted** (*Deleting a category that has no history anywhere*, above). It can be **renamed**, under the same name rules, to any name no other category has (*Renaming a category*, above). Deleting and renaming were settled on 2026-09-26 and are not built. MoneyBud ships with six **default categories** (above). |
+| **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). A category with history is taken out of use by **archiving**, never by deleting: its history stays, and adding its name again, recording an expense against it or assigning a positive amount to it brings it back (*A category is taken out of use, not deleted*, above). A category with **no history in any period** can instead be **deleted** (*Deleting a category that has no history anywhere*, above). It can be **renamed**, under the same name rules, to any name no other category has (*Renaming a category*, above). Deleting and renaming were settled on 2026-09-26 and built in the corrections increment. MoneyBud ships with six **default categories** (above). |
 | **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. An archived category can be **renamed**, and stays archived (*Renaming a category*, above). On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). |
-| **Rename** | Giving a category a new name. The new name follows the rules for adding one: trimmed, stored otherwise as typed, and refused if it trims to nothing. A name **another** category has, archived ones included, is **refused**, and the user is told it is taken. The category's **own** name in a new spelling is allowed, which is the front door *The existing spelling is kept* kept adding from being. **Past periods show the new name.** An archived category can be renamed and **stays archived**. See *Renaming a category* above. Settled 2026-09-26; not built. |
-| **Delete** | Said of a **category** only: removing one that has **no history in any period**, meaning no expense and no budget of more than zero. It is gone, not archived, and adding its name again creates a new category. A separate act from archiving, with its own button, shown only on such a category. **Never confirmed**, and announced afterwards. A category with history cannot be deleted; it is archived. Decided by figures, never by `Ledger.HasBudget`. See *Deleting a category that has no history anywhere* above. Settled 2026-09-26; not built. |
+| **Rename** | Giving a category a new name. The new name follows the rules for adding one: trimmed, stored otherwise as typed, and refused if it trims to nothing. A name **another** category has, archived ones included, is **refused**, and the user is told it is taken. The category's **own** name in a new spelling is allowed, which is the front door *The existing spelling is kept* kept adding from being. **Past periods show the new name.** An archived category can be renamed and **stays archived**. See *Renaming a category* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.RenameCategory`. |
+| **Delete** | Said of a **category** only: removing one that has **no history in any period**, meaning no expense and no budget of more than zero. It is gone, not archived, and adding its name again creates a new category. A separate act from archiving, with its own button, shown only on such a category. **Never confirmed**, and announced afterwards. A category with history cannot be deleted; it is archived. Decided by figures, never by `Ledger.HasBudget`. See *Deleting a category that has no history anywhere* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.CanDelete` and `Ledger.DeleteCategory`. |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
@@ -1221,12 +1230,12 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back at the start of the next period rather than applied to it — see below. A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
 | **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). The marker's badge reads *Te veel toegewezen*. Built in the UI increment. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). |
-| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; not built. |
+| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; built in the corrections increment. |
 | **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). |
 | **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an **optional** **Label** of its own, below. **May not be dated in the future**, unlike an income — money not yet spent is a plan, and the plan layer already has a word for it, the *Budget* (see *Income may be dated in the future; an expense may not*). The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. |
 | **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
-| **Change** | Said of an **entry**: correcting an expense or an income after it was recorded. Allowed in **any** budget period, past ones included. A change is judged exactly as the changed entry would be if it were recorded now, so it is refused on the same rules, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings that category back, announced. Fixing an expense that is already on an archived category does **not** bring it back. A change **overwrites** the entry: MoneyBud keeps no record of what it was. A changed date that moves the entry to another period leaves the screen where it was and says where the entry went. See *An entry can be changed or removed* above. Settled 2026-09-26; not built. |
-| **Remove** | Said of an **entry**: taking an expense or an income away entirely. Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; not built. |
+| **Change** | Said of an **entry**: correcting an expense or an income after it was recorded. Allowed in **any** budget period, past ones included. A change is judged exactly as the changed entry would be if it were recorded now, so it is refused on the same rules, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings that category back, announced. Fixing an expense that is already on an archived category does **not** bring it back. A change **overwrites** the entry: MoneyBud keeps no record of what it was. A changed date that moves the entry to another period leaves the screen where it was and says where the entry went. See *An entry can be changed or removed* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.ChangeExpense` and `Ledger.ChangeIncome`. |
+| **Remove** | Said of an **entry**: taking an expense or an income away entirely. Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. |
 | **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
 | **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker's badge reads *Over budget*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). Built in the UI increment. |
@@ -1506,12 +1515,18 @@ the argument for them, and he chose among them without adding reasons of his own
 scope, all four parts of it, and confirmed that explicitly: changing an entry, removing one, renaming
 a category, and deleting a category that was never used.
 
-**Settled, with scenarios approved, and not built.** The four feature files were approved at the
-scenario gate on 2026-09-26: [`change-an-entry.feature`](../../features/change-an-entry.feature),
+**Settled, specified, and built.** The four feature files were approved at the scenario gate on
+2026-09-26: [`change-an-entry.feature`](../../features/change-an-entry.feature),
 [`remove-an-entry.feature`](../../features/remove-an-entry.feature),
 [`rename-a-category.feature`](../../features/rename-a-category.feature) and
 [`delete-a-category.feature`](../../features/delete-a-category.feature). Six readings approved with
-them are listed in *Approved at the scenario gate, 2026-09-26* (below). There is no code yet.
+them are listed in *Approved at the scenario gate, 2026-09-26* (below). The plan was **approved at
+the plan gate** the same day. It proposed what the form does around a correction, which this
+section had left to it (*On screen: picking an entry to correct*, below). The increment was built to
+it and reviewed by `spec-reviewer`, which found no faked scenario and one low defect, since fixed
+(*Chosen in the build, not put to the stakeholder*, below). How the domain holds these rulings is in
+[§8.1](08-crosscutting-concepts.md), and how the screen holds them is in
+[§8.4](08-crosscutting-concepts.md).
 
 ### Removing an entry asks first
 
@@ -1728,13 +1743,36 @@ dialog or an inline editor would be a second place to enter the same fields, wit
 keep in step. *Verwijderen* is where removing is reached, and it is the act that asks first
 (*Removing an entry asks first*, above).
 
-The four words are labels on buttons and on the form's state. They are not yet in *Dutch display
-terms* (below), which says why.
+*Wijzigen* and *Verwijderen* are display terms, and are in *Dutch display terms* (below), with
+*Hernoemen* and the *Verwijderen* for deleting a category. *Opslaan* and *Annuleren* are the form's
+controls, not terms of the model, and are not in the table.
 
 **Left for the plan to propose**, as the ring's width was: what the form shows after *Opslaan*,
 *Annuleren* or *Verwijderen*, and what happens to a change in progress when the user steps to
-another period or clicks another row. One case of the first is settled (next): after saving an
-unchanged entry, the form returns to normal.
+another period or clicks another row. One case of the first was already settled (next): after
+saving an unchanged entry, the form returns to normal.
+
+**Proposed by the plan, approved at the plan gate on 2026-09-26, and built:**
+
+- **The form empties and goes back to recording** once a change goes through, a change saved
+  unchanged included, after *Annuleren*, and after a confirmed removal.
+- **After a refused change the form keeps what was typed and stays in *Wijzigen*.** A refused
+  recording keeps what was typed for the same reason: a refusal is corrected in place.
+- **Stepping to another period drops an entry being changed** and a waiting question. **A new
+  entry being typed is kept.** Only an entry being changed was picked from a row of the period
+  that was on screen. A new one belongs to no period until it is recorded.
+- **Clicking another row loads that entry** in place of the one loaded.
+- **Declining the question says nothing** (*Removing an entry asks first*, above) and **leaves the
+  entry loaded in its form**, so the user can go on to change it or cancel.
+
+**The question is asked inline, in the message bar**, rather than in a dialog window. The
+stakeholder asked for that at the plan gate. Its two answers, and which other acts drop it, were
+chosen in the build (*Chosen in the build, not put to the stakeholder*, below), and so was
+cancelling a rename when the screen steps.
+
+The stepping rule is **not** what was first built. As first built, stepping emptied a new entry
+being typed as well. `spec-reviewer` found it, and it was fixed before the increment closed: a new
+entry is not tied to the period on screen, so there was nothing to drop it for.
 
 ### Changes and renames are announced
 
@@ -1761,6 +1799,14 @@ form hands back must pass the same reading as typed text. **The amount loaded in
 therefore be in a form the amount box accepts.** MoneyBud's display form, "€ 2.000,00", cannot be
 typed back in (*Typing an amount*, below). If the form were loaded with it, saving an unchanged
 entry would be refused as "not an amount", which this ruling forbids.
+
+**How the build met it.** An amount is loaded as **"2000,00"**: a comma, always two decimals, no
+thousands separator and no euro sign (`AmountInput.Format`). Two decimals always means a loaded
+amount can never end in a mark and three digits, so it is never read as ambiguous either. A unit
+test holds that every such text reads back to the same amount, and every *saved with nothing
+changed* scenario loads an entry and saves it back through the same form. The domain also
+recognises an unchanged save **before** it runs any check, so it cannot be refused by construction
+([§8.1](08-crosscutting-concepts.md)).
 
 ### Corrections and the sweep
 
@@ -1797,6 +1843,24 @@ kept, because it is why they stand.
 
 **The user is told afterwards that an entry was removed.** This was a derivation too (*Removing an
 entry asks first*, above). The approved scenarios assert it, so it was approved with them.
+
+### Chosen in the build, not put to the stakeholder
+
+These are visible to the user, and were chosen while building. **They are the build's readings, not
+rulings.** None was put to the stakeholder, and any of them can be contradicted. Each fills a gap
+that the rulings above leave, and none contradicts one.
+
+| Reading | Why it was built this way |
+|---|---|
+| **A rename rewrites the category box in the expense form and the assign form** when the box names the old name under the name rule | A rename frees the old name. Without this, an entry loaded before the rename and saved unchanged afterwards would name a category that no longer has that name. It would be refused, or it would land on a new category that has since taken the old name. Either breaks *saving an unchanged entry is never refused* (*Changes and renames are announced*, above). The rewrite applies to a new entry being typed as well, since that box names the same category |
+| **Stepping to another period also cancels a rename in progress** | A category is renamed from its row, and that row may not exist in the period stepped to. The same reason drops an entry being changed (*On screen: picking an entry to correct*, above) |
+| **Anything else the user does drops a waiting removal question**: loading another row, *Annuleren*, and any act after which MoneyBud says something or deliberately says nothing, such as saving a change, recording, assigning or renaming (stepping drops it too, which the plan settled) | Each means the user has moved on from the entry the question was about. The question is never left asking about an entry that has since been changed or put away, and **a question and a notice are never shown together**: the question is shown in the notice's place. Added after `arc42-keeper` noticed that, as first built, recording or assigning left the question standing beside the new notice |
+| **The archive button moved under the category's name**, beside *Hernoemen* and *Verwijderen*, out of the column it had of its own | A row can now offer three acts, and three buttons did not fit in the column. *Hernoemen* is on every row, *Archiveren* only on a category in use, as before, and *Verwijderen* only on a category with no history anywhere |
+| **The question's answers are *Verwijderen* and *Annuleren*** | No reason beyond consistency was recorded. They are the words the screen already uses: *Verwijderen* is the button that raised the question, and *Annuleren* is how a form backs out |
+| **A rename box that is open when the screen refreshes itself loses keyboard focus.** Known, and not fixed | The Desktop refreshes once a minute so that the *Huidige periode* label can move ([§8.4](08-crosscutting-concepts.md)). That rebuilds the category rows, the rename box with them. **The text typed is kept**, because it is held by the screen, not by the box. Only the cursor is lost, at most once a minute |
+
+**The one defect `spec-reviewer` found** is recorded under *On screen: picking an entry to correct*
+(above). Stepping used to empty a new entry being typed, and now drops only an entry being changed.
 
 ## Unassigned money is something you can see, not something you work out
 
@@ -2000,7 +2064,9 @@ In the stakeholder's words: *"It should implement all that is currently working 
 an entry, renaming a category and deleting one with no history are settled for the domain (*An entry
 can be changed or removed*, *Renaming a category*, *Deleting a category that has no history
 anywhere*, all above), with how each is reached on screen. By this rule, the UI will cover them when
-the domain does. Not built.
+the domain does. **Both were built in the corrections increment**, the domain and the screen
+together, so the list above now includes changing and removing an entry, renaming a category, and
+deleting one with no history.
 
 ### Category entry is free text with suggestions
 
@@ -2112,9 +2178,12 @@ front of him. Correcting entries becomes its own later increment. Carried in
 as missing, alongside keeping data, and deferred both in the same breath: *"Maar dat komt later."*
 That confirms the acceptance above rather than reopening it.
 
-**Settled for the next increment on 2026-09-26, and not built.** Correcting entries was taken up as
-its own increment, as the paragraph above said it would be, and its rulings are in *An entry can be
-changed or removed* (above). Until it is built, the paragraph above still describes MoneyBud.
+**Settled for the next increment on 2026-09-26, and built the same day.** Correcting entries was
+taken up as its own increment, as the paragraph above said it would be, and its rulings are in *An
+entry can be changed or removed* (above). **The paragraph above no longer describes MoneyBud.** A
+wrong entry is corrected by clicking its row. It is kept as written, because what was accepted for
+the demo, and why, is part of the record. Its other half, that nothing is kept when MoneyBud
+closes, still holds.
 
 ### Typing an amount
 
@@ -2143,8 +2212,8 @@ Settled by the stakeholder on 2026-09-25, **after the spec review**, which found
 - **An entry cannot be corrected** ([§11](11-risks-and-technical-debt.md)). A wrong amount stays
   wrong for the rest of the run.
 
-**The last of these reasons goes once corrections are built** (*An entry can be changed or
-removed*, above, settled 2026-09-26). A wrong amount will then be fixable. In the documentation's
+**The last of these reasons went when corrections were built** (*An entry can be changed or
+removed*, above, settled and built 2026-09-26). A wrong amount is now fixable. In the documentation's
 reading the ruling does not rest on that reason alone. The first three still hold, and a wrong
 amount recorded without a word still has to be noticed before it can be fixed. The ruling has not
 been put back to the stakeholder.
@@ -2881,6 +2950,10 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Previous / next period | Vorige / volgende periode |
 | Add category / Record expense / Record income | Categorie toevoegen / Uitgave toevoegen / Inkomst toevoegen |
 | Overview (the start screen) | Overzicht |
+| Change (an entry) | Wijzigen |
+| Remove (an entry) | Verwijderen |
+| Rename (a category) | Hernoemen |
+| Delete (a category) | Verwijderen |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -2897,26 +2970,25 @@ row, fails the test suite until the code follows. Keep this section's heading an
 exactly as they are, because the test finds the table by them. The marker badges, the *Gearchiveerd*
 caption and the *Niet teruggezet* notice all use terms from this table. No word was added for them.
 
-**Due with the corrections increment, and deliberately not in the table yet** (2026-09-26). By this
-table's own precedent, an act's button label is a display term: *Archiveren*, *Toewijzen* and
-*Categorie toevoegen* are here. So the acts settled in *An entry can be changed or removed*,
-*Renaming a category* and *Deleting a category that has no history anywhere* (above) will need rows:
+**The last four rows came with the corrections increment** (2026-09-26). By this table's own
+precedent, an act's button label is a display term: *Archiveren*, *Toewijzen* and *Categorie
+toevoegen* are here. So the acts settled in *An entry can be changed or removed*, *Renaming a
+category* and *Deleting a category that has no history anywhere* (above) needed rows: *Change* (an
+entry) is **Wijzigen**, the entry form's state; *Remove* (an entry) is **Verwijderen**; *Rename* (a
+category) is **Hernoemen**; and *Delete* (a category) is **Verwijderen** as well.
 
-- *Change* (an entry): **Wijzigen**, the entry form's state.
-- *Remove* (an entry): **Verwijderen**.
-- *Rename* (a category): **Hernoemen**.
-- *Delete* (a category): **Verwijderen** as well.
-
-All four were **approved by the stakeholder on 2026-09-26**, as proposed. **One Dutch word for two
-English terms is chosen, not fallen into.** **Why**, in the documentation's reasoning, which he
+All four were **approved by the stakeholder on 2026-09-26**, as proposed. They were held out of the
+table until the build, because adding a row fails `TekstTests` until `Tekst` has the constant, and
+went in with the build that added the constants. **One Dutch word for two English terms is chosen,
+not fallen into.** **Why**, in the documentation's reasoning, which he
 chose: removing and deleting act on different things, an entry and a category, so *Verwijderen* is
 never ambiguous on screen. This documentation keeps the two English
 terms apart all the same, *remove* for an entry and *delete* for a category (*Remove* and *Delete*,
 terms table), because in English "removing a category" already means archiving it.
 
 *Opslaan* and *Annuleren* are the form's controls, not terms of the model, and nothing like them is
-in the table. **The rows are held out of the table** because adding a row fails `TekstTests` until
-`Tekst` follows, and they belong with the build that adds the constants.
+in the table. `Tekst` has them as constants all the same, beside the table's terms, and so is
+*Weet je het zeker?*, which is copy. None of the three is held to this table.
 
 ## Open questions
 
@@ -2992,7 +3064,9 @@ period left *Over-assigned* by a correction stays that way, and that is accepted
 period can be corrected*). Three more were ruled while the scenarios were written: a change and a
 rename are announced, saving an unchanged entry is quiet, and declining to remove an entry is met
 with silence (*Changes and renames are announced*, *Removing an entry asks first*). That makes
-fifteen. The same rulings **widen** the question below without answering it.
+fifteen. The plan gate then settled what the form does around a correction, which had been left to
+it (*On screen: picking an entry to correct*). All of it is built. The same rulings **widen** the
+question below without answering it.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -3098,8 +3172,8 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Does trimming and ignoring case apply when recording an expense against a name, or only when adding one? | Same section — **both**. Recording against "  groceries " records against Groceries. **Confirmed** by the stakeholder on 2026-09-25, not only inferred from "every comparison". When answered, it changed the code's behaviour, which refused that expense as naming an unknown category. It is now built and asserted ([§8.1](08-crosscutting-concepts.md)) |
 | What happens when the user adds a name they already have? | Same section — they get the existing category back, and are told so. Derived and not contradicted. It does **not** answer the archived case, which *Adding an archived category's name brings it back* answers separately |
 | Does adding a name in a different capitalisation change the existing category's spelling? | Same section, *The existing spelling is kept* — **no**, for an active category, an archived one brought back by adding its name, and one brought back by recording an expense against it. Taking the new spelling would be a rename by the back door |
-| May a category be renamed? | *Renaming a category* — **yes**, since 2026-09-26. It was first deferred with its two questions named (*Renaming a category is not in this increment*), and both are now answered: past periods show the **new** name, and a name **another** category has, archived ones included, is **refused**. Chosen over the old name in old periods and over merging. The category's own name in a new spelling is allowed, which is the front door to what adding kept out as "a rename by the back door". Same name rules as adding. An archived category can be renamed and stays archived. Settled 2026-09-26; not built |
-| May a category be deleted? | *Deleting a category that has no history anywhere* — **only one with no history in any period**: no expense, and no budget of more than zero. Chosen over a stricter "never touched" rule, which would have made "assigned, then taken back to zero" a state. A separate act from archiving, with its own button on such a category only, chosen over one button with MoneyBud picking. **Not confirmed**, and announced afterwards. The recommendation was to leave deleting out, since archiving already hides such a category everywhere; the stakeholder kept it in, in his own words *so that it is gone for good and its name is free again*, because an archived category keeps its name. Settled 2026-09-26; not built |
+| May a category be renamed? | *Renaming a category* — **yes**, since 2026-09-26. It was first deferred with its two questions named (*Renaming a category is not in this increment*), and both are now answered: past periods show the **new** name, and a name **another** category has, archived ones included, is **refused**. Chosen over the old name in old periods and over merging. The category's own name in a new spelling is allowed, which is the front door to what adding kept out as "a rename by the back door". Same name rules as adding. An archived category can be renamed and stays archived. Settled 2026-09-26; built in the corrections increment |
+| May a category be deleted? | *Deleting a category that has no history anywhere* — **only one with no history in any period**: no expense, and no budget of more than zero. Chosen over a stricter "never touched" rule, which would have made "assigned, then taken back to zero" a state. A separate act from archiving, with its own button on such a category only, chosen over one button with MoneyBud picking. **Not confirmed**, and announced afterwards. The recommendation was to leave deleting out, since archiving already hides such a category everywhere; the stakeholder kept it in, in his own words *so that it is gone for good and its name is free again*, because an archived category keeps its name. Settled 2026-09-26; built in the corrections increment |
 | Which categories does MoneyBud ship with? | *The default categories* — six, Dutch, a starting set chosen to be tried. *Sparen* ships unbacked until accounts exist |
 | Is a category in use shown in a period where it has no history? | *When any category is shown in a period: the full rule* — **yes in the current and future periods**, because those are the periods you plan; **no in a past one**, which is a record of what happened. A category is shown in P if it has history in P, or if it is in use and P is current or later. Chosen over "every period, always" and "only with history, always". Settled 2026-09-25; built in the UI increment |
 | What does assigning to an archived category do? | *Assigning to an archived category brings it back* — the category is **not offered**, and assigning to its name anyway **brings it back**, announced, like recording an expense. A third route back, and still no un-archive act. Chosen over refusing and over offering it. Settled 2026-09-25; built in the assigning increment, which also retired the `SetBudget` scaffold that did not do this ([§8.1](08-crosscutting-concepts.md)). Refined the same day: only a **positive** assignment brings it back (next rows) |
@@ -3110,7 +3184,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What does the assigning increment cover? | *Nothing here blocks the assigning increment* — assigning in current and later periods, *Over-assigned*, the clipped shortfall and bringing back. Backed categories, the pool account, one-action carry-over, the sweep and any UI are out, each for its own reason. Settled 2026-09-25; built to that scope |
 | Is an archived category's figure offered back when a period opens? | *An archived category's figure is not offered back when a period opens* — **no**. You put it away, so MoneyBud does not suggest planning for it. If it is brought back, it is assigned to like any other. Settled 2026-09-25; carry-over is not built |
 | Must category names in feature files be English? | *They are Dutch because they are content* — **no**. A name is test data because it is synthetic and no scenario leans on the defaults, not because of its language. Settled 2026-09-25, loosening the earlier "English, with the rest of the specification" |
-| What does the UI cover? | *It covers what the domain does, and nothing more* — everything the domain already does, in the stakeholder's words "all that is currently working on the backend", all three routes back included. No editing or deleting of a transaction, because the domain has neither; that consequence was **accepted** by the stakeholder for the demo, and correcting entries becomes its own later increment ([§11](11-risks-and-technical-debt.md)). Settled 2026-09-25; built in the UI increment. **That later increment was settled on 2026-09-26** (*An entry can be changed or removed*), and is not built |
+| What does the UI cover? | *It covers what the domain does, and nothing more* — everything the domain already does, in the stakeholder's words "all that is currently working on the backend", all three routes back included. No editing or deleting of a transaction, because the domain has neither; that consequence was **accepted** by the stakeholder for the demo, and correcting entries becomes its own later increment ([§11](11-risks-and-technical-debt.md)). Settled 2026-09-25; built in the UI increment. **That later increment was settled on 2026-09-26** (*An entry can be changed or removed*), and built the same day, so the UI now covers correcting too |
 | Is the category box a pick-list or free text? | *Category entry is free text with suggestions* — **free text**, suggesting the offered categories and accepting any name. Chosen over a pick-list alone, which would put two routes back and the unknown-name refusal out of reach. "Not offered" means not suggested. Settled 2026-09-25; built in the UI increment |
 | What does the ring show when there is nothing to draw? | *The overview, and its ring* — an **empty grey outline with a hint**, only when the period has neither income nor any *Budget*. The hint's wording is copy. Settled 2026-09-25; built in the UI increment |
 | Does the UI show periods other than the current one? | *Stepping between periods* — **yes**, back and forward, because entries land in past and future periods and a current-only UI would accept entries it could never show. This is where the display rule got built, as `Ledger.CategoriesShownIn`. Settled 2026-09-25; built in the UI increment |
@@ -3147,26 +3221,27 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | How do small budgets stay visible in the ring? | *Every slice has a minimum width* — **a minimum width for every slice**, *Unassigned* included, so the ring is no longer drawn exactly in proportion. A **revision** of the approved ring. Chosen over keeping the ring exact and over names beside the ring. The fill stays **exact**, with no minimum fill, chosen over a visible sliver for any spending. The minimum is **2%**. Slices below it are drawn at 2% and the rest share what is left in proportion, repeated until none falls below, with *Unassigned* counted like any other slice. So a larger *Budget* is never drawn narrower than a smaller one. At 50 slices or more, all are drawn equal. Ruled at the first demo, in follow-ups and at the plan gate, 2026-09-26; built |
 | In what order does a form ask for its fields? | *The fields ask what before how much* — the "what" before the amount: expense *Omschrijving*, *Categorie*, *Bedrag*, *Datum*; income *Omschrijving*, *Bedrag*, *Datum*; assigning *Categorie*, *Bedrag*. Ruled at the first demo, 2026-09-26; built, and held by `WindowMarkupTests`, which reads the window's markup |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
-| Can an entry be changed or removed, and in which periods? | *An entry can be changed or removed* and *An entry in a past period can be corrected* — **yes, both, in any period**, past ones included. An entry is a fact, and "past is past" is about plans. Chosen over refusing corrections in a past period. Settled 2026-09-26; not built |
-| Does removing an entry ask first? | *Removing an entry asks first* — **yes**, the only act that does, because it destroys a record. Chosen over removing then offering undo, and over removing and just saying so. The principle that leaves archiving unconfirmed, confirm only where a record is lost, gives this answer. Settled 2026-09-26; not built |
-| May removing or lowering an income leave its period over-assigned? | *Removing or lowering an income may leave its period over-assigned* — **yes**, shown with the existing marker and nothing more. Chosen over saying so in the message and over refusing it. Settled 2026-09-26; not built |
-| How is a changed entry judged? | *A changed entry is judged as if it were recorded now* — **exactly as if typed in fresh now**, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings it back, announced. Chosen over the same rules with the category staying archived. Fixing an expense that is **already on** an archived category does **not** bring it back, because that is correcting history, not using the category again. Chosen over bringing it back strictly as a fresh recording would. Settled 2026-09-26; not built |
-| May a correction leave a past period over-assigned for good? | *An entry in a past period can be corrected* — **yes, accepted**. It is the true figure, the marker shows it, and it is the "past is past" cost already accepted for assigning. Chosen over allowing a negative assignment in a past period, which would have reopened that ruling. First derived, then put to the stakeholder and accepted, 2026-09-26; not built |
-| What happens when a changed date moves an entry to another period? | *A changed date can move an entry to another period* — as for a new entry landing elsewhere: the screen **stays** and says where the entry went. Chosen over the screen following the entry. Settled 2026-09-26; not built |
-| Is a change a new record or a rewrite? | *A change overwrites the entry* — a **rewrite**. MoneyBud keeps no record of what the entry was, and shows no history. A default the stakeholder accepted, 2026-09-26; not built |
-| What happens to an archived category when its last expense in a period is removed? | *Correcting can change where a category is shown* — it **drops out of that period**, unless a budget of more than zero keeps it there. Derived from the history rule, then accepted by the stakeholder, 2026-09-26; not built |
-| How is an entry picked for correcting? | *On screen: picking an entry to correct* — clicking its row loads it into its entry form, in a *Wijzigen* state with *Opslaan*, *Annuleren* and *Verwijderen*. Chosen over icons with a dialog and over editing inline. Settled 2026-09-26; not built |
-| Are a change and a rename announced? | *Changes and renames are announced* — **yes, both**, afterwards, because a silent act looks the same as a failure. Chosen over announcing neither and over announcing only a rename. Settled 2026-09-26; not built |
-| What happens when an entry is saved with nothing changed? | Same section — **never refused, and quiet**: nothing changes, nothing is announced, and the form returns to normal. Chosen over saying so. So the amount loaded into the form must be one the amount box accepts. Settled 2026-09-26; not built |
-| What is said when the user declines to remove an entry? | *Removing an entry asks first* — **nothing**. The entry stays. Chosen over saying it was kept. Settled 2026-09-26; not built |
+| Can an entry be changed or removed, and in which periods? | *An entry can be changed or removed* and *An entry in a past period can be corrected* — **yes, both, in any period**, past ones included. An entry is a fact, and "past is past" is about plans. Chosen over refusing corrections in a past period. Settled 2026-09-26; built |
+| Does removing an entry ask first? | *Removing an entry asks first* — **yes**, the only act that does, because it destroys a record. Chosen over removing then offering undo, and over removing and just saying so. The principle that leaves archiving unconfirmed, confirm only where a record is lost, gives this answer. Settled 2026-09-26; built |
+| May removing or lowering an income leave its period over-assigned? | *Removing or lowering an income may leave its period over-assigned* — **yes**, shown with the existing marker and nothing more. Chosen over saying so in the message and over refusing it. Settled 2026-09-26; built |
+| How is a changed entry judged? | *A changed entry is judged as if it were recorded now* — **exactly as if typed in fresh now**, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings it back, announced. Chosen over the same rules with the category staying archived. Fixing an expense that is **already on** an archived category does **not** bring it back, because that is correcting history, not using the category again. Chosen over bringing it back strictly as a fresh recording would. Settled 2026-09-26; built |
+| May a correction leave a past period over-assigned for good? | *An entry in a past period can be corrected* — **yes, accepted**. It is the true figure, the marker shows it, and it is the "past is past" cost already accepted for assigning. Chosen over allowing a negative assignment in a past period, which would have reopened that ruling. First derived, then put to the stakeholder and accepted, 2026-09-26; built |
+| What happens when a changed date moves an entry to another period? | *A changed date can move an entry to another period* — as for a new entry landing elsewhere: the screen **stays** and says where the entry went. Chosen over the screen following the entry. Settled 2026-09-26; built |
+| Is a change a new record or a rewrite? | *A change overwrites the entry* — a **rewrite**. MoneyBud keeps no record of what the entry was, and shows no history. A default the stakeholder accepted, 2026-09-26; built |
+| What happens to an archived category when its last expense in a period is removed? | *Correcting can change where a category is shown* — it **drops out of that period**, unless a budget of more than zero keeps it there. Derived from the history rule, then accepted by the stakeholder, 2026-09-26; built |
+| How is an entry picked for correcting? | *On screen: picking an entry to correct* — clicking its row loads it into its entry form, in a *Wijzigen* state with *Opslaan*, *Annuleren* and *Verwijderen*. Chosen over icons with a dialog and over editing inline. Settled 2026-09-26; built |
+| What does the form do after *Opslaan*, *Annuleren* or a removal, and when the screen steps or another row is clicked? | *On screen: picking an entry to correct* — it **empties and goes back to recording** after a change goes through (unchanged included), after *Annuleren* and after a confirmed removal; after a refused change it **keeps what was typed** and stays in *Wijzigen*. **Stepping** drops an entry being changed and a waiting question, and **keeps a new entry** being typed. **Clicking another row** loads that one. Declining the question leaves the entry loaded, and the question is asked inline in the message bar. Proposed by the plan and approved at the plan gate, 2026-09-26; built, with the stepping rule corrected after the spec review. What else drops a waiting question or a rename in progress was chosen in the build (*Chosen in the build, not put to the stakeholder*) |
+| Are a change and a rename announced? | *Changes and renames are announced* — **yes, both**, afterwards, because a silent act looks the same as a failure. Chosen over announcing neither and over announcing only a rename. Settled 2026-09-26; built |
+| What happens when an entry is saved with nothing changed? | Same section — **never refused, and quiet**: nothing changes, nothing is announced, and the form returns to normal. Chosen over saying so. So the amount loaded into the form must be one the amount box accepts. Settled 2026-09-26; built |
+| What is said when the user declines to remove an entry? | *Removing an entry asks first* — **nothing**. The entry stays. Chosen over saying it was kept. Settled 2026-09-26; built |
 | What happens when a correction lands in a period already swept? | *Corrections and the sweep* — nothing is decided, because there is no sweep. A correction that means MoneyBud moved too much meets the late-expense rule. One that means there was more to move **joins the open question** above |
 
 **Seven** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
 shown exactly like an overspent budget despite being a harder fact (since the marker revision of
 2026-09-25, this one is open again on the account side, see *Assigning may overdraw the pool
-account*); the demo cannot correct a wrong entry except by starting over (settled for correction
-on 2026-09-26 and planned as the next increment, not yet built); a clamped start day
+account*); the demo cannot correct a wrong entry except by starting over (a cost that **no longer
+applies**: corrections were settled and built on 2026-09-26); a clamped start day
 produces a period that is longer than its neighbours with nothing on screen explaining why; net
 worth and *Unassigned* will disagree about an expected income, because they are answering about
 different moments in time; and an archived category now has three routes back rather than one
@@ -3247,8 +3322,12 @@ was the other, until [`type-an-amount.feature`](../../features/type-an-amount.fe
 at the scenario gate on 2026-09-26 and bound, with two further rulings of that day in it
 ([§11](11-risks-and-technical-debt.md), *Resolved*).
 
-**Nothing here blocks the corrections increment.** Its rulings are in *An entry can be changed or
-removed*, *Renaming a category* and *Deleting a category that has no history anywhere* (above), all
-of 2026-09-26. The two points its first write-up left open were settled the same day. It reaches
-nothing about accounts. It meets the
-sweep only as a question already filed, which it widens without needing an answer.
+**Nothing here blocked the corrections increment, and it is built.** Its rulings are in *An entry
+can be changed or removed*, *Renaming a category* and *Deleting a category that has no history
+anywhere* (above), all of 2026-09-26. The two points its first write-up left open were settled the
+same day. Its four feature files were approved at the scenario gate, its plan at the plan gate, and
+`spec-reviewer` reviewed the result, all on 2026-09-26. It added no record: what it settled in code,
+a `Category` with identity, is how the domain expresses renaming, not architecture
+([§9](09-architecture-decisions.md), [§8.1](08-crosscutting-concepts.md)). It reaches nothing about
+accounts. It meets the sweep only as a question already filed, which it widens without needing an
+answer.

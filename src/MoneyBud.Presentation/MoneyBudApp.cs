@@ -11,6 +11,13 @@ namespace MoneyBud.Presentation;
 public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto = null);
 
 /// <summary>
+/// A question MoneyBud is waiting on an answer to. There is only ever one kind — whether to remove
+/// an entry — because removing is the one act that asks before it acts (arc42 §12, *Removing an
+/// entry asks first*). It is shown where a <see cref="Notice"/> would be, in its place.
+/// </summary>
+public sealed record Question(string Text);
+
+/// <summary>
 /// The whole screen, without a toolkit: the period on screen and stepping between periods, the
 /// Overview of that period, the category suggestions, the acts the user can take, and what
 /// MoneyBud tells them afterwards.
@@ -23,6 +30,13 @@ public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto 
 /// <item>When an entry lands in a period other than the one on screen, the screen stays where it
 /// is and says which period the entry went into.</item>
 /// <item>Amounts arrive as typed text, read by <see cref="AmountInput"/>.</item>
+/// <item>Removing an entry asks first, and waits on the answer (<see cref="Question"/>). Declining
+/// says nothing.</item>
+/// <item>An entry saved unchanged, or a category renamed to exactly its own name, goes through
+/// quietly: nothing is said, and whatever was said before is gone.</item>
+/// <item>Stepping to another period drops whatever was in progress — an entry being changed, a
+/// category being renamed, a question waiting on an answer — because each was picked from a row
+/// of the period that was on screen.</item>
 /// </list>
 ///
 /// <para>The period on screen is held as the period itself, never as "current" or an offset from
@@ -61,7 +75,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     public PeriodOverview Overview => OverviewFor(ShownPeriod);
 
     /// <summary>The Overview any period would show if it were on screen.</summary>
-    public PeriodOverview OverviewFor(BudgetPeriod period) => PeriodOverview.Of(Ledger, period);
+    public PeriodOverview OverviewFor(BudgetPeriod period) => PeriodOverview.Of(Ledger, period, Renaming);
 
     /// <summary>
     /// The categories suggested when recording an expense or assigning: those offered for new
@@ -132,6 +146,15 @@ public sealed partial class MoneyBudApp : ObservableObject
     [ObservableProperty]
     public partial Notice? Notice { get; private set; }
 
+    /// <summary>The question waiting on an answer, shown in the notice's place. Null when none is.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAsking))]
+    public partial Question? Question { get; private set; }
+
+    public bool IsAsking => Question is not null;
+
+    private Action? onConfirm;
+
     // ------------------------------------------------------------------ stepping
 
     [RelayCommand]
@@ -144,6 +167,12 @@ public sealed partial class MoneyBudApp : ObservableObject
     {
         ShownPeriod = period;
         AssignForm.Period = period;
+        // Only an entry being changed was picked from this period's rows. A new entry being typed
+        // belongs to no period until it is recorded, and stays.
+        if (ExpenseForm.IsEditing) ExpenseForm.Clear();
+        if (IncomeForm.IsEditing) IncomeForm.Clear();
+        Renaming = null;
+        DropQuestion();
         Notice = null;
         pointedAt = null;
         Refresh();
@@ -253,12 +282,242 @@ public sealed partial class MoneyBudApp : ObservableObject
     [RelayCommand]
     private void Archive(string name) => ArchiveCategory(name);
 
+    // ------------------------------------------------------------------ correcting an entry
+
+    /// <summary>
+    /// Clicking an expense's row: loads it into the expense form to be changed or removed. A
+    /// question about another entry is dropped, since the user has moved on from it; clicking
+    /// another row while one is loaded simply loads that one.
+    /// </summary>
+    [RelayCommand]
+    public void EditExpense(ExpenseLine line)
+    {
+        DropQuestion();
+        ExpenseForm.Load(line.Entry);
+    }
+
+    /// <summary>Clicking an income's row, as <see cref="EditExpense"/>.</summary>
+    [RelayCommand]
+    public void EditIncome(IncomeLine line)
+    {
+        DropQuestion();
+        IncomeForm.Load(line.Entry);
+    }
+
+    /// <summary>
+    /// Changes an expense, judged as recording it now would be (arc42 §12). A change that goes
+    /// through is announced, and says which period the expense went into when that is not the
+    /// period on screen; one that changes nothing is quiet.
+    /// </summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeExpenseResult? ChangeExpense(
+        Expense expense, string? amount, string? category, string? label, DateOnly? date = null)
+    {
+        if (!AmountInput.TryRead(amount, out var euros))
+        {
+            NotAnAmount(amount);
+            return null;
+        }
+
+        var result = Ledger.ChangeExpense(expense, euros, category, date ?? Ledger.Today, label);
+
+        switch (result.Outcome)
+        {
+            case ChangeOutcome.Changed:
+                Tell(Tekst.ExpenseChanged(result.Expense!, result.CategoryBroughtBack), PeriodOf(result.Expense!.Date));
+                break;
+            case ChangeOutcome.Unchanged:
+                SayNothing();
+                break;
+            default:
+                Refuse(Tekst.Refusal(result.Refusal!.Value, category));
+                break;
+        }
+
+        return result;
+    }
+
+    /// <summary>Changes an income, as <see cref="ChangeExpense"/> changes an expense.</summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeIncomeResult? ChangeIncome(Income income, string? amount, string? label, DateOnly? date = null)
+    {
+        if (!AmountInput.TryRead(amount, out var euros))
+        {
+            NotAnAmount(amount);
+            return null;
+        }
+
+        var result = Ledger.ChangeIncome(income, euros, label, date ?? Ledger.Today);
+
+        switch (result.Outcome)
+        {
+            case ChangeOutcome.Changed:
+                Tell(Tekst.IncomeChanged(result.Income!), PeriodOf(result.Income!.Date));
+                break;
+            case ChangeOutcome.Unchanged:
+                SayNothing();
+                break;
+            default:
+                Refuse(Tekst.Refusal(result.Refusal!.Value));
+                break;
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Asks whether to remove an expense, and removes nothing until <see cref="Confirm"/>. The
+    /// question replaces whatever was said before; the only thing asked is the act, never the
+    /// state of the money (§12, *Being asked is not being warned*).
+    /// </summary>
+    public void AskToRemove(Expense expense) => Ask(Tekst.AskToRemove(expense), () =>
+    {
+        Ledger.RemoveExpense(expense);
+        if (ExpenseForm.Editing?.Id == expense.Id) ExpenseForm.Clear();
+        Tell(Tekst.ExpenseRemoved(expense), landedIn: null);
+    });
+
+    /// <summary>Asks whether to remove an income, as <see cref="AskToRemove(Expense)"/>.</summary>
+    public void AskToRemove(Income income) => Ask(Tekst.AskToRemove(income), () =>
+    {
+        Ledger.RemoveIncome(income);
+        if (IncomeForm.Editing?.Id == income.Id) IncomeForm.Clear();
+        Tell(Tekst.IncomeRemoved(income), landedIn: null);
+    });
+
+    /// <summary>Yes to the question: the act it asked about is done, and said.</summary>
+    [RelayCommand]
+    public void Confirm()
+    {
+        var act = onConfirm ?? throw new InvalidOperationException("Nothing is waiting to be confirmed.");
+        DropQuestion();
+        act();
+    }
+
+    /// <summary>
+    /// No to the question, or <i>Annuleren</i> on a form: the entry stays, and nothing is said —
+    /// declining is choosing not to act, so there is no outcome to tell (§12). Does nothing when
+    /// no question is waiting.
+    /// </summary>
+    [RelayCommand]
+    public void Decline()
+    {
+        if (Question is null) return;
+
+        SayNothing();
+    }
+
+    private void Ask(string text, Action act)
+    {
+        Notice = null;
+        Question = new Question(text);
+        onConfirm = act;
+        Refresh();
+    }
+
+    private void DropQuestion()
+    {
+        Question = null;
+        onConfirm = null;
+    }
+
+    // ------------------------------------------------------------------ renaming and deleting
+
+    /// <summary>
+    /// The name of the category being renamed, whose row shows a text box in place of its name.
+    /// Null when none is.
+    /// </summary>
+    [ObservableProperty]
+    public partial string? Renaming { get; private set; }
+
+    /// <summary>What the rename box holds. Starts as the name the category already has.</summary>
+    [ObservableProperty]
+    public partial string? NewName { get; set; }
+
+    /// <summary>The rename button on a category's row: its name becomes a text box.</summary>
+    [RelayCommand]
+    public void StartRename(string name)
+    {
+        Renaming = name;
+        NewName = name;
+        Refresh();
+    }
+
+    [RelayCommand]
+    public void CancelRename()
+    {
+        Renaming = null;
+        NewName = null;
+        Refresh();
+    }
+
+    /// <summary>
+    /// Renames the category being renamed to what the box holds (arc42 §12, *Renaming a
+    /// category*). A rename is announced from what to what; the name spelled exactly as it was
+    /// is quiet. Refused, the box keeps what was typed.
+    ///
+    /// <para>A form that names the category by its old name is made to name it by its new one.
+    /// The old name is free once the category is renamed, so otherwise an entry loaded before the
+    /// rename and saved unchanged afterwards would be refused, or would land on whatever category
+    /// took the old name since — and saving an unchanged entry is never refused (§12).</para>
+    /// </summary>
+    public RenameCategoryResult SaveRename()
+    {
+        var name = Renaming ?? throw new InvalidOperationException("No category is being renamed.");
+        var result = Ledger.RenameCategory(name, NewName);
+
+        if (result.WasRefused)
+        {
+            Refuse(Tekst.Refusal(result.Refusal!.Value, NewName));
+            return result;
+        }
+
+        Renaming = null;
+        NewName = null;
+
+        if (result.Outcome == RenameOutcome.Unchanged)
+        {
+            SayNothing();
+            return result;
+        }
+
+        var renamed = result.Category!;
+        if (CategoryName.Comparer.Equals(ExpenseForm.Category, result.OldName)) ExpenseForm.Category = renamed.Name;
+        if (CategoryName.Comparer.Equals(AssignForm.Category, result.OldName)) AssignForm.Category = renamed.Name;
+
+        Tell(Tekst.CategoryRenamed(result.OldName!, renamed), landedIn: null);
+        return result;
+    }
+
+    [RelayCommand]
+    private void Rename() => SaveRename();
+
+    /// <summary>
+    /// Deletes a category with no history anywhere, without asking, and says so afterwards
+    /// (arc42 §12). Offered only on the row of such a category (<see cref="CategoryRow.CanDelete"/>);
+    /// the ledger throws for any other.
+    /// </summary>
+    public Category DeleteCategory(string name)
+    {
+        var category = Ledger.DeleteCategory(name);
+        Tell(Tekst.CategoryDeleted(category), landedIn: null);
+        return category;
+    }
+
+    /// <summary>The delete button on the row of a category with no history anywhere.</summary>
+    [RelayCommand]
+    private void Delete(string name) => DeleteCategory(name);
+
     // ------------------------------------------------------------------ telling
 
     private BudgetPeriod PeriodOf(DateOnly date) => Ledger.Calendar.PeriodContaining(date);
 
+    // Whatever MoneyBud says after an act replaces a question still waiting: the user has moved
+    // on from it, and a question and a notice are never shown together.
+
     private void Tell(string text, BudgetPeriod? landedIn)
     {
+        DropQuestion();
         Notice = landedIn is { } period && period != ShownPeriod
             ? new Notice($"{text} {Tekst.WentInto(period)}", IsRefusal: false, WentInto: period)
             : new Notice(text, IsRefusal: false);
@@ -267,7 +526,16 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     private void Refuse(string text)
     {
+        DropQuestion();
         Notice = new Notice(text, IsRefusal: true);
+        Refresh();
+    }
+
+    /// <summary>An act with no outcome to tell: nothing is said, and what was said before is gone.</summary>
+    private void SayNothing()
+    {
+        DropQuestion();
+        Notice = null;
         Refresh();
     }
 
