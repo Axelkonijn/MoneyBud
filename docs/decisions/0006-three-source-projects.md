@@ -126,3 +126,17 @@ can end up in it by accident, and the specs project does not reference the Deskt
 - **Reversal stays cheap.** Merging `MoneyBud.Presentation` back into another project moves files and
   changes no behaviour. It would cost the scenarios their window-free home, which is the reason for
   the split.
+
+## Note, 2026-09-26: one test now reads the Desktop's markup
+
+This note adds to the record and rewrites nothing above. The first demo's rulings were built on
+2026-09-26 ([§12](../arc42/12-glossary.md), *The user interface*, first demo). Two of them went where
+this record says: the minimum slice width is `Ring.MinimumSweep`, and what pointing at the ring
+shows is decided by `MoneyBudApp.PointAt` and `Ring.SliceAt`. The Desktop only turns the pointer's
+position into a share. The third ruling, the order of a form's fields, can live only in the window's
+markup. It is held by `WindowMarkupTests`, which reads `MainWindow.axaml` as text. **That qualifies
+the first consequence above**, "the Desktop has no automated tests, by plan". It now has one, and it
+starts no window. The specs project still does not reference the Desktop. **Approved by the
+stakeholder at the plan gate on 2026-09-26 as a small departure**, not as a change to the decision.
+The three-project split stands. Details are in [§8.4](../arc42/08-crosscutting-concepts.md), *One test
+reads the window's markup*.

@@ -5,7 +5,7 @@
         x:Class="MoneyBud.Desktop.MainWindow"
         x:DataType="p:MoneyBudApp"
         Title="MoneyBud"
-        Width="1320" Height="820" MinWidth="1000" MinHeight="640"
+        Width="1320" Height="900" MinWidth="1000" MinHeight="720"
         Background="#F6F7F9">
 
   <!-- Income on the left, the plan in the middle, expenses on the right: the stakeholder's own
@@ -74,8 +74,8 @@
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Incomes}" />
           <StackPanel DockPanel.Dock="Top" DataContext="{Binding IncomeForm}" x:DataType="p:IncomeForm">
-            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
+            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
             <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordIncome}"
@@ -106,62 +106,83 @@
 
       <!-- ======================= The plan ======================= -->
       <Border Grid.Column="2" Classes="card">
-        <DockPanel>
-          <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Overview}" />
+        <!-- The ring takes most of the height the column has, and grows with the window; the
+               rows below it scroll. -->
+          <Grid RowDefinitions="Auto,3*,Auto,Auto,2*,Auto">
+          <TextBlock Grid.Row="0" Classes="heading" Text="{x:Static p:Tekst.Overview}" />
 
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="260,*" Margin="0,0,0,12">
-            <Panel Width="240" Height="240">
-              <d:RingControl Ring="{Binding Overview.Ring}" />
+          <!-- The ring is the column's centrepiece (arc42 §12, first demo). Its centre shows
+               Niet toegewezen, or the row of the category slice pointed at; which of the two is
+               MoneyBudApp's to say. The centre ignores the pointer, so the ring sees it there. -->
+          <Panel Grid.Row="1" MinHeight="260" Margin="0,0,0,12">
+            <d:RingControl Ring="{Binding Overview.Ring}" Pointed="{Binding PointedSlice}"
+                           App="{Binding}" />
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="200" Spacing="4"
+                        IsHitTestVisible="False">
               <TextBlock Text="{Binding Overview.RingHint}" IsVisible="{Binding Overview.Ring.IsEmpty}"
-                         TextWrapping="Wrap" TextAlignment="Center" Width="130"
-                         HorizontalAlignment="Center" VerticalAlignment="Center" Classes="caption" />
-            </Panel>
+                         TextWrapping="Wrap" TextAlignment="Center" Classes="caption" />
 
-            <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="6" Margin="12,0,0,0">
-              <TextBlock Text="{x:Static p:Tekst.Unassigned}" Classes="caption" />
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="{Binding Overview.UnassignedText}" FontSize="26" FontWeight="SemiBold" />
-                <Border Classes="marker" IsVisible="{Binding Overview.IsOverAssigned}">
+              <StackPanel IsVisible="{Binding RingCentreShowsUnassigned}" Spacing="4">
+                <TextBlock Text="{x:Static p:Tekst.Unassigned}" Classes="caption" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding Overview.UnassignedText}" FontSize="26" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" />
+                <Border Classes="marker" IsVisible="{Binding Overview.IsOverAssigned}" HorizontalAlignment="Center">
                   <TextBlock Text="{x:Static p:Tekst.OverAssigned}" />
                 </Border>
               </StackPanel>
 
-              <!-- Assigning: its period starts as the one on screen and can be moved on its own. -->
-              <StackPanel DataContext="{Binding AssignForm}" x:DataType="p:AssignForm" Margin="0,10,0,0">
-                <Grid ColumnDefinitions="*,8,*">
-                  <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
-                  <AutoCompleteBox Grid.Column="2" Text="{Binding Category}"
-                                   PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}"
-                                   MinimumPrefixLength="0"
-                                   ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
+              <Panel IsVisible="{Binding PointedRow, Converter={x:Static ObjectConverters.IsNotNull}}">
+              <StackPanel DataContext="{Binding PointedRow}" x:DataType="p:CategoryRow" Spacing="3">
+                <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{x:Static p:Tekst.Archived}" Classes="caption" HorizontalAlignment="Center"
+                           IsVisible="{Binding IsArchived}" />
+                <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,Auto,Auto" Margin="0,4,0,0">
+                  <TextBlock Grid.Row="0" Text="{x:Static p:Tekst.Budget}" Classes="caption" TextAlignment="Right" />
+                  <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding BudgetText}" />
+                  <TextBlock Grid.Row="1" Text="{x:Static p:Tekst.Spent}" Classes="caption" TextAlignment="Right" />
+                  <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding SpentText}" />
+                  <TextBlock Grid.Row="2" Text="{x:Static p:Tekst.Remaining}" Classes="caption" TextAlignment="Right" />
+                  <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding RemainingText}" FontWeight="SemiBold" />
                 </Grid>
-                <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
-                  <Button Content="‹" Command="{Binding EarlierPeriodCommand}" />
-                  <TextBlock Grid.Column="1" Text="{Binding PeriodTitle}" VerticalAlignment="Center"
-                             HorizontalAlignment="Center" />
-                  <Button Grid.Column="2" Content="›" Command="{Binding LaterPeriodCommand}" />
-                  <Button Grid.Column="4" Content="{x:Static p:Tekst.Assign}" Command="{Binding SubmitCommand}"
-                          Classes="accent" />
-                </Grid>
+                <Border Classes="marker" IsVisible="{Binding IsOverBudget}" HorizontalAlignment="Center">
+                  <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
+                </Border>
               </StackPanel>
+              </Panel>
             </StackPanel>
+          </Panel>
+
+          <!-- Assigning: its period starts as the one on screen and can be moved on its own. -->
+          <Grid Grid.Row="2" DataContext="{Binding AssignForm}" x:DataType="p:AssignForm"
+                ColumnDefinitions="*,8,*,12,Auto,Auto,Auto,8,Auto" Margin="0,0,0,12">
+            <AutoCompleteBox Grid.Column="0" Text="{Binding Category}" Margin="0"
+                             PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}"
+                             MinimumPrefixLength="0"
+                             ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
+            <TextBox Grid.Column="2" Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" Margin="0" />
+            <Button Grid.Column="4" Content="‹" Command="{Binding EarlierPeriodCommand}" />
+            <TextBlock Grid.Column="5" Text="{Binding PeriodTitle}" VerticalAlignment="Center" Margin="6,0" />
+            <Button Grid.Column="6" Content="›" Command="{Binding LaterPeriodCommand}" />
+            <Button Grid.Column="8" Content="{x:Static p:Tekst.Assign}" Command="{Binding SubmitCommand}"
+                    Classes="accent" />
           </Grid>
 
           <!-- Adding a category. -->
-          <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,12,0,0"
+          <Grid Grid.Row="5" ColumnDefinitions="*,8,Auto" Margin="0,12,0,0"
                 DataContext="{Binding CategoryForm}" x:DataType="p:CategoryForm">
             <TextBox Text="{Binding Name}" PlaceholderText="{x:Static p:Tekst.Category}" Margin="0" />
             <Button Grid.Column="2" Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.AddCategory}" />
           </Grid>
 
           <!-- One row per category the period shows, in the ring's order. -->
-          <Grid DockPanel.Dock="Top" ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,0,0,4">
+          <Grid Grid.Row="3" ColumnDefinitions="18,*,86,86,92,90,86" Margin="0,0,0,4">
             <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static p:Tekst.Category}" />
             <TextBlock Grid.Column="2" Classes="caption" Text="{x:Static p:Tekst.Budget}" TextAlignment="Right" />
             <TextBlock Grid.Column="3" Classes="caption" Text="{x:Static p:Tekst.Spent}" TextAlignment="Right" />
             <TextBlock Grid.Column="4" Classes="caption" Text="{x:Static p:Tekst.Remaining}" TextAlignment="Right" />
           </Grid>
-          <ScrollViewer>
+          <ScrollViewer Grid.Row="4">
             <ItemsControl ItemsSource="{Binding Overview.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="p:CategoryRow">
@@ -189,7 +210,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </ScrollViewer>
-        </DockPanel>
+        </Grid>
       </Border>
 
       <!-- ======================= Expenses ======================= -->
@@ -197,11 +218,11 @@
         <DockPanel>
           <TextBlock DockPanel.Dock="Top" Classes="heading" Text="{x:Static p:Tekst.Expenses}" />
           <StackPanel DockPanel.Dock="Top" DataContext="{Binding ExpenseForm}" x:DataType="p:ExpenseForm">
-            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
+            <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
             <AutoCompleteBox Text="{Binding Category}" PlaceholderText="{x:Static p:Tekst.Category}"
                              FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}" MinimumPrefixLength="0"
                              ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CategorySuggestions}" />
-            <TextBox Text="{Binding Label}" PlaceholderText="{x:Static p:Tekst.Label}" />
+            <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
             <Button Command="{Binding SubmitCommand}" Content="{x:Static p:Tekst.RecordExpense}"

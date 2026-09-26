@@ -1077,7 +1077,7 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. |
 | **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). |
-| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and not yet built:** every slice, *Unassigned* included, has a **minimum width**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. Hovering a slice shows its figures, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). |
+| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and built:** every slice, *Unassigned* included, is drawn at least **2% of the ring**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. The fill stays exact. Pointing at a slice shows its figures in the ring's hole, which otherwise shows *Unassigned*, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). |
 
 ## A start day the month is too short for clamps to its last day
 
@@ -1501,13 +1501,18 @@ and ",50" are not amounts. Each sits in the section it belongs to. The toolkit i
 Avalonia (*The toolkit*, below). How the screen is arranged in code is in
 [§8.4](08-crosscutting-concepts.md).
 
-**The first demo, on 2026-09-26, brought five more rulings, and they are not built yet.** The source
-is [the demo feedback](../stakeholder/2026-09-26-demo-feedback.md), plus follow-up questions put to
+**The first demo, on 2026-09-26, brought five more rulings, and they are built.** The source is
+[the demo feedback](../stakeholder/2026-09-26-demo-feedback.md), plus follow-up questions put to
 the stakeholder the same day. The five rulings are: the category box empties after an entry goes
 through, the ring becomes the middle column's centrepiece, hovering a slice shows its figures, every
 slice has a minimum width, and each form asks *what* before *how much*. The minimum width **revises**
-an approved rule, so [`overview.feature`](../../features/overview.feature) goes back through the
-scenario gate. Each ruling sits in the section it belongs to and is marked *first demo*.
+an approved rule, so [`overview.feature`](../../features/overview.feature) went back through the
+scenario gate, and [`point-at-a-slice.feature`](../../features/point-at-a-slice.feature) is new. The
+plan was **approved at the plan gate on 2026-09-26**, and the choices it made stand as rulings: the
+width of the minimum, how minimums squeeze the other slices, where the pointed-at figures appear,
+and where the *Unassigned* figure and the assign form went. `spec-reviewer` found no faked scenario,
+and raised three low findings, all fixed. Each ruling sits in the section it belongs to and is
+marked *first demo*.
 
 ### It covers what the domain does, and nothing more
 
@@ -1600,11 +1605,20 @@ shown*, below).
 **A defect came with it, and it is not a rule.** At the demo he typed "groc", picked the suggestion
 *Groceries* and recorded the expense, and the box went back to "groc". It showed what was typed, not
 what was picked. The feedback does not say whether that expense was recorded against Groceries or
-refused as "groc". The fix has to find out which. If it was refused, the box is handing on the typed
-text instead of the picked name, which is worse than a display glitch. What a submitted "Groc" does
-stays as approved (*Approved at the scenario gate*, below).
+refused as "groc". If it was refused, the box was handing on the typed text instead of the picked
+name, which would be worse than a display glitch. What a submitted "Groc" does stays as approved
+(*Approved at the scenario gate*, below).
 
-This is form behaviour, so unit tests hold it, not scenarios.
+**What the build found.** The real window was run headless in a scratch harness, kept outside the
+repository. Typing "groc" and picking *Groceries* with the keyboard **does** reach the form, and the
+expense and the assignment are both recorded against Groceries. The exact symptom did **not**
+reproduce, with the old code or the new, using keyboard picking. Picking with the mouse could not be
+driven headlessly. So the demo expense was **most likely** recorded against Groceries. The reported
+symptom is gone now that the box empties after success, and it stays empty after later acts. That is
+as far as the evidence goes.
+
+**Built** in `ExpenseForm` and `AssignForm`, and held by unit tests, not scenarios, because this is
+form behaviour.
 
 **There is no editing or deleting of a transaction.** That is not a separate decision. The domain
 has neither, so a UI that covers what the domain does has neither. The consequence is worth
@@ -1844,9 +1858,11 @@ the amount first.
 **What it does not change:** which fields there are, what each one accepts, and their defaults
 (above). The assign form's period stepper was not part of the question.
 
-This is window behaviour, so unit tests hold it, not scenarios. The order is set today in the
-Desktop's markup, which no test reaches ([§11](11-risks-and-technical-debt.md)). How a unit test
-comes to hold it is for the plan.
+This is window behaviour, so a unit test holds it, not scenarios. **Built** in the Desktop's
+markup, `MainWindow.axaml`, and held by `WindowMarkupTests`, which reads that markup as text, the
+way `TekstTests` reads this glossary. That was approved at the plan gate on 2026-09-26 as a small
+departure from the Desktop having no automated tests
+([§8.4](08-crosscutting-concepts.md), [ADR 0006](../decisions/0006-three-source-projects.md)).
 
 ### The period start day stays at the 1st, for now
 
@@ -1990,13 +2006,35 @@ spending at all is visible.
 
 **Left for the plan to propose, not open questions:** how wide the minimum is, and what happens when
 minimums squeeze the other slices, for instance when many small slices together would need more of
-the ring than there is. The plan puts both to the stakeholder at the plan gate.
+the ring than there is. Both are now settled (below).
 
 **A requirement on the squeeze rule, from the documentation and not from the stakeholder:** whatever
 the plan proposes, **a larger *Budget* must never be drawn narrower than a smaller one**. Slices run
 largest *Budget* first (*The order of categories and slices*, below), so a ring whose widths broke
 that order would look wrong. The *Unassigned* slice sits outside that order, because it is always
-last. Whether this requirement also compares it with the category slices is for the plan to say.
+last, so whether the requirement also compares it with the category slices was left for the plan.
+
+> **The minimum is 2% of the ring (7.2°). A slice whose share falls below it is drawn at 2%, and
+> the other slices share what is left in proportion to their sizes. This repeats until no slice
+> falls below. *Unassigned* counts like any other slice.** When the minimum cannot fit every slice,
+> at 50 slices or more, every slice is drawn equally wide.
+
+Proposed in the plan and **approved by the stakeholder at the plan gate, 2026-09-26**. **What it
+guarantees**, which is why it was proposed: a larger size is never drawn narrower than a smaller
+one, equal sizes are drawn equally wide, and the shares still close the circle. That meets the
+requirement above. Counting *Unassigned* like any other slice answers the question the requirement
+left open: it **is** compared with the category slices. The two reasons that follow are the
+documentation's. **Why repeat:** giving way can push another
+slice below the minimum, and one pass would leave it there. **Why equal widths at 50 or more:** at
+2% each there is no room for anything else, and equal widths are the one answer that still keeps
+the order.
+
+**Built** as `Ring.MinimumSweep` and `Ring.Sweeps` in the presentation layer. The Desktop's
+`RingControl` used to have a hidden minimum of its own, a floor on how thin it would draw a slice.
+That has been **removed**, so the width is decided in one place and tests reach it. Scenarios in
+[`overview.feature`](../../features/overview.feature) hold the minimum for one-cent slices, the
+*Unassigned* slice included, and the exact fill. The squeeze and the 50-slice case are held by unit
+tests only, and have no scenario.
 
 **It changes an approved scenario file.** [`overview.feature`](../../features/overview.feature)
 says in its header that the whole ring is the period's income, and in its reading notes that "the
@@ -2034,6 +2072,27 @@ has nothing to hover, and it is still listed with the marker. An *Over-assigned*
 **What the hover shows is decided in the presentation layer**, as the rows are. The Desktop only
 shows it ([§8.4](08-crosscutting-concepts.md), [§11](11-risks-and-technical-debt.md)). Every word
 in it is already in *Dutch display terms* (below), and no word was added.
+
+> **The figures appear in the ring's hole, not in a tooltip. With nothing pointed at, the hole shows
+> *Niet toegewezen* and its figure, with the marker when the period is over-assigned. An empty ring
+> shows its hint there. The slice pointed at is drawn highlighted. Stepping to another period points
+> at nothing.**
+
+Proposed in the plan and **approved by the stakeholder at the plan gate, 2026-09-26**. It settles
+where the *Unassigned* figure went when the ring took over the middle column (*The Overview's
+layout*, below). **What follows**, in the documentation's reading of the build: pointing at the
+*Unassigned* slice shows in the hole what the hole shows anyway, its name and figure, so the
+highlight is what makes that slice visibly answer. Because the hole shows *Unassigned* whenever
+nothing else is pointed at, an over-assigned period's figure and marker still have a place, although
+there is no *Unassigned* slice. The figures are read afresh on every act, so a slice pointed at never
+shows stale figures, and stepping never leaves a slice from another period pointed at.
+
+**Built.** The presentation layer decides everything: `Ring.SliceAt` finds the slice at a share of
+the ring, `RingSlice.Row` is a category slice's row, and `MoneyBudApp.PointAt`, `PointedSlice`,
+`PointedRow` and `RingCentreShowsUnassigned` are what the window binds to. The Desktop only turns
+the pointer's position into a share. Specified by
+[`point-at-a-slice.feature`](../../features/point-at-a-slice.feature), with `PointingTests` for the
+centre and for stepping.
 
 #### One marker for over budget and over-assigned
 
@@ -2178,8 +2237,18 @@ Settled by the stakeholder at the first demo, 2026-09-26, answering a follow-up 
 large the ring should be. His complaint was that the ring was too small. He had pictured it much
 larger, and small budgets could hardly be seen in it. This **refines** the layout above. It does not
 replace it: the plan is still in the middle. Within that column the ring now comes first and takes
-most of the room. As built, it sat at a fixed size beside the *Unassigned* figure and the assign
-form. Where those two go now was not part of the question, and is for the plan to propose.
+most of the room. As first built, it sat at a fixed size beside the *Unassigned* figure and the
+assign form. Where those two go now was not part of the question, and was left for the plan.
+
+> **The ring takes most of the middle column's height and grows with the window. Below it come the
+> assign form, then the category rows, which scroll, then adding a category. The *Unassigned* figure
+> sits in the ring's hole.**
+
+Proposed in the plan and **approved by the stakeholder at the plan gate, 2026-09-26**. It settles
+both places left open: the assign form went below the ring, and the *Unassigned* figure went into the
+hole (*Hovering a slice shows its figures*, above). **Built** in the Desktop's markup. The ring was
+first built at a fixed 340 px, and `spec-reviewer` found that it did not grow. It now grows with the
+window.
 
 This is presentation, so it stays out of the scenarios. It works together with the minimum slice
 width (*Every slice has a minimum width*, above): a larger ring and a minimum width both answer
@@ -2394,9 +2463,11 @@ ruled on 2026-09-26, while `type-an-amount.feature` was written: four or more wh
 the mark are not an amount, and a mark needs a digit on both sides. Five more came from the first
 demo on 2026-09-26, with follow-up questions the same day: the category box empties after an entry
 goes through, the ring is the middle column's centrepiece, hovering a slice shows its figures, every
-slice has a minimum width, and the fields ask what before how much. They are not built yet. How
-wide the minimum is, and what happens when minimums squeeze the other slices, are left for the plan
-to propose. They are not filed here as open questions.
+slice has a minimum width, and the fields ask what before how much. Follow-ups the same day settled
+what pointing at an over-budget or archived slice shows, and that the fill stays exact. How wide the
+minimum is, and what happens when minimums squeeze the other slices, were left for the plan rather
+than filed here. The plan gate settled both on 2026-09-26, together with where pointed-at figures
+appear and where the *Unassigned* figure and the assign form went. All of it is built.
 
 One question is **opened** by them rather than answered: whether an overdrawn account gets the
 marker *Over budget* and *Over-assigned* now have. It cannot be answered before accounts exist, and
@@ -2540,11 +2611,11 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Do the suggestions narrow as you type? | *Category entry is free text with suggestions* — **yes, on "contains"**: "schap" finds Boodschappen. Chosen over "starts with" and over not narrowing. Settles what `suggest-categories.feature` left open. Case and whitespace runs are ignored, ordinally. Settled after the review, 2026-09-25; built in the presentation layer and held by unit tests, with no scenario, which the stakeholder did not ask for |
 | Is a marker that reads *Over budget* in one place and *Te veel toegewezen* in the other still "the same marker"? | *One marker for over budget and over-assigned* — **yes**: the same look, with each badge naming its own state. Confirmed after the review, 2026-09-25 |
 | How does the Overview show an archived category that is still shown? | *Where an archived category is still shown* — with a **Gearchiveerd** caption, and **no archive button**. Built that way, seen after the review, and kept by the stakeholder, 2026-09-25 |
-| Does the category box empty after an entry? | *Category entry is free text with suggestions* — **yes, after an expense or an assignment goes through**, and it keeps what was typed after a refusal, like every other field. It replaces the built behaviour of keeping the category. Ruled at the first demo, 2026-09-26; not built |
-| How large is the ring? | *The Overview's layout* — **the centrepiece of the middle column**, filling most of it, with the category rows below. Ruled at the first demo, 2026-09-26; not built |
-| Does the ring respond to the pointer? | *Hovering a slice shows its figures* — **hovering** a category slice shows its category, *Budget*, *Uitgegeven* and *Resterend*, and the *Unassigned* slice shows its name and figure. Chosen over clicking to select and over clicking to zoom. A hover tells you everything its row does: an over-budget slice shows the negative *Resterend* with the marker, and an archived category's slice shows *Gearchiveerd*. Ruled at the first demo and in follow-ups, 2026-09-26; not built |
-| How do small budgets stay visible in the ring? | *Every slice has a minimum width* — **a minimum width for every slice**, *Unassigned* included, so the ring is no longer drawn exactly in proportion. A **revision** of the approved ring. Chosen over keeping the ring exact and over names beside the ring. The fill stays **exact**, with no minimum fill, chosen over a visible sliver for any spending. The width, and what happens when minimums squeeze the other slices, are for the plan, which must never draw a larger *Budget* narrower than a smaller one. Ruled at the first demo and in follow-ups, 2026-09-26; not built |
-| In what order does a form ask for its fields? | *The fields ask what before how much* — the "what" before the amount: expense *Omschrijving*, *Categorie*, *Bedrag*, *Datum*; income *Omschrijving*, *Bedrag*, *Datum*; assigning *Categorie*, *Bedrag*. Ruled at the first demo, 2026-09-26; not built |
+| Does the category box empty after an entry? | *Category entry is free text with suggestions* — **yes, after an expense or an assignment goes through**, and it keeps what was typed after a refusal, like every other field. It replaces the old behaviour of keeping the category. The "groc" symptom did not reproduce, and that expense was most likely recorded against Groceries. Ruled at the first demo, 2026-09-26; built |
+| How large is the ring? | *The Overview's layout* — **the centrepiece of the middle column**, taking most of its height and growing with the window. Below it come the assign form, the rows and adding a category, and the *Unassigned* figure sits in the ring's hole. Ruled at the first demo and at the plan gate, 2026-09-26; built |
+| Does the ring respond to the pointer? | *Hovering a slice shows its figures* — **hovering** a category slice shows its category, *Budget*, *Uitgegeven* and *Resterend*, and the *Unassigned* slice shows its name and figure. Chosen over clicking to select and over clicking to zoom. A hover tells you everything its row does: an over-budget slice shows the negative *Resterend* with the marker, and an archived category's slice shows *Gearchiveerd*. The figures appear in the ring's hole, which shows *Unassigned* when nothing is pointed at, and the slice pointed at is highlighted. Ruled at the first demo, in follow-ups and at the plan gate, 2026-09-26; built |
+| How do small budgets stay visible in the ring? | *Every slice has a minimum width* — **a minimum width for every slice**, *Unassigned* included, so the ring is no longer drawn exactly in proportion. A **revision** of the approved ring. Chosen over keeping the ring exact and over names beside the ring. The fill stays **exact**, with no minimum fill, chosen over a visible sliver for any spending. The minimum is **2%**. Slices below it are drawn at 2% and the rest share what is left in proportion, repeated until none falls below, with *Unassigned* counted like any other slice. So a larger *Budget* is never drawn narrower than a smaller one. At 50 slices or more, all are drawn equal. Ruled at the first demo, in follow-ups and at the plan gate, 2026-09-26; built |
+| In what order does a form ask for its fields? | *The fields ask what before how much* — the "what" before the amount: expense *Omschrijving*, *Categorie*, *Bedrag*, *Datum*; income *Omschrijving*, *Bedrag*, *Datum*; assigning *Categorie*, *Bedrag*. Ruled at the first demo, 2026-09-26; built, and held by `WindowMarkupTests`, which reads the window's markup |
 | Does expected money have a location, given that future-dated income is *Unassigned* before it arrives? | *The central distinction* — the question does not arise: expected income is **not money yet**, so there is no euro to lack a location, and the rule survives untouched. What it does cost is stated there and under *Net worth*: net worth is a point-in-time figure that excludes expected income, *Unassigned* is a period figure that includes it, and the two disagree by design |
 
 **Seven** of these answers were taken with their drawbacks visible rather than resolved: the

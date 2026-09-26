@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 574 passing: 324 scenario cases, 250 developer unit tests
+dotnet test  MoneyBud.slnx     # 620 passing: 340 scenario cases, 280 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; every start is a first start
 ```
 
@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the first feedback round's scenarios were approved. Update this when a stage completes._
+_Last updated 2026-09-26, after the first feedback round was built green on `feedback-round-1`. Update this when a stage completes._
 
 **Done: all five stages, five times — for `record-expense`, `record-income`, categories,
 assigning and the desktop UI.** All five are built and green.
@@ -245,19 +245,22 @@ untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
 **Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
 category's last figure is **not offered back**.
 
-**In progress: the first feedback round, on branch `feedback-round-1`.** Axel ran the demo on
-2026-09-26 in a guided session. **Stage 1 is done**: his feedback is captured, approved by him, in
+**The first feedback round is done and green, on branch `feedback-round-1`** (not yet merged
+into `main`). Axel ran the demo on 2026-09-26 in a guided session; his feedback is in
 [`docs/stakeholder/2026-09-26-demo-feedback.md`](docs/stakeholder/2026-09-26-demo-feedback.md).
-**Stages 2 and 3 are done** (2026-09-26): the rulings are in §12, and the scenarios were
-**approved at the first gate** — `overview.feature` revised (three scenarios for the minimum
-width, none changed) and the new `point-at-a-slice.feature` (hover). Both are unbound, so 16
-cases fail as undefined until the build. **The next step is stage 4, the plan**, which must
-propose the minimum width, the squeeze rule (a larger *Budget* never drawn narrower than a
-smaller one), how field order becomes testable outside the untested Desktop, and where the
-*Niet toegewezen* figure and assign form go. Three changes, all small:
+All five stages ran the same day: rulings in §12, scenarios **approved at the first gate**
+(`overview.feature` revised, `point-at-a-slice.feature` new), the plan **approved at the second**,
+and `spec-reviewer` found no faked scenario and three low defects, all fixed. What the plan
+settled: the minimum is **2%** of the ring (`Ring.MinimumSweep`); smaller slices are widened and
+the rest give way in proportion, so a larger slice is never narrower and *Unassigned* counts like
+any other; past 50 slices all are drawn equal. A slice's details show **in the ring's hole**,
+which otherwise shows *Niet toegewezen*. The field order is held by a unit test that **reads
+`MainWindow.axaml`** — an approved exception to the untested Desktop. The "groc" defect did not
+reproduce in a headless run (a picked suggestion does reach the form); the box now empties
+either way. Three changes, all small:
 
-- **The category box empties after every entry**, expense and assign alike. Today it keeps what
-  was *typed* ("groc") rather than the suggestion picked, which is a bug on top of the wish.
+- **The category box empties after every entry that goes through**, expense and assign alike;
+  a refusal keeps it, like every other field.
 - **The ring becomes the centrepiece** of the middle column, rows below it; **hovering a slice
   shows** everything its row does — category, Budget, Uitgegeven, Resterend, the marker,
   *Gearchiveerd* — and the *Niet toegewezen* slice shows its figure; **every slice, Unassigned

@@ -15,7 +15,7 @@ later ask "why on earth is it like this?".
 | [0003](../decisions/0003-money-representation.md) | How money is represented in code | Accepted, amended same day | 2026-09-24 |
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
-| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1 | 2026-09-25 |
+| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1. Dated note, 2026-09-26: one test reads the Desktop's markup | 2026-09-25 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -72,3 +72,10 @@ increments' were not: they are about how one layer expresses the requirements, n
 architecture. How typed text becomes an amount, why display formatting ignores the machine's
 culture, and how the scenarios reach the screen are in [§8.2](08-crosscutting-concepts.md) and
 [§8.4](08-crosscutting-concepts.md).
+
+**The first demo's rulings added none** (2026-09-26). They introduced no technology and moved no
+boundary. One of them **qualifies** a consequence of ADR 0006 without reversing its decision: the
+order of form fields can live only in the window's markup, so one test now reads that markup as
+text, and the Desktop is no longer entirely untested. That was approved at the plan gate as a small
+departure. It is recorded as a dated note on ADR 0006 and in [§8.4](08-crosscutting-concepts.md),
+not as a superseding record, because the three-project split stands.
