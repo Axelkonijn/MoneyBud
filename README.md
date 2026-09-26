@@ -5,7 +5,8 @@ A personal budgeting app — track income, expenses and savings goals for one pe
 ## Status
 
 **A demo, to gather feedback on.** A desktop app that records income and expenses, assigns
-income to categories, and shows each budget period as a ring. Its data may not survive a new
+income to categories, offers a new period the last plan made to take over in one go, and shows
+each budget period as a ring. Its data may not survive a new
 version until the switch to real use.
 
 ```

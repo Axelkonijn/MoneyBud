@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 901 passing: 531 scenario cases, 370 developer unit tests
+dotnet test  MoneyBud.slnx     # 935 passing: 554 scenario cases, 381 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after increment 7 (persistence) was built, tried by Axel and merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-27, after increment 8 (opening a period) was built, reviewed, documented and approved by Axel. Update this when a stage completes._
 
 **Done: all five stages, seven times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things and keeping data.** All seven are built and green;
@@ -137,7 +137,8 @@ archives and assigns, and whose `StartNew` seeds the default categories), `Assig
 entries carry a ledger-issued `Id`, `Category` is a class with identity, and there are
 `ChangeExpenseResult`, `ChangeIncomeResult` (with `ChangeOutcome`) and `RenameCategoryResult`
 (with `RenameOutcome`, `RenameRefusal`). Since increment 7: `LedgerSnapshot`, `Ledger.ToSnapshot` and
-`FromSnapshot`, and the `ILedgerStore` port (with `Claim` and `LoadResult`).
+`FromSnapshot`, and the `ILedgerStore` port (with `Claim` and `LoadResult`). Since increment 8:
+`Ledger.PlanOfferedIn` → `PlanOffer` (with `PlanFigure`) and `Ledger.TakeOverPlan` → `TakeOverPlanResult`.
 In `MoneyBud.Presentation`: `MoneyBudApp` (the screen, including the one `Question` and the save
 line), `MoneyBudStart`, `PeriodOverview` and `Ring`, the entry forms (with their *Wijzigen* state),
 `AmountInput` and `Tekst`. In `MoneyBud.Storage`: `LedgerJson` and `FileLedgerStore`. No accounts
@@ -249,8 +250,8 @@ screen ever needs it, revisit §12 first ([§8.1](docs/arc42/08-crosscutting-con
 the toolkit's own filter and had to be moved into Presentation. Anything the window chooses is
 untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
 
-**Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
-category's last figure is **not offered back**.
+**Settled ahead, and since built** (increment 8): **when a period opens**, an archived category's
+last figure is **not offered back**.
 
 **The first feedback round is done and green, built on branch `feedback-round-1` and merged into
 `main`.** Axel ran the result himself on 2026-09-26: "it looks great". Axel ran the demo on 2026-09-26 in a guided session; his feedback is in
@@ -336,23 +337,49 @@ found no faked scenario and five low defects, all fixed. In outline:
 already there, assigning 0 and a negative clipped against a zero budget are said but not saved; a
 new no-op act must pass `changed: false`, or a failing disk shows a false "not saved".
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. The
-next session starts at **stage 1 of opening a period**: a conversation with Axel, not a delegation.
-Much of it is already settled in §12 (a period opens with last period's figures *remembered but not
-assigned*, one action assigns them in full, an archived category's last figure is not offered back),
-so stage 1 is mostly confirming that and finding what is still open — for instance what "last
-period's figures" means when the previous period had no budget, and how the offer is shown.
+**Increment 8 — opening a period — is built and green on branch `increment-8-opening-a-period`
+(2026-09-27), approved by Axel the same day and committed on the branch.** Stages 1–4 on 2026-09-26:
+seventeen rulings in §12 *Opening a period*; `features/take-over-a-plan.feature` (19 scenarios,
+23 cases) **approved at the first gate**; the plan below **approved at the second**. Built as planned;
+`spec-reviewer` found no faked scenario and three low items, all fixed (a refused take-over's notice
+was unchecked; the button did not use `Tekst.TakeOverPlan`; §5 not updated). Headless check of the
+real window passed. Budget column widened 86 → 104 px so "plan: € 1.450,00" fits. In outline: in the current period and later ones, while every Budget there is zero (archived
+included), MoneyBud offers the latest earlier period's plan (a period counts only with a Budget > 0
+for a category not archived now); a button names the source period and total, each row shows grey
+"plan: € 400,00", rows sort by plan figure during the offer; taking it over assigns in full into the
+**period on screen**, unconfirmed, may go over-assigned, and the notice names the period. The approved plan:
+
+- **Domain.** `Ledger.PlanOfferedIn(period)` → `PlanOffer?` (source period, figures per category,
+  total): null for a past period or when any Budget there is > 0; the source is found directly from
+  stored budgets (latest earlier period with a Budget > 0 for a non-archived category), no loop, no
+  limit — **never `HasBudget`**. `Ledger.TakeOverPlan(period)` → result: refuses a past period with
+  `AssignRefusal.PeriodInPast` (same message as assigning); otherwise calls `Assign` per figure, the
+  only writer of a budget; throws when nothing is offered (unreachable). No new ADR; nothing new saved.
+- **Presentation.** `PeriodOverview.Offer` + button text; `CategoryRow.PlanFigure` + "plan: € …";
+  rows sort Budget, then plan figure, then order added. `MoneyBudApp.TakeOverPlan` acts on
+  `ShownPeriod`; notice always names the period, proposed *"Plan van augustus 2026 overgenomen in
+  oktober 2026: € 1.450,00 toegewezen."*; saves (`changed: true`). `Tekst` gets *Plan overnemen* and
+  *plan* — move them from §12's proposals table into the real display-terms table at the same time.
+- **Desktop.** Button directly under the assign form, visible only with an offer; grey figure under
+  the Budget figure in each row (no new column).
+- **Tests.** `TakeOverSteps.cs`; a `plan` column in the categories-table step; a period phrase for
+  "the budget period 2 before the current one"; **anchor** the existing "the next budget period
+  begins while MoneyBud is open" step, or it also matches the new "…before the Overview is next
+  drawn". Unit tests: the search back, the throw, `Tekst` wording, the sort incl. equal plan figures.
+- **After green — done except the last:** `spec-reviewer`; stale header comments; §5, §8.1, §12;
+  README; this file; headless check; Axel's approval.
+
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code.
 Put questions to Axel as multiple choice with a recommendation (`AskUserQuestion`); that worked well
-for persistence.
+for persistence and for opening a period.
 
 Order agreed with Axel on 2026-09-26:
 
 1. **Correcting things — done** (increment 6, above).
 2. **Persistence — done** (increment 7, above).
-3. **Opening a period — start here** — offering last period's figures back and the one action that assigns them
-   in full. Settled in §12, not built. After persistence, because it matters once MoneyBud is used
-   across real months.
-4. **Accounts, net worth and the sweep** — later increments. The sweep depends on accounts.
+3. **Opening a period — done** (increment 8, above).
+4. **Accounts, net worth and the sweep — start here, at stage 1** — later increments. The sweep
+   depends on accounts.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:

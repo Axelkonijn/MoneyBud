@@ -114,3 +114,10 @@ consequence for storage, that a category's name can no longer serve as its key, 
 [§8.3](08-crosscutting-concepts.md) for the persistence increment, where it may well need a record.
 It became one of the questions that increment's plan had to settle, and ADR 0007 answers it: a
 category gets a key that exists only in the file, and the domain gained no id.
+
+**Opening a period added none**, as its approved plan said in advance. It introduced no technology,
+moved no boundary ([§5](05-building-block-view.md)), touched no money rule and changed nothing that
+is kept, so ADR 0007's file format stands at version 1. The one choice with any weight is that
+taking a plan over calls `Assign` once per figure instead of writing budgets itself, which keeps one
+writer of a *Budget*. That applies a rule [§8.1](08-crosscutting-concepts.md) already recorded,
+rather than making a new one, and it is recorded there.

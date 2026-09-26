@@ -36,6 +36,16 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
     /// <summary>Whether this row's name is being renamed, and so shows a text box in its place.</summary>
     public bool IsRenaming { get; init; }
 
+    /// <summary>
+    /// The figure this category would take over from the plan offered, shown in grey under its
+    /// <i>Budget</i> (arc42 §12, <i>The offer is a button, and a figure on each row</i>). Null while
+    /// no plan is offered, and for a category not in the plan — which shows no figure, not a zero.
+    /// </summary>
+    public Money? PlanFigure { get; init; }
+
+    /// <summary>"plan: € 400,00", or null when the row shows no plan figure.</summary>
+    public string? PlanText => PlanFigure is { } figure ? Tekst.PlanFigure(figure) : null;
+
     public bool IsOverBudget => Marker == Marker.Over;
     public string BudgetText => Tekst.Euro(Budget);
     public string SpentText => Tekst.Euro(Spent);
@@ -69,8 +79,9 @@ public sealed record IncomeLine(Income Entry)
 
 /// <summary>
 /// One budget period as the Overview shows it: the categories it lists, its ring, its
-/// <i>Unassigned</i>, and its expenses and incomes. Worked out afresh from the ledger each time,
-/// so it never holds a figure that has since changed.
+/// <i>Unassigned</i>, its expenses and incomes, and the plan it is offered, if any. Worked out
+/// afresh from the ledger each time, so it never holds a figure that has since changed — and an
+/// offer that has gone, because the period has passed or has a plan now, is simply not there.
 /// </summary>
 public sealed record PeriodOverview(
     BudgetPeriod Period,
@@ -78,8 +89,18 @@ public sealed record PeriodOverview(
     Ring Ring,
     Money Unassigned,
     IReadOnlyList<ExpenseLine> Expenses,
-    IReadOnlyList<IncomeLine> Incomes)
+    IReadOnlyList<IncomeLine> Incomes,
+    PlanOffer? Offer = null)
 {
+    /// <summary>Whether the button that takes the plan over is shown.</summary>
+    public bool HasOffer => Offer is not null;
+
+    /// <summary>
+    /// The button's text, naming the period whose plan is offered and its total: "Plan van
+    /// augustus 2026 overnemen (€ 1.450,00)". Null while no plan is offered.
+    /// </summary>
+    public string? OfferText => Offer is { } offer ? Tekst.TakeOverPlanButton(offer) : null;
+
     public bool IsOverAssigned => Unassigned.IsNegative;
 
     /// <summary>The same marker an overspent category carries (§12).</summary>
@@ -93,9 +114,16 @@ public sealed record PeriodOverview(
     /// <param name="renaming">The name of the category being renamed, if any, whose row shows a text box.</param>
     public static PeriodOverview Of(Ledger ledger, BudgetPeriod period, string? renaming = null)
     {
+        var offer = ledger.PlanOfferedIn(period);
+
         // The display rule decides which categories are listed, in the order they were added.
         // Sorting by Budget is stable, so equal budgets — every zero among them — keep that
         // order, and a category brought back keeps the place it was first added in (§12).
+        //
+        // While a plan is offered every Budget is zero, so the plan figure decides instead, a row
+        // with none counting as zero: that is the order the rows will have once the plan is taken
+        // over, so nothing jumps (§12, *The figure on each row goes with the offer*). With no
+        // offer every plan figure is null and the second key changes nothing.
         var rows = ledger.CategoriesShownIn(period)
             .Select(c => new CategoryRow(
                 c.Name,
@@ -106,8 +134,10 @@ public sealed record PeriodOverview(
             {
                 CanDelete = ledger.CanDelete(c.Name),
                 IsRenaming = c.Name == renaming,
+                PlanFigure = offer?.FigureFor(c),
             })
             .OrderByDescending(r => r.Budget.Cents)
+            .ThenByDescending(r => r.PlanFigure?.Cents ?? 0)
             .ToList();
 
         var incomes = ledger.IncomesIn(period);
@@ -124,7 +154,8 @@ public sealed record PeriodOverview(
             ring,
             unassigned,
             NewestFirst(ledger.ExpensesIn(period), e => e.Date).Select(e => new ExpenseLine(e)).ToList(),
-            NewestFirst(incomes, i => i.Date).Select(i => new IncomeLine(i)).ToList());
+            NewestFirst(incomes, i => i.Date).Select(i => new IncomeLine(i)).ToList(),
+            offer);
     }
 
     /// <summary>

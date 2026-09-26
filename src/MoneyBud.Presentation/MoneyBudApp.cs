@@ -27,6 +27,8 @@ public sealed record Question(string Text);
 /// <list type="bullet">
 /// <item>A date left out means today, whatever period is shown. A period left out for assigning
 /// means the period shown.</item>
+/// <item>Taking a plan over always acts on the period shown, wherever the assign form's own period
+/// has been moved to.</item>
 /// <item>When an entry lands in a period other than the one on screen, the screen stays where it
 /// is and says which period the entry went into.</item>
 /// <item>Amounts arrive as typed text, read by <see cref="AmountInput"/>.</item>
@@ -327,6 +329,32 @@ public sealed partial class MoneyBudApp : ObservableObject
 
         return result;
     }
+
+    /// <summary>
+    /// The offer's button: takes the plan offered over, in full, into the <b>period on screen</b> —
+    /// never the assign form's own period, because the grey figures it takes over are on this
+    /// period's rows (arc42 §12, <i>The offer is a button, and a figure on each row</i>). Asks
+    /// nothing, and says afterwards which period the plan went into.
+    ///
+    /// <para>For up to a minute after a period boundary the button can still be on screen over a
+    /// period that is now past. Pressed then, it is refused as any assignment there is, and the
+    /// redraw after the refusal takes the offer away.</para>
+    /// </summary>
+    public TakeOverPlanResult TakeOverPlan()
+    {
+        var result = Ledger.TakeOverPlan(ShownPeriod);
+
+        if (result.WasTakenOver)
+            Tell(Tekst.PlanTakenOver(result.Plan!, result.Into!), landedIn: null);
+        else
+            Refuse(Tekst.Refusal(result.Refusal!.Value, category: null));
+
+        return result;
+    }
+
+    /// <summary>The offer's button, shown only while a plan is offered.</summary>
+    [RelayCommand]
+    private void TakeOver() => TakeOverPlan();
 
     public AddCategoryResult AddCategory(string? name)
     {

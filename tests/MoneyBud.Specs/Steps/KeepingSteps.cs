@@ -279,7 +279,8 @@ public sealed class KeepingSteps(SpecContext context)
     // The acts the screen offers are the commands of the screen and its forms, and the window's
     // buttons are bound to those and nothing else. Both are listed in full, so a new act — one to
     // save, or to start over — fails here until it is looked at. None of those listed saves data or
-    // starts over: the forms' Submit records or saves an entry, Remove asks to remove one.
+    // starts over: the forms' Submit records or saves an entry, Remove asks to remove one, and
+    // TakeOver takes a plan over, which only assigns.
     [Then(@"^MoneyBud should offer no act for (saving|starting over)$")]
     public void ThenMoneyBudShouldOfferNoActFor(string _)
     {
@@ -287,7 +288,7 @@ public sealed class KeepingSteps(SpecContext context)
         [
             "ArchiveCommand", "CancelRenameCommand", "ConfirmCommand", "DeclineCommand", "DeleteCommand",
             "EditExpenseCommand", "EditIncomeCommand", "RenameCommand", "StartRenameCommand",
-            "StepBackCommand", "StepForwardCommand",
+            "StepBackCommand", "StepForwardCommand", "TakeOverCommand",
         ];
         Assert.Equal(screen, CommandsOf(App));
 

@@ -209,9 +209,12 @@
             </StackPanel>
           </Panel>
 
-          <!-- Assigning: its period starts as the one on screen and can be moved on its own. -->
-          <Grid Grid.Row="2" DataContext="{Binding AssignForm}" x:DataType="p:AssignForm"
-                ColumnDefinitions="*,8,*,12,Auto,Auto,Auto,8,Auto" Margin="0,0,0,12">
+          <!-- Assigning: its period starts as the one on screen and can be moved on its own. Under
+               it, while a plan is offered, the button that takes the plan over into the period on
+               screen (arc42 §12, Opening a period). -->
+          <StackPanel Grid.Row="2" Margin="0,0,0,12" Spacing="8">
+          <Grid DataContext="{Binding AssignForm}" x:DataType="p:AssignForm"
+                ColumnDefinitions="*,8,*,12,Auto,Auto,Auto,8,Auto">
             <AutoCompleteBox Grid.Column="0" Text="{Binding Category}" Margin="0"
                              PlaceholderText="{x:Static p:Tekst.Category}" FilterMode="Custom" TextFilter="{x:Static d:Suggestions.Filter}"
                              MinimumPrefixLength="0"
@@ -223,6 +226,10 @@
             <Button Grid.Column="8" Content="{x:Static p:Tekst.Assign}" Command="{Binding SubmitCommand}"
                     Classes="accent" />
           </Grid>
+          <Button IsVisible="{Binding Overview.HasOffer}" Content="{Binding Overview.OfferText}"
+                  Command="{Binding TakeOverCommand}"
+                  HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+          </StackPanel>
 
           <!-- Adding a category. -->
           <Grid Grid.Row="5" ColumnDefinitions="*,8,Auto" Margin="0,12,0,0"
@@ -234,7 +241,7 @@
           <!-- One row per category the period shows, in the ring's order. Under each name, its
                acts: Hernoemen always, Archiveren while in use, Verwijderen only when it has no
                history anywhere — two separate buttons, so nothing is decided for the user. -->
-          <Grid Grid.Row="3" ColumnDefinitions="18,*,86,86,92,90" Margin="0,0,0,4">
+          <Grid Grid.Row="3" ColumnDefinitions="18,*,104,86,92,90" Margin="0,0,0,4">
             <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static p:Tekst.Category}" />
             <TextBlock Grid.Column="2" Classes="caption" Text="{x:Static p:Tekst.Budget}" TextAlignment="Right" />
             <TextBlock Grid.Column="3" Classes="caption" Text="{x:Static p:Tekst.Spent}" TextAlignment="Right" />
@@ -244,7 +251,7 @@
             <ItemsControl ItemsSource="{Binding Overview.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="p:CategoryRow">
-                  <Grid ColumnDefinitions="18,*,86,86,92,90" Margin="0,3">
+                  <Grid ColumnDefinitions="18,*,104,86,92,90" Margin="0,3">
                     <Ellipse Width="10" Height="10" VerticalAlignment="Center"
                              Fill="{Binding SliceIndex, Converter={x:Static d:SliceColours.Swatch}}" />
                     <StackPanel Grid.Column="1" Spacing="1">
@@ -275,7 +282,13 @@
                                 Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).CancelRenameCommand}" />
                       </StackPanel>
                     </StackPanel>
-                    <TextBlock Grid.Column="2" Text="{Binding BudgetText}" TextAlignment="Right" VerticalAlignment="Center" />
+                    <!-- While a plan is offered, the figure the row would take over, in grey under
+                         its Budget; no figure at all for a category not in the plan. -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                      <TextBlock Text="{Binding BudgetText}" TextAlignment="Right" />
+                      <TextBlock Text="{Binding PlanText}" TextAlignment="Right" Classes="caption"
+                                 IsVisible="{Binding PlanText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    </StackPanel>
                     <TextBlock Grid.Column="3" Text="{Binding SpentText}" TextAlignment="Right" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="4" Text="{Binding RemainingText}" TextAlignment="Right" VerticalAlignment="Center" />
                     <Border Grid.Column="5" Classes="marker" IsVisible="{Binding IsOverBudget}"

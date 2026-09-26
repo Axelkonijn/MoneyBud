@@ -48,6 +48,25 @@ internal static partial class SpecParsing
     }
 
     /// <summary>
+    /// Resolves a period as a step names it in full: "the previous budget period" without its
+    /// "the", or "budget period 2 before the current one" (features/take-over-a-plan.feature).
+    /// </summary>
+    public static BudgetPeriod PeriodNamed(this Ledger ledger, string phrase)
+    {
+        var match = NamedPeriod().Match(phrase.Trim());
+        if (!match.Success)
+            throw new ArgumentException($"Unknown budget period \"{phrase}\".", nameof(phrase));
+
+        return match.Groups[1].Success
+            ? ledger.Period(match.Groups[1].Value)
+            : ledger.PeriodsFromCurrent(int.Parse(match.Groups[2].Value, CultureInfo.InvariantCulture)
+                                        * (match.Groups[3].Value == "before" ? -1 : 1));
+    }
+
+    [GeneratedRegex(@"^(?:(current|previous|next) budget period|budget period (\d+) (before|after) the current one)$")]
+    private static partial Regex NamedPeriod();
+
+    /// <summary>
     /// Resolves a date as the scenarios phrase it: "today", "tomorrow", or a day of a named
     /// budget period. A null phrase means the step named no date, which means today.
     /// </summary>

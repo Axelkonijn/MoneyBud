@@ -29,8 +29,12 @@ namespace MoneyBud.Domain;
 /// entry: nothing remembers what it was, and it keeps its place in the order recorded. A category
 /// can be renamed, and one with no history in any period can be deleted.</para>
 ///
-/// <para>Not built yet: accounts, and with them backed categories and the pool account; carrying
-/// last period's figures into a new one; and the end-of-period sweep (arc42 §12).</para>
+/// <para>A period with no plan is offered the latest earlier one (<see cref="PlanOfferedIn"/>),
+/// and taking it over assigns it in full (<see cref="TakeOverPlan"/>). The figures are
+/// remembered; nothing is assigned until the user takes them over.</para>
+///
+/// <para>Not built yet: accounts, and with them backed categories and the pool account; and the
+/// end-of-period sweep (arc42 §12).</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -418,8 +422,7 @@ public sealed class Ledger
     /// </summary>
     public AssignResult Assign(decimal amountInEuros, string? categoryName, BudgetPeriod period)
     {
-        if (Calendar.PeriodContaining(period.FirstDay) != period)
-            throw new ArgumentException($"{period} is not a budget period.", nameof(period));
+        CheckIsAPeriod(period);
 
         if (CategoryName.Normalise(categoryName) is null)
             return AssignResult.Refused(AssignRefusal.CategoryMissing);
@@ -451,6 +454,96 @@ public sealed class Ledger
 
         var broughtBack = !amount.IsNegative && archived.Remove(category);
         return AssignResult.Assigned(category, shortfall, broughtBack);
+    }
+
+    /// <summary>
+    /// The plan a period is offered, or null when it is offered none (arc42 §12, <i>Opening a
+    /// period</i>).
+    ///
+    /// <para>A period is offered a plan when it is the current period or a later one, every
+    /// <i>Budget</i> in it is zero — an archived category's included, since that is still assigned
+    /// money — and some earlier period has a plan. The plan offered is the <b>latest</b> earlier
+    /// one, however far back, and "earlier" is earlier than <paramref name="period"/>, not than
+    /// today. A period has a plan when it has a <i>Budget</i> above zero for a category that is
+    /// not archived now; spending is not a plan.</para>
+    ///
+    /// <para>Decided by the figures alone, never by <see cref="HasBudget"/>: a <i>Budget</i> taken
+    /// back to zero is the same as one never made, so taking every <i>Budget</i> back brings the
+    /// offer back (§8.1). And read afresh on every call — the clock for "current", the archive for
+    /// "archived now" — so the offer comes and goes with no event to mark it.</para>
+    ///
+    /// <para><b>Throws</b> for a period that is not one of <see cref="Calendar"/>'s own, as
+    /// <see cref="Assign"/> does.</para>
+    /// </summary>
+    public PlanOffer? PlanOfferedIn(BudgetPeriod period)
+    {
+        CheckIsAPeriod(period);
+
+        if (period.FirstDay < CurrentPeriod.FirstDay)
+            return null;
+
+        if (budgets.Any(b => b.Key.PeriodStart == period.FirstDay && b.Value.Cents > 0))
+            return null;
+
+        // Budgets are kept by their period's first day, so the latest earlier plan is simply the
+        // latest first day that carries one: no walking back period by period, and no limit.
+        var planned = budgets
+            .Where(b => b.Key.PeriodStart < period.FirstDay && b.Value.Cents > 0 && !archived.Contains(b.Key.Category))
+            .Select(b => b.Key.PeriodStart)
+            .ToList();
+
+        if (planned.Count == 0)
+            return null;
+
+        var from = planned.Max();
+        var figures = categoriesInOrderAdded
+            .Where(c => !archived.Contains(c)
+                        && budgets.TryGetValue((c, from), out var amount) && amount.Cents > 0)
+            .Select(c => new PlanFigure(c, budgets[(c, from)]))
+            .ToList();
+
+        return new PlanOffer(Calendar.PeriodContaining(from), figures);
+    }
+
+    /// <summary>
+    /// Takes over the plan offered in a period: every figure in it is assigned in full, into
+    /// <paramref name="period"/>, as one act (arc42 §12, <i>Taking the plan over assigns it in
+    /// full</i>). Even past what <i>Unassigned</i> holds, so the period may go <i>Over-assigned</i>,
+    /// allowed and unwarned. It touches no expense, and brings no archived category back, since no
+    /// archived category's figure is in a plan.
+    ///
+    /// <para>Each figure goes through <see cref="Assign"/>, which stays the only way a budget is
+    /// written. Refused, like any assignment, for a past period; that is checked first, since a
+    /// past period is offered nothing.</para>
+    ///
+    /// <para><b>Throws</b> when the period is offered no plan. The act is offered only while a plan
+    /// is, and every act redraws the screen, so the user cannot reach it.</para>
+    /// </summary>
+    public TakeOverPlanResult TakeOverPlan(BudgetPeriod period)
+    {
+        CheckIsAPeriod(period);
+
+        if (period.FirstDay < CurrentPeriod.FirstDay)
+            return TakeOverPlanResult.Refused(AssignRefusal.PeriodInPast);
+
+        var plan = PlanOfferedIn(period)
+            ?? throw new InvalidOperationException($"No plan is offered in {period}.");
+
+        foreach (var figure in plan.Figures)
+        {
+            var result = Assign(figure.Amount.Euros, figure.Category.Name, period);
+            if (!result.WasAssigned || result.Shortfall != Money.Zero || result.CategoryBroughtBack)
+                throw new InvalidOperationException(
+                    $"Taking over {figure.Category.Name}'s figure did not simply assign it: {result}.");
+        }
+
+        return TakeOverPlanResult.TakenOver(plan, period);
+    }
+
+    private void CheckIsAPeriod(BudgetPeriod period)
+    {
+        if (Calendar.PeriodContaining(period.FirstDay) != period)
+            throw new ArgumentException($"{period} is not a budget period.", nameof(period));
     }
 
     /// <summary>

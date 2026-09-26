@@ -7,7 +7,7 @@ know regardless of which part of the system they're touching.
 ---
 
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
-built, since 2026-09-26._
+built, since 2026-09-26. Opening a period is built, and appears in §8.1 and §8.4._
 
 ## 8.1 Domain Model
 
@@ -104,7 +104,16 @@ own:
   deliberately does not call `HasBudget`. So a category assigned to and then taken back to zero can
   be deleted, as an approved scenario asserts. Its stored budgets of zero are not history, and
   `DeleteCategory` drops them with it, so nothing of a deleted category is left behind for
-  `HasBudget` or anything else to find.
+  `HasBudget` or anything else to find. **Opening a period added a third**: whether a period has a
+  plan. It decides whether an earlier plan is offered to a period and whether an earlier period can
+  be the one offered. §12 settles both on figures: every *Budget* zero, and a *Budget* of more than
+  zero for a category not archived now. Assigning €100 and taking it back must bring the offer back
+  ([§12](12-glossary.md), *Opening a period*). A build on `HasBudget` would not, because the stored
+  zero would still be there. **Built that way:** `Ledger.PlanOfferedIn` reads the stored budgets'
+  figures directly, `> 0` in both tests, and deliberately does not call `HasBudget`. So the stored
+  zeros a taken-back budget leaves, on disk as well as in memory, cannot hold an offer back. Three
+  places now read figures where `HasBudget` would read a difference, and still no production code
+  calls it.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case
@@ -187,8 +196,15 @@ would set up their sum, and the step fails rather than let a scenario start from
 not state. Setup goes through the same door as the scenario under test, so a setup the rules would
 refuse, clip or turn into a bring-back fails loudly instead of quietly making some other state.
 
-Carry-over at period open, which is where an archived category's figure is not offered back, is
-still unbuilt for every category (*What has no code yet*, below).
+**Taking a plan over goes through the same door.** This section once argued, ahead of the build and
+not as a ruling, that when carry-over was built, taking an earlier plan over should be an assignment
+of each figure rather than a second writer. The opening-a-period increment built it that way.
+`Ledger.TakeOverPlan` checks for a past period first, then calls `Assign` once per figure in the
+plan, into the period given. It writes no budget itself. So the floor, the past-period refusal and
+the rule that writing nothing leaves no mark all hold for a take-over without being repeated. It
+also checks what each `Assign` returned, and throws if one was refused, clipped or brought a
+category back: none of those can happen to a figure in a plan, so any of them would mean the offer
+and the ledger disagreed.
 
 ### "MoneyBud shows, it never blocks" is held by a type
 
@@ -226,7 +242,17 @@ have: an outcome that is **neither success to announce nor refusal**.
 Every "throws" in this increment is one of §12's non-cases: something the screen offers no way to
 do. None of them is a refusal the user could meet.
 
-Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal`, `AssignRefusal` and, since the corrections increment, `RenameRefusal` **values, not messages**. The wording the user
+**Opening a period added one query and one act, held the same way.**
+
+| Member | Its shape | What the shape holds |
+|---|---|---|
+| `Ledger.PlanOfferedIn` → `PlanOffer?` | The plan offered, or null. A `PlanOffer` is the source period and one `PlanFigure` (a category and an amount) per category in the plan, in order added, with `Total` and `FigureFor(category)`. **Worked out on every call, never stored** | §12 reads the offer as a state, not an event, and the type says so: there is nothing to open, close or remember at a period boundary, and "current" and "archived now" are read afresh each time. The source is found from the stored budgets directly, as the latest period start before the given period with a *Budget* above zero for a category not archived now. No walk back period by period, and no limit. A figure holds the `Category`, not its name, so a category renamed since is offered under its new name |
+| `Ledger.TakeOverPlan` → `TakeOverPlanResult` | **Two** shapes, like `AssignResult`: taken over, carrying the `Plan` and the period it went `Into`, or **refused** with an `AssignRefusal`, of which only `PeriodInPast` can occur | Reusing assigning's refusal type says that a take-over *is* assigning. **No outcome for going *Over-assigned***, because a take-over assigns in full whatever *Unassigned* holds, and that has nowhere else to go. The one refusal is reachable for up to a minute after a period boundary, before the screen redraws ([§8.4](#84-the-presentation-layer)). It **throws** when no plan is offered, since the button is shown only while one is |
+
+Both **throw** for a `BudgetPeriod` that is not one of the calendar's own, as `Assign` does. The three
+now share that check, one private `CheckIsAPeriod`, rather than each repeating it.
+
+Refusals are `ExpenseRefusal`, `IncomeRefusal`, `CategoryRefusal`, `AssignRefusal` and, since the corrections increment, `RenameRefusal` **values, not messages**. Taking a plan over added no refusal type of its own. The wording the user
 sees belongs to the UI; putting copy in the domain would put it in the wrong place and would make
 re-wording it a domain change. The UI increment settled that the wording is **Dutch**
 ([§12](12-glossary.md), *The UI is in Dutch*), and built it that way. Every Dutch sentence is in
@@ -422,15 +448,19 @@ exist, with [`add-category.feature`](../../features/add-category.feature) and
 [`archive-category.feature`](../../features/archive-category.feature) approved. *Assign* and
 *Over-assigned* left when the assigning increment shipped: `Ledger.Assign` and
 `Ledger.IsOverAssigned` exist, and [`assign-to-category.feature`](../../features/assign-to-category.feature)
-is approved. Read the absence of a §12 term from this table as "built", not as "nobody wrote a row
-for it".
+is approved. **Carry-over** at period opening left when the opening-a-period increment was built:
+`Ledger.PlanOfferedIn` and `Ledger.TakeOverPlan` exist, and
+[`take-over-a-plan.feature`](../../features/take-over-a-plan.feature) is approved and green. It had
+been put out of the assigning increment's scope as a slice of its own. Its row said that nothing
+acts when a period opens, and that is still true: the offer is a state worked out whenever it is
+asked for, not an event handled at the boundary. Read the absence of a §12 term from this table as
+"built", not as "nobody wrote a row for it".
 
 | §12 concept | Why there is no code |
 |---|---|
 | *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* | The location dimension has not been in any increment so far ([§11](11-risks-and-technical-debt.md)) |
 | *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do. This includes the **backed half of assigning**, where assigning really moves money out of a source it may overdraw. The assigning increment left it out for this reason, so every category is unbacked and `Assign` is planning only |
 | *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
-| **Carry-over** at period opening (§12, *Budgets carry over as figures*), including that an archived category's figure is not offered back | Belongs with **period opening**, a slice of its own, and was put out of the assigning increment's scope for that reason ([§12](12-glossary.md), *Nothing here blocks the assigning increment*). Nothing acts when a period opens: a new period simply has no budgets until something is assigned |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
@@ -645,6 +675,10 @@ one JSON file in the user's local application data, written whole after every ch
 of its own. Its three feature files, `keep-data.feature`, `start-moneybud.feature` and
 `carry-on-when-saving-fails.feature`, are approved and bound.
 
+**Opening a period changed nothing here.** The plan offered is worked out from the budgets already
+kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
+are unchanged.
+
 Through the first six increments this section recorded a **deferral**, with a trigger. That record is kept
 below (*How this section read until 2026-09-26*), because the reasoning is still the reason nothing
 was stored until then.
@@ -842,7 +876,10 @@ rediscovered: **for up to a minute after a period boundary the screen can be out
 can still read *Huidige periode*, and in-use categories with no history can still be listed in a
 period that has just become past. An assignment made in that minute is refused as past, because the
 domain reads the clock itself. Any act refreshes at once, so the refusal also corrects the label.
-Nothing is announced either way, which is what §12 asks.
+Nothing is announced either way, which is what §12 asks. **Since the opening-a-period increment the
+same holds for the offer**: the take-over button and the grey plan figures can stay on a period that
+has just become past, pressing the button then is refused as a past-period assignment, and the redraw
+after the refusal takes them away (*Opening a period on screen*, below).
 
 **A second consequence, since the corrections increment, known and not fixed.** The minute's refresh
 rebuilds the category rows, and with them a rename box that is open. **The box loses keyboard
@@ -875,7 +912,8 @@ ruling (*On screen: picking an entry to correct*). Six further choices were made
 not put to the stakeholder: a rename rewriting the category box, stepping cancelling a rename,
 which acts drop a waiting question, the archive button's new place, the question's two answers, and
 the rename box losing focus on the minute's refresh. They sit in §12, *Chosen in the build, not put
-to the stakeholder*, beside the rulings each one fills in.
+to the stakeholder*, beside the rulings each one fills in. **Opening a period's are there too**, under
+*Taking a plan over: chosen in the build, not put to the stakeholder*, for the same reason.
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -982,6 +1020,44 @@ is a sibling of the notice and the question in `MainWindow.axaml`, so that it ca
 their place without a test failing. It widens the markup exception below, and was approved at the
 plan gate on the same terms.
 
+### Opening a period on screen
+
+The rulings are in [§12](12-glossary.md), *Opening a period*. How the presentation layer holds them:
+
+- **The offer is part of the Overview, worked out with it.** `PeriodOverview.Of` asks
+  `Ledger.PlanOfferedIn` for the period it is building, and keeps the answer as `Offer`. `HasOffer`
+  shows the button, and `OfferText` is its text, *"Plan van augustus 2026 overnemen (€ 1.450,00)"*.
+  Because the Overview is rebuilt on every read ("Nothing is cached", above), an offer that has gone,
+  because the period got a plan or became past, is simply absent at the next read. Nothing clears it.
+- **Each row carries its own grey figure.** `CategoryRow.PlanFigure` is `Offer.FigureFor` the row's
+  category: null with no offer, and null for a category not in the plan, which therefore shows no
+  label rather than "plan: € 0,00". `PlanText` is *"plan: € 400,00"*, or null.
+- **The row order has a second key.** Rows sort by *Budget*, then by plan figure (none counting as
+  zero), then by order added, the last through a stable sort. While an offer stands every *Budget* is
+  zero, so the plan figure decides. With no offer every plan figure is null, so the second key
+  changes nothing and the order is the one the UI increment built. One sort serves both, rather
+  than a second ordering switched on by the offer.
+- **`MoneyBudApp.TakeOverPlan` acts on `ShownPeriod`**, never on the assign form's own period, so the
+  button and the grey figures always describe the same period. It asks nothing. Taken over, the
+  notice names both periods: *"Plan van augustus 2026 overgenomen in oktober 2026: € 1.450,00
+  toegewezen."*, naming the period it went into even when that is the one on screen. It passes
+  `changed: true`, so it saves like any change, and it always does change the ledger, since every
+  figure in a plan is above zero. Refused, it shows the sentence the assign form shows for a past
+  period, and saves nothing ([§12](12-glossary.md), *Taking a plan over: chosen in the build, not
+  put to the stakeholder*).
+- **The words are `Tekst.TakeOverPlan`, *Plan overnemen*, and `Tekst.Plan`, *plan***, two rows of §12's
+  display-terms table that `TekstTests` holds. The button's text is built from the `TakeOverPlan`
+  constant, split around the period's name, so the table's words are the words on the button.
+  `spec-reviewer` found that the first build wrote the button's words out afresh, leaving the
+  constant unused, and that was fixed.
+
+**The Desktop only binds.** The button, under the assign form, binds its visibility to `HasOffer`,
+its text to `OfferText` and its command to `TakeOverCommand`. The grey figure is a caption under the
+*Budget* figure, shown when `PlanText` is not null. The *Budget* column was widened to fit it
+([§12](12-glossary.md), *Taking a plan over: chosen in the build, not put to the stakeholder*). No
+markup test covers either, and a headless run of the real window checked both
+([§11](11-risks-and-technical-debt.md), the Desktop row).
+
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
 `RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
@@ -1044,6 +1120,30 @@ licence to leave a decision in the window because a text test could reach it. A 
   file, or a file whose version is one higher. The *Then* checks the file byte for byte afterwards,
   and that no temporary file was made.
 
+**How the opening-a-period scenarios reach the screen** (`TakeOverSteps`, with small additions to
+`ScreenSteps`, `AssignSteps`, `KeepingSteps` and `SpecParsing`):
+
+- **"I take over the plan offered"** first checks that the Overview has the button to press, then
+  calls `MoneyBudApp.TakeOverPlan`, the button's own door. **"I try to take over the plan offered"**
+  does not check, because it is the button as last drawn, pressed after a boundary the screen has not
+  caught up with.
+- **"…before the Overview is next drawn"** moves the clock into the next period without the timer's
+  refresh, so the button is still there to be pressed on a period that has just become past. The
+  older "the next budget period begins while MoneyBud is open" step, which does refresh, is
+  **anchored**, because unanchored it also matched the start of the new one.
+- **A refused take-over proves nothing was assigned anywhere**: the *When* keeps every budget in
+  every period beforehand, and the *Then* compares. Being told is checked on the notice: that it is
+  a refusal, and that it is the sentence `Tekst` makes for a past-period assignment. `spec-reviewer`
+  found the notice unchecked at first. A take-over's notice is checked the same way, against the
+  sentence `Tekst.PlanTakenOver` makes, and that it names the period. Comparing with what `Tekst`
+  produces rather than with a quoted sentence keeps the wording copy: rewording it stays a change to
+  `Tekst` alone.
+- **The categories table has an optional `plan` column**, checked against both `PlanFigure` and
+  `PlanText`, with `none` for a row that shows no figure. A period can be named as "the budget period
+  2 before the current one", for the skipped month.
+- **"MoneyBud should offer no act for saving / starting over"** lists `TakeOverCommand` among the
+  screen's commands, as an act that only assigns.
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -1059,7 +1159,13 @@ a budget in the calendar's last month among them; that a failed save leaves the 
 byte; that half a save left in the temporary file is never read and is overwritten; the lock; an
 unreachable folder; that the default folder is the local application data and never the
 repository; and which acts save. It also added a second test to `WindowMarkupTests`, for the save
-line. ADR 0004's rule applies to them unchanged: a unit test is never the reason a behaviour exists.
+line. The opening-a-period increment added `TakeOverTests`: that the search back has no limit; that
+the plan comes whole from one period, not from each category's own latest figure; that its figures
+are in order added; the non-cases that throw (taking over where nothing is offered, and a date range
+that is not a period); the button's, the grey figure's and the notice's wording against §12's
+example; and that rows sort by plan figure, equal figures in order added, and do not move when the
+plan is taken over. ADR 0004's rule applies to them unchanged: a unit test is never the reason a
+behaviour exists.
 
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
@@ -1112,3 +1218,10 @@ developer unit tests, 52 more than above. One of the 64 cases is the `cannot be 
 after review, which took the count from 900 to 901. A headless run of the real window, outside the repository, also showed
 the question and "not saved" together, "saved again" after a retry, a second start refused, a damaged
 file left untouched, and the file holding what was entered.
+
+**At the close of the opening-a-period increment**: 935 tests passing with zero warnings. That is 554
+scenario cases, the 531 above and 23 from `take-over-a-plan.feature`'s 19 scenarios, and 381 developer
+unit tests, the 370 above and 11 in `TakeOverTests`. A headless run of the real window showed the
+button's text and the grey figures in plan order, and after taking over: the budgets set, the rows
+where they were, the button and the grey figures gone, and *Niet toegewezen* at −€ 1.450,00 with the
+marker.

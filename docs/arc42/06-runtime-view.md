@@ -18,7 +18,8 @@ something arrived ([§5](05-building-block-view.md)). Four interactions are wort
 
 - **Recording an expense through the screen.** Every act the user can take follows its shape, so it
   is not repeated for income, assigning or categories. Changing an entry and renaming a category
-  follow it too. **Removing an entry is the one exception**, described in words after the diagram,
+  follow it too, and so does taking over a plan, with one difference inside the ledger, described
+  in words after the diagram. **Removing an entry is the one exception**, also described in words,
   because it is the only act split across two presses.
 - **Starting MoneyBud**, **saving after an act, including a save that fails and is retried**, and
   **closing**. All three arrived with the persistence increment, when storage became a fourth
@@ -58,7 +59,7 @@ sequenceDiagram
     App-->>Form: the result
     Note over Form: recorded: clear amount, label, date<br/>refused: keep what was typed
     Window->>App: bindings read Overview again
-    App->>Ledger: PeriodOverview.Of: CategoriesShownIn, BudgetFor, SpentOn,<br/>RemainingFor, UnassignedIn, ExpensesIn, IncomesIn
+    App->>Ledger: PeriodOverview.Of: PlanOfferedIn, CategoriesShownIn, BudgetFor, SpentOn,<br/>RemainingFor, UnassignedIn, ExpensesIn, IncomesIn
     Note over Window: RingControl draws from Ring's shares
 ```
 
@@ -88,6 +89,18 @@ the clock when a period ends while MoneyBud is open ([§8.4](08-crosscutting-con
 the form makes ([§8.4](08-crosscutting-concepts.md)). The window and the form's clearing are the
 only parts of this diagram that no scenario runs through. The form's clearing has unit tests of its
 own.
+
+## Taking over a plan: one call in, one assignment per figure
+
+Since the opening-a-period increment. The button calls `MoneyBudApp.TakeOverPlan`, which calls
+`Ledger.TakeOverPlan` once, with the **period on screen**, whatever period the assign form is set to.
+Inside the ledger that one call becomes several: after checking for a past period, it asks
+`PlanOfferedIn` for the plan and calls `Assign` once per figure. So the budgets are written by the
+same member as a hand-made assignment, and the screen sees one act. It gets one result, sets one
+notice naming the period, saves once through `Tell` and refreshes once. **The offer is not cleared
+by anyone.** It is part of the Overview, which `PeriodOverview.Of` works out on every read, and once
+the period has a *Budget* above zero `PlanOfferedIn` answers null. The same read makes the button
+and the grey figures go when a period becomes past ([§8.4](08-crosscutting-concepts.md)).
 
 ## Removing an entry: two presses, one call to the ledger
 
@@ -183,7 +196,7 @@ sequenceDiagram
     participant Store as FileLedgerStore
     participant Json as LedgerJson
 
-    Note over App: an act went through (recorded, changed, removed,<br/>assigned, added, archived, renamed, deleted)
+    Note over App: an act went through (recorded, changed, removed,<br/>assigned, plan taken over, added, archived, renamed, deleted)
     App->>App: Tell(text, landedIn, changed)
     alt changed nothing (already there, assign 0, clipped in full against 0)
         Note over App: said, not saved

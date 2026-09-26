@@ -308,6 +308,8 @@ public sealed class SpecContext : IDisposable
 
     public void Record(RenameCategoryResult result) => LastAttempt = result;
 
+    public void Record(TakeOverPlanResult result) => LastAttempt = result;
+
     public void RecordDeleted(Category category) => LastAttempt = new Deleted(category);
 
     /// <summary>

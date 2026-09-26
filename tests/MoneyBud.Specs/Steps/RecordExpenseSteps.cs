@@ -43,10 +43,17 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // refused, clipped or would bring a category back fails the scenario here rather than
     // quietly making some other state.
     [Given(@"I have a budget of (\S+) euro for ""([^""]*)"" in the (current|previous|next) budget period")]
-    public void GivenIHaveABudgetFor(string amount, string category, string which)
+    public void GivenIHaveABudgetFor(string amount, string category, string which) =>
+        GiveBudget(amount, category, Ledger.Period(which));
+
+    // Further back than the previous period, in keep-data.feature's words (take-over-a-plan.feature).
+    [Given(@"^I have a budget of (\S+) euro for ""([^""]*)"" in the budget period (\d+) before the current one$")]
+    public void GivenIHaveABudgetForAnEarlierPeriod(string amount, string category, int count) =>
+        GiveBudget(amount, category, Ledger.PeriodsFromCurrent(-count));
+
+    private void GiveBudget(string amount, string category, BudgetPeriod period)
     {
         EnsureCategory(category);
-        var period = Ledger.Period(which);
 
         var result = period.FirstDay < Ledger.CurrentPeriod.FirstDay
             ? context.AsIfToday(period.FirstDay, () => Ledger.Assign(SpecParsing.Amount(amount), category, period))

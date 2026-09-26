@@ -51,6 +51,10 @@
 #     which they were added. That covers every category with a Budget of zero, so those all come
 #     after every budgeted category, in the order they were added. A category brought back from
 #     archived keeps its original place in that order: bringing it back is not adding it again.
+#     While a plan is offered, every Budget in the period is zero, so the rows are ordered by the
+#     grey plan figure instead, largest first, ties in the order added, and a row with no plan
+#     figure counting as zero (take-over-a-plan.feature, settled at its scenario gate on
+#     2026-09-26).
 #   - The ring's category slices are in that same order.
 #   - The Unassigned slice is always the last slice, after every category slice, whatever the
 #     sizes. (Which way round the ring is read is presentation, and is not asserted.)

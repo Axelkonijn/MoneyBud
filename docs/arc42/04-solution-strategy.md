@@ -68,7 +68,10 @@ Entry now happens through a screen, and several things were shaped to take work 
 - an expense's label is optional, and a category with no budget records an expense like any other;
 - since the corrections increment, a wrong entry is fixed by clicking its row, in the same form and
   by the same rules it was entered with, and a mistyped category name can be renamed
-  ([§12](12-glossary.md), *An entry can be changed or removed*).
+  ([§12](12-glossary.md), *An entry can be changed or removed*);
+- since the opening-a-period increment, a period with no plan is offered the latest earlier one,
+  figure by figure in grey, and one press takes it over in full, so a stable month is re-planned
+  without retyping it ([§12](12-glossary.md), *Opening a period*).
 
 Two things hold it back, and both are recorded rather than solved:
 
@@ -80,8 +83,9 @@ Two things hold it back, and both are recorded rather than solved:
   amount or is ambiguous ([§12](12-glossary.md), *Typing an amount*). Each is there to stop a wrong
   record, and none of them makes entry easier.
 
-The decisions that would serve it most belong to later increments: the account default, and the
-one-action carry-over of last period's budgets ([§12](12-glossary.md)).
+The decision that would serve it most belongs to a later increment: the account default
+([§12](12-glossary.md)). The other one this paragraph used to name, the one-action carry-over of
+last period's budgets, is built (above).
 
 ### 3. Adaptability — **genuinely served**
 

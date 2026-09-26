@@ -13,7 +13,8 @@
 # assigning increment"). There are no accounts, so every category is unbacked and assigning moves
 # no money anywhere. These are out, and no scenario below touches them: backed categories,
 # accounts, the pool account and overdrawing it; the one action that assigns last period's plan in
-# full, and anything else about a period opening; the end-of-period sweep; any UI.
+# full, and anything else about a period opening (since built, in take-over-a-plan.feature); the
+# end-of-period sweep; any UI.
 #
 # Reading the Givens:
 #   - "I have a budget of X euro for Y in the current (or next) budget period" means X was
