@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the UI increment shipped green on branch `increment-5-ui`. Update this when a stage completes._
+_Last updated 2026-09-26, after the UI increment shipped green and was merged into `main`. Update this when a stage completes._
 
 **Done: all five stages, five times — for `record-expense`, `record-income`, categories,
 assigning and the desktop UI.** All five are built and green.
@@ -205,7 +205,7 @@ and one low defect, fixed. All in [§12](docs/arc42/12-glossary.md); in outline:
 - **`SetBudget` is gone.** A budget is made only by `Ledger.Assign`. The specs make a past
   period's budget by moving the test clock into that period and assigning — no test-only door.
 
-**Increment 5 — the desktop UI — is done and green**, on branch `increment-5-ui` (not yet merged).
+**Increment 5 — the desktop UI — is done and green**, built on branch `increment-5-ui` and merged into `main`.
 Settled with Axel on 2026-09-25 and 2026-09-26; `spec-reviewer` found no faked scenario, one
 medium defect ("2.000" was recorded as €2,00 — now refused) and one low (accented names sorted
 after Z), both fixed. All in [§12](docs/arc42/12-glossary.md), *The user interface*; in outline:
