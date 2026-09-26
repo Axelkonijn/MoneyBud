@@ -16,10 +16,11 @@
 # within their own list. So each list runs by date, not grouped by category, and an income never
 # sits among the expenses or the other way round.
 #
-# There is no editing or deleting of an entry. The domain has neither, so the list has neither
-# (glossary: "Category entry is free text with suggestions", which records that consequence and
-# the stakeholder's acceptance of it for the demo). Nothing below asserts that absence, because
-# there is no act to assert it against.
+# An entry can be changed or removed since 2026-09-26 (glossary: "An entry can be changed or
+# removed"). On screen, an entry is picked for that by clicking its row in this list. Changing and
+# removing are specified in change-an-entry.feature and remove-an-entry.feature, which use this
+# file's list steps to show what a correction does to the list. Nothing below changes or removes
+# anything.
 #
 # Reading the steps:
 #   - "the expenses listed in the ... budget period should be exactly these, in this order" lists

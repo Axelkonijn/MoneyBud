@@ -84,7 +84,11 @@ own:
   *I have set no budget* *Givens*, and one *Then*, the first-start check that no category has a
   budget or any spending, plus one unit test. **This stays a watch-out.** A query that can tell
   apart two states §12 says are one is safe only while nothing a user sees is built on it. If a
-  view ever wants it, revisit §12 first.
+  view ever wants it, revisit §12 first. **The corrections increment adds a second place it must
+  not reach**: whether a category can be deleted. §12 settles that on figures alone, a budget of more
+  than zero or an expense in any period, and rejected the rule `HasBudget` would give
+  ([§12](12-glossary.md), *Deleting a category that has no history anywhere*). Settled 2026-09-26;
+  not built.
 
 *Over budget* follows from *Remaining* alone — a negative `RemainingFor`. Exactly zero is not
 negative, so §12's "spending a category down to nothing is the plan working" needs no special case

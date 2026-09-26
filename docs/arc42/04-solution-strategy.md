@@ -71,7 +71,9 @@ Three things hold it back, and all three are recorded rather than solved:
   ([ADR 0002](../decisions/0002-desktop-application-first.md), [§11](11-risks-and-technical-debt.md)).
   This is the goal the desktop-first trade costs most.
 - **A wrong entry cannot be corrected** except by closing MoneyBud and losing everything, which the
-  stakeholder accepted for the demo ([§11](11-risks-and-technical-debt.md)).
+  stakeholder accepted for the demo ([§11](11-risks-and-technical-debt.md)). Correcting entries is
+  settled as the next increment, on 2026-09-26, and not built ([§12](12-glossary.md), *An entry can
+  be changed or removed*).
 - **Much of what is visible is still refusal**: five reasons an expense is refused, three for an
   income, four for an assignment, and now two more before any of them, for text that is not an
   amount or is ambiguous ([§12](12-glossary.md), *Typing an amount*). Each is there to stop a wrong

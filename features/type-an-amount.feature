@@ -1,14 +1,15 @@
 # How the amount I type is read (glossary: "Typing an amount", ruled by the stakeholder on
 # 2026-09-25). One rule covers every place I type an amount: recording an expense, recording an
-# income, and assigning.
+# income, and assigning. Changing an entry's amount is typing it again, under the same rule
+# (change-an-entry.feature).
 #
 #   - A comma or a point is the decimal mark. "12,50" and "12.50" are both twelve euros fifty.
 #   - No thousands separator is accepted. "1.832,45", "1,832.45" and "1 832" are not amounts.
 #   - A mark followed by exactly three digits ending in 0, such as "2.000" or "1,500", is refused
 #     as AMBIGUOUS. Read as a decimal it is two euros, read the way MoneyBud itself writes
 #     thousands it is two thousand, and both are whole cents, so nothing later would catch the
-#     wrong one. An entry cannot be corrected afterwards, so MoneyBud refuses rather than guesses,
-#     and names both readings.
+#     wrong one. An entry can be corrected afterwards (change-an-entry.feature), but only once
+#     the wrong amount is noticed, so MoneyBud refuses rather than guesses, and names both readings.
 #   - A mark followed by four or more digits that are all whole cents, such as "2.0000", is not an
 #     amount (ruled 2026-09-26). MoneyBud shows at most two decimals, and "2.0000" would otherwise
 #     be recorded as 2,00 without a word.
@@ -36,7 +37,9 @@
 #     is between them is, spaces included. Elsewhere amounts are written unquoted, as 12.50 euro,
 #     and always in a form these rules read without comment: those files are about what happens
 #     to an amount, and this one is about how typed text becomes one. The two grammars are kept
-#     apart on purpose. An unquoted amount always ends in "euro". A quoted one never does.
+#     apart on purpose. An unquoted amount always ends in "euro". A quoted one never does. The one
+#     exception is change-an-entry.feature, which borrows this grammar for two outlines about
+#     typing a changed amount.
 #   - In a table, the quotation marks in a cell are part of the step, as in record-expense.feature.
 #   - "I should be told that "abc" is not an amount" means the entry is refused because the text
 #     is not an amount. It holds for empty text too. What I am told is a fact, not a sentence: the
