@@ -16,9 +16,16 @@ public sealed partial class MainWindow : Window
         DataContext = app;
 
         // Once a minute the screen looks again, so the current-period label moves when a period
-        // ends while MoneyBud is open. The period on screen stays where it is (arc42 §12).
-        clock = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Background, (_, _) => app?.Refresh());
+        // ends while MoneyBud is open, and a save that failed is tried again. What either does is
+        // MoneyBudApp.Tick's to decide (arc42 §12).
+        clock = new DispatcherTimer(TimeSpan.FromMinutes(1), DispatcherPriority.Background, (_, _) => app?.Tick());
         clock.Start();
-        Closed += (_, _) => clock.Stop();
+
+        // Closing asks nothing; MoneyBudApp.Close makes its last try at saving, and lets go.
+        Closed += (_, _) =>
+        {
+            clock.Stop();
+            app?.Close();
+        };
     }
 }

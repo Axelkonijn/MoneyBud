@@ -36,6 +36,18 @@ internal static partial class SpecParsing
     };
 
     /// <summary>
+    /// The period <paramref name="count"/> periods after the current one, or before it when
+    /// negative — "the budget period 13 before the current one" (features/keep-data.feature).
+    /// </summary>
+    public static BudgetPeriod PeriodsFromCurrent(this Ledger ledger, int count)
+    {
+        var period = ledger.CurrentPeriod;
+        for (var i = 0; i < Math.Abs(count); i++)
+            period = count > 0 ? ledger.Calendar.Next(period) : ledger.Calendar.Previous(period);
+        return period;
+    }
+
+    /// <summary>
     /// Resolves a date as the scenarios phrase it: "today", "tomorrow", or a day of a named
     /// budget period. A null phrase means the step named no date, which means today.
     /// </summary>
@@ -55,7 +67,10 @@ internal static partial class SpecParsing
         if (!match.Success)
             throw new ArgumentException($"Unknown date phrase \"{phrase}\".", nameof(phrase));
 
-        var period = ledger.Period(match.Groups[2].Value);
+        var period = match.Groups[2].Success
+            ? ledger.Period(match.Groups[2].Value)
+            : ledger.PeriodsFromCurrent(int.Parse(match.Groups[3].Value, CultureInfo.InvariantCulture)
+                                        * (match.Groups[4].Value == "before" ? -1 : 1));
         return match.Groups[1].Value == "first" ? period.FirstDay : period.LastDay;
     }
 
@@ -67,6 +82,6 @@ internal static partial class SpecParsing
     public static DateOnly ADayInside(this Ledger ledger, BudgetPeriod period) =>
         period.Contains(ledger.Today) ? ledger.Today : period.LastDay;
 
-    [GeneratedRegex(@"^the (first|last) day of the (current|previous|next) budget period$")]
+    [GeneratedRegex(@"^the (first|last) day of the (?:(current|previous|next) budget period|budget period (\d+) (before|after) the current one)$")]
     private static partial Regex DayOfPeriod();
 }

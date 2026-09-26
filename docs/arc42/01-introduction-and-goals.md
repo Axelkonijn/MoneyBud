@@ -69,8 +69,11 @@ income, categories, assigning) built a domain library with no user interface. Th
 desktop UI, in Dutch, over everything the domain does, and so turns the library into the demo
 [ADR 0002](../decisions/0002-desktop-application-first.md) is about. Its start screen is the one
 round 3 asked for: *"waar mijn geld heen gaat — het radiale diagram"*, the Overview headed by a ring
-that shows each category's plan and spending in one picture. It keeps nothing when it closes
-([§8.3](08-crosscutting-concepts.md)). What it covers, and how the ring is drawn, are in
+that shows each category's plan and spending in one picture. As first built, it kept nothing when
+it closed. **Keeping data came two increments later**, settled with the stakeholder and built on
+2026-09-26 ([§8.3](08-crosscutting-concepts.md)). It does not end the demo: the data kept is still
+demo data, and the switch to real use is expected to follow it rather than come with it
+([§12](12-glossary.md), *What MoneyBud keeps*). What it covers, and how the ring is drawn, are in
 [§12](12-glossary.md), *The user interface*. It is built with Avalonia
 ([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)), over a presentation layer that holds
 everything the screen decides ([ADR 0006](../decisions/0006-three-source-projects.md)).

@@ -117,8 +117,15 @@ public sealed class ScreenSteps(SpecContext context)
         Assert.Null(App.PeriodLabel);
     }
 
+    // Nothing new: no notice, no question, and nothing on the save line. A lasting "not saved"
+    // is not something new, so it does not count (carry-on-when-saving-fails.feature).
     [Then(@"I should not have been told anything")]
-    public void ThenIShouldNotHaveBeenToldAnything() => Assert.Null(App.Notice);
+    public void ThenIShouldNotHaveBeenToldAnything()
+    {
+        Assert.Null(App.Notice);
+        Assert.Null(App.Question);
+        if (!App.IsUnsaved) Assert.Null(App.SaveLine);
+    }
 
     // ------------------------------------------------------------------- Then: the ring
 

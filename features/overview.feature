@@ -665,9 +665,9 @@ Feature: See where my money goes on the Overview
   #
   # MoneyBud starts as a first start does: the six default categories and nothing else
   # (glossary: "What the UI starts with, and what it keeps"). That the defaults exist is specified
-  # in add-category.feature and not repeated. What is new is what the Overview shows. Nothing is
-  # kept when MoneyBud closes, so for now every start is a first start. That MoneyBud opens on the
-  # current period is in step-between-periods.feature.
+  # in add-category.feature and not repeated. What is new is what the Overview shows. A first start
+  # is a start with no kept data (start-moneybud.feature). That MoneyBud opens on the current
+  # period is in step-between-periods.feature.
   #
   # All six have a budget of zero, so they are listed in the order they were added. The defaults
   # count as added in the order they ship in, which is the stakeholder's own list (settled

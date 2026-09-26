@@ -1854,7 +1854,7 @@ that the rulings above leave, and none contradicts one.
 |---|---|
 | **A rename rewrites the category box in the expense form and the assign form** when the box names the old name under the name rule | A rename frees the old name. Without this, an entry loaded before the rename and saved unchanged afterwards would name a category that no longer has that name. It would be refused, or it would land on a new category that has since taken the old name. Either breaks *saving an unchanged entry is never refused* (*Changes and renames are announced*, above). The rewrite applies to a new entry being typed as well, since that box names the same category |
 | **Stepping to another period also cancels a rename in progress** | A category is renamed from its row, and that row may not exist in the period stepped to. The same reason drops an entry being changed (*On screen: picking an entry to correct*, above) |
-| **Anything else the user does drops a waiting removal question**: loading another row, *Annuleren*, and any act after which MoneyBud says something or deliberately says nothing, such as saving a change, recording, assigning or renaming (stepping drops it too, which the plan settled) | Each means the user has moved on from the entry the question was about. The question is never left asking about an entry that has since been changed or put away, and **a question and a notice are never shown together**: the question is shown in the notice's place. Added after `arc42-keeper` noticed that, as first built, recording or assigning left the question standing beside the new notice |
+| **Anything else the user does drops a waiting removal question**: loading another row, *Annuleren*, and any act after which MoneyBud says something or deliberately says nothing, such as saving a change, recording, assigning or renaming (stepping drops it too, which the plan settled) | Each means the user has moved on from the entry the question was about. The question is never left asking about an entry that has since been changed or put away, and **a question and a notice are never shown together**: the question is shown in the notice's place. Added after `arc42-keeper` noticed that, as first built, recording or assigning left the question standing beside the new notice. **Stands beside one thing since 2026-09-26, and built that way:** the save line. The lasting "not saved" state is shown beside any notice and beside the question, and stepping does not clear it (*When a save fails, MoneyBud says so and keeps going*). The one-time "saved again" is said on the same line, so it too can stand beside the question. Neither is an ordinary notice, and between the question and an ordinary notice this reading still holds |
 | **The archive button moved under the category's name**, beside *Hernoemen* and *Verwijderen*, out of the column it had of its own | A row can now offer three acts, and three buttons did not fit in the column. *Hernoemen* is on every row, *Archiveren* only on a category in use, as before, and *Verwijderen* only on a category with no history anywhere |
 | **The question's answers are *Verwijderen* and *Annuleren*** | No reason beyond consistency was recorded. They are the words the screen already uses: *Verwijderen* is the button that raised the question, and *Annuleren* is how a form backs out |
 | **A rename box that is open when the screen refreshes itself loses keyboard focus.** Known, and not fixed | The Desktop refreshes once a minute so that the *Huidige periode* label can move ([§8.4](08-crosscutting-concepts.md)). That rebuilds the category rows, the rename box with them. **The text typed is kept**, because it is held by the screen, not by the box. Only the cursor is lost, at most once a minute |
@@ -2183,7 +2183,7 @@ taken up as its own increment, as the paragraph above said it would be, and its 
 entry can be changed or removed* (above). **The paragraph above no longer describes MoneyBud.** A
 wrong entry is corrected by clicking its row. It is kept as written, because what was accepted for
 the demo, and why, is part of the record. Its other half, that nothing is kept when MoneyBud
-closes, still holds.
+closes, still holds, until the persistence increment is built (*What MoneyBud keeps*, below).
 
 ### Typing an amount
 
@@ -2857,6 +2857,14 @@ put it later himself. The paragraph above calls "a request to keep data" the sig
 looser than §8.3's wording. This remark shows why the looser wording is not enough: it names the
 gap without asking for it to be filled. §8.3's wording is the one that counts.
 
+**The second half is superseded, and the first half stands** (2026-09-26, built the same day). The
+stakeholder chose to have MoneyBud keep its data, as the next increment (*What MoneyBud keeps*,
+below). **§8.3's trigger still has not fired.** Keeping data is his choice of what to build next,
+not a response to having to re-enter anything. That increment is built, so "everything entered is
+lost when MoneyBud closes" is no longer true. The first half does not change: when there is no data
+yet, MoneyBud starts with the six default categories and nothing else. This section is kept as it
+was written, because what was decided for the UI, and why, is part of the record.
+
 ### The UI is in Dutch
 
 > **Everything MoneyBud shows is in Dutch**, in the terms of *Dutch display terms* (below), which the
@@ -2881,6 +2889,387 @@ section depends on it. This section first read *The toolkit is not chosen here*,
 true: the requirements were settled first, and the toolkit was picked to serve them. The scenarios
 for this increment are declarative and toolkit-free, as `features/README.md` requires, and they run
 against a layer with no toolkit in it ([ADR 0006](../decisions/0006-three-source-projects.md)).
+
+## What MoneyBud keeps
+
+The persistence increment's rulings, settled with the stakeholder on 2026-09-26. They were answers
+to multiple-choice questions, each put to him with a recommendation. Like the follow-ups of
+2026-09-24, they went straight into this glossary rather than into a new interview round. **He took
+the recommended option unless a ruling below says otherwise.** Where a reason is his, it is given as
+his. Where it is only this documentation's reading, it says so.
+
+**All of it is built**, in the persistence increment, on 2026-09-26. How the data is stored was not a
+question for the stakeholder, and none of these rulings answers it: the form storage takes, how
+amounts are written, and how an entry and a category keep their identity across a restart were left
+to the plan. The plan answered them, and [ADR 0007](../decisions/0007-keeping-the-ledger.md) records
+them: one JSON file, whole cents as integers, entry ids kept and categories keyed in the file
+([§8.3](08-crosscutting-concepts.md), *Answered by the plan*). Where a ruling below left a detail to
+the plan, what was built is said beside it, marked **Built**.
+
+### Why now: demo now, real soon
+
+> **MoneyBud keeps its data so that it does not have to be re-entered between sessions. It is still
+> a demo.** The stakeholder expects to switch to real use not long after keeping data is built.
+
+**This is his choice, not [§8.3](08-crosscutting-concepts.md)'s trigger firing.** That trigger is
+the first time he is asked to re-enter data he would mind re-entering, and it has not happened. The
+order was agreed the same day: correcting things first, deliberately, because while nothing is kept
+closing MoneyBud discards every mistake, and once data is kept an uncorrectable typo is permanent.
+Keeping data comes next.
+
+**What stays as it was.** The data is still demo data, so every argument that rests on it being
+throwaway still holds for now (*Demo data may not survive a new version*, below). Three things this
+documentation says expire "when the demo stops being a demo" do **not** expire with this increment:
+
+- reopening desktop-first ([ADR 0002](../decisions/0002-desktop-application-first.md));
+- the sweep's money having nowhere to go while there are no accounts;
+- the period start day that cannot change once budgets exist.
+
+As first written up, all three came due at the **switch to real use** instead, and the switch was
+called **foreseeable**, where before this ruling it had been hypothetical.
+
+**Softened the same day** (*Real use before accounts*, below). Asked whether real use starting
+before accounts was acceptable, the stakeholder found the question beside the point: he will try
+MoneyBud out before accounts exist, and does not mind his saved data being deleted when they arrive.
+So the switch to real use is **not a line this increment or opening a period has to plan around**,
+and his data stays throwaway at least up to and including the accounts increment. The three things
+above still wait for the demo to stop being a demo. Nothing about them is due in the meantime
+([§11](11-risks-and-technical-debt.md)).
+
+### Everything is kept, for good
+
+> **MoneyBud keeps everything, as one continuous history, for as long as the user has it.** There
+> is no fresh start per year.
+
+Chosen over a fresh start each year. **Why:** a budget period ends but never closes (*Ending versus
+closing a budget period*, above), so the model has no yearly boundary, and a yearly cut would create
+one it has not got. Settled rules already reach across periods and need the history to be there: an
+archived category is shown in every period where it has history (*Where an archived category is
+still shown*), and a new period remembers the last one's figures (*Budgets carry over as figures*).
+
+**For demo data, "for good" is qualified** by *Demo data may not survive a new version* (below).
+
+> **"Everything" is the ledger: categories, archived or not, budgets, expenses and incomes.** What is
+> on screen is not kept: the period shown, an entry half typed, a question waiting for an answer, a
+> rename in progress. **So MoneyBud always opens on the current period.**
+
+A follow-up question, the same day. The ruling above had not said whether "everything" includes
+what is on screen, and this settles it.
+
+### Saved by itself, after every change
+
+> **MoneyBud saves automatically after every change. There is no save button.**
+
+**Why:** a forgotten save loses entries, and a save button is one more act for every entry, which
+is the friction quality goal 2 is about ([§1.2](01-introduction-and-goals.md)).
+
+### When a save fails, MoneyBud says so and keeps going
+
+> **If a change cannot be saved (a full disk, a locked file, a profile that is not there), MoneyBud
+> says the change was not saved and lets the user carry on.** Every later change tries again to save
+> everything. **Closing MoneyBud before a save has succeeded loses the changes that were not saved.**
+
+A follow-up question, the same day. **Rejected:** undoing the change that could not be saved, and
+refusing further entries until a save succeeds. The loss on closing was **accepted with that
+consequence in front of him**. In the documentation's reading, this is "MoneyBud shows, it never
+blocks" applied to saving. The change stands in the ledger and on screen, the failure is shown, and
+nothing is refused because of it. Because every save writes everything, one save that succeeds
+catches up every change that failed before it.
+
+> **The "not saved" notice stays on screen until a later save succeeds.** It is a lasting state,
+> not a one-off message that the next notice replaces.
+
+A further follow-up, the same day. **Rejected:** saying it once, like any other message. **Why**,
+his: otherwise the next message would hide it, and the user could close MoneyBud without knowing
+that changes were unsaved.
+
+> **Closing MoneyBud with unsaved changes just closes.** There is no question first. The unsaved
+> changes are lost, as the ruling above already accepted.
+
+A further follow-up, the same day. **Rejected:** asking before closing. **Why:** the lasting notice
+is the warning. MoneyBud shows, it never blocks, and that holds for closing as well.
+
+**Left for the plan and the scenarios, not settled here:** how the lasting notice relates to the
+screen's rule that a question and a notice are never shown together (*Chosen in the build, not put to
+the stakeholder*, above; [§8.4](08-crosscutting-concepts.md)). That rule was made for one message bar
+holding one thing at a time. A notice that has to stay while other notices and the removal question
+come and go does not fit it as it stands, and how the two fit together is for the plan and the
+scenarios to work out.
+
+**Settled the same day, while the scenarios were written** (the rulings below, 2026-09-26, since
+built). The paragraph above is kept because it is why they were asked. **Built:** the plan made room
+with a **save line**, a line of its own beside the notice and the question, rather than by changing
+the one-message rule ([§8.4](08-crosscutting-concepts.md), *Keeping the ledger*).
+
+> **The "not saved" notice is shown beside any other notice and beside the removal question.**
+> Stepping between periods does not clear it.
+
+**Rejected:** other messages displacing it for a while. **Why**, in the documentation's reading: it
+is the same reason the notice lasts at all. Anything that hides it, even briefly, is a moment in
+which the user could close without knowing. **The one-message rule yields to it.** That rule was a
+choice made in the build, not a ruling, and it still holds between the removal question and an
+ordinary notice. Only the "not saved" state stands beside either (*Chosen in the build, not put to
+the stakeholder*, above).
+
+> **What retries a save: every change, and MoneyBud itself, now and then.** So the notice goes soon
+> after the problem is fixed, without the user doing anything.
+
+This **refines** "every later change tries again" above. **Rejected:** retrying only on real
+changes, which was that ruling's literal reading: a user who had fixed the problem would see the
+notice until he next changed something. How often MoneyBud retries was left to the plan. **Built:
+once a minute**, on the timer the Desktop already ran for the *Huidige periode* label. It retries
+only while something is unsaved. A change that alters the ledger retries as well. A refusal, or an
+act that changes nothing, does not, because it is not a change.
+
+> **When saving succeeds again after a failure, MoneyBud says so once**, with a short notice that
+> everything is saved again.
+
+**Rejected:** the "not saved" notice simply disappearing. **Why**, in the documentation's reading: a
+state the user has been shown should be seen to end, not just be gone.
+
+**Built, and a clarification of "a short notice".** The recovery is said **on the save line**, the
+same line that said "not saved", and **not as an ordinary notice**: *"Alles is weer opgeslagen."* It
+stays until the next act, the removal question being asked, or a step to another period. Because it is on the save line, it too stands
+beside the removal question, which it would do when the minute's retry works while a question is
+waiting. So the one-message rule is untouched: it still holds between the question and ordinary
+notices, and neither line of the save line is an ordinary notice. This paragraph's first write-up
+called the recovery "a short notice" and implied the one-message rule applied to it. The approved
+plan put it on the save line, and `spec-reviewer` found the two disagreeing. The build is right and
+this text was wrong. The ruling itself, said once, is unchanged.
+
+> **Closing makes one last attempt to save.** If it works, nothing is lost. If it fails, MoneyBud
+> closes without asking, as ruled above.
+
+**Rejected:** no last attempt. The ruling that closing asks nothing stands. **Built:** closing the
+window calls `MoneyBudApp.Close`, which tries once if something is unsaved, and then lets go of the
+data.
+
+> **Saving that works says nothing.** Only a failure is announced, and the recovery after one.
+
+**Rejected:** a brief confirmation for every save. **Why**, in the documentation's reading: saving
+happens after every change, so a confirmation would follow every act, and a message that always
+appears stops being read.
+
+### An interrupted save never damages the previous one
+
+> **If a save is interrupted, by a crash or a power cut, the previous save is left intact.** At worst
+> the change being saved is lost.
+
+A follow-up question, 2026-09-26. **Rejected:** no guarantee. **Why:** there are no backups
+(*Backing up is the user's business*, below), so a half-written save could otherwise make the whole
+history unreadable. How this is guaranteed was left to the plan. **Built:** a save is written to a
+temporary file, flushed to the disk, and only then renamed over the data file. The data file is
+never written in place. A temporary file left by a save that was cut off is never read, and the next
+save writes over it ([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
+
+> **After an interrupted save, the next start opens normally and says nothing.** The change that
+> was being saved may be missing, and nothing mentions it.
+
+A follow-up question, 2026-09-26. **Rejected:** saying that the last change may not have been kept.
+**Why**, as put to him and accepted: the user saw the crash, and MoneyBud could not say which change
+is missing anyway. It matches closing without a word after a last save attempt has failed (*When a
+save fails, MoneyBud says so and keeps going*, above).
+
+### In a fixed place, never in the repository
+
+> **The data lives in a fixed place in the user's profile.** The user never chooses where. It is
+> always outside the repository.
+
+**Why:** the repository is public, and real data must never land in it
+([§2](02-architecture-constraints.md)). **Rejected:** a file the user opens and saves wherever he
+likes. In the documentation's reading, a fixed place is what makes "never in the repository" a
+property rather than a habit: a location the user picks, or one taken relative to where MoneyBud is
+run from, could land inside a working copy of the repository.
+
+Which folder in the profile was a plan question. **Built:** the user's **local** application data,
+`%LOCALAPPDATA%\MoneyBud` on Windows, found through the profile and never relative to the working
+directory. Local rather than roaming, because a file rewritten after every change should not be
+copied between machines ([ADR 0007](../decisions/0007-keeping-the-ledger.md), [§7](07-deployment-view.md)).
+
+### When the data cannot be read, MoneyBud says so and touches nothing
+
+> **If the data is damaged, or was written by a newer version of MoneyBud, MoneyBud says it cannot
+> read it and leaves it exactly as it is.** It does not start with empty data instead.
+
+**Rejected:** starting empty. **Why:** saving is automatic, so an empty start would save over the
+history at the first change. In the documentation's reading there is a second reason: data that
+cannot be read may still be recoverable, by the user or by a later version, but only while nothing
+has written over it.
+
+> **Having said so, MoneyBud closes.** Nothing can be entered, so nothing typed can be lost unsaved.
+
+A follow-up question, the same day. **Rejected:** opening with nothing that can be entered, and
+opening usable but saving nothing. **Why**, his: nothing can be entered, so nothing typed can be
+lost unsaved. MoneyBud cannot save while it leaves the data untouched, so anything entered would
+only be lost at closing.
+
+**What the message says** is ruled under *Where the data is, is written in the README* (below):
+only that the data cannot be read.
+
+> **Kept data that is there but blank, with nothing at all in it, counts as unreadable**: MoneyBud
+> says so, touches nothing and closes. **A saved budget that is empty**, with no categories and
+> nothing recorded, **is valid**, and loads as no categories.
+
+A follow-up question, 2026-09-26, and a second one the same day that settled what "empty" meant.
+**Rejected:** treating blank data as a first start. **Why:** MoneyBud never writes a **blank** save,
+so blank data means something went wrong, and treating it as a first start would save over it. It
+does write an **empty budget**, after the last category with no history is deleted, and that save
+has to load as it was (*A first start is unchanged*, below). The first write-up of this ruling said
+"empty" for both. The documentation raised the clash, and the stakeholder confirmed the distinction.
+Only **no kept data at all** is a first start.
+
+**Built:** a file that is not a whole document in MoneyBud's format and version, or that holds data
+breaking a rule the ledger keeps, is refused as unreadable, blank included. MoneyBud shows *"MoneyBud
+kan je gegevens niet lezen. Er is niets aan veranderd."* in a small window, and closes when it is
+closed. The file is not written to ([§8.3](08-crosscutting-concepts.md)).
+
+> **"Touches nothing" means the data file.** Making the folder if it is missing, and the lock file
+> beside the data, is MoneyBud's own bookkeeping, and acceptable.
+
+Confirmed by the stakeholder on 2026-09-26, after the review. The build claims the data before it
+loads it, and the claim makes the folder and `moneybud.lock`, so both can appear on a start that
+then says it cannot read the data. The documentation raised whether that squares with "touches
+nothing". **Rejected:** creating nothing at all. **Why:** the data would have to be checked before
+the lock was taken, and in between two MoneyBuds could start at once, which *Only one MoneyBud at a
+time* (below) rules out.
+
+### When the data's folder cannot be reached
+
+> **If MoneyBud cannot reach the folder its data lives in at all, it does what it does for data it
+> cannot read**: it says it cannot read the data, touches nothing, and closes. That covers a profile
+> that is not there, a folder MoneyBud is not allowed to open, and a *file* named MoneyBud standing
+> where the folder should be.
+
+Put to the stakeholder on 2026-09-26, during the review of the persistence increment, and ruled the
+same day. The rulings above covered data that is there and cannot be read, and data that is not
+there at all, which is a first start. A folder that cannot be reached is neither, and the build had
+to do something with it. **Rejected:** starting empty and showing "not saved". **Why:** if the real
+data came back while MoneyBud was open, a profile mounted late or a permission restored, the first
+save that worked would write the empty start over it. That is the same danger that rules out
+starting empty on unreadable data, reached by another road. The message is the same one, and still
+points nowhere.
+
+**Built:** the store reports the folder as unreachable when it cannot be made or opened, or when it
+is not a full path, and starting turns that into the unreadable-data message. It was ruled after
+`start-moneybud.feature` was approved, so **the stakeholder approved adding one row, `cannot be
+reached`, to that file's approved "cannot read" outline** (2026-09-26), and the file's header says
+so. The row makes the folder unreachable for real and checks the data file byte for byte afterwards
+([§8.4](08-crosscutting-concepts.md)).
+
+### Backing up is the user's business
+
+> **MoneyBud keeps one set of data and makes no copies of it.** Backing it up is up to the user,
+> outside MoneyBud.
+
+He was offered keeping earlier copies, and declined. **No recommendation was made on this
+question.** No reason came with the choice. The cost, in the documentation's reading: a file lost
+or damaged, with no backup of the user's own, is the whole history gone
+([§11](11-risks-and-technical-debt.md)).
+
+### One set of data, and no way to reset it in MoneyBud
+
+> **There is one set of data. MoneyBud has no act for starting over.** Starting over means deleting
+> the file yourself. The next start is then a first start (below).
+
+**Rejected:** a start-over button, and separate budgets side by side, such as a play budget beside
+the real one.
+
+### Only one MoneyBud at a time
+
+> **Starting MoneyBud while it is already open is refused.** The second start says MoneyBud is
+> already open, and closes.
+
+A follow-up question, the same day. **Rejected:** letting both run. **Why:** two windows saving one
+set of data would overwrite each other's changes. **Built:** the second start says *"MoneyBud is al
+geopend."* and closes. The first holds a lock on the data from before it reads it until it closes,
+and a crash lets go of it, so a crash never blocks the next start
+([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
+
+### The login is the protection
+
+> **No password and no encryption. The Windows login is enough.**
+
+**Why:** the data is local (quality goal 4, [§1.2](01-introduction-and-goals.md)), and a forgotten
+password would lock the user out of his own data for good. The ruling names **Windows** because that
+is the only system MoneyBud has run on ([§7](07-deployment-view.md)).
+
+### Demo data may not survive a new version
+
+> **Until real use starts, a new version of MoneyBud may be unable to read demo data saved by an
+> older one.** It then says it cannot read it and touches nothing, as above, and the user deletes
+> the file and starts fresh. **Carrying data from one version to the next becomes a requirement at
+> the switch to real use**, and not before.
+
+A follow-up question, the same day. **Rejected:** carrying the data over from the first file ever
+saved. **Why**, in the documentation's reasoning: until the switch there is no real data, and
+building a way to carry demo data forward pays to preserve something nobody would mind losing. It
+is the argument [ADR 0003](../decisions/0003-money-representation.md) makes against a currency field
+("paying now to avoid a migration of nothing is paying for nothing"), and it rests on the same fact:
+the first version is a demo to react to, not an MVP ([§1.1](01-introduction-and-goals.md)).
+
+**What it means for the build.** Until the switch, the way data is stored can change between
+versions without anything carrying the old data across. From the switch on, it cannot.
+
+**Extended the same day** (*Real use before accounts*, next): saved data need not survive into the
+version that adds accounts either. So the stored form may change freely **at least up to and
+including the accounts increment**, whatever the stakeholder is doing with MoneyBud by then.
+
+### Real use before accounts
+
+Asked whether real use starting before accounts exist was acceptable, given that until then
+leftover and unassigned money is carried nowhere at a period's end, the stakeholder answered:
+
+> *"I dont really see how this is relevant. I'll likely try it out a bit before accounts are added
+> but if the saves need to be deleted when accounts get added i dont mind"*
+
+A follow-up question, 2026-09-26, answered in English. **What it settles:** his data may be
+dropped **at least up to and including the accounts increment**. That extends *Demo data may not
+survive a new version* (above) past the point this documentation had assumed. **What it does not
+change:** the acceptance that the sweep's money vanishes while there are no accounts stands as it
+was. He will try MoneyBud out, and what he enters is still throwaway enough to delete.
+
+He found the question beside the point, and it is recorded that way. The documentation had raised
+it because it had tied several deadlines to "the switch to real use"
+([§11](11-risks-and-technical-debt.md)). His answer means none of them needs planning around yet.
+
+### Where the data is, is written in the README
+
+> **The data's location is documented in the README, and only there.** MoneyBud itself does not show
+> it: not on screen, and not in the message that it cannot read the data.
+
+A follow-up question, the same day. **Why it is documented at all:** backing up is the user's job
+(above), and a file he cannot find is one he cannot back up. **The recommendation was that MoneyBud
+show it**, on screen and always when it cannot read the file. He declined both parts. So the message
+that the data cannot be read does not have to name where it is. A user who meets that message and
+wants to start fresh (*Demo data may not survive a new version*) finds the file through the README.
+
+> **The message that the data cannot be read points nowhere.** It names no path and does not refer
+> to the README. It says only that the data cannot be read.
+
+A follow-up question, the same day, which **confirms the literal reading** of the ruling above.
+**Rejected:** pointing to the README, and naming the path in this message alone.
+
+### A first start is unchanged
+
+> **When there is no data yet, MoneyBud starts as it does today:** the six default categories and
+> nothing else.
+
+**Not asked in this round.** It is carried over unchanged from *What the UI starts with, and what it
+keeps* (above) and from *A new MoneyBud starts with the six default categories* in
+[`add-category.feature`](../../features/add-category.feature). "No data yet" covers both the very
+first start and a start after the user has deleted the file (*One set of data*, above).
+
+> **The default categories come only with a first start: no kept data at all.** A user who deletes
+> all six and starts MoneyBud again still has no categories.
+
+A follow-up question, 2026-09-26. **Rejected:** adding the defaults again whenever there are no
+categories. In the documentation's reading, kept data with no categories is the user's own doing,
+and handing back what he deleted would undo it.
+
+**Where this meets the blank-data ruling, confirmed by the stakeholder** (2026-09-26). Deleting all
+six defaults with no history leaves a budget with nothing in it, and MoneyBud saves it after that
+change. That save is valid and loads as no categories. Only a **blank** save, with nothing at all
+in it, is unreadable (*When the data cannot be read*, above).
 
 ## Dutch source terms
 
@@ -3068,6 +3457,20 @@ fifteen. The plan gate then settled what the form does around a correction, whic
 it (*On screen: picking an entry to correct*). All of it is built. The same rulings **widen** the
 question below without answering it.
 
+Ten more were answered on 2026-09-26 for the **persistence increment** (*What MoneyBud keeps*,
+above): why keep data now, what is kept, when it is saved, where it lives, what happens when it
+cannot be read, backups, one set of data or several, protection, whether a new version must read an
+older one's demo data, and whether MoneyBud shows where its data is. None is built. What a first
+start does was not asked again and stands. None of them touches the question below. Six follow-ups
+were answered the same day: what the screen does when the data cannot be read, what a failed save
+does, a second start while MoneyBud is open, what "everything" covers, what the unreadable-data
+message says, and whether real use before accounts matters. The last extended how long saved data
+may be dropped. Two more the same day refined the failed save: the "not saved" notice lasts, and
+closing does not ask. Eight more came while the scenarios were being written: the notice stands
+beside other messages, MoneyBud retries by itself, recovery is announced once, closing makes a last
+attempt, a save that works says nothing, an interrupted save never damages the previous one, empty
+data is unreadable, and the defaults come only with a first start.
+
 ### What happens to an income back-dated into a period that has already been swept?
 
 A budget period **ends but never closes** (*Ending versus closing a budget period*, above), so an
@@ -3191,7 +3594,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Can the UI change the period start day? | *The period start day stays at the 1st, for now* — **not in this increment**. The stakeholder's ruling was "if the backend is ready, yes"; it is not, because budgets are stored against their period's first day. Deferred, not rejected; the configurable-start-day rule stands. Settled 2026-09-25 |
 | What does the start screen show, and how is the ring drawn? | *The overview, and its ring* — the Overview, headed by a ring with one slice per category, sized to its *Budget* and filled as far as spent, plus a slice for *Unassigned*. Chosen over a ring of spending only and a ring of budgets only. Settled 2026-09-25; built in the UI increment |
 | How does the ring show an overspent category, spending with no budget, and an over-assigned period? | Same section — an overspent slice stays budget-sized, filled and marked; spending with no budget gets no slice and is listed with the marker; an over-assigned ring shows budgets only, with *Unassigned* marked. One marker for all of them, beside the **negative figure itself**, not a positive "over by". The marker is a **revision** by the stakeholder of the earlier "plain negative figure, unremarked", for *Over budget* and *Over-assigned* only; how *Overdrawn* is shown is not settled. The over-assigned answer was chosen over a ring at income size with an overflowing segment. Settled 2026-09-25; built in the UI increment. "The same marker" was confirmed after the review to mean the same look, with each badge naming its own state (next rows) |
-| What data does the UI start with, and is it kept? | *What the UI starts with, and what it keeps* — the six default categories and nothing else, and nothing is kept on close. Chosen over synthetic demo data and over saving to a file. [§8.3](08-crosscutting-concepts.md) stands. Settled 2026-09-25; built in the UI increment |
+| What data does the UI start with, and is it kept? | *What the UI starts with, and what it keeps* — the six default categories and nothing else, and nothing is kept on close. Chosen over synthetic demo data and over saving to a file. [§8.3](08-crosscutting-concepts.md) stands. Settled 2026-09-25; built in the UI increment. **Its second half is superseded on 2026-09-26** (*What MoneyBud keeps*): MoneyBud keeps its data, by the stakeholder's choice rather than §8.3's trigger. Built the same day. The starting state stands |
 | What language does MoneyBud display, and in which terms? | *The UI is in Dutch* and *Dutch display terms* — Dutch, in terms the stakeholder approved. "Nog toe te wijzen" is not used, because *Left to assign* is retired in both languages. Settled 2026-09-25; built in the UI increment |
 | What do a new entry's date and an assignment's period default to while a period is on screen? | *Defaults, and entering while another period is shown* — an expense's or income's date defaults to **today**, whatever period is shown; assigning defaults to the **period on screen**. Entries are recorded as they happen, and assigning is planning the period being looked at. Settled 2026-09-25; built in the UI increment |
 | Is assigning offered while a past period is shown? | Same section — **yes, and it is refused with its reason**. With the default above, that is how the past-period refusal is reached from the UI. Chosen over not offering it. Settled 2026-09-25; built in the UI increment |
@@ -3235,6 +3638,35 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What happens when an entry is saved with nothing changed? | Same section — **never refused, and quiet**: nothing changes, nothing is announced, and the form returns to normal. Chosen over saying so. So the amount loaded into the form must be one the amount box accepts. Settled 2026-09-26; built |
 | What is said when the user declines to remove an entry? | *Removing an entry asks first* — **nothing**. The entry stays. Chosen over saying it was kept. Settled 2026-09-26; built |
 | What happens when a correction lands in a period already swept? | *Corrections and the sweep* — nothing is decided, because there is no sweep. A correction that means MoneyBud moved too much meets the late-expense rule. One that means there was more to move **joins the open question** above |
+| Why keep data now, when §8.3's trigger has not fired? | *Why now: demo now, real soon* — **the stakeholder's choice**, to save re-entering between sessions. MoneyBud is still a demo, and he expects to switch to real use not long after this is built. What expires "when the demo stops being a demo" does not expire yet. It was first written up as due at a now-foreseeable switch to real use; softened the same day, because his data may be dropped at least up to and including the accounts increment, so no increment before then plans around the switch (*Real use before accounts*). Settled 2026-09-26; built |
+| What is kept, and for how long? | *Everything is kept, for good* — **everything, as one continuous history**, with no fresh start per year, because periods never close and the model has no yearly boundary. Chosen over a yearly fresh start. Settled 2026-09-26; built |
+| When is data saved? | *Saved by itself, after every change* — **automatically, after every change**, with no save button, because a forgotten save loses entries and a save button is entry friction. Settled 2026-09-26; built |
+| Where does the data live? | *In a fixed place, never in the repository* — **a fixed place in the user's profile**, never chosen by the user and always outside the repository, which is public. Chosen over a file the user opens and saves wherever he likes. Settled 2026-09-26; built, in `%LOCALAPPDATA%\MoneyBud` on Windows, a folder the plan chose |
+| What happens when the data cannot be read? | *When the data cannot be read, MoneyBud says so and touches nothing* — whether damaged or written by a newer version, MoneyBud **says so and leaves it untouched**. Chosen over starting empty, which automatic saving would turn into overwriting the history. Settled 2026-09-26; built |
+| Does MoneyBud keep backups? | *Backing up is the user's business* — **no**. One set of data; backing up happens outside MoneyBud. Offered keeping earlier copies, and declined; no recommendation was made on this one. Settled 2026-09-26 |
+| Can there be more than one set of data, or a reset? | *One set of data, and no way to reset it in MoneyBud* — **one set, and no reset act**: starting over means deleting the file. Chosen over a start-over button and over separate budgets side by side. Settled 2026-09-26; built |
+| Is the data protected? | *The login is the protection* — **the Windows login is enough**: no password, no encryption, because the data is local and a forgotten password would lock the user out for good. Settled 2026-09-26 |
+| Must a new version read demo data an older one saved? | *Demo data may not survive a new version* — **not until real use starts**. Until then an unreadable file is met by saying so and touching nothing, and the user deletes it and starts fresh. Carrying data across versions is a requirement from the switch to real use. Chosen over carrying data over from the first file saved. Settled 2026-09-26. **Extended the same day**: not before the version that adds accounts either (*Real use before accounts*) |
+| Does MoneyBud show where its data is? | *Where the data is, is written in the README* — **no**: it is documented in the README only, not shown on screen and not named in the message that the data cannot be read. The recommendation was to show it, on screen and always when the file cannot be read; he declined both parts. Settled 2026-09-26; built |
+| What does MoneyBud do after saying it cannot read its data? | *When the data cannot be read, MoneyBud says so and touches nothing* — **it closes**, so nothing can be entered and nothing typed can be lost unsaved. Chosen over opening with nothing enterable and over opening usable but unsaved. Settled 2026-09-26; built |
+| What happens when a save fails? | *When a save fails, MoneyBud says so and keeps going* — MoneyBud **says the change was not saved and lets the user carry on**, and every later change tries again to save everything. Closing before a save succeeds loses the unsaved changes, accepted with that consequence. Chosen over undoing the change and over refusing entries until a save succeeds. Settled 2026-09-26; built |
+| Does the "not saved" notice go away when the next message appears? | *When a save fails, MoneyBud says so and keeps going* — **no**: it stays on screen until a later save succeeds, as a lasting state, so the next message cannot hide it and nobody closes MoneyBud without knowing. Chosen over saying it once, like any message. How it sits beside the one-message rule was left to the plan and scenarios, and answered in the next row. Settled 2026-09-26; built |
+| Does closing with unsaved changes ask first? | Same section — **no, it just closes**, and the unsaved changes are lost, as already accepted. The lasting notice is the warning: MoneyBud shows, it never blocks. Chosen over asking before closing. Settled 2026-09-26; built |
+| Can other messages hide the "not saved" notice? | *When a save fails, MoneyBud says so and keeps going* — **no**: it is shown beside any other notice and beside the removal question, and stepping does not clear it. The build's one-message rule yields to it, and still holds between the question and an ordinary notice. Chosen over other messages displacing it for a while. Settled 2026-09-26; built |
+| What retries a save after a failure? | Same section — **every change, and MoneyBud itself now and then**, so the notice goes soon after the problem is fixed. Refines "every later change tries again". The interval was left to the plan, which made it **once a minute**. Chosen over retrying only on real changes. Settled 2026-09-26; built |
+| Is recovery after a failed save announced? | Same section — **yes, once**: a short message that everything is saved again. Chosen over the notice just disappearing. Settled 2026-09-26; built. **Clarified after review**: it is said **on the save line**, where "not saved" was, not as an ordinary notice, so it too can stand beside the removal question. It stays until the next act, question or step. First written up as "a short notice", which read as if the one-message rule applied to it |
+| What if the data's folder cannot be reached at all? | *When the data's folder cannot be reached* — **the same as data that cannot be read**: say so, touch nothing, close. That covers a missing profile, a folder MoneyBud may not open, and a file where the folder should be. Chosen over starting empty and showing "not saved", because if the real data came back, the first save that worked would write the empty start over it. Put to the stakeholder during review and ruled 2026-09-26; built, and held by a `cannot be reached` row added to `start-moneybud.feature` with his approval |
+| Does "touches nothing" forbid making the folder and the lock file? | *When the data cannot be read, MoneyBud says so and touches nothing* — **no**: it means the data file. Making the folder if it is missing, and the lock file beside the data, is MoneyBud's own bookkeeping. Chosen over creating nothing at all, which would mean checking the data before taking the lock and leave a window in which two MoneyBuds start at once. Confirmed by the stakeholder, 2026-09-26; built that way |
+| Does closing try to save? | Same section — **one last attempt**. If it works nothing is lost; if it fails MoneyBud closes without asking. Chosen over no last attempt. Settled 2026-09-26; built |
+| Is a save that works announced? | Same section — **no**. Only a failure, and the recovery after one, is announced. Chosen over a brief confirmation for each save. Settled 2026-09-26; built |
+| What does an interrupted save do to the data? | *An interrupted save never damages the previous one* — a crash or power cut **leaves the previous save intact**; at worst the change being saved is lost, because with no backups a half-written save could make the whole history unreadable. Chosen over no guarantee. The means was left to the plan: a temporary file, flushed, then renamed over the data file. Settled 2026-09-26; built |
+| What does the next start say after an interrupted save? | *An interrupted save never damages the previous one* — **nothing**: it opens normally, and a change missing because its save was interrupted goes unmentioned. The user saw the crash, and MoneyBud could not say which change is missing. Consistent with closing silently after a failed last attempt. Chosen over saying the last change may not have been kept. Settled 2026-09-26; built |
+| What if the kept data is there but blank? | *When the data cannot be read, MoneyBud says so and touches nothing* — **blank** data, with nothing at all in it, **counts as unreadable**: say so, touch nothing, close. MoneyBud never writes a blank save, so blank data means something went wrong. Chosen over treating it as a first start. A saved **empty budget** (no categories, nothing recorded) is valid and loads as no categories, confirmed by the stakeholder the same day (next row). Settled 2026-09-26; built |
+| Do the default categories come back when there are none? | *A first start is unchanged* — **no**: they come only with a first start, when there is no kept data at all. Deleting all six and restarting leaves no categories. Chosen over re-adding them when there are no categories. Settled 2026-09-26; built |
+| What happens when MoneyBud is started while it is already open? | *Only one MoneyBud at a time* — **the second start refuses**: it says MoneyBud is already open, and closes, because two windows saving one file would overwrite each other. Chosen over letting both run. Settled 2026-09-26; built |
+| What does "everything is kept" cover? | *Everything is kept, for good* — **the ledger only**: categories, archived or not, budgets, expenses and incomes. Screen state is not kept (the period shown, a half-typed entry, a waiting question, a rename in progress), so MoneyBud always opens on the current period. Settled 2026-09-26; built |
+| Does the unreadable-data message say where the data is? | *Where the data is, is written in the README* — **no**: no path and no pointer to the README, only that the data cannot be read. Confirms the literal reading of the ruling before it. Chosen over pointing to the README and over naming the path in this message alone. Settled 2026-09-26; built |
+| Does it matter that real use may start before accounts exist? | *Real use before accounts* — in the stakeholder's words, *"I dont really see how this is relevant"*: he will try it out before accounts, and does not mind the saves being deleted when accounts arrive. So saved data may be dropped **at least up to and including the accounts increment**, extending *Demo data may not survive a new version*. The vanishing sweep money stays accepted as it was. Answered 2026-09-26 |
 
 **Seven** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
@@ -3331,3 +3763,14 @@ a `Category` with identity, is how the domain expresses renaming, not architectu
 ([§9](09-architecture-decisions.md), [§8.1](08-crosscutting-concepts.md)). It reaches nothing about
 accounts. It meets the sweep only as a question already filed, which it widens without needing an
 answer.
+
+**Nothing here blocked the persistence increment, and it is built.** Its rulings are in *What
+MoneyBud keeps* (above), all of 2026-09-26. Its three feature files, `keep-data.feature`,
+`start-moneybud.feature` and `carry-on-when-saving-fails.feature`, were approved at the scenario
+gate. Its plan was approved at the plan gate and brought [ADR 0007](../decisions/0007-keeping-the-ledger.md),
+which answers what the rulings left to it: the form, the folder, how amounts and identity are
+stored, and where storage sits. `spec-reviewer` reviewed the result, all on 2026-09-26. The review
+led to one new ruling, *When the data's folder cannot be reached*, with a scenario row approved
+after the gate; one confirmed reading, that "touches nothing" means the data file; and one correction
+to this glossary: "saved again" is said on the save line, not as an ordinary notice. It reaches nothing
+about accounts, and the stored form may change when accounts arrive (*Real use before accounts*).

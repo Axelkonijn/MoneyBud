@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Where the ledger is kept between runs, and in what form (ADR 0007). No package: the JSON
+       reader and writer are the runtime's own. Knows the domain and nothing of the screen. -->
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyBud.Domain\MoneyBud.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,7 @@
 # 0006 — Three source projects: domain, presentation, desktop
 
-**Status:** Accepted
+**Status:** Accepted; **amended by [ADR 0007](0007-keeping-the-ledger.md)** (2026-09-26), which adds a
+fourth source project, `MoneyBud.Storage`. See the note at the end.
 **Date:** 2026-09-25
 **Supersedes:** decision 1 of [ADR 0004](0004-solution-layout.md), "two projects". ADR 0004's other
 three decisions stand: xUnit as the runner, the feature files linked in from `features/`, and
@@ -140,3 +141,25 @@ starts no window. The specs project still does not reference the Desktop. **Appr
 stakeholder at the plan gate on 2026-09-26 as a small departure**, not as a change to the decision.
 The three-project split stands. Details are in [§8.4](../arc42/08-crosscutting-concepts.md), *One test
 reads the window's markup*.
+
+## Note, 2026-09-26: a fourth project, for keeping data
+
+This note adds to the record and rewrites nothing above. The persistence increment added
+**`MoneyBud.Storage`**, which holds the file the ledger is kept in, and **[ADR 0007](0007-keeping-the-ledger.md)**
+records why. Approved by the stakeholder at the plan gate on 2026-09-26.
+
+**What it changes here.** The title's "three" is now four. Two reference lists in the table above
+grew: the Desktop also references `MoneyBud.Storage`, and so does `MoneyBud.Specs`. The specs still
+do not reference the Desktop. `MoneyBud.Presentation` does **not** reference the new project. It
+knows a store only through a port, `ILedgerStore`, which sits in the domain.
+
+**What it does not change.** Each of the three projects keeps the role this record gave it. The
+domain still references only the base class library. The presentation layer still holds everything
+the screen decides, and now also decides when to save and what is said about it. The Desktop is
+still deliberately thin: it makes the store and shows what the presentation layer returns. That is
+why this is a note and not a superseding record. No decision above was reversed. One was extended.
+
+**The markup exception widened, on the same terms.** A second test in `WindowMarkupTests` holds that
+the save line is a sibling of the notice and the question. It was approved at the plan gate as part
+of the same small departure described in the note above. The §8.4 subsection the note above names
+is now called *Tests that read the window's markup*.

@@ -45,11 +45,18 @@ systems at all — this makes the technical context almost empty, and the emptin
 | Channel | How it works |
 |---|---|
 | The user ↔ MoneyBud | Directly, through the application's own interface, on the machine it is installed on. No network is involved at any point |
-| MoneyBud ↔ its own data | Local storage on that same machine. What form that takes is undecided, and **there is no such channel at all yet** — nothing is stored in any increment built so far, see [§8.3](08-crosscutting-concepts.md) |
+| MoneyBud ↔ its own data | Local storage on that same machine: one file, `moneybud.json`, in the user's local application data, read at start and written after every change that alters the ledger. **Built 2026-09-26**, in the persistence increment ([§7](07-deployment-view.md), [ADR 0007](../decisions/0007-keeping-the-ledger.md)) |
 
 **There are no protocols, ports, APIs or interchange formats to document**, because there is nobody
 on the other end of them. Nothing listens, nothing dials out, and MoneyBud does not need the machine
 to be online to work.
+
+**Keeping data adds no party to the boundary.** The data file is MoneyBud's own, not an interchange
+format: nothing else is meant to read or write it. That it is readable JSON is for the user who backs
+it up and may open it to check, not an invitation to other programs. A hand edit that breaks a rule
+makes the file unreadable to MoneyBud ([ADR 0007](../decisions/0007-keeping-the-ledger.md)). **Backup stays outside the boundary by ruling**
+([§12](12-glossary.md), *Backing up is the user's business*). Whatever the user backs the file up
+with is his, and MoneyBud neither knows about it nor talks to it.
 
 The first external channel would arrive with bank import (§3.2 above). That is when this section
 gains a file format or a protocol, and not before — nothing here should be designed in advance of

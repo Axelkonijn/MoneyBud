@@ -3,6 +3,7 @@
     <Project Path="src/MoneyBud.Desktop/MoneyBud.Desktop.csproj" />
     <Project Path="src/MoneyBud.Domain/MoneyBud.Domain.csproj" />
     <Project Path="src/MoneyBud.Presentation/MoneyBud.Presentation.csproj" />
+    <Project Path="src/MoneyBud.Storage/MoneyBud.Storage.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MoneyBud.Specs/MoneyBud.Specs.csproj" />

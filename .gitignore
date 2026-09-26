@@ -8,6 +8,11 @@ secrets.json
 
 # Real financial data — this repo is public, keep it synthetic
 data/real/
+# MoneyBud's own data file lives in the user's profile, never here (arc42 §8.3). A second line of
+# defence in case one is ever copied in.
+moneybud.json
+moneybud.json.tmp
+moneybud.lock
 *.ofx
 *.qif
 *.csv.private

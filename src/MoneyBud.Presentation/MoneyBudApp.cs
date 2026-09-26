@@ -43,11 +43,29 @@ public sealed record Question(string Text);
 /// it. So when a new period begins while MoneyBud is open, the screen stays on the period it
 /// showed, which is now past; only whether it is labelled current changes, and nothing is
 /// announced (§12, *Staying open across a period boundary*).</para>
+///
+/// <para><b>Keeping the ledger</b> (§12, *What MoneyBud keeps*) is also decided here, because each
+/// part of it is something the screen shows or does:</para>
+/// <list type="bullet">
+/// <item>Every act that goes through saves the whole ledger. A refusal, or an act that changed
+/// nothing, does not. A save that works says nothing.</item>
+/// <item>A save that fails leaves the act done and says so on the <see cref="SaveLine"/>, which is
+/// not the notice's place: it stays there beside any notice and beside the question, and stepping
+/// does not clear it, until a save works.</item>
+/// <item>Every later act tries again, and so does <see cref="Tick"/>, once a minute. The save that
+/// works says once, on the same line, that everything is saved again.</item>
+/// <item><see cref="Close"/> tries once more, and asks nothing whatever comes of it.</item>
+/// </list>
 /// </summary>
 public sealed partial class MoneyBudApp : ObservableObject
 {
-    public MoneyBudApp(Ledger ledger)
+    private readonly ILedgerStore? store;
+
+    /// <param name="store">Where the ledger is kept, already claimed and loaded from. Null keeps
+    /// nothing, for a screen made to be looked at rather than used.</param>
+    public MoneyBudApp(Ledger ledger, ILedgerStore? store = null)
     {
+        this.store = store;
         Ledger = ledger;
         ShownPeriod = ledger.CurrentPeriod;
         ExpenseForm = new ExpenseForm(this);
@@ -174,14 +192,15 @@ public sealed partial class MoneyBudApp : ObservableObject
         Renaming = null;
         DropQuestion();
         Notice = null;
+        savedAgain = false;
         pointedAt = null;
         Refresh();
     }
 
     /// <summary>
     /// Tells whatever is bound to this that every figure may have changed. Called after each act,
-    /// and by the Desktop on a timer, so the current-period label moves when a period ends.
-    /// Changes nothing itself.
+    /// and by <see cref="Tick"/>, so the current-period label moves when a period ends. Changes
+    /// nothing itself.
     /// </summary>
     public void Refresh()
     {
@@ -190,8 +209,57 @@ public sealed partial class MoneyBudApp : ObservableObject
         OnPropertyChanged(string.Empty);
         foreach (var name in (string[])[nameof(ShownPeriod), nameof(ShowsCurrentPeriod), nameof(PeriodTitle),
                                         nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions),
-                                        ..PointingNames])
+                                        nameof(IsUnsaved), nameof(SaveLine), ..PointingNames])
             OnPropertyChanged(name);
+    }
+
+    // ------------------------------------------------------------------ keeping
+
+    private bool savedAgain;
+
+    /// <summary>
+    /// Whether a change has not been kept: the last save failed, and none has worked since (§12,
+    /// *When a save fails, MoneyBud says so and keeps going*).
+    /// </summary>
+    public bool IsUnsaved { get; private set; }
+
+    /// <summary>
+    /// What the line for saving says: that changes are not saved, for as long as that is true; that
+    /// everything is saved again, from the save that ends it until the next thing done; otherwise
+    /// nothing. A line of its own, so that it shows beside a notice and beside the question alike.
+    /// </summary>
+    public string? SaveLine => IsUnsaved ? Tekst.NotSaved : savedAgain ? Tekst.SavedAgain : null;
+
+    /// <summary>
+    /// Once a minute, from the Desktop's timer: looks again, so the current-period label moves when
+    /// a period ends, and tries again to save when a save has failed — so that once saving works
+    /// again, the changes are kept with nothing done (§12).
+    /// </summary>
+    public void Tick()
+    {
+        if (IsUnsaved) Keep();
+        Refresh();
+    }
+
+    /// <summary>
+    /// MoneyBud closing. Changes not yet kept get one last try; whatever comes of it, nothing is
+    /// asked and MoneyBud closes (§12, *Closing makes one last attempt*). Lets go of the store, so
+    /// nothing may be done here afterwards.
+    /// </summary>
+    public void Close()
+    {
+        if (IsUnsaved) store?.TrySave(Ledger.ToSnapshot());
+        store?.Dispose();
+    }
+
+    /// <summary>Saves the whole ledger, and notes whether that worked for the line to say.</summary>
+    private void Keep()
+    {
+        if (store is null) return;
+
+        var kept = store.TrySave(Ledger.ToSnapshot());
+        savedAgain = kept && IsUnsaved;
+        IsUnsaved = !kept;
     }
 
     // ------------------------------------------------------------------ acts
@@ -247,7 +315,13 @@ public sealed partial class MoneyBudApp : ObservableObject
         var result = Ledger.Assign(euros, category, target);
 
         if (result.WasAssigned)
-            Tell(Tekst.Assigned(Money.FromEuros(euros), result), target);
+        {
+            // Zero moves nothing, and nor does a negative amount clipped in full against a Budget
+            // of zero: the act goes through and is said, but there is nothing to keep.
+            var assigned = Money.FromEuros(euros);
+            var moved = assigned != Money.Zero && result.Shortfall != -assigned;
+            Tell(Tekst.Assigned(assigned, result), target, changed: moved);
+        }
         else
             Refuse(Tekst.Refusal(result.Refusal!.Value, category));
 
@@ -261,7 +335,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         if (result.WasRefused)
             Refuse(Tekst.CategoryAdded(result));
         else
-            Tell(Tekst.CategoryAdded(result), landedIn: null);
+            Tell(Tekst.CategoryAdded(result), landedIn: null,
+                 changed: result.Outcome != AddCategoryOutcome.AlreadyThere);
 
         return result;
     }
@@ -410,6 +485,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     private void Ask(string text, Action act)
     {
         Notice = null;
+        savedAgain = false;
         Question = new Question(text);
         onConfirm = act;
         Refresh();
@@ -513,14 +589,21 @@ public sealed partial class MoneyBudApp : ObservableObject
     private BudgetPeriod PeriodOf(DateOnly date) => Ledger.Calendar.PeriodContaining(date);
 
     // Whatever MoneyBud says after an act replaces a question still waiting: the user has moved
-    // on from it, and a question and a notice are never shown together.
+    // on from it, and a question and a notice are never shown together. The save line is not
+    // what MoneyBud says after an act, and is left to Keep.
 
-    private void Tell(string text, BudgetPeriod? landedIn)
+    /// <summary>
+    /// An act that went through: said, and then the ledger is kept — unless the act changed
+    /// nothing, such as adding a name already there, when there is nothing to keep.
+    /// </summary>
+    private void Tell(string text, BudgetPeriod? landedIn, bool changed = true)
     {
         DropQuestion();
         Notice = landedIn is { } period && period != ShownPeriod
             ? new Notice($"{text} {Tekst.WentInto(period)}", IsRefusal: false, WentInto: period)
             : new Notice(text, IsRefusal: false);
+        savedAgain = false;
+        if (changed) Keep();
         Refresh();
     }
 
@@ -528,14 +611,19 @@ public sealed partial class MoneyBudApp : ObservableObject
     {
         DropQuestion();
         Notice = new Notice(text, IsRefusal: true);
+        savedAgain = false;
         Refresh();
     }
 
-    /// <summary>An act with no outcome to tell: nothing is said, and what was said before is gone.</summary>
+    /// <summary>
+    /// An act with no outcome to tell: nothing is said, and what was said before is gone. Nothing
+    /// changed, so there is nothing to keep.
+    /// </summary>
     private void SayNothing()
     {
         DropQuestion();
         Notice = null;
+        savedAgain = false;
         Refresh();
     }
 
