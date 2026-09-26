@@ -61,14 +61,19 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Twelve feature files exist, and every scenario in all of them passes. The first demo feedback
-round's scenarios, all of `point-at-a-slice.feature` and the new scenarios in `overview.feature`,
-were approved at the scenario gate on 2026-09-26 and are bound.
+Sixteen feature files exist. Twelve are approved and bound, and every scenario in them passes.
+The first demo feedback round's scenarios, all of `point-at-a-slice.feature` and the new
+scenarios in `overview.feature`, were approved at the scenario gate on 2026-09-26.
+
+The corrections increment's four files — `change-an-entry.feature`, `remove-an-entry.feature`,
+`rename-a-category.feature` and `delete-a-category.feature` — were **approved at the scenario
+gate on 2026-09-26**. They have no step definitions yet; those come with the build.
 
 | Capability | File |
 |---|---|
 | Recording | `record-expense.feature`, `record-income.feature` |
-| Categories | `add-category.feature`, `archive-category.feature` |
+| Correcting | `change-an-entry.feature`, `remove-an-entry.feature` — approved, not yet bound |
+| Categories | `add-category.feature`, `archive-category.feature`; `rename-a-category.feature`, `delete-a-category.feature` — approved, not yet bound |
 | Planning | `assign-to-category.feature` |
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
-| Typing | `type-an-amount.feature` — the one file whose amounts are quoted text as typed, not numbers |
+| Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

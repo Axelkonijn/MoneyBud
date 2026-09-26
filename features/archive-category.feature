@@ -3,6 +3,10 @@
 # nothing is gone: its expenses, its budgets and its place in every period's figures remain
 # exactly as they were. Archiving never destroys a record and never blocks.
 #
+# Deleting exists since 2026-09-26, as a separate act for a category with NO history in any period
+# (delete-a-category.feature). It changes nothing here: a category with history is archived, never
+# deleted. "Remove" is now said of an entry only (remove-an-entry.feature).
+#
 # Archiving never asks for confirmation, and I am told afterwards that the category was
 # ARCHIVED — both settled by the stakeholder on 2026-09-25. Nothing is lost by archiving and
 # adding the name undoes it, so there is nothing a confirmation would protect. Being told is
@@ -40,7 +44,9 @@
 #   - Archiving a name I do not have, and archiving a category that is already archived. Archived
 #     is a yes-or-no state of a category that exists, so neither is something I can do, and no
 #     behaviour is defined for either (glossary: What the state fixes).
-#   - Renaming, assigning, accounts and the end-of-period sweep.
+#   - Renaming, archived categories included (rename-a-category.feature); deleting
+#     (delete-a-category.feature); assigning, apart from bringing back; accounts; and the
+#     end-of-period sweep.
 #   - Budget figures carried over into a new period. They are not built. It is settled that an
 #     archived category's figure is not offered back when a period opens (glossary: An archived
 #     category's figure is not offered back when a period opens); its scenarios belong with

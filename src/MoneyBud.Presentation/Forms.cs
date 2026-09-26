@@ -11,6 +11,13 @@ namespace MoneyBud.Presentation;
 //
 // A date left empty means today, and an empty date is what every form starts with and returns
 // to: the date does not follow the period on screen (arc42 §12).
+//
+// The expense and income forms have a second state, Wijzigen: clicking a row in a transaction list
+// loads that entry into its form (arc42 §12, *On screen: picking an entry to correct*). The same
+// fields are read by the same rules, and the submit button saves the change instead of recording.
+// The form empties and returns to recording once the change goes through — saved unchanged
+// included — or on Annuleren, or once the entry is removed; after a refusal it keeps what was
+// typed and stays in Wijzigen, as a refused recording keeps what was typed.
 
 public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
 {
@@ -19,12 +26,69 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
     [ObservableProperty] public partial string? Label { get; set; }
     [ObservableProperty] public partial DateTime? Date { get; set; }
 
+    /// <summary>The expense being changed, or null while the form records a new one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText))]
+    public partial Expense? Editing { get; private set; }
+
+    public bool IsEditing => Editing is not null;
+
+    public string SubmitText => IsEditing ? Tekst.Save : Tekst.RecordExpense;
+
+    /// <summary>
+    /// Loads an expense to be changed or removed, each field as it would be typed: the amount in
+    /// the form the amount box reads back (<see cref="AmountInput.Format"/>), so that saving it
+    /// unchanged cannot be refused.
+    /// </summary>
+    public void Load(Expense expense)
+    {
+        Editing = expense;
+        Label = expense.Label;
+        Category = expense.Category.Name;
+        Amount = AmountInput.Format(expense.Amount);
+        Date = expense.Date.ToDateTime(TimeOnly.MinValue);
+    }
+
     [RelayCommand]
     private void Submit()
     {
-        var result = app.RecordExpense(Amount, Category, Label, DateOf(Date));
-        if (result is not { WasRecorded: true }) return;
+        if (IsEditing)
+        {
+            Save();
+            return;
+        }
 
+        var result = app.RecordExpense(Amount, Category, Label, DateOf(Date));
+        if (result is { WasRecorded: true }) Clear();
+    }
+
+    /// <summary>Saves the change to the expense being edited.</summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeExpenseResult? Save()
+    {
+        var expense = Editing ?? throw new InvalidOperationException("No expense is being changed.");
+
+        var result = app.ChangeExpense(expense, Amount, Category, Label, DateOf(Date));
+        if (result is { WasRefused: false }) Clear();
+        return result;
+    }
+
+    /// <summary>Verwijderen: asks first, and removes only once the user confirms.</summary>
+    [RelayCommand]
+    public void Remove() =>
+        app.AskToRemove(Editing ?? throw new InvalidOperationException("No expense is being changed."));
+
+    [RelayCommand]
+    public void Cancel()
+    {
+        app.Decline();
+        Clear();
+    }
+
+    /// <summary>Empties the form and returns it to recording a new expense.</summary>
+    public void Clear()
+    {
+        Editing = null;
         Amount = null;
         Category = null;
         Label = null;
@@ -40,12 +104,64 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
     [ObservableProperty] public partial string? Label { get; set; }
     [ObservableProperty] public partial DateTime? Date { get; set; }
 
+    /// <summary>The income being changed, or null while the form records a new one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText))]
+    public partial Income? Editing { get; private set; }
+
+    public bool IsEditing => Editing is not null;
+
+    public string SubmitText => IsEditing ? Tekst.Save : Tekst.RecordIncome;
+
+    /// <summary>Loads an income to be changed or removed, as <see cref="ExpenseForm.Load"/> does.</summary>
+    public void Load(Income income)
+    {
+        Editing = income;
+        Label = income.Label;
+        Amount = AmountInput.Format(income.Amount);
+        Date = income.Date.ToDateTime(TimeOnly.MinValue);
+    }
+
     [RelayCommand]
     private void Submit()
     {
-        var result = app.RecordIncome(Amount, Label, ExpenseForm.DateOf(Date));
-        if (result is not { WasRecorded: true }) return;
+        if (IsEditing)
+        {
+            Save();
+            return;
+        }
 
+        var result = app.RecordIncome(Amount, Label, ExpenseForm.DateOf(Date));
+        if (result is { WasRecorded: true }) Clear();
+    }
+
+    /// <summary>Saves the change to the income being edited.</summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeIncomeResult? Save()
+    {
+        var income = Editing ?? throw new InvalidOperationException("No income is being changed.");
+
+        var result = app.ChangeIncome(income, Amount, Label, ExpenseForm.DateOf(Date));
+        if (result is { WasRefused: false }) Clear();
+        return result;
+    }
+
+    /// <summary>Verwijderen: asks first, and removes only once the user confirms.</summary>
+    [RelayCommand]
+    public void Remove() =>
+        app.AskToRemove(Editing ?? throw new InvalidOperationException("No income is being changed."));
+
+    [RelayCommand]
+    public void Cancel()
+    {
+        app.Decline();
+        Clear();
+    }
+
+    /// <summary>Empties the form and returns it to recording a new income.</summary>
+    public void Clear()
+    {
+        Editing = null;
         Amount = null;
         Label = null;
         Date = null;

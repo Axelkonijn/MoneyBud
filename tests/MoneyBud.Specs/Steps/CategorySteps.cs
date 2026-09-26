@@ -1,13 +1,14 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
 using Reqnroll;
 
 namespace MoneyBud.Specs.Steps;
 
 /// <summary>
-/// Steps for adding and archiving categories — features/add-category.feature and
-/// features/archive-category.feature — and the category observations record-expense.feature
-/// shares with them.
+/// Steps for adding, archiving, renaming and deleting categories — features/add-category.feature,
+/// archive-category.feature, rename-a-category.feature and delete-a-category.feature — and the
+/// category observations record-expense.feature shares with them.
 ///
 /// <para>How names are checked follows the key in add-category.feature's header, and the
 /// difference between its steps is deliberate. "should include X" is letter for letter, the name
@@ -31,6 +32,9 @@ public sealed class CategorySteps(SpecContext context)
 
     [Given(@"I have archived the category ""([^""]*)""")]
     public void GivenIHaveArchivedTheCategory(string category) => Ledger.ArchiveCategory(category);
+
+    [Given(@"^I have deleted the category ""([^""]*)""$")]
+    public void GivenIHaveDeletedTheCategory(string category) => Ledger.DeleteCategory(category);
 
     [Given(@"I have set no budget for ""([^""]*)"" in the (current|previous|next) budget period")]
     public void GivenIHaveSetNoBudgetFor(string category, string which)
@@ -63,6 +67,34 @@ public sealed class CategorySteps(SpecContext context)
         context.RecordArchived(context.App.ArchiveCategory(category));
     }
 
+    // From the category's row on screen, as the user renames it: the rename button turns the
+    // name into a text box, which starts out holding the name, and what is typed replaces it.
+    [When(@"^I (?:rename|try to rename) the category ""([^""]*)"" to ""([^""]*)""$")]
+    public void WhenIRenameTheCategory(string category, string newName)
+    {
+        before = Snapshot();
+        var app = context.App;
+        Assert.Contains(category, app.Overview.Rows.Select(r => r.Name));
+
+        app.StartRename(category);
+        Assert.True(app.Overview.Rows.Single(r => r.Name == category).IsRenaming);
+        Assert.Equal(category, app.NewName);
+
+        app.NewName = newName;
+        context.Record(app.SaveRename());
+    }
+
+    // With the delete button on its row on screen, which is the only way to reach it.
+    [When(@"^I delete the category ""([^""]*)""$")]
+    public void WhenIDeleteTheCategory(string category)
+    {
+        before = Snapshot();
+        var row = context.App.Overview.Rows.SingleOrDefault(r => r.Name == category);
+        Assert.True(row is { CanDelete: true }, $"The row of {category} should carry the delete button.");
+
+        context.RecordDeleted(context.App.DeleteCategory(category));
+    }
+
     // ------------------------------------------------------------------- Then
 
     [Then(@"I should be told that ""([^""]*)"" was created")]
@@ -81,13 +113,81 @@ public sealed class CategorySteps(SpecContext context)
         Assert.True(Ledger.IsArchived(category), $"{category} should be archived.");
     }
 
+    // Adding's refusal, reached by renaming as well (rename-a-category.feature).
     [Then(@"I should be told that a category needs a name")]
     public void ThenIShouldBeToldThatACategoryNeedsAName()
     {
+        if (context.LastAttempt is RenameCategoryResult renamed)
+        {
+            Assert.Equal(RenameRefusal.NameMissing, renamed.Refusal);
+            return;
+        }
+
         var result = LastAdd();
         Assert.True(result.WasRefused, "Expected adding the category to be refused, but it was not.");
         Assert.Equal(CategoryRefusal.NameMissing, result.Refusal);
     }
+
+    // Went through: renamed, or given exactly its own name. Either way the box has closed.
+    [Then(@"^the rename should go through$")]
+    public void ThenTheRenameShouldGoThrough()
+    {
+        var result = LastRename();
+        Assert.False(result.WasRefused, $"Expected the rename to go through, but it was refused: {result.Refusal}.");
+        Assert.Null(context.App.Renaming);
+    }
+
+    // Refused, the box stays open on what was typed, to be corrected in place.
+    [Then(@"^the rename should be refused$")]
+    public void ThenTheRenameShouldBeRefused()
+    {
+        Assert.True(LastRename().WasRefused, "Expected the rename to be refused, but it went through.");
+        Assert.NotNull(context.App.Renaming);
+    }
+
+    // From what to what, letter for letter: the old name as it was stored and the new one as
+    // now stored, trimmed. The wording is not fixed; that it was said is.
+    [Then(@"^I should be told that ""([^""]*)"" was renamed to ""([^""]*)""$")]
+    public void ThenIShouldBeToldThatWasRenamedTo(string oldName, string newName)
+    {
+        var result = LastRename();
+        Assert.Equal(RenameOutcome.Renamed, result.Outcome);
+        Assert.Equal((oldName, newName), (result.OldName, result.Category!.Name));
+
+        var notice = context.App.Notice ?? throw new InvalidOperationException("Nothing was said.");
+        Assert.False(notice.IsRefusal);
+        Assert.Equal(Tekst.CategoryRenamed(oldName, result.Category), notice.Text);
+    }
+
+    [Then(@"^I should be told that the new name is already taken$")]
+    public void ThenIShouldBeToldThatTheNewNameIsAlreadyTaken()
+    {
+        Assert.Equal(RenameRefusal.NameTaken, LastRename().Refusal);
+        Assert.True(context.App.Notice?.IsRefusal, "Expected to be told of a refusal.");
+    }
+
+    [Then(@"^I should be told that ""([^""]*)"" was deleted$")]
+    public void ThenIShouldBeToldThatWasDeleted(string category)
+    {
+        var deleted = Assert.IsType<SpecContext.Deleted>(context.LastAttempt);
+        Assert.Equal(category, deleted.Category.Name);
+        Assert.False(Ledger.HasCategory(category), $"{category} should be gone, not archived.");
+
+        var notice = context.App.Notice ?? throw new InvalidOperationException("Nothing was said.");
+        Assert.False(notice.IsRefusal);
+        Assert.Equal(Tekst.CategoryDeleted(deleted.Category), notice.Text);
+    }
+
+    // Offered means a row of the category carries the delete button. The rows looked at are
+    // those of every period a scenario can name: a category with history anywhere is shown in at
+    // least one of them, and one shown in none has no row to carry the button.
+    [Then(@"^I should be able to delete the category ""([^""]*)""$")]
+    public void ThenIShouldBeAbleToDelete(string category) =>
+        Assert.Contains(RowsOf(category), r => r.Name == category && r.CanDelete);
+
+    [Then(@"^I should not be able to delete the category ""([^""]*)""$")]
+    public void ThenIShouldNotBeAbleToDelete(string category) =>
+        Assert.DoesNotContain(RowsOf(category), r => r.CanDelete);
 
     [Then(@"my categories should be unchanged")]
     public void ThenMyCategoriesShouldBeUnchanged()
@@ -166,6 +266,15 @@ public sealed class CategorySteps(SpecContext context)
 
     private AddCategoryResult LastAdd() =>
         context.LastAddResult ?? throw new InvalidOperationException("No category has been added yet.");
+
+    private RenameCategoryResult LastRename() =>
+        context.LastAttempt as RenameCategoryResult
+        ?? throw new InvalidOperationException($"The last thing done was not a rename: {context.LastAttempt}.");
+
+    private IEnumerable<CategoryRow> RowsOf(string category) =>
+        new[] { "previous", "current", "next" }
+            .SelectMany(which => context.App.OverviewFor(Ledger.Period(which)).Rows)
+            .Where(r => CategoryName.Comparer.Equals(r.Name, category));
 
     private void AssertAdded(AddCategoryOutcome expected, string category)
     {

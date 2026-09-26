@@ -45,6 +45,19 @@ public static class Tekst
     public const string RecordExpense = "Uitgave toevoegen";
     public const string RecordIncome = "Inkomst toevoegen";
     public const string Overview = "Overzicht";
+    public const string Change = "Wijzigen";
+    public const string Remove = "Verwijderen";
+    public const string Rename = "Hernoemen";
+
+    // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
+    // an entry and deleting on a category, so the word is never ambiguous where it is shown.
+    public const string Delete = "Verwijderen";
+
+    // The form's controls and the one question MoneyBud asks. Not terms of the model, so not in
+    // the table (§12, *Dutch display terms*).
+    public const string Save = "Opslaan";
+    public const string Cancel = "Annuleren";
+    public const string AreYouSure = "Weet je het zeker?";
 
     // Words the table does not fix, used as headings and hints.
     public const string Expenses = "Uitgaven";
@@ -138,8 +151,16 @@ public static class Tekst
 
     public static string Refusal(CategoryRefusal refusal) => refusal switch
     {
-        CategoryRefusal.NameMissing => "Een categorie heeft een naam nodig.",
+        CategoryRefusal.NameMissing => NameMissing,
     };
+
+    public static string Refusal(RenameRefusal refusal, string? newName) => refusal switch
+    {
+        RenameRefusal.NameMissing => NameMissing,
+        RenameRefusal.NameTaken => $"„{newName?.Trim()}” is al de naam van een andere categorie.",
+    };
+
+    private const string NameMissing = "Een categorie heeft een naam nodig.";
 
     private const string FinerThanCent = "Een bedrag kan niet kleiner zijn dan een cent.";
 
@@ -181,6 +202,37 @@ public static class Tekst
 
     public static string CategoryArchived(Domain.Category category) =>
         $"{Quoted(category.Name)} is {Archived.ToLowerInvariant()}.";
+
+    public static string CategoryRenamed(string oldName, Domain.Category category) =>
+        $"{Quoted(oldName)} hernoemd naar {Quoted(category.Name)}.";
+
+    public static string CategoryDeleted(Domain.Category category) => $"{Quoted(category.Name)} is verwijderd.";
+
+    public static string ExpenseChanged(Domain.Expense expense, bool broughtBack) =>
+        $"{Expense} gewijzigd: {Euro(expense.Amount)} voor {Quoted(expense.Category.Name)}."
+        + (broughtBack ? " " + WasBroughtBack(expense.Category.Name) : "");
+
+    public static string IncomeChanged(Domain.Income income) =>
+        $"{Income} gewijzigd: {Quoted(income.Label)}, {Euro(income.Amount)}.";
+
+    // The question names the entry, so it is clear which one goes. It says nothing about what the
+    // removal does to the figures: being asked is not being warned (§12, *Removing an entry asks
+    // first*).
+    public static string AskToRemove(Domain.Expense expense) =>
+        $"{Describe(expense)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+
+    public static string AskToRemove(Domain.Income income) =>
+        $"{Describe(income)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+
+    public static string ExpenseRemoved(Domain.Expense expense) => $"{Describe(expense)} verwijderd.";
+
+    public static string IncomeRemoved(Domain.Income income) => $"{Describe(income)} verwijderd.";
+
+    private static string Describe(Domain.Expense expense) =>
+        $"{Expense} van {Euro(expense.Amount)} voor {Quoted(expense.Category.Name)}";
+
+    private static string Describe(Domain.Income income) =>
+        $"{Income} {Quoted(income.Label)} van {Euro(income.Amount)}";
 
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>
     public static string WentInto(BudgetPeriod period) => $"Dit staat in {PeriodName(period)}.";

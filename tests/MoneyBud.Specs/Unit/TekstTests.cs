@@ -37,6 +37,10 @@ public sealed partial class TekstTests
         ["Previous / next period"] = [Tekst.PreviousPeriod, Tekst.NextPeriod],
         ["Add category / Record expense / Record income"] = [Tekst.AddCategory, Tekst.RecordExpense, Tekst.RecordIncome],
         ["Overview (the start screen)"] = [Tekst.Overview],
+        ["Change (an entry)"] = [Tekst.Change],
+        ["Remove (an entry)"] = [Tekst.Remove],
+        ["Rename (a category)"] = [Tekst.Rename],
+        ["Delete (a category)"] = [Tekst.Delete],
     };
 
     [Fact]
@@ -77,6 +81,10 @@ public sealed partial class TekstTests
     [Fact]
     public void Every_category_refusal_has_Dutch_wording() =>
         AssertWorded(Enum.GetValues<CategoryRefusal>().Select(Tekst.Refusal));
+
+    [Fact]
+    public void Every_rename_refusal_has_Dutch_wording() =>
+        AssertWorded(Enum.GetValues<RenameRefusal>().Select(r => Tekst.Refusal(r, "Hobby")));
 
     [Theory]
     [InlineData(183245, "€ 1.832,45")]

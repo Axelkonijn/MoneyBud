@@ -38,8 +38,8 @@
 # explicit Given, so none of them depends on whether the defaults are there — and a name I "do
 # not have" is never one of the six.
 #
-# Out of scope: renaming a category (deferred, glossary: Renaming a category is not in this
-# increment), assigning to one, and anything to do with accounts.
+# Out of scope: renaming a category (rename-a-category.feature), deleting one that has no history
+# (delete-a-category.feature), assigning to one, and anything to do with accounts.
 
 @budget
 Feature: Add a category
@@ -92,8 +92,8 @@ Feature: Add a category
   # capitalisation I see may not be the one I typed.
   #
   # The existing spelling is kept. Taking the new capitalisation would change a category's name
-  # as a side-effect of adding one — a rename by the back door, and renaming is not in this
-  # increment.
+  # as a side-effect of adding one — a rename by the back door. Renaming has a front door of its
+  # own since 2026-09-26 (rename-a-category.feature), and adding still never renames.
   #
   # The budget and the spending are there to show that what I get back is the category I
   # already had, figures and all, rather than a fresh one that happens to share its name.

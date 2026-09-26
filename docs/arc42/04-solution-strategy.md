@@ -63,15 +63,16 @@ Entry now happens through a screen, and several things were shaped to take work 
 - the category box suggests the categories in use, narrowing as you type, and still accepts any
   name;
 - after a refusal a form keeps what was typed, so it is corrected in place rather than retyped;
-- an expense's label is optional, and a category with no budget records an expense like any other.
+- an expense's label is optional, and a category with no budget records an expense like any other;
+- since the corrections increment, a wrong entry is fixed by clicking its row, in the same form and
+  by the same rules it was entered with, and a mistyped category name can be renamed
+  ([§12](12-glossary.md), *An entry can be changed or removed*).
 
-Three things hold it back, and all three are recorded rather than solved:
+Two things hold it back, and both are recorded rather than solved:
 
 - **It is on the desktop, and entry happens out of the house**
   ([ADR 0002](../decisions/0002-desktop-application-first.md), [§11](11-risks-and-technical-debt.md)).
   This is the goal the desktop-first trade costs most.
-- **A wrong entry cannot be corrected** except by closing MoneyBud and losing everything, which the
-  stakeholder accepted for the demo ([§11](11-risks-and-technical-debt.md)).
 - **Much of what is visible is still refusal**: five reasons an expense is refused, three for an
   income, four for an assignment, and now two more before any of them, for text that is not an
   amount or is ambiguous ([§12](12-glossary.md), *Typing an amount*). Each is there to stop a wrong
@@ -101,9 +102,12 @@ one-action carry-over of last period's budgets ([§12](12-glossary.md)).
   to break is hard to break by accident. The ring's proportions are drawing shares, not amounts, and
   do not reach `Money` ([§8.2](08-crosscutting-concepts.md)).
 
-The caveat stands: adaptability of the **software** is served; adaptability of the **data**, which
-[§1.2](01-introduction-and-goals.md) names in the same breath, is untouched because there is no
-stored data to adapt. The inability to correct an entry is that caveat as the user meets it.
+The caveat is smaller, but it stands: adaptability of the **software** is served; adaptability of
+the **data**, which [§1.2](01-introduction-and-goals.md) names in the same breath, is served only
+within a run. Since the corrections increment, an entry can be changed or removed and a category
+renamed without starting over, which is where the user met the gap first
+([§11](11-risks-and-technical-debt.md), *Resolved*). But nothing is stored, so what was adjusted is
+gone when MoneyBud closes. Recurring entries, the other thing that goal names, do not exist yet.
 
 ### 4. Local operation — **served, and trivially so**
 

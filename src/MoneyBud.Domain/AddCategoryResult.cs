@@ -10,7 +10,7 @@ namespace MoneyBud.Domain;
 /// explains an outcome the user could not have predicted — old expenses reappearing under a
 /// category they believe they just created. Either way the category comes back spelled as it
 /// already was, not as typed this time: taking the new spelling would be a rename by the back
-/// door, and renaming is not in this increment.</para>
+/// door. Renaming is its own act, <see cref="Ledger.RenameCategory"/>.</para>
 /// </summary>
 public sealed record AddCategoryResult
 {

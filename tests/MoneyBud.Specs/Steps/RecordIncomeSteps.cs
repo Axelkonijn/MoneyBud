@@ -117,8 +117,16 @@ public sealed class RecordIncomeSteps(SpecContext context)
         context.Record(context.App.RecordIncome(amount, label, date is null ? null : Ledger.Date(date))
             ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
 
+    // Answers for a change too, as RecordExpenseSteps' does.
     private void AssertRefused(IncomeRefusal expected)
     {
+        if (context.LastAttempt is ChangeIncomeResult changed)
+        {
+            Assert.True(changed.WasRefused, "Expected the change to be refused, but it went through.");
+            Assert.Equal(expected, changed.Refusal);
+            return;
+        }
+
         Assert.False(
             context.IncomeResult.WasRecorded, "Expected the income to be refused, but it was recorded.");
         Assert.Equal(expected, context.IncomeResult.Refusal);

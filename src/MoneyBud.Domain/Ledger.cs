@@ -22,6 +22,12 @@ namespace MoneyBud.Domain;
 /// of a period's <i>Unassigned</i> and into a category's <i>Budget</i>. There is no other way to
 /// write a plan.</para>
 ///
+/// <para>An entry — an expense or an income — can be changed or removed in any period, past ones
+/// included (arc42 §12, *An entry can be changed or removed*). A change is judged exactly as
+/// recording the changed entry now would be, by the same checks, and it <b>overwrites</b> the
+/// entry: nothing remembers what it was, and it keeps its place in the order recorded. A category
+/// can be renamed, and one with no history in any period can be deleted.</para>
+///
 /// <para>Not built yet: accounts, and with them backed categories and the pool account; carrying
 /// last period's figures into a new one; and the end-of-period sweep (arc42 §12).</para>
 /// </summary>
@@ -32,8 +38,12 @@ public sealed class Ledger
     private readonly List<Category> categoriesInOrderAdded = [];
     private readonly HashSet<Category> archived = [];
     private readonly Dictionary<(Category Category, DateOnly PeriodStart), Money> budgets = [];
+
+    // In the order recorded. A change replaces an entry where it stands, so the order stays the
+    // order the entries were first recorded in.
     private readonly List<Expense> expenses = [];
     private readonly List<Income> incomes = [];
+    private int lastEntryId;
 
     public Ledger(TimeProvider clock, BudgetPeriodCalendar? calendar = null)
     {
@@ -121,6 +131,90 @@ public sealed class Ledger
 
         if (!archived.Add(category))
             throw new InvalidOperationException($"\"{category.Name}\" is already archived.");
+
+        return category;
+    }
+
+    /// <summary>
+    /// Gives a category a new name (arc42 §12, *Renaming a category*). The new name follows the
+    /// rules for adding one: trimmed, stored otherwise as typed, and refused when it trims to
+    /// nothing. A name another category has — archived ones included — is refused as taken.
+    ///
+    /// <para>A new spelling of the category's own name is not taken: under the name rule it is
+    /// the same name, so no other category can hold it. The name spelled exactly as it already
+    /// is changes nothing.</para>
+    ///
+    /// <para>It stays the same category. Its budgets, its expenses, its place in the order added
+    /// and whether it is archived are untouched, and every period, past ones included, shows the
+    /// new name. Renaming is not new entry, so it brings nothing back. The old name is free
+    /// afterwards: nothing remembers it.</para>
+    ///
+    /// <para><b>Throws</b> for a name that is not one of the user's categories. A category is
+    /// renamed from its row, so this is not something the user can do.</para>
+    /// </summary>
+    public RenameCategoryResult RenameCategory(string name, string? newName)
+    {
+        var category = Find(name)
+            ?? throw new InvalidOperationException($"There is no category called \"{name}\" to rename.");
+
+        var stored = CategoryName.Normalise(newName);
+        if (stored is null)
+            return RenameCategoryResult.Refused(RenameRefusal.NameMissing);
+
+        if (stored == category.Name)
+            return RenameCategoryResult.Unchanged(category);
+
+        if (categories.TryGetValue(stored, out var holder) && holder != category)
+            return RenameCategoryResult.Refused(RenameRefusal.NameTaken);
+
+        // The index is keyed by name, so the category is taken out under its old name and put
+        // back under its new one. Everything else holds the category itself and follows.
+        var oldName = category.Name;
+        categories.Remove(oldName);
+        category.Name = stored;
+        categories.Add(stored, category);
+
+        return RenameCategoryResult.Renamed(oldName, category);
+    }
+
+    /// <summary>
+    /// Whether a category has no history in any period — no expense, and no budget of more than
+    /// zero — and so can be deleted (arc42 §12, *Deleting a category that has no history
+    /// anywhere*).
+    ///
+    /// <para>Decided by the figures as they are now. A budget assigned and taken back to zero is
+    /// no history: that is deliberately not <see cref="HasBudget"/>, which can tell it apart from
+    /// never assigned, a difference §12 says does not exist. And an expense that was removed, or
+    /// moved to another category, leaves no trace to count.</para>
+    /// </summary>
+    public bool CanDelete(string name) =>
+        Find(name) is { } category
+        && !expenses.Any(e => e.Category == category)
+        && !budgets.Any(b => b.Key.Category == category && b.Value.Cents > 0);
+
+    /// <summary>
+    /// Deletes a category with no history anywhere. It is gone: not archived, brought back by
+    /// nothing, and its name is free, so adding the name afterwards creates a new category that
+    /// goes last in the order added. Never asks first — nothing of value is lost (arc42 §12).
+    /// Budgets of zero it still had go with it, since they are not history.
+    ///
+    /// <para><b>Throws</b> for a name that is not one of the user's categories, and for a category
+    /// with history. The delete act is offered only on a category that <see cref="CanDelete"/>, so
+    /// neither is something the user can do.</para>
+    /// </summary>
+    public Category DeleteCategory(string name)
+    {
+        var category = Find(name)
+            ?? throw new InvalidOperationException($"There is no category called \"{name}\" to delete.");
+
+        if (!CanDelete(name))
+            throw new InvalidOperationException($"\"{category.Name}\" has history, so it cannot be deleted.");
+
+        categories.Remove(category.Name);
+        categoriesInOrderAdded.Remove(category);
+        archived.Remove(category);
+        foreach (var key in budgets.Keys.Where(k => k.Category == category).ToList())
+            budgets.Remove(key);
 
         return category;
     }
@@ -278,27 +372,111 @@ public sealed class Ledger
     public RecordExpenseResult RecordExpense(
         decimal amountInEuros, string? categoryName, DateOnly date, string? label = null)
     {
-        if (CategoryName.Normalise(categoryName) is null)
-            return RecordExpenseResult.Refused(ExpenseRefusal.CategoryMissing);
+        var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
+        if (refusal is { } reason)
+            return RecordExpenseResult.Refused(reason);
 
-        if (Find(categoryName) is not { } category)
-            return RecordExpenseResult.Refused(ExpenseRefusal.UnknownCategory);
-
-        if (amountInEuros <= 0)
-            return RecordExpenseResult.Refused(ExpenseRefusal.AmountNotPositive);
-
-        if (!Money.IsWholeCents(amountInEuros))
-            return RecordExpenseResult.Refused(ExpenseRefusal.AmountFinerThanCent);
-
-        if (date > Today)
-            return RecordExpenseResult.Refused(ExpenseRefusal.DateInFuture);
-
-        var broughtBack = archived.Remove(category);
+        var broughtBack = archived.Remove(category!);
 
         var expense = new Expense(
-            Money.FromEuros(amountInEuros), date, category, NormaliseLabel(label));
+            ++lastEntryId, Money.FromEuros(amountInEuros), date, category!, NormaliseLabel(label));
         expenses.Add(expense);
         return RecordExpenseResult.Recorded(expense, broughtBack);
+    }
+
+    /// <summary>
+    /// Changes an expense to the amount, category, date and label given, or refuses the change
+    /// for exactly one reason (arc42 §12, *A changed entry is judged as if it were recorded now*).
+    ///
+    /// <para>The checks are recording's, in recording's order, so a change passes or fails exactly
+    /// as the changed expense would if it were recorded now — past periods included, where a
+    /// correction changes the period's figures, and that is its purpose. A refused change leaves
+    /// the expense exactly as it was.</para>
+    ///
+    /// <para><b>An expense saved with nothing changed is never refused</b>, and is told apart so
+    /// that it can go through quietly. It is recognised before any check runs, so that it cannot
+    /// fail one: what was accepted once is accepted again as it is.</para>
+    ///
+    /// <para>A change <b>overwrites</b> the expense: same id, same place in the order recorded,
+    /// and no record kept of what it was. Moving it <b>onto</b> an archived category brings that
+    /// category back, as recording against it would; fixing an expense already on an archived
+    /// category does not, because that is correcting history, not using the category
+    /// again.</para>
+    ///
+    /// <para><b>Throws</b> for an expense that is not in the ledger, such as one already removed.
+    /// A change is made from the expense's row, so that is not something the user can do.</para>
+    /// </summary>
+    public ChangeExpenseResult ChangeExpense(
+        Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label)
+    {
+        var index = IndexOf(expense);
+        var current = expenses[index];
+
+        if (Money.IsWholeCents(amountInEuros)
+            && Money.FromEuros(amountInEuros) == current.Amount
+            && Find(categoryName) == current.Category
+            && date == current.Date
+            && NormaliseLabel(label) == current.Label)
+            return ChangeExpenseResult.Unchanged(current);
+
+        var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
+        if (refusal is { } reason)
+            return ChangeExpenseResult.Refused(reason);
+
+        var broughtBack = category != current.Category && archived.Remove(category!);
+
+        var changed = current with
+        {
+            Amount = Money.FromEuros(amountInEuros),
+            Date = date,
+            Category = category!,
+            Label = NormaliseLabel(label),
+        };
+        expenses[index] = changed;
+        return ChangeExpenseResult.Changed(changed, broughtBack);
+    }
+
+    /// <summary>
+    /// Removes an expense. It is gone, and nothing keeps a copy. Asking first is the screen's to
+    /// do (arc42 §12, *Removing an entry asks first*); by the time this is called, the user has
+    /// confirmed. Removing is not new entry, so it never brings a category back.
+    ///
+    /// <para><b>Throws</b> for an expense that is not in the ledger.</para>
+    /// </summary>
+    public void RemoveExpense(Expense expense) => expenses.RemoveAt(IndexOf(expense));
+
+    /// <summary>
+    /// The one check an expense passes or fails, for recording and changing alike, in the fixed
+    /// order <see cref="RecordExpense"/> describes: the category, then the amount, then the date.
+    /// On success, the category the name refers to.
+    /// </summary>
+    private (ExpenseRefusal? Refusal, Category? Category) CheckExpense(
+        decimal amountInEuros, string? categoryName, DateOnly date)
+    {
+        if (CategoryName.Normalise(categoryName) is null)
+            return (ExpenseRefusal.CategoryMissing, null);
+
+        if (Find(categoryName) is not { } category)
+            return (ExpenseRefusal.UnknownCategory, null);
+
+        if (amountInEuros <= 0)
+            return (ExpenseRefusal.AmountNotPositive, null);
+
+        if (!Money.IsWholeCents(amountInEuros))
+            return (ExpenseRefusal.AmountFinerThanCent, null);
+
+        if (date > Today)
+            return (ExpenseRefusal.DateInFuture, null);
+
+        return (null, category);
+    }
+
+    private int IndexOf(Expense expense)
+    {
+        var index = expenses.FindIndex(e => e.Id == expense.Id);
+        return index >= 0
+            ? index
+            : throw new InvalidOperationException($"Expense {expense.Id} is not in the ledger.");
     }
 
     /// <summary>Every expense dated in a period, whatever its category, in the order recorded.</summary>
@@ -333,19 +511,82 @@ public sealed class Ledger
     /// </summary>
     public RecordIncomeResult RecordIncome(decimal amountInEuros, string? label, DateOnly date)
     {
-        var trimmed = NormaliseLabel(label);
-        if (trimmed is null)
-            return RecordIncomeResult.Refused(IncomeRefusal.LabelMissing);
+        if (CheckIncome(amountInEuros, label) is { } refusal)
+            return RecordIncomeResult.Refused(refusal);
 
-        if (amountInEuros <= 0)
-            return RecordIncomeResult.Refused(IncomeRefusal.AmountNotPositive);
-
-        if (!Money.IsWholeCents(amountInEuros))
-            return RecordIncomeResult.Refused(IncomeRefusal.AmountFinerThanCent);
-
-        var income = new Income(Money.FromEuros(amountInEuros), date, trimmed);
+        var income = new Income(++lastEntryId, Money.FromEuros(amountInEuros), date, NormaliseLabel(label)!);
         incomes.Add(income);
         return RecordIncomeResult.Recorded(income);
+    }
+
+    /// <summary>
+    /// Changes an income to the amount, label and date given, or refuses the change for exactly
+    /// one of recording's reasons. Everything <see cref="ChangeExpense"/> says holds here too:
+    /// judged as recording now, never refused when nothing changed, and an overwrite that keeps the
+    /// income's place. A future date is allowed, as it is when recording.
+    ///
+    /// <para>Lowering an income, or moving it out of its period, may leave that period
+    /// <i>Over-assigned</i>. Allowed, shown with the marker, and nothing more is said — in a past
+    /// period for good, since nothing can be assigned there to balance it (arc42 §12).</para>
+    ///
+    /// <para><b>Throws</b> for an income that is not in the ledger.</para>
+    /// </summary>
+    public ChangeIncomeResult ChangeIncome(Income income, decimal amountInEuros, string? label, DateOnly date)
+    {
+        var index = IndexOf(income);
+        var current = incomes[index];
+
+        if (Money.IsWholeCents(amountInEuros)
+            && Money.FromEuros(amountInEuros) == current.Amount
+            && NormaliseLabel(label) == current.Label
+            && date == current.Date)
+            return ChangeIncomeResult.Unchanged(current);
+
+        if (CheckIncome(amountInEuros, label) is { } refusal)
+            return ChangeIncomeResult.Refused(refusal);
+
+        var changed = current with
+        {
+            Amount = Money.FromEuros(amountInEuros),
+            Date = date,
+            Label = NormaliseLabel(label)!,
+        };
+        incomes[index] = changed;
+        return ChangeIncomeResult.Changed(changed);
+    }
+
+    /// <summary>
+    /// Removes an income, once the user has confirmed. It may leave its period
+    /// <i>Over-assigned</i>, which is allowed and shown, never refused. <b>Throws</b> for an income
+    /// that is not in the ledger.
+    /// </summary>
+    public void RemoveIncome(Income income) => incomes.RemoveAt(IndexOf(income));
+
+    /// <summary>
+    /// The one check an income passes or fails, for recording and changing alike, in the fixed
+    /// order <see cref="RecordIncome"/> describes: the label, then the amount. The date is not
+    /// checked.
+    /// </summary>
+    private static IncomeRefusal? CheckIncome(decimal amountInEuros, string? label)
+    {
+        if (NormaliseLabel(label) is null)
+            return IncomeRefusal.LabelMissing;
+
+        if (amountInEuros <= 0)
+            return IncomeRefusal.AmountNotPositive;
+
+        if (!Money.IsWholeCents(amountInEuros))
+            return IncomeRefusal.AmountFinerThanCent;
+
+        return null;
+    }
+
+    private int IndexOf(Income income)
+    {
+        var index = incomes.FindIndex(i => i.Id == income.Id);
+        return index >= 0
+            ? index
+            : throw new InvalidOperationException($"Income {income.Id} is not in the ledger.");
     }
 
     public IReadOnlyList<Income> IncomesIn(BudgetPeriod period) =>
