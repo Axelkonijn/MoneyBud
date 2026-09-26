@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the first feedback round was built green on `feedback-round-1`. Update this when a stage completes._
+_Last updated 2026-09-26, after the first feedback round was built, tried by Axel and merged into `main`. Update this when a stage completes._
 
 **Done: all five stages, five times — for `record-expense`, `record-income`, categories,
 assigning and the desktop UI.** All five are built and green.
@@ -245,8 +245,8 @@ untested by plan, so a choice belongs in `MoneyBud.Presentation`, with a test.
 **Settled ahead of later increments** (in §12; not built): **when a period opens**, an archived
 category's last figure is **not offered back**.
 
-**The first feedback round is done and green, on branch `feedback-round-1`** (not yet merged
-into `main`). Axel ran the demo on 2026-09-26 in a guided session; his feedback is in
+**The first feedback round is done and green, built on branch `feedback-round-1` and merged into
+`main`.** Axel ran the result himself on 2026-09-26: "it looks great". Axel ran the demo on 2026-09-26 in a guided session; his feedback is in
 [`docs/stakeholder/2026-09-26-demo-feedback.md`](docs/stakeholder/2026-09-26-demo-feedback.md).
 All five stages ran the same day: rulings in §12, scenarios **approved at the first gate**
 (`overview.feature` revised, `point-at-a-slice.feature` new), the plan **approved at the second**,
@@ -274,7 +274,9 @@ Axel's remark that the date stays on today after stepping to another month is an
 not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
 Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code:
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Axel
+said on 2026-09-26 that it is time to **move on to new slices**, so the next session starts at
+**stage 1 of the next one**: a conversation with Axel, not a delegation.
 
 - **Opening a period** — offering last period's figures back and the one action that assigns them
   in full. Settled in §12, not built.
