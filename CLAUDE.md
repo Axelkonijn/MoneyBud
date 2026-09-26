@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after the UI increment shipped green and was merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-26, after the first feedback round's scenarios were approved. Update this when a stage completes._
 
 **Done: all five stages, five times — for `record-expense`, `record-income`, categories,
 assigning and the desktop UI.** All five are built and green.
@@ -248,16 +248,21 @@ category's last figure is **not offered back**.
 **In progress: the first feedback round, on branch `feedback-round-1`.** Axel ran the demo on
 2026-09-26 in a guided session. **Stage 1 is done**: his feedback is captured, approved by him, in
 [`docs/stakeholder/2026-09-26-demo-feedback.md`](docs/stakeholder/2026-09-26-demo-feedback.md).
-**The next step is stage 2** — `arc42-keeper` records it in §12 — then scenarios (gate), plan
-(gate), build. Three changes, all small:
+**Stages 2 and 3 are done** (2026-09-26): the rulings are in §12, and the scenarios were
+**approved at the first gate** — `overview.feature` revised (three scenarios for the minimum
+width, none changed) and the new `point-at-a-slice.feature` (hover). Both are unbound, so 16
+cases fail as undefined until the build. **The next step is stage 4, the plan**, which must
+propose the minimum width, the squeeze rule (a larger *Budget* never drawn narrower than a
+smaller one), how field order becomes testable outside the untested Desktop, and where the
+*Niet toegewezen* figure and assign form go. Three changes, all small:
 
 - **The category box empties after every entry**, expense and assign alike. Today it keeps what
   was *typed* ("groc") rather than the suggestion picked, which is a bug on top of the wish.
 - **The ring becomes the centrepiece** of the middle column, rows below it; **hovering a slice
-  shows** its category, Budget, Uitgegeven and Resterend; **small budgets get a minimum slice
-  width**, so they and their fill stay visible. That minimum **changes an approved rule** — the
-  ring was exactly proportional — so `overview.feature` goes back through the scenario gate, and
-  the plan proposes the minimum.
+  shows** everything its row does — category, Budget, Uitgegeven, Resterend, the marker,
+  *Gearchiveerd* — and the *Niet toegewezen* slice shows its figure; **every slice, Unassigned
+  included, gets a minimum width**. That minimum **revised an approved rule** — the ring was
+  exactly proportional. **The fill stays exact**: no minimum fill.
 - **Field order: the "what" before the amount.** Expense: Omschrijving → Categorie → Bedrag →
   Datum. Income: Omschrijving → Bedrag → Datum. Assigning: Categorie → Bedrag.
 

@@ -558,6 +558,11 @@ in which it **can** fire: until now nobody could enter anything, so nobody could
 with `Ledger.StartNew`, and it is gone when the window closes. The trigger above is now reachable
 and has not fired.
 
+**Raised at the first demo, and still not fired** (2026-09-26). The stakeholder named keeping data as
+missing and deferred it in the same sentence: *"Maar dat komt later."* That names a gap. It does not
+say he minded re-entering anything, and that is what the trigger waits for
+([§12](12-glossary.md), *What the UI starts with, and what it keeps*).
+
 This is a **scope** decision rather than an architectural one, which is why it lives here and not
 as a record in [`docs/decisions/`](../decisions/). MoneyBud already records "not in the first
 increment" in the section the thing belongs to — [§12](12-glossary.md) does it for accounts, the
@@ -597,12 +602,12 @@ Nothing is announced either way, which is what §12 asks.
 ### Decided while building, not put to the stakeholder
 
 These are visible to the user and were chosen in the build. They are recorded here so that they are
-not mistaken for rulings. None contradicts a ruling, and any of them can be put to the stakeholder
-if he reacts to it.
+not mistaken for rulings. Any of them can be put to the stakeholder if he reacts to it. He reacted to
+one at the first demo, and it now contradicts a ruling until the code follows (the first row).
 
 | Behaviour | Why it was built this way |
 |---|---|
-| **A form clears after its entry goes through, and keeps what was typed after a refusal** | A refusal is corrected in place, not retyped. A cleared form after success shows that it went through. The assign form clears only its amount, and keeps its category and period |
+| **A form clears after its entry goes through, and keeps what was typed after a refusal** | A refusal is corrected in place, not retyped. A cleared form after success shows that it went through. As built, the expense form keeps its category after success, and the assign form clears only its amount, keeping its category and period. **The category half has since been ruled the other way** at the first demo, 2026-09-26: the category box empties after success too ([§12](12-glossary.md), *Category entry is free text with suggestions*). Not built yet, so until it is, this row describes code that contradicts a ruling. The assign form's period is unaffected |
 | **Every date starts empty, and empty means today** | §12's default ("an entry's date defaults to today, whatever period is on screen"), built so the date never follows the period on screen. The picker shows *Vandaag* until a date is chosen |
 | **The assign form's period follows the screen when it steps, and can be moved on its own** | §12's "assigning defaults to the period on screen", plus a way to name another period without moving the screen, which is how an assignment lands elsewhere |
 | **Stepping clears the last notice** | A notice is about the last thing done. After stepping it would sit beside a period it may not describe |
