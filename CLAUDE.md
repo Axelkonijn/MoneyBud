@@ -97,7 +97,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-26, after increment 6 (corrections) was built and reviewed, on its branch and not yet merged. Update this when a stage completes._
+_Last updated 2026-09-26, after increment 6 (corrections) was built, tried by Axel and merged into `main`. Update this when a stage completes._
 
 **Done: all five stages, six times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI and correcting things.** All six are built and green.
@@ -277,8 +277,8 @@ Axel's remark that the date stays on today after stepping to another month is an
 not a change** — the ruling (date = today) stands, since in real use he would set the date anyway.
 Correcting entries and keeping data are acknowledged as missing and **explicitly later**.
 
-**Increment 6 — correcting things — is done and green**, on branch `increment-6-corrections`,
-**not yet merged**. Stages 1–4 ran on 2026-09-26 (rulings in §12, four feature files approved at
+**Increment 6 — correcting things — is done and green**, built on branch `increment-6-corrections`
+and merged into `main` after Axel tried it on 2026-09-26: "looks good". Stages 1–4 ran on 2026-09-26 (rulings in §12, four feature files approved at
 the first gate — `change-an-entry`, `remove-an-entry`, `rename-a-category`, `delete-a-category`,
 73 scenarios, 127 cases — and the plan approved at the second); built on Axel's "continue" the same
 day. `spec-reviewer` found no faked scenario and one low defect (stepping wiped a *new* entry being
@@ -304,9 +304,10 @@ README updated; no ADR. In outline:
 - **Headless check** of the real window passed: row click loads, Opslaan changes, Verwijderen asks in
   the bar, the rename box writes back, delete shows only on a row with no history.
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. Once
-Axel has tried increment 6 and it is merged, the next session starts at **stage 1 of persistence**:
-a conversation with Axel, not a delegation.
+**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code. The
+next session starts at **stage 1 of persistence**: a conversation with Axel, not a delegation.
+Questions already foreseen for it: what is kept and for how long (everything, or a fresh start per
+year), and where the data file lives — the repo is public, so real data must never land in it.
 
 Order agreed with Axel on 2026-09-26:
 
