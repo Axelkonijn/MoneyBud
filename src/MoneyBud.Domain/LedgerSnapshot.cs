@@ -11,16 +11,28 @@ namespace MoneyBud.Domain;
 /// <see cref="Ledger.ToSnapshot"/>. It only has to hold within one snapshot, because a snapshot is
 /// always the whole ledger.</para>
 ///
-/// <para>Lists are in the ledger's own order: categories in the order added, entries in the order
-/// recorded. That order is what the Overview breaks ties by and lists newest first by, so it is
-/// part of what is kept.</para>
+/// <para><b>Accounts are referred to the same way</b>, by <see cref="AccountSnapshot.Key"/>, their
+/// place in the order added, and for the same reason: an account can be renamed.
+/// <see cref="PoolAccount"/> is the key of the pool account. No balance is kept: a balance is
+/// worked out from what is kept (ADR 0008).</para>
+///
+/// <para>Lists are in the ledger's own order: categories and accounts in the order added, entries
+/// in the order recorded. That order is what the Overview breaks ties by and lists newest first by,
+/// so it is part of what is kept. The entries' ids are kept too, because the order they were issued
+/// in decides what a balance correction has in it.</para>
 /// </summary>
 public sealed record LedgerSnapshot(
     IReadOnlyList<CategorySnapshot> Categories,
     IReadOnlyList<BudgetSnapshot> Budgets,
     IReadOnlyList<ExpenseSnapshot> Expenses,
     IReadOnlyList<IncomeSnapshot> Incomes,
-    int LastEntryId);
+    int LastEntryId,
+    IReadOnlyList<AccountSnapshot> Accounts,
+    int PoolAccount,
+    IReadOnlyList<TransferSnapshot> Transfers,
+    IReadOnlyList<BalanceCorrectionSnapshot> BalanceCorrections);
+
+public sealed record AccountSnapshot(int Key, string Name);
 
 public sealed record CategorySnapshot(int Key, string Name, bool IsArchived);
 
@@ -30,6 +42,10 @@ public sealed record CategorySnapshot(int Key, string Name, bool IsArchived);
 /// </summary>
 public sealed record BudgetSnapshot(int Category, DateOnly PeriodStart, Money Amount);
 
-public sealed record ExpenseSnapshot(int Id, Money Amount, DateOnly Date, int Category, string? Label);
+public sealed record ExpenseSnapshot(int Id, Money Amount, DateOnly Date, int Category, string? Label, int Account);
 
-public sealed record IncomeSnapshot(int Id, Money Amount, DateOnly Date, string Label);
+public sealed record IncomeSnapshot(int Id, Money Amount, DateOnly Date, string Label, int Account);
+
+public sealed record TransferSnapshot(int Id, Money Amount, DateOnly Date, int From, int To);
+
+public sealed record BalanceCorrectionSnapshot(int Id, DateOnly Date, int Account, Money Balance, bool IsStartingBalance);

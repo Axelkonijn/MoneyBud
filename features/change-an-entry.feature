@@ -3,7 +3,10 @@
 # its own capability, in remove-an-entry.feature.
 #
 # What can be changed: an expense's amount, date, label and category, and an income's amount, date
-# and label. An income has no category, so there is none to change.
+# and label. An income has no category, so there is none to change. Since the accounts increment,
+# either can also be moved to another account, and every change moves the balance of the account
+# it is on: that is specified in record-on-an-account.feature and correct-a-balance.feature, and
+# nothing here depends on it.
 #
 # The rules, from arc42 §12:
 #   - A change is allowed in ANY budget period, past ones included. An entry is a fact, and a wrong

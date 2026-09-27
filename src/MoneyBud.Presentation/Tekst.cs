@@ -50,6 +50,21 @@ public static class Tekst
     public const string Rename = "Hernoemen";
     public const string TakeOverPlan = "Plan overnemen";
     public const string Plan = "plan";
+    public const string Account = "Rekening";
+    public const string Accounts = "Rekeningen";
+    public const string Balance = "Saldo";
+    public const string NetWorth = "Vermogen";
+    public const string PoolAccount = "Hoofdrekening";
+    public const string MakePool = "Maak hoofdrekening";
+    public const string Transfer = "Overboeking";
+    public const string TransferAct = "Overboeken";
+    public const string From = "Van";
+    public const string To = "Naar";
+    public const string StartingBalance = "Startsaldo";
+    public const string BalanceCorrection = "Correctie";
+    public const string CorrectBalance = "Saldo corrigeren";
+    public const string AddAccount = "Rekening toevoegen";
+    public const string Overdrawn = "Rood";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -59,6 +74,7 @@ public static class Tekst
     // the table (§12, *Dutch display terms*).
     public const string Save = "Opslaan";
     public const string Cancel = "Annuleren";
+    public const string Close = "Sluiten";
     public const string AreYouSure = "Weet je het zeker?";
 
     // Words the table does not fix, used as headings and hints.
@@ -76,9 +92,12 @@ public static class Tekst
     public const string NotSaved = "Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw.";
     public const string SavedAgain = "Alles is weer opgeslagen.";
 
-    // Said when MoneyBud does not start. The first names no place and points nowhere: it only
-    // says the data cannot be read, and that nothing was changed (§12).
-    public const string CannotRead = "MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd.";
+    // Said when MoneyBud does not start. The first names no place and points nowhere (§12): it says
+    // the data cannot be opened, the reasons that can be, and that it was not changed. MoneyBud
+    // cannot tell those reasons apart, so it names them all. Reworded on 2026-09-27 after the
+    // stakeholder found the first wording confusing.
+    public const string CannotRead =
+        "MoneyBud kan je opgeslagen gegevens niet openen. Het bestand is beschadigd, niet bereikbaar of gemaakt door een andere versie van MoneyBud. MoneyBud heeft het niet gewijzigd.";
     public const string AlreadyOpen = "MoneyBud is al geopend.";
     public const string Ok = "OK";
 
@@ -132,13 +151,13 @@ public static class Tekst
     public static string AmbiguousAmount(string typed)
     {
         var (asThousands, asDecimal) = AmountInput.Readings(typed);
-        return $"„{typed.Trim()}” is dubbelzinnig: bedoel je {asThousands} of {asDecimal}?";
+        return $"{Quoted(typed.Trim())} is dubbelzinnig: bedoel je {asThousands} of {asDecimal}?";
     }
 
     public static string NotAnAmount(string? typed) =>
         string.IsNullOrWhiteSpace(typed)
             ? "Vul een bedrag in."
-            : $"„{typed.Trim()}” is geen bedrag. Gebruik bijvoorbeeld 12,50.";
+            : $"{Quoted(typed.Trim())} is geen bedrag. Gebruik bijvoorbeeld 12,50.";
 
     public static string Refusal(ExpenseRefusal refusal, string? category) => refusal switch
     {
@@ -172,15 +191,43 @@ public static class Tekst
     public static string Refusal(RenameRefusal refusal, string? newName) => refusal switch
     {
         RenameRefusal.NameMissing => NameMissing,
-        RenameRefusal.NameTaken => $"„{newName?.Trim()}” is al de naam van een andere categorie.",
+        RenameRefusal.NameTaken => $"{Quoted(newName?.Trim() ?? "")} is al de naam van een andere categorie.",
     };
+
+    public static string Refusal(AccountRefusal refusal) => refusal switch
+    {
+        AccountRefusal.NameMissing => AccountNameMissing,
+        AccountRefusal.NameTaken => AccountNameTaken,
+        AccountRefusal.AmountFinerThanCent => FinerThanCent,
+    };
+
+    /// <summary>Renaming an account is refused for the reasons renaming a category is, worded for an account.</summary>
+    public static string AccountRenameRefusal(RenameRefusal refusal) => refusal switch
+    {
+        RenameRefusal.NameMissing => AccountNameMissing,
+        RenameRefusal.NameTaken => AccountNameTaken,
+    };
+
+    public static string Refusal(TransferRefusal refusal) => refusal switch
+    {
+        TransferRefusal.SameAccount => "Een overboeking heeft twee verschillende rekeningen nodig.",
+        TransferRefusal.AmountNotPositive => "Een overboeking moet meer dan € 0,00 zijn.",
+        TransferRefusal.AmountFinerThanCent => FinerThanCent,
+        TransferRefusal.DateInFuture => "Een overboeking kan niet in de toekomst liggen.",
+    };
+
+    /// <summary>The one refusal a balance correction has.</summary>
+    public const string BalanceFinerThanCent = FinerThanCent;
+
+    private const string AccountNameMissing = "Een rekening heeft een naam nodig.";
+    private const string AccountNameTaken = "Er is al een rekening met die naam.";
 
     private const string NameMissing = "Een categorie heeft een naam nodig.";
 
     private const string FinerThanCent = "Een bedrag kan niet kleiner zijn dan een cent.";
 
     private static string NotACategory(string? category) =>
-        $"„{category?.Trim()}” is geen van je categorieën.";
+        $"{Quoted(category?.Trim() ?? "")} is geen van je categorieën.";
 
     // ------------------------------------------------------------------ outcomes
 
@@ -275,10 +322,70 @@ public static class Tekst
     public static string PlanTakenOver(PlanOffer plan, BudgetPeriod into) =>
         $"Plan van {PeriodName(plan.From)} overgenomen in {PeriodName(into)}: {Euro(plan.Total)} toegewezen.";
 
+    // ------------------------------------------------------------------ accounts
+
+    public static string AccountAdded(Domain.Account account) => $"{Account} {Quoted(account.Name)} toegevoegd.";
+
+    public static string AccountRenamed(string oldName, Domain.Account account) =>
+        $"{Quoted(oldName)} hernoemd naar {Quoted(account.Name)}.";
+
+    public static string AccountDeleted(Domain.Account account) => $"{Account} {Quoted(account.Name)} is verwijderd.";
+
+    public static string PoolChanged(Domain.Account account) =>
+        $"{Quoted(account.Name)} is nu de {PoolAccount.ToLowerInvariant()}.";
+
+    public static string TransferRecorded(Domain.Transfer transfer) => $"{Describe(transfer)} toegevoegd.";
+
+    public static string TransferChanged(Domain.Transfer transfer) => $"{Transfer} gewijzigd: {Describe(transfer)}.";
+
+    public static string TransferRemoved(Domain.Transfer transfer) => $"{Describe(transfer)} verwijderd.";
+
+    public static string AskToRemove(Domain.Transfer transfer) =>
+        $"{Describe(transfer)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+
+    public static string BalanceCorrected(Domain.BalanceCorrection correction) =>
+        $"{Balance} van {Quoted(correction.Account.Name)} gecorrigeerd naar {Euro(correction.Balance)}.";
+
+    public static string AskToRemove(Domain.BalanceCorrection correction) =>
+        $"{Describe(correction)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+
+    public static string BalanceCorrectionRemoved(Domain.BalanceCorrection correction) =>
+        $"{Describe(correction)} verwijderd.";
+
+    /// <summary>
+    /// What a history row says it is: "Correctie — saldo € 1.000,00 (−€ 23,40)" for a balance
+    /// correction, "Startsaldo — € 1.000,00" for a starting balance, the two accounts for a transfer,
+    /// and the category and label for an expense or income. The wording is copy; the difference is
+    /// the ruling (§12, <i>Accounts and net worth</i>).
+    /// </summary>
+    public static string HistoryText(HistoryLine line) => line.Entry switch
+    {
+        Domain.BalanceCorrection { IsStartingBalance: true } c => $"{StartingBalance} — {Euro(c.Balance)}",
+        Domain.BalanceCorrection c =>
+            $"{BalanceCorrection} — {Balance.ToLowerInvariant()} {Euro(c.Balance)} ({Signed(line.Difference ?? Money.Zero)})",
+        Domain.Transfer t => $"{Transfer} {From.ToLowerInvariant()} {Quoted(t.From.Name)} {To.ToLowerInvariant()} {Quoted(t.To.Name)}",
+        Domain.Income i => $"{Income} {Quoted(i.Label)}",
+        Domain.Expense e => $"{Expense} {Quoted(e.Category.Name)}" + (e.Label is { } label ? $", {label}" : ""),
+        _ => throw new InvalidOperationException($"{line.Entry.GetType().Name} is not in a history."),
+    };
+
+    /// <summary>An amount with its sign always shown, as a difference is: "+€ 76,60", "−€ 23,40".</summary>
+    public static string Signed(Money amount) => amount.IsNegative ? Euro(amount) : $"+{Euro(amount)}";
+
+    private static string Describe(Domain.Transfer transfer) =>
+        $"{Transfer} van {Euro(transfer.Amount)} van {Quoted(transfer.From.Name)} naar {Quoted(transfer.To.Name)}";
+
+    private static string Describe(Domain.BalanceCorrection correction) =>
+        correction.IsStartingBalance
+            ? $"{StartingBalance} van {Quoted(correction.Account.Name)}"
+            : $"{BalanceCorrection} van {Quoted(correction.Account.Name)} naar {Euro(correction.Balance)}";
+
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>
     public static string WentInto(BudgetPeriod period) => $"Dit staat in {PeriodName(period)}.";
 
     private static string WasBroughtBack(string name) => $"{Quoted(name)} is weer in gebruik.";
 
-    private static string Quoted(string text) => $"„{text}”";
+    // Plain double quotes around a name or what was typed. The Dutch low-high pair was used
+    // first; the stakeholder found it odd on screen and asked for ordinary quotes (2026-09-27).
+    private static string Quoted(string text) => $"\"{text}\"";
 }

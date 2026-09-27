@@ -65,6 +65,13 @@ public sealed record ExpenseLine(Expense Entry)
     public Money Amount => Entry.Amount;
     public string DateText => Tekst.DayName(Date);
     public string AmountText => Tekst.Euro(Amount);
+
+    /// <summary>
+    /// The account the expense is on, when that is not the pool account; null when it is, so the
+    /// usual row stays uncluttered and one on another account stands out (arc42 §12). Read against
+    /// the pool account as it is when shown.
+    /// </summary>
+    public string? AccountName { get; init; }
 }
 
 /// <summary>An income's row in the period's list, carrying the income for the reason <see cref="ExpenseLine"/> does.</summary>
@@ -75,6 +82,9 @@ public sealed record IncomeLine(Income Entry)
     public Money Amount => Entry.Amount;
     public string DateText => Tekst.DayName(Date);
     public string AmountText => Tekst.Euro(Amount);
+
+    /// <summary>The account the income is on, when that is not the pool account, as for an expense.</summary>
+    public string? AccountName { get; init; }
 }
 
 /// <summary>
@@ -153,9 +163,13 @@ public sealed record PeriodOverview(
             rows,
             ring,
             unassigned,
-            NewestFirst(ledger.ExpensesIn(period), e => e.Date).Select(e => new ExpenseLine(e)).ToList(),
-            NewestFirst(incomes, i => i.Date).Select(i => new IncomeLine(i)).ToList(),
+            NewestFirst(ledger.ExpensesIn(period), e => e.Date)
+                .Select(e => new ExpenseLine(e) { AccountName = NameUnlessPool(e.Account) }).ToList(),
+            NewestFirst(incomes, i => i.Date)
+                .Select(i => new IncomeLine(i) { AccountName = NameUnlessPool(i.Account) }).ToList(),
             offer);
+
+        string? NameUnlessPool(Account account) => account == ledger.PoolAccount ? null : account.Name;
     }
 
     /// <summary>

@@ -25,6 +25,8 @@ something arrived ([§5](05-building-block-view.md)). Four interactions are wort
   **closing**. All three arrived with the persistence increment, when storage became a fourth
   building block ([ADR 0007](../decisions/0007-keeping-the-ledger.md)). In each of them the order of
   the calls is the point, and none can be read off the static view.
+- **How a balance is worked out**, since the accounts increment, in words. No building block holds
+  a balance, so where one comes from is exactly what the static view cannot show.
 
 ## Recording an expense through the screen
 
@@ -113,7 +115,41 @@ drops the question, calls nothing, and says nothing. Stepping, loading another r
 or *Annuleren* drop a waiting question the same way, without calling the ledger. So the domain never
 sees a removal the user did not confirm, and has no confirmation of its own
 ([§8.1](08-crosscutting-concepts.md), [§8.4](08-crosscutting-concepts.md)). The removal scenarios
-run both presses, and check that the question is waiting while the entry is still listed.
+run both presses, and check that the question is waiting while the entry is still listed. Removing a
+transfer or a balance correction from an account's history, since the accounts increment, takes the
+same two presses.
+
+## A balance: worked out on every read, by nobody in particular
+
+Since the accounts increment ([ADR 0008](../decisions/0008-balance-is-worked-out.md)). It earns a
+place here because the static view shows no balance anywhere: `Account` has none, and no act writes
+one.
+
+**An act writes an entry.** Recording, changing or removing an income, expense or transfer, and
+correcting a balance, each adds, replaces or removes one entry in the ledger's lists, and nothing
+else. `MoneyBudApp` then refreshes, as after any act.
+
+**The redraw works every figure out again.** The window's bindings read the following, and each
+recomputes from the entries:
+
+- `MoneyBudApp.Accounts`: one `Ledger.BalanceOf` per account.
+- `NetWorth`: every `BalanceOf` again, summed.
+- `History`, if an account's history is open: `Ledger.HistoryOf`, and `Ledger.DifferenceOf` for
+  each balance correction.
+
+`BalanceOf` takes the account's latest typed balance, by date then id, and adds every income,
+expense and transfer on the account that it does not hold and that is dated today or earlier.
+`DifferenceOf` compares a typed balance with the previous one and with what lies between them.
+
+**So a late receipt changes two figures by one entry, and neither is updated by anyone.** Record an
+expense dated before a balance correction, and the next read finds:
+
+- the **balance** unchanged, because the correction holds the expense;
+- the **difference** smaller, because it now explains part of the correction.
+
+No code has to know that both should change, because neither is stored. The once-a-minute refresh
+runs the same reads, which is how a future-dated income reaches its balance on its date without any
+act.
 
 ## Starting MoneyBud: claim, then load, then check
 

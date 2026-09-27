@@ -12,8 +12,9 @@ public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto 
 
 /// <summary>
 /// A question MoneyBud is waiting on an answer to. There is only ever one kind — whether to remove
-/// an entry — because removing is the one act that asks before it acts (arc42 §12, *Removing an
-/// entry asks first*). It is shown where a <see cref="Notice"/> would be, in its place.
+/// something recorded: an entry, a transfer, a balance correction or a starting balance — because
+/// removing a record is the one act that asks before it acts (arc42 §12, *Removing an entry asks
+/// first*). It is shown where a <see cref="Notice"/> would be, in its place.
 /// </summary>
 public sealed record Question(string Text);
 
@@ -36,9 +37,10 @@ public sealed record Question(string Text);
 /// says nothing.</item>
 /// <item>An entry saved unchanged, or a category renamed to exactly its own name, goes through
 /// quietly: nothing is said, and whatever was said before is gone.</item>
-/// <item>Stepping to another period drops whatever was in progress — an entry being changed, a
-/// category being renamed, a question waiting on an answer — because each was picked from a row
-/// of the period that was on screen.</item>
+/// <item>Stepping to another period drops whatever was picked from the period on screen — an entry
+/// being changed, a category being renamed, a question waiting on an answer. What belongs to no
+/// period stays: a new entry being typed, an account's history and anything done in it, a transfer
+/// being recorded or changed.</item>
 /// </list>
 ///
 /// <para>The period on screen is held as the period itself, never as "current" or an offset from
@@ -74,6 +76,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         IncomeForm = new IncomeForm(this);
         AssignForm = new AssignForm(this);
         CategoryForm = new CategoryForm(this);
+        AccountForm = new AccountForm(this);
+        TransferForm = new TransferForm(this);
     }
 
     public Ledger Ledger { get; }
@@ -82,6 +86,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     public IncomeForm IncomeForm { get; }
     public AssignForm AssignForm { get; }
     public CategoryForm CategoryForm { get; }
+    public AccountForm AccountForm { get; }
+    public TransferForm TransferForm { get; }
 
     public BudgetPeriod ShownPeriod { get; private set; }
 
@@ -209,10 +215,18 @@ public sealed partial class MoneyBudApp : ObservableObject
         // An empty name means "everything" to most listeners; the named ones are for any that
         // only listen by name.
         OnPropertyChanged(string.Empty);
+        RefreshFormAccounts();
         foreach (var name in (string[])[nameof(ShownPeriod), nameof(ShowsCurrentPeriod), nameof(PeriodTitle),
                                         nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions),
                                         nameof(IsUnsaved), nameof(SaveLine), ..PointingNames])
             OnPropertyChanged(name);
+    }
+
+    private void RefreshFormAccounts()
+    {
+        ExpenseForm?.RefreshAccount();
+        IncomeForm?.RefreshAccount();
+        TransferForm?.RefreshAccounts();
     }
 
     // ------------------------------------------------------------------ keeping
@@ -267,7 +281,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     // ------------------------------------------------------------------ acts
 
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
-    public RecordExpenseResult? RecordExpense(string? amount, string? category, string? label, DateOnly? date = null)
+    public RecordExpenseResult? RecordExpense(
+        string? amount, string? category, string? label, DateOnly? date = null, Account? account = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -275,7 +290,7 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.RecordExpense(euros, category, date ?? Ledger.Today, label);
+        var result = Ledger.RecordExpense(euros, category, date ?? Ledger.Today, label, account);
 
         if (result.Expense is { } expense)
             Tell(Tekst.ExpenseRecorded(expense, result.CategoryBroughtBack), PeriodOf(expense.Date));
@@ -286,7 +301,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     }
 
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
-    public RecordIncomeResult? RecordIncome(string? amount, string? label, DateOnly? date = null)
+    public RecordIncomeResult? RecordIncome(string? amount, string? label, DateOnly? date = null, Account? account = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -294,7 +309,7 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.RecordIncome(euros, label, date ?? Ledger.Today);
+        var result = Ledger.RecordIncome(euros, label, date ?? Ledger.Today, account);
 
         if (result.Income is { } income)
             Tell(Tekst.IncomeRecorded(income), PeriodOf(income.Date));
@@ -414,7 +429,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
     public ChangeExpenseResult? ChangeExpense(
-        Expense expense, string? amount, string? category, string? label, DateOnly? date = null)
+        Expense expense, string? amount, string? category, string? label, DateOnly? date = null,
+        Account? account = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -422,7 +438,7 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.ChangeExpense(expense, euros, category, date ?? Ledger.Today, label);
+        var result = Ledger.ChangeExpense(expense, euros, category, date ?? Ledger.Today, label, account);
 
         switch (result.Outcome)
         {
@@ -442,7 +458,8 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>Changes an income, as <see cref="ChangeExpense"/> changes an expense.</summary>
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
-    public ChangeIncomeResult? ChangeIncome(Income income, string? amount, string? label, DateOnly? date = null)
+    public ChangeIncomeResult? ChangeIncome(
+        Income income, string? amount, string? label, DateOnly? date = null, Account? account = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -450,7 +467,7 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.ChangeIncome(income, euros, label, date ?? Ledger.Today);
+        var result = Ledger.ChangeIncome(income, euros, label, date ?? Ledger.Today, account);
 
         switch (result.Outcome)
         {
@@ -611,6 +628,368 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// <summary>The delete button on the row of a category with no history anywhere.</summary>
     [RelayCommand]
     private void Delete(string name) => DeleteCategory(name);
+
+    // ------------------------------------------------------------------ accounts
+
+    /// <summary>
+    /// The strip across the top: every account with its balance today, the pool account first and
+    /// the rest in the order added (arc42 §12, <i>Accounts and net worth</i>). The same in every
+    /// period — a balance is about today, not the period on screen.
+    /// </summary>
+    public IReadOnlyList<AccountLine> Accounts =>
+        Ledger.Accounts
+            .Select(a => new AccountLine(a, Ledger.BalanceOf(a), a == Ledger.PoolAccount) { IsOpen = a == HistoryAccount })
+            .ToList();
+
+    private IReadOnlyList<Account> accountChoices = [];
+    private IReadOnlyList<string> accountNames = [];
+
+    /// <summary>
+    /// The accounts a form's account list offers, in the strip's order. The same list as long as the
+    /// accounts, their order and their names stay the same, and a new one when any changes: a list
+    /// handed a new collection lets go of what it had selected and takes it up again from its form,
+    /// while one handed the same collection on every refresh would do that once a minute.
+    /// </summary>
+    public IReadOnlyList<Account> AccountChoices
+    {
+        get
+        {
+            var wanted = Ledger.Accounts;
+            if (!wanted.SequenceEqual(accountChoices) || !wanted.Select(a => a.Name).SequenceEqual(accountNames))
+            {
+                accountChoices = wanted;
+                accountNames = wanted.Select(a => a.Name).ToList();
+            }
+
+            return accountChoices;
+        }
+    }
+
+    /// <summary>Net worth, <i>Vermogen</i>: every balance today, summed.</summary>
+    public Money NetWorth => Ledger.NetWorth;
+
+    public string NetWorthText => Tekst.Euro(NetWorth);
+
+    /// <summary>
+    /// Below zero, net worth carries the one marker, badge <i>Rood</i>, as an overdrawn account does.
+    /// Exactly zero does not.
+    /// </summary>
+    public Marker NetWorthMarker => NetWorth.IsNegative ? Marker.Over : Marker.None;
+
+    public bool IsNetWorthNegative => NetWorth.IsNegative;
+
+    /// <summary>
+    /// Adds an account with the starting balance typed. Left empty, or only spaces, there is no
+    /// starting balance, as a label that trims to nothing is no label; anything else must read as an
+    /// amount (arc42 §12).
+    /// </summary>
+    /// <returns>The ledger's answer, or null when the starting balance could not be read as one.</returns>
+    public AddAccountResult? AddAccount(string? name, string? startingBalance)
+    {
+        decimal? euros = null;
+        if (!string.IsNullOrWhiteSpace(startingBalance))
+        {
+            if (!AmountInput.TryRead(startingBalance, out var typed))
+            {
+                NotAnAmount(startingBalance);
+                return null;
+            }
+
+            euros = typed;
+        }
+
+        var result = Ledger.AddAccount(name, euros);
+
+        if (result.Account is { } account)
+        {
+            Tell(Tekst.AccountAdded(account), landedIn: null);
+            // After the redraw, so that the lists already hold the new account when the transfer
+            // form moves Naar onto it; a list cannot show an account it has not got.
+            TransferForm.AccountsChanged(oldPool: null);
+        }
+        else
+            Refuse(Tekst.Refusal(result.Refusal!.Value));
+
+        return result;
+    }
+
+    /// <summary>
+    /// Renames an account: announced from what to what, quiet when the name is exactly as it was,
+    /// refused for a name that trims to nothing or another account has. Every entry on it, and every
+    /// form holding it, follows, because they hold the account and not its name.
+    /// </summary>
+    public RenameAccountResult RenameAccount(Account account, string? newName)
+    {
+        var result = Ledger.RenameAccount(account, newName);
+
+        if (result.WasRefused)
+        {
+            Refuse(Tekst.AccountRenameRefusal(result.Refusal!.Value));
+            return result;
+        }
+
+        RenamingAccount = false;
+        NewAccountName = null;
+
+        if (result.Outcome == RenameOutcome.Unchanged)
+            SayNothing();
+        else
+            Tell(Tekst.AccountRenamed(result.OldName!, result.Account!), landedIn: null);
+
+        return result;
+    }
+
+    /// <summary>
+    /// Deletes an unused account, without asking, and says so. Offered only on such an account
+    /// (<see cref="Ledger.CanDeleteAccount"/>); the ledger throws for any other. A form that had it
+    /// chosen goes back to the pool account, and its history closes.
+    /// </summary>
+    public Account DeleteAccount(Account account)
+    {
+        Ledger.DeleteAccount(account);
+
+        ExpenseForm.Forget(account);
+        IncomeForm.Forget(account);
+        TransferForm.Forget(account);
+        if (HistoryAccount == account) CloseHistory();
+
+        Tell(Tekst.AccountDeleted(account), landedIn: null);
+        return account;
+    }
+
+    /// <summary>
+    /// Makes an account the pool account, and says so. New entries start out on it from now on;
+    /// nothing already recorded moves.
+    /// </summary>
+    public void MakePool(Account account)
+    {
+        var oldPool = Ledger.PoolAccount;
+        Ledger.MakePool(account);
+        Tell(Tekst.PoolChanged(account), landedIn: null);
+
+        // After the redraw, as for a new account: the lists are in their new order first.
+        ExpenseForm.PoolChanged(oldPool);
+        IncomeForm.PoolChanged(oldPool);
+        TransferForm.AccountsChanged(oldPool);
+    }
+
+    /// <summary>
+    /// Records the balance the bank shows today for an account. Dated today whatever period is on
+    /// screen. Any amount reads, zero and below zero included; the one refusal is finer than a cent.
+    /// </summary>
+    /// <returns>The ledger's answer, or null when the balance could not be read as an amount.</returns>
+    public CorrectBalanceResult? CorrectBalance(Account account, string? balance)
+    {
+        if (!AmountInput.TryRead(balance, out var euros))
+        {
+            NotAnAmount(balance);
+            return null;
+        }
+
+        var result = Ledger.CorrectBalance(account, euros);
+
+        if (result.Correction is { } correction)
+        {
+            BalanceInput = null;
+            Tell(Tekst.BalanceCorrected(correction), landedIn: null);
+        }
+        else
+            Refuse(Tekst.BalanceFinerThanCent);
+
+        return result;
+    }
+
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public RecordTransferResult? RecordTransfer(string? amount, Account from, Account to, DateOnly? date = null)
+    {
+        if (!AmountInput.TryRead(amount, out var euros))
+        {
+            NotAnAmount(amount);
+            return null;
+        }
+
+        var result = Ledger.RecordTransfer(euros, from, to, date ?? Ledger.Today);
+
+        if (result.Transfer is { } transfer)
+            Tell(Tekst.TransferRecorded(transfer), landedIn: null);
+        else
+            Refuse(Tekst.Refusal(result.Refusal!.Value));
+
+        return result;
+    }
+
+    /// <summary>
+    /// Changes a transfer, judged as recording it now would be. Announced; saved unchanged is
+    /// quiet. A transfer is in no period's lists, so nothing says where it went.
+    /// </summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeTransferResult? ChangeTransfer(
+        Transfer transfer, string? amount, Account from, Account to, DateOnly? date = null)
+    {
+        if (!AmountInput.TryRead(amount, out var euros))
+        {
+            NotAnAmount(amount);
+            return null;
+        }
+
+        var result = Ledger.ChangeTransfer(transfer, euros, from, to, date ?? Ledger.Today);
+
+        switch (result.Outcome)
+        {
+            case ChangeOutcome.Changed:
+                Tell(Tekst.TransferChanged(result.Transfer!), landedIn: null);
+                break;
+            case ChangeOutcome.Unchanged:
+                SayNothing();
+                break;
+            default:
+                Refuse(Tekst.Refusal(result.Refusal!.Value));
+                break;
+        }
+
+        return result;
+    }
+
+    /// <summary>Asks whether to remove a transfer, as removing an entry asks.</summary>
+    public void AskToRemove(Transfer transfer) => Ask(Tekst.AskToRemove(transfer), () =>
+    {
+        Ledger.RemoveTransfer(transfer);
+        if (TransferForm.Editing?.Id == transfer.Id) TransferForm.Clear();
+        Tell(Tekst.TransferRemoved(transfer), landedIn: null);
+    });
+
+    /// <summary>
+    /// Asks whether to remove a balance correction or a starting balance: a record is lost, so it
+    /// asks first, as removing an entry does.
+    /// </summary>
+    public void AskToRemove(BalanceCorrection correction) => Ask(Tekst.AskToRemove(correction), () =>
+    {
+        Ledger.RemoveBalanceCorrection(correction);
+        Tell(Tekst.BalanceCorrectionRemoved(correction), landedIn: null);
+    });
+
+    // ------------------------------------------------------------------ an account's history
+
+    /// <summary>The account whose history is open, or null. Clicking an account in the strip opens it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHistoryOpen), nameof(History))]
+    public partial Account? HistoryAccount { get; private set; }
+
+    public bool IsHistoryOpen => HistoryAccount is not null;
+
+    /// <summary>
+    /// The open account's history, every period, newest first (<see cref="HistoryLine"/>). Empty
+    /// when no history is open.
+    /// </summary>
+    public IReadOnlyList<HistoryLine> History =>
+        HistoryAccount is { } account
+            ? Ledger.HistoryOf(account)
+                .Select(e => new HistoryLine(e, account, e is BalanceCorrection c ? Ledger.DifferenceOf(c) : null))
+                .ToList()
+            : [];
+
+    /// <summary>Whether the open account can be deleted: unused, and not the pool account.</summary>
+    public bool CanDeleteHistoryAccount => HistoryAccount is { } account && Ledger.CanDeleteAccount(account);
+
+    /// <summary>Whether the open account can be made the pool account: it is not the pool already.</summary>
+    public bool CanMakeHistoryAccountPool => HistoryAccount is { } account && account != Ledger.PoolAccount;
+
+    /// <summary>What the balance box in the open history holds.</summary>
+    [ObservableProperty]
+    public partial string? BalanceInput { get; set; }
+
+    /// <summary>Whether the open account's name is a text box, being renamed.</summary>
+    [ObservableProperty]
+    public partial bool RenamingAccount { get; private set; }
+
+    /// <summary>What the account's rename box holds. Starts as the name it already has.</summary>
+    [ObservableProperty]
+    public partial string? NewAccountName { get; set; }
+
+    /// <summary>Clicking an account in the strip: opens its history. Clicking the open one closes it.</summary>
+    [RelayCommand]
+    public void OpenHistory(Account account)
+    {
+        if (HistoryAccount == account)
+        {
+            CloseHistory();
+            return;
+        }
+
+        HistoryAccount = account;
+        RenamingAccount = false;
+        NewAccountName = null;
+        BalanceInput = null;
+        Refresh();
+    }
+
+    [RelayCommand]
+    public void CloseHistory()
+    {
+        HistoryAccount = null;
+        RenamingAccount = false;
+        NewAccountName = null;
+        BalanceInput = null;
+        Refresh();
+    }
+
+    [RelayCommand]
+    private void CorrectOpenBalance()
+    {
+        if (HistoryAccount is { } account) CorrectBalance(account, BalanceInput);
+    }
+
+    [RelayCommand]
+    private void StartAccountRename()
+    {
+        RenamingAccount = true;
+        NewAccountName = HistoryAccount?.Name;
+    }
+
+    [RelayCommand]
+    private void CancelAccountRename()
+    {
+        RenamingAccount = false;
+        NewAccountName = null;
+    }
+
+    [RelayCommand]
+    private void SaveAccountRename()
+    {
+        if (HistoryAccount is { } account) RenameAccount(account, NewAccountName);
+    }
+
+    [RelayCommand]
+    private void DeleteOpenAccount()
+    {
+        if (HistoryAccount is { } account) DeleteAccount(account);
+    }
+
+    [RelayCommand]
+    private void MakeOpenAccountPool()
+    {
+        if (HistoryAccount is { } account) MakePool(account);
+    }
+
+    /// <summary>A transfer's row in a history: loads it into the transfer form, to be changed or removed.</summary>
+    [RelayCommand]
+    public void EditTransfer(HistoryLine line)
+    {
+        DropQuestion();
+        TransferForm.Load((Transfer)line.Entry);
+    }
+
+    /// <summary>The remove button on a history row that offers it: a transfer or a typed balance.</summary>
+    [RelayCommand]
+    public void RemoveFromHistory(HistoryLine line)
+    {
+        switch (line.Entry)
+        {
+            case Transfer transfer: AskToRemove(transfer); break;
+            case BalanceCorrection correction: AskToRemove(correction); break;
+            default: throw new InvalidOperationException("Only a transfer or a typed balance is removed from a history.");
+        }
+    }
 
     // ------------------------------------------------------------------ telling
 

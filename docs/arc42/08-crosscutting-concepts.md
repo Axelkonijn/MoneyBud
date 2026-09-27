@@ -23,10 +23,42 @@ have **no code at all**, so that a reader can tell *not built yet* from *missing
 Money handling is not repeated here. It is [§8.2](#82-money-handling) and
 [ADR 0003](../decisions/0003-money-representation.md).
 
-### Only one of the two dimensions is built
+### Both dimensions are built, and a balance is not a field
 
 §12 opens with every amount having a **location** (an *Account*) and a **purpose** (a *Category*).
-**Only purpose exists in code.**
+**Since the accounts increment (2026-09-27) both exist in code**
+([§12](12-glossary.md), *Accounts and net worth*; [ADR 0008](../decisions/0008-balance-is-worked-out.md)).
+
+- **`Account` is a class with identity, like `Category`,** and holds a name and nothing else. Only the
+  ledger sets the name, and the name rule is shared with categories (`NameRule`). An account and a
+  category may share a name, because each has its own index.
+- **Every `Expense` and `Income` names an account**, the pool account unless another was chosen.
+  `Ledger.PoolAccount` is always exactly one account, so the constructor takes its name: an empty
+  ledger cannot have none. `Accounts` lists it first.
+- **Four entry kinds implement `IEntry`**: `Expense`, `Income`, `Transfer` and `BalanceCorrection`.
+  They draw their ids from one counter, and the id is the recording order across kinds. A change
+  keeps the id.
+- **No balance is stored.** `BalanceOf` is the latest typed balance, by date then id, plus every
+  entry on the account that it does not hold (`Holds`: dated before its day, or on its day with a
+  lower id) and that is dated today or earlier. With no typed balance it is the plain sum. `NetWorth`,
+  `IsOverdrawn`, `DifferenceOf` and `HistoryOf` are worked out the same way, on every call. That is
+  the purpose side's rule, *worked out, never stored*, applied to the location side.
+- **Accounts touch no budget figure.** *Unassigned*, every *Budget* and every *Remaining* answer
+  exactly as before. The two dimensions still vary independently.
+- **The acts hold "shows, never blocks" by their result types**, as the category acts do.
+  `AddAccountResult`, `RecordTransferResult`, `ChangeTransferResult` and `CorrectBalanceResult`
+  carry one refusal each, in a fixed order, and nothing refuses for an overdraft. Misuse the screen
+  cannot reach throws, as before: an account not in the ledger, deleting a used account or the pool,
+  making the pool the pool.
+- **Backing is still absent, not stubbed.** There is no backing account on a category and no
+  *Accumulated* (the table below).
+
+#### How this section read until 2026-09-27
+
+Kept as written, because it records why the location dimension was left out for eight increments,
+and the reasoning, a half-built dimension being worse than none, is why backing is left out now.
+
+> **Only one of the two dimensions is built.** Only purpose exists in code.
 
 The location dimension is **absent, not stubbed.** There is no `Account` type, no account field on
 `Expense` **or on `Income`**, no nullable placeholder waiting to be filled, and no hidden default
@@ -43,6 +75,10 @@ designed yet, and every §12 rule about accounts (backing, the pool account, the
 is a rule about a *relationship* that cannot be expressed by a field left blank. The cost is that
 money leaving the system has nowhere to leave from, which is the last row of
 [§11](11-risks-and-technical-debt.md) and is accepted there.
+
+**Settled for the accounts increment on 2026-09-27**, and then built the same day: see above. A note
+written between the two said that how the balance ruling is expressed in the domain and kept on disk
+was for the plan. The plan answered it with ADR 0008.
 
 ### The two layers meet in exactly one method
 
@@ -422,6 +458,13 @@ steps call `StartNew`, and they refuse to run after any other setup. So a scenar
 relied on Boodschappen being there would fail. Independence from the default set is **enforced**,
 not hoped for.
 
+**Since the accounts increment, "empty" has one account in it.** There is always exactly one pool
+account, so `new Ledger(clock, poolAccount)` takes its name and has no categories and nothing
+recorded, but has that account, with no starting balance. The spec context names it **"Bank"**, a
+synthetic name, so no scenario leans on the first start's *Betaalrekening* either. `StartNew` adds
+the six defaults to a ledger whose pool account is `Ledger.DefaultAccountName`, *Betaalrekening*
+([§12](12-glossary.md), *Approved at the scenario gate, 2026-09-27*).
+
 ### `Ledger` is not a §12 term, and that is worth flagging
 
 §12 has no word for *the whole model* — the thing holding the categories, the budgets, the expenses
@@ -433,6 +476,10 @@ and *Account* is a §12 term for something MoneyBud deliberately has not got yet
 harmless now and will read oddly the moment the location dimension exists. Recorded here rather
 than added to the glossary, because §12 holds the **domain's** vocabulary and this is a word the
 implementation needed, not one the stakeholder uses.
+
+**Accounts arrived on 2026-09-27, and the name was kept.** No rename was part of the accounts
+increment's plan. The class now does hold accounts, so the name reads more naturally than it did.
+Whether it should become something else is still unasked, and nothing depends on the answer.
 
 ### What has no code yet, and why
 
@@ -453,14 +500,16 @@ is approved. **Carry-over** at period opening left when the opening-a-period inc
 [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature) is approved and green. It had
 been put out of the assigning increment's scope as a slice of its own. Its row said that nothing
 acts when a period opens, and that is still true: the offer is a state worked out whenever it is
-asked for, not an event handled at the boundary. Read the absence of a §12 term from this table as
-"built", not as "nobody wrote a row for it".
+asked for, not an event handled at the boundary. **The location dimension** left when the accounts
+increment was built (2026-09-27): *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* and the
+*pool account* as a default, with *Transfer*, *Balance correction* and *Starting balance*, which
+arrived with it (*Both dimensions are built*, above). Read the absence of a §12 term from this table
+as "built", not as "nobody wrote a row for it".
 
 | §12 concept | Why there is no code |
 |---|---|
-| *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* | The location dimension has not been in any increment so far ([§11](11-risks-and-technical-debt.md)) |
-| *Account-backed category*, *Backing account*, *Accumulated* | Same. All three are relationships between a category and an account, so none can exist before accounts do. This includes the **backed half of assigning**, where assigning really moves money out of a source it may overdraw. The assigning increment left it out for this reason, so every category is unbacked and `Assign` is planning only |
-| *Pool account*, *Sweep*, *Sweep destination* | Same, and doubly so: §12 requires a sweep destination to be account-backed, so the sweep cannot run at all ([§11](11-risks-and-technical-debt.md)) |
+| *Account-backed category*, *Backing account*, *Accumulated* | All three are relationships between a category and an account. Accounts exist since the accounts increment, but backing was left to the next one, by the stakeholder's ruling ([§12](12-glossary.md), *What this increment covers, and what waits*). This includes the **backed half of assigning**, where assigning really moves money out of a source it may overdraw. So every category is still unbacked and `Assign` is planning only |
+| *Sweep*, *Sweep destination*, and the *pool account* as a **source** | §12 requires a sweep destination to be account-backed, so the sweep cannot run before backing exists ([§11](11-risks-and-technical-debt.md)). The *pool account* itself is built, as the default for every new entry (`Ledger.PoolAccount`). Its role as the source of MoneyBud's own movements waits for backing and the sweep |
 | *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
@@ -675,6 +724,16 @@ one JSON file in the user's local application data, written whole after every ch
 of its own. Its three feature files, `keep-data.feature`, `start-moneybud.feature` and
 `carry-on-when-saving-fails.feature`, are approved and bound.
 
+**The accounts increment took the file to version 2** (2026-09-27,
+[ADR 0008](../decisions/0008-balance-is-worked-out.md)). It adds `accounts` (key and name),
+`poolAccount`, an `account` key on every expense and income, `transfers` (id, cents, date, `from`,
+`to`) and `balanceCorrections` (id, date, account, cents, `starting`). **No balance is written**:
+balances are worked out from what is kept. Version 1 is refused as unreadable, which applies the
+ruling that data saved before accounts is not carried over (*What the stakeholder ruled*, below, last
+rows). `Ledger.FromSnapshot` checks the new rules too: an entry or a pool account pointing at no
+account, a transfer from an account to itself, two starting balances on one account, and ids unique
+across all four kinds of entry. Where this section says "version 1" below, it was written before.
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -719,14 +778,14 @@ the code at the close of the increment:
 | **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
 | **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
 | **A fixed place in the user's profile**, never chosen by the user, always outside the repository | The location is derived from the user's profile, **never** from the working directory. `dotnet run --project src/MoneyBud.Desktop` runs inside a working copy of the public repository, so a relative path would put data exactly where it must never be. `.gitignore` is a second line, not the protection. **Built:** `FileLedgerStore.DefaultFolder` is `Environment.SpecialFolder.LocalApplicationData` plus `MoneyBud`, which is `%LOCALAPPDATA%\MoneyBud` on Windows. A folder that is not a full path is refused as unreachable, so a relative path cannot be used even by mistake. `.gitignore` lists `moneybud.json`, `moneybud.json.tmp` and `moneybud.lock`. A unit test holds that the folder is outside the repository |
-| **Unreadable data, damaged or written by a newer version: say so, touch nothing, and close.** Never start empty instead. The message says only that the data cannot be read: no path, no pointer to the README | A load that fails must leave nothing able to save over the file, and no screen to enter anything into. Automatic saving is what makes an empty start dangerous here. **Built:** `MoneyBudStart.Start` returns `Refused(CannotRead)` for a file `LedgerJson` cannot read and for kept data `Ledger.FromSnapshot` refuses. No `MoneyBudApp` is made, so nothing can save. The Desktop shows *"MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd."* in a small window, and closing it closes MoneyBud. The message is copy in `Tekst`, not a display term. **"Touches nothing" means the data file**, as the stakeholder confirmed (2026-09-26): the claim, which comes before loading, may make the folder if it is missing and the lock file beside the data, and that is MoneyBud's own bookkeeping. Creating nothing at all was rejected, because it would mean checking the data before taking the lock, which leaves a window in which two MoneyBuds start at once |
+| **Unreadable data, damaged or written by a newer version: say so, touch nothing, and close.** Never start empty instead. The message says only that the data cannot be read: no path, no pointer to the README | A load that fails must leave nothing able to save over the file, and no screen to enter anything into. Automatic saving is what makes an empty start dangerous here. **Built:** `MoneyBudStart.Start` returns `Refused(CannotRead)` for a file `LedgerJson` cannot read and for kept data `Ledger.FromSnapshot` refuses. No `MoneyBudApp` is made, so nothing can save. The Desktop shows *"MoneyBud kan je opgeslagen gegevens niet openen. Het bestand is beschadigd, niet bereikbaar of gemaakt door een andere versie van MoneyBud. MoneyBud heeft het niet gewijzigd."* in a small window (reworded on 2026-09-27; it read *"MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd."* until the stakeholder found that confusing), and closing it closes MoneyBud. The message is copy in `Tekst`, not a display term. **"Touches nothing" means the data file**, as the stakeholder confirmed (2026-09-26): the claim, which comes before loading, may make the folder if it is missing and the lock file beside the data, and that is MoneyBud's own bookkeeping. Creating nothing at all was rejected, because it would mean checking the data before taking the lock, which leaves a window in which two MoneyBuds start at once |
 | **A folder that cannot be reached at all is met the same way** (ruled 2026-09-26, during review): a profile that is not there, a folder MoneyBud may not open, a *file* standing where the folder should be | Say it cannot read the data, touch nothing, close. **Rejected:** starting empty and showing "not saved", because if the real data came back, the first save that worked would write the empty start over it. **Built:** `FileLedgerStore.TryClaim` returns `Claim.Unreachable`, and `MoneyBudStart` turns it into `Refused(CannotRead)`, the same message as above. Held by a `cannot be reached` row in `start-moneybud.feature`'s "cannot read" outline, added after the scenario gate with the stakeholder's approval (§8.4) |
 | **A second start while MoneyBud is open is refused**: it says MoneyBud is already open, and closes | Only one process may hold the data. Two would overwrite each other's saves. **Built:** `TryClaim` opens `moneybud.lock` exclusively and holds it until `Close`. It is claimed **before** loading. A second start gets `Claim.HeldElsewhere`, and `MoneyBudStart` returns `Refused(AlreadyOpen)`: *"MoneyBud is al geopend."* The operating system lets go of the lock when a process dies, so a crash never blocks the next start |
 | **Backups are not MoneyBud's job** | One set of data, and no copies kept by MoneyBud. **Built:** there is one data file and nothing copies it. The one extra file a save makes, `moneybud.json.tmp`, is renamed away, not kept |
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -982,7 +1041,7 @@ Desktop only wires them together. The runtime order is drawn in [§6](06-runtime
   returns `Opened` with the screen, or `Refused` with one `StartRefusal`: `CannotRead` or
   `AlreadyOpen`. A folder that cannot be reached, a file that cannot be read and kept data that
   breaks a domain rule all become `CannotRead`. `Refused.Text` is the sentence the Desktop shows.
-  The two sentences, *"MoneyBud kan je gegevens niet lezen. Er is niets aan veranderd."* and
+  The two sentences, *"MoneyBud kan je opgeslagen gegevens niet openen. Het bestand is beschadigd, niet bereikbaar of gemaakt door een andere versie van MoneyBud. MoneyBud heeft het niet gewijzigd."* and
   *"MoneyBud is al geopend."*, are copy in `Tekst`, not display terms, so §12's table does not hold
   them.
 - **Only an act that changed the ledger saves.** Every act that goes through ends in
@@ -1164,8 +1223,21 @@ the plan comes whole from one period, not from each category's own latest figure
 are in order added; the non-cases that throw (taking over where nothing is offered, and a date range
 that is not a period); the button's, the grey figure's and the notice's wording against §12's
 example; and that rows sort by plan figure, equal figures in order added, and do not move when the
-plan is taken over. ADR 0004's rule applies to them unchanged: a unit test is never the reason a
-behaviour exists.
+plan is taken over. The accounts increment added `AccountTests`, which covers:
+
+- how a balance is worked out: with no typed balance; what a typed balance holds, on its own day and
+  before; that a changed entry keeps its first recording; that the latest typed balance counts; and
+  that a future income reaches the balance only on its date;
+- the difference: worked out again as forgotten entries are found, and none for a starting balance;
+- transfers, including one across a balance correction changing net worth;
+- the order of accounts, and that an account may share a category's name but not another account's;
+- the history's order;
+- that every balance and difference survives being kept and read back;
+- the non-cases that throw.
+
+`StorageTests` now reads version 2 and refuses version 1. `WindowMarkupTests` holds the account list
+last on both entry forms and the transfer form's order, Van → Naar → Bedrag → Datum. ADR 0004's rule
+applies to them unchanged: a unit test is never the reason a behaviour exists.
 
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
@@ -1225,3 +1297,10 @@ unit tests, the 370 above and 11 in `TakeOverTests`. A headless run of the real 
 button's text and the grey figures in plan order, and after taking over: the budgets set, the rows
 where they were, the button and the grey figures gone, and *Niet toegewezen* at −€ 1.450,00 with the
 marker.
+
+**At the close of the accounts increment** (2026-09-27): **1183 tests passing** with zero warnings.
+That is 734 scenario cases and 449 developer unit tests. The new cases come from the six accounts
+feature files, 174 cases, and from the scenarios added to `start-moneybud.feature` and
+`keep-data.feature`. `spec-reviewer` found no faked scenario, one vacuous scenario and some defects,
+all fixed. A headless run of the real window found how the forms must hold their accounts
+([§12](12-glossary.md), *Accounts: chosen in the build, not put to the stakeholder*).

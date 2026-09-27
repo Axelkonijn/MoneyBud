@@ -6,8 +6,8 @@ A personal budgeting app — track income, expenses and savings goals for one pe
 
 **A demo, to gather feedback on.** A desktop app that records income and expenses, assigns
 income to categories, offers a new period the last plan made to take over in one go, and shows
-each budget period as a ring. Its data may not survive a new
-version until the switch to real use.
+each budget period as a ring. It keeps accounts with their balances and your net worth, and moves
+money between accounts. Its data may not survive a new version until the switch to real use.
 
 ```
 dotnet run --project src/MoneyBud.Desktop    # the app
@@ -32,8 +32,11 @@ MoneyBud keeps everything you enter in one file, saved after every change:
 
 MoneyBud does not show this location itself, and it makes **no backups**. Copy that file to back
 it up. To start over, close MoneyBud and delete the file; the next start begins with the six
-default categories. If MoneyBud says it cannot read your data, it has changed nothing: the file
-is still there as it was.
+default categories and one account, Betaalrekening. If MoneyBud says it cannot read your data, it
+has changed nothing: the file is still there as it was.
+
+**Data saved before accounts existed cannot be read** by the version with accounts. MoneyBud says it
+cannot read your data and closes. Delete the file to start fresh.
 
 The file lives in your user profile, never in this repository, whichever folder MoneyBud is run
 from.

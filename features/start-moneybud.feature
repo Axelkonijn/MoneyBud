@@ -3,14 +3,21 @@
 # keep-data.feature. A save that fails is in carry-on-when-saving-fails.feature.
 #
 # A start meets one of four situations, and this file has a section for each:
-#   - NO KEPT DATA YET. MoneyBud starts as it always has: the six default categories and nothing
-#     else. Carried over unchanged, not newly ruled (glossary: "A first start is unchanged"). "No
-#     data yet" covers the very first start and a start after I have deleted what MoneyBud kept.
-#     Deleting it myself is the only way to start over: MoneyBud has no act for it.
-#   - KEPT DATA. MoneyBud opens it as it was left, and does NOT add the default categories back. A
-#     default I deleted, renamed or archived stays that way.
+#   - NO KEPT DATA YET. MoneyBud starts with the six default categories, ONE ACCOUNT, and nothing
+#     else. The categories are carried over unchanged, not newly ruled (glossary: "A first start is
+#     unchanged"). The account came with the accounts increment (glossary: "A first start has one
+#     account", settled by the stakeholder on 2026-09-27): it is "Betaalrekening", it is the pool
+#     account, and it has NO STARTING BALANCE. So its balance is the plain sum of what is on it,
+#     whatever the dates, until I first correct it, and entries dated before the first start move
+#     it. Only a balance I actually type has earlier entries in it. Like the categories, its name is
+#     Dutch because it is content MoneyBud ships with. "No data yet" covers the very first start and
+#     a start after I have deleted what MoneyBud kept. Deleting it myself is the only way to start
+#     over: MoneyBud has no act for it.
+#   - KEPT DATA. MoneyBud opens it as it was left, and does NOT add the default categories back, nor
+#     Betaalrekening. A default I deleted, renamed or archived stays that way, and so does the first
+#     start's account renamed.
 #   - KEPT DATA IT CANNOT READ, because it is damaged, is blank, or was written by a newer version
-#     of MoneyBud. MoneyBud says it cannot read it, touches nothing, and closes. It does not start
+#     of MoneyBud or by a version without accounts. MoneyBud says it cannot read it, touches nothing, and closes. It does not start
 #     with empty data instead, because saving is automatic and the first change would write over the
 #     history. The message POINTS NOWHERE: it names no place and does not refer to the README. It
 #     only says the data cannot be read (glossary: "Where the data is, is written in the README").
@@ -28,9 +35,13 @@
 #
 # Not specified here, and deliberately so: where the data is kept (a fixed place in my profile,
 # never chosen by me, and written down in the README only), and data kept by an OLDER version of
-# MoneyBud. Until the switch to real use, a new version may be unable to read an older one's data,
-# and is then in the third situation above. No scenario involves more than one version apart from
-# the "newer version" row, which is the ruling's own case.
+# MoneyBud in general. Until the switch to real use, a new version may be unable to read an older
+# one's data, and is then in the third situation above. Two rows of that outline involve another
+# version, each because a ruling names it: the "newer version" row, and, since the accounts
+# increment, the row for data kept by a version WITHOUT ACCOUNTS. The version with accounts cannot
+# read that data: it says so and closes, and I delete the file, which the README says where to find
+# (glossary: "Saved data from before accounts", settled by the stakeholder on 2026-09-27). It is the
+# first time "Demo data may not survive a new version" is used, and nothing new is ruled by it.
 #
 # Reading the steps:
 #   - "I start MoneyBud" is starting it in whatever situation the Givens describe.
@@ -39,8 +50,9 @@
 #     deleted it" are the two other ways of having no kept data: I removed it myself, outside
 #     MoneyBud, having found where it is in the README.
 #   - "MoneyBud has kept data that is damaged (is blank, with nothing at all in it; was written by
-#     a newer version of MoneyBud)" is what is there when MoneyBud starts. How it got that way is
-#     not the point. "Cannot be reached" means MoneyBud cannot get at its data at all when it starts.
+#     a newer version of MoneyBud; was written by a version without accounts)" is what is there when
+#     MoneyBud starts. How it got that way is not the point. "A version without accounts" is any
+#     version of MoneyBud from before the accounts increment. "Cannot be reached" means MoneyBud cannot get at its data at all when it starts.
 #     "Blank, with nothing at all in it" means the kept data is there and holds
 #     nothing whatsoever. It does NOT mean an empty budget: kept data that holds a budget with no
 #     categories and nothing recorded is readable, and is the scenario "Kept data with every
@@ -58,25 +70,31 @@
 #   - "no categories should be offered for a new expense" means the list of categories offered is
 #     empty.
 #   - "I close MoneyBud and start it again" is keep-data.feature's.
+#   - The account steps ("the accounts should be exactly these", "the pool account should be",
+#     "nothing should be in the history of", "the balance of", "net worth", "I correct the balance
+#     of", "I rename the account") are explained in show-accounts.feature and the accounts files
+#     it names.
 #   - Every other step is reused unchanged from the file that introduced it.
 #
-# The names, labels and amounts are synthetic test data. The six default category names are
-# content MoneyBud ships with, not test data (glossary: "The default categories").
+# The names, labels and amounts are synthetic test data. The six default category names and
+# "Betaalrekening" are content MoneyBud ships with, not test data (glossary: "The default
+# categories", "A first start has one account").
 
 @keeping
 Feature: Start MoneyBud
   As someone whose whole budgeting history is in MoneyBud
-  I want MoneyBud to start with a sensible set of categories the first time, and afterwards to open only data it can read, one MoneyBud at a time
+  I want MoneyBud to start with a sensible set of categories and an account the first time, and afterwards to open only data it can read, one MoneyBud at a time
   So that starting MoneyBud can never write over, or lose, what it has kept
 
   # ----------------------------------------------------------------------------------
-  # No kept data yet: the six default categories, and nothing else
+  # No kept data yet: the six default categories, one account, and nothing else
   #
   # The same start in all three rows. What was recorded before the data was deleted is gone with
-  # it, and the income in the second row is there to show that.
+  # it, and the income in the second row is there to show that: Betaalrekening starts at nothing,
+  # with nothing in its history.
   # ----------------------------------------------------------------------------------
 
-  Scenario Outline: With no kept data, MoneyBud starts with the six default categories and nothing else
+  Scenario Outline: With no kept data, MoneyBud starts with the six default categories, one account, and nothing else
     Given <history>
     When I start MoneyBud
     Then the Overview should show the current budget period
@@ -91,12 +109,36 @@ Feature: Start MoneyBud
     And no category should have a budget or any spending in the current budget period
     And no incomes should be listed in the current budget period
     And no expenses should be listed in the current budget period
+    And the accounts should be exactly these, in this order:
+      | account        | balance |
+      | Betaalrekening | 0.00    |
+    And the pool account should be "Betaalrekening"
+    And nothing should be in the history of "Betaalrekening"
+    And net worth should be 0.00 euro
 
     Examples:
       | history                                                                                                               |
       | I have never used MoneyBud                                                                                            |
       | I used MoneyBud, recorded an income of 1832.45 euro labelled "Salaris" in it, and have since deleted the data it kept |
       | MoneyBud could not read the data it kept, and I have since deleted it                                                 |
+
+  # Betaalrekening has no starting balance: nobody checked its 0.00 against a bank. So a salary and
+  # a receipt from before the first start, entered on the first day, both move it. Once I type its
+  # real balance, that balance has in it every entry dated before it, and a receipt entered after
+  # that no longer moves it (correct-a-balance.feature). Today is fixed as the last day of the
+  # period so that the dates differ.
+  Scenario: The first start's account has no starting balance, so entries dated before the first start move it until I correct it
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have just started using MoneyBud for the first time
+    When I record an income of 1832.45 euro labelled "Salaris" dated on the first day of the current budget period
+    And I record an expense of 50 euro for "Boodschappen" labelled "Markt" dated yesterday
+    Then the balance of "Betaalrekening" should be 1782.45 euro
+    And net worth should be 1782.45 euro
+    When I correct the balance of "Betaalrekening" to 1800 euro
+    And I record an expense of 12.50 euro for "Boodschappen" labelled "Bakker" dated yesterday
+    Then the balance of "Betaalrekening" should still be 1800 euro
+    And net worth should still be 1800 euro
 
   # ----------------------------------------------------------------------------------
   # Kept data: opened as it was left, and the defaults are not added back
@@ -142,6 +184,17 @@ Feature: Start MoneyBud
     And I close MoneyBud and start it again
     Then no categories should be offered for a new expense
 
+  # The first start's account is what a first start gives, like the defaults. Renamed, it stays
+  # renamed, and Betaalrekening is not added back beside it.
+  Scenario: The first start's account, renamed, stays renamed after starting again, and is not added back
+    Given I have just started using MoneyBud for the first time
+    When I rename the account "Betaalrekening" to "ING"
+    And I close MoneyBud and start it again
+    Then the accounts should be exactly these, in this order:
+      | account | balance |
+      | ING     | 0.00    |
+    And the pool account should be "ING"
+
   # ----------------------------------------------------------------------------------
   # Kept data MoneyBud cannot read: say so, touch nothing, and close
   #
@@ -164,6 +217,7 @@ Feature: Start MoneyBud
       | is blank, with nothing at all in it        |
       | was written by a newer version of MoneyBud |
       | cannot be reached                          |
+      | was written by a version without accounts  |
 
   # ----------------------------------------------------------------------------------
   # MoneyBud is already open: the second start says so, and closes

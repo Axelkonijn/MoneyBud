@@ -61,8 +61,19 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Twenty feature files exist. All twenty are approved and bound, and every scenario in them passes.
-The latest, `take-over-a-plan.feature`, was built with the opening-a-period increment.
+Twenty-six feature files exist. **All twenty-six are approved and bound, and every scenario in them
+passes**: 734 scenario cases, beside 449 developer unit tests, 1183 in all (2026-09-27). The latest,
+the accounts increment's six, were built with that increment.
+
+The accounts increment's six files — `add-an-account.feature`, `record-on-an-account.feature`,
+`correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature` and
+`show-accounts.feature` — were **approved at the scenario gate on 2026-09-27**, with one row added
+to `add-an-account.feature` for the stakeholder's ruling at the gate (a starting balance of only
+spaces is one left empty). They are bound since that increment was built, the same day. The same increment adds scenarios to
+`start-moneybud.feature` and `keep-data.feature`, and edits header comments in six earlier files;
+those were approved with them. `show-accounts.feature`
+explains the steps the six share, including the one account, "Bank", that every scenario's empty
+ledger now starts with.
 The first demo feedback round's scenarios, all of `point-at-a-slice.feature` and the new
 scenarios in `overview.feature`, were approved at the scenario gate on 2026-09-26.
 
@@ -90,5 +101,6 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | Categories | `add-category.feature`, `archive-category.feature`, `rename-a-category.feature`, `delete-a-category.feature` |
 | Planning | `assign-to-category.feature`, `take-over-a-plan.feature` |
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
+| Accounts | `add-an-account.feature`, `record-on-an-account.feature`, `correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature`, `show-accounts.feature` — approved and bound 2026-09-27 |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

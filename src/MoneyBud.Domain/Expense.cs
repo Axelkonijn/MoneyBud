@@ -15,7 +15,9 @@ namespace MoneyBud.Domain;
 /// <para><see cref="Label"/> is the expense's own free-text name — "Albert Heijn" against the
 /// category "Groceries" — and is optional. Nothing is derived from it.</para>
 ///
-/// <para>An expense has no account. The location dimension is not built yet (arc42 §11), which
-/// is why §12's *An expense defaults to the pool account* does not apply here yet.</para>
+/// <para><see cref="Account"/> is the account the money left. Unless the user chose another, it is
+/// the <i>pool account</i> at the time of recording (arc42 §12, *An expense defaults to the pool
+/// account*). No category is backed yet, so the category never supplies an account.</para>
 /// </summary>
-public sealed record Expense(int Id, Money Amount, DateOnly Date, Category Category, string? Label);
+public sealed record Expense(int Id, Money Amount, DateOnly Date, Category Category, string? Label, Account Account)
+    : IEntry;

@@ -6,16 +6,18 @@ namespace MoneyBud.Specs.Unit;
 
 /// <summary>
 /// The one ruling that lives only in the Desktop's markup: each form asks what the entry is
-/// before its amount (arc42 §12, <i>The fields ask what before how much</i>). The Desktop is
+/// before its amount (arc42 §12, <i>The fields ask what before how much</i>), and the account list
+/// comes last, after the date (§12, <i>Accounts and net worth</i>). The Desktop is
 /// otherwise untested by plan (ADR 0006); reading its markup as text is how this one ruling is
 /// held, the way <see cref="TekstTests"/> holds the display terms by reading §12.
 /// </summary>
 public sealed partial class WindowMarkupTests
 {
     [Theory]
-    [InlineData("ExpenseForm", new[] { "Label", "Category", "Amount", "Date" })]
-    [InlineData("IncomeForm", new[] { "Label", "Amount", "Date" })]
+    [InlineData("ExpenseForm", new[] { "Label", "Category", "Amount", "Date", "ChosenAccount" })]
+    [InlineData("IncomeForm", new[] { "Label", "Amount", "Date", "ChosenAccount" })]
     [InlineData("AssignForm", new[] { "Category", "Amount" })]
+    [InlineData("TransferForm", new[] { "ChosenFrom", "ChosenTo", "Amount", "Date" })]
     public void Each_form_asks_what_before_how_much(string form, string[] fields) =>
         Assert.Equal(fields, FieldsOf(form));
 
@@ -60,9 +62,10 @@ public sealed partial class WindowMarkupTests
         // Fields in the order they are laid out: down a stack in the order written, and across a
         // grid by column, whatever order the columns are written in.
         return element.Descendants()
-            .Where(e => e.Name.LocalName is "TextBox" or "AutoCompleteBox" or "CalendarDatePicker")
+            .Where(e => e.Name.LocalName is "TextBox" or "AutoCompleteBox" or "CalendarDatePicker" or "ComboBox")
             .OrderBy(e => (int?)e.Attribute("Grid.Column") ?? 0)
-            .Select(e => BoundTo().Match((string?)e.Attribute("Text") ?? (string?)e.Attribute("SelectedDate") ?? "").Groups[1].Value);
+            .Select(e => BoundTo().Match((string?)e.Attribute("Text") ?? (string?)e.Attribute("SelectedDate")
+                                         ?? (string?)e.Attribute("SelectedItem") ?? "").Groups[1].Value);
     }
 
     [GeneratedRegex(@"^\{Binding (\w+)\}$")]

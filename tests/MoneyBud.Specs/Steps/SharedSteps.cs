@@ -69,6 +69,27 @@ public sealed class SharedSteps(SpecContext context)
                 Assert.True(takenOver.WasTakenOver);
                 Assert.Null(takenOver.Refusal);
                 break;
+            case AddAccountResult added:
+                Assert.False(added.WasRefused);
+                break;
+            case RecordTransferResult transfer:
+                Assert.True(transfer.WasRecorded);
+                break;
+            case ChangeTransferResult changed:
+                Assert.False(changed.WasRefused);
+                break;
+            case CorrectBalanceResult corrected:
+                Assert.True(corrected.WasRecorded);
+                break;
+            case RenameAccountResult renamed:
+                Assert.False(renamed.WasRefused);
+                break;
+            case SpecContext.AccountDeleted deleted:
+                Assert.NotNull(deleted.Account);
+                break;
+            case SpecContext.PoolMade made:
+                Assert.NotNull(made.Account);
+                break;
             default:
                 throw NothingAttempted();
         }
@@ -96,6 +117,18 @@ public sealed class SharedSteps(SpecContext context)
                 break;
             case ChangeIncomeResult changed:
                 Assert.Equal(IncomeRefusal.AmountFinerThanCent, changed.Refusal);
+                break;
+            case AddAccountResult added:
+                Assert.Equal(AccountRefusal.AmountFinerThanCent, added.Refusal);
+                break;
+            case RecordTransferResult transfer:
+                Assert.Equal(TransferRefusal.AmountFinerThanCent, transfer.Refusal);
+                break;
+            case ChangeTransferResult changed:
+                Assert.Equal(TransferRefusal.AmountFinerThanCent, changed.Refusal);
+                break;
+            case CorrectBalanceResult corrected:
+                Assert.False(corrected.WasRecorded, "Expected the balance correction to be refused, but it was recorded.");
                 break;
             default:
                 throw NothingAttempted();

@@ -34,18 +34,30 @@ public sealed partial class CorrectionSteps(SpecContext context)
     // Recording's grammar, as something that happened earlier. Setup goes through the ledger's
     // own door, so a setup entry that would be refused fails the scenario here; and it never
     // brings a category back, which would mean the Givens are in the wrong order.
-    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+)$")]
+    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)$")]
     public void GivenIHaveRecordedAnExpense(string amount, string category, string label, string date) =>
         RecordExpense(amount, category, label, Ledger.Date(date));
+
+    // On an account other than the one a new entry starts out on (features/show-accounts.feature).
+    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""$")]
+    public void GivenIHaveRecordedAnExpenseOnTheAccount(string amount, string category, string label, string date, string account) =>
+        RecordExpense(amount, category, label, Ledger.Date(date), Ledger.Account(account));
 
     [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" without a label$")]
     public void GivenIHaveRecordedAnExpenseWithoutALabel(string amount, string category) =>
         RecordExpense(amount, category, label: null, Ledger.Today);
 
-    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+)$")]
-    public void GivenIHaveRecordedAnIncome(string amount, string label, string date)
+    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)$")]
+    public void GivenIHaveRecordedAnIncome(string amount, string label, string date) =>
+        RecordIncome(amount, label, date, account: null);
+
+    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""$")]
+    public void GivenIHaveRecordedAnIncomeOnTheAccount(string amount, string label, string date, string account) =>
+        RecordIncome(amount, label, date, Ledger.Account(account));
+
+    private void RecordIncome(string amount, string label, string date, Account? account)
     {
-        var result = Ledger.RecordIncome(SpecParsing.Amount(amount), label, Ledger.Date(date));
+        var result = Ledger.RecordIncome(SpecParsing.Amount(amount), label, Ledger.Date(date), account);
         Assert.True(result.WasRecorded, $"Setting up the income \"{label}\" was refused: {result.Refusal}.");
     }
 
@@ -70,6 +82,14 @@ public sealed partial class CorrectionSteps(SpecContext context)
     public void WhenIChangeTheLabel(string entry, string label) =>
         Change(entry, expense => expense.Label = label, income => income.Label = label);
 
+    // Choosing another account from the form's list (record-on-an-account.feature).
+    [When(@"^I (?:change|try to change) the account of " + Entry + @" to ""([^""]*)""$")]
+    public void WhenIChangeTheAccount(string entry, string account)
+    {
+        var chosen = Ledger.Account(account);
+        Change(entry, expense => expense.ChosenAccount = chosen, income => income.ChosenAccount = chosen);
+    }
+
     [When(@"^I (?:change|try to change) the date of " + Entry + @" to (.+)$")]
     public void WhenIChangeTheDate(string entry, string date)
     {
@@ -77,8 +97,16 @@ public sealed partial class CorrectionSteps(SpecContext context)
         Change(entry, expense => expense.Date = day, income => income.Date = day);
     }
 
-    [When(@"^I try to change " + Entry + @" into an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+)$")]
-    public void WhenITryToChangeIntoAnExpense(string entry, string amount, string category, string label, string date)
+    [When(@"^I try to change " + Entry + @" into an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)$")]
+    public void WhenITryToChangeIntoAnExpense(string entry, string amount, string category, string label, string date) =>
+        ChangeIntoAnExpense(entry, amount, category, label, date, account: null);
+
+    [When(@"^I try to change " + Entry + @" into an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""$")]
+    public void WhenITryToChangeIntoAnExpenseOnTheAccount(
+        string entry, string amount, string category, string label, string date, string account) =>
+        ChangeIntoAnExpense(entry, amount, category, label, date, Ledger.Account(account));
+
+    private void ChangeIntoAnExpense(string entry, string amount, string category, string label, string date, Account? account)
     {
         var day = Ledger.Date(date).ToDateTime(TimeOnly.MinValue);
         Change(entry, expense =>
@@ -87,6 +115,7 @@ public sealed partial class CorrectionSteps(SpecContext context)
             expense.Category = category;
             expense.Amount = amount;
             expense.Date = day;
+            if (account is not null) expense.ChosenAccount = account;
         }, incomeEdit: null);
     }
 
@@ -142,6 +171,10 @@ public sealed partial class CorrectionSteps(SpecContext context)
                 Assert.False(income.WasRefused, $"Expected the change to go through, but it was refused: {income.Refusal}.");
                 Assert.False(App.IncomeForm.IsEditing, "The income form should have returned to recording.");
                 break;
+            case ChangeTransferResult transfer:
+                Assert.False(transfer.WasRefused, $"Expected the change to go through, but it was refused: {transfer.Refusal}.");
+                Assert.False(App.TransferForm.IsEditing, "The transfer form should have returned to recording.");
+                break;
             default:
                 throw NothingChanged();
         }
@@ -155,7 +188,12 @@ public sealed partial class CorrectionSteps(SpecContext context)
         switch (context.LastAttempt)
         {
             case SpecContext.Unread { What: "change" }:
-                Assert.True(App.ExpenseForm.IsEditing || App.IncomeForm.IsEditing, "The form should still be on the entry.");
+                Assert.True(App.ExpenseForm.IsEditing || App.IncomeForm.IsEditing || App.TransferForm.IsEditing,
+                            "The form should still be on the entry.");
+                break;
+            case ChangeTransferResult transfer:
+                Assert.True(transfer.WasRefused, "Expected the change to be refused, but it went through.");
+                Assert.True(App.TransferForm.IsEditing, "The transfer form should still be on the transfer.");
                 break;
             case ChangeExpenseResult expense:
                 Assert.True(expense.WasRefused, "Expected the change to be refused, but it went through.");
@@ -317,9 +355,9 @@ public sealed partial class CorrectionSteps(SpecContext context)
         return Assert.Single(overview.Expenses, e => e.Label is null && e.Amount == amount && e.Category == category);
     }
 
-    private void RecordExpense(string amount, string category, string? label, DateOnly date)
+    private void RecordExpense(string amount, string category, string? label, DateOnly date, Account? account = null)
     {
-        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label);
+        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label, account);
         Assert.True(result.WasRecorded, $"Setting up an expense for {category} was refused: {result.Refusal}.");
         Assert.False(result.CategoryBroughtBack, $"Setting up an expense brought {category} back.");
     }

@@ -23,8 +23,9 @@ namespace MoneyBud.Domain;
 /// of a period's <i>Unassigned</i> and into a category's <i>Budget</i>. There is no other way to
 /// write a plan.</para>
 ///
-/// <para>An entry — an expense or an income — can be changed or removed in any period, past ones
-/// included (arc42 §12, *An entry can be changed or removed*). A change is judged exactly as
+/// <para>An entry — an expense or an income, and likewise a transfer — can be changed or removed in
+/// any period, past ones included (arc42 §12, *An entry can be changed or removed*). A change is
+/// judged exactly as
 /// recording the changed entry now would be, by the same checks, and it <b>overwrites</b> the
 /// entry: nothing remembers what it was, and it keeps its place in the order recorded. A category
 /// can be renamed, and one with no history in any period can be deleted.</para>
@@ -33,8 +34,16 @@ namespace MoneyBud.Domain;
 /// and taking it over assigns it in full (<see cref="TakeOverPlan"/>). The figures are
 /// remembered; nothing is assigned until the user takes them over.</para>
 ///
-/// <para>Not built yet: accounts, and with them backed categories and the pool account; and the
-/// end-of-period sweep (arc42 §12).</para>
+/// <para><b>Accounts</b> are the location dimension (arc42 §12, <i>Accounts and net worth</i>).
+/// Every income and expense is on one, the <i>pool account</i> unless another was chosen, and
+/// money moves between them by <see cref="RecordTransfer"/>. A balance is <b>worked out</b>, never
+/// stored (<see cref="BalanceOf"/>, ADR 0008), from the account's latest typed balance and whatever
+/// is on it that the typed balance does not already have in it. Accounts touch no budget figure:
+/// <i>Unassigned</i>, every <i>Budget</i> and every <i>Remaining</i> answer exactly as they did
+/// before accounts existed.</para>
+///
+/// <para>Not built yet: backed categories and <i>Accumulated</i>, and the end-of-period sweep
+/// (arc42 §12).</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -44,13 +53,34 @@ public sealed class Ledger
     private readonly HashSet<Category> archived = [];
     private readonly Dictionary<(Category Category, DateOnly PeriodStart), Money> budgets = [];
 
+    private readonly Dictionary<string, Account> accounts = new(NameRule.Comparer);
+    private readonly List<Account> accountsInOrderAdded = [];
+    private Account pool = null!;
+
     // In the order recorded. A change replaces an entry where it stands, so the order stays the
-    // order the entries were first recorded in.
+    // order the entries were first recorded in. All four kinds draw their ids from one counter, so
+    // an id also says which of two entries was recorded first — across kinds, which is what a
+    // balance correction on the day of an entry needs to know (IEntry).
     private readonly List<Expense> expenses = [];
     private readonly List<Income> incomes = [];
+    private readonly List<Transfer> transfers = [];
+    private readonly List<BalanceCorrection> balanceCorrections = [];
     private int lastEntryId;
 
-    public Ledger(TimeProvider clock, BudgetPeriodCalendar? calendar = null)
+    /// <summary>
+    /// An empty ledger — no categories, nothing recorded — with one account, the pool account, named
+    /// <paramref name="poolAccount"/>, with no starting balance. There is always exactly one pool
+    /// account, so an empty ledger cannot have none.
+    /// </summary>
+    public Ledger(TimeProvider clock, string poolAccount, BudgetPeriodCalendar? calendar = null)
+        : this(clock, calendar)
+    {
+        var stored = NameRule.Normalise(poolAccount)
+            ?? throw new ArgumentException("The pool account needs a name.", nameof(poolAccount));
+        pool = NewAccount(stored);
+    }
+
+    private Ledger(TimeProvider clock, BudgetPeriodCalendar? calendar)
     {
         this.clock = clock;
         Calendar = calendar ?? new BudgetPeriodCalendar();
@@ -65,16 +95,23 @@ public sealed class Ledger
         ["Boodschappen", "Huur", "Hobby", "Sparen", "Verzekeringen", "Abonnementen"];
 
     /// <summary>
-    /// A MoneyBud used for the first time: the default categories and nothing else — nothing
-    /// budgeted, nothing spent, no income.
+    /// The account a first start comes with (arc42 §12, <i>Accounts and net worth</i>): one account,
+    /// the pool account, named for a current account but of no kind, with no starting balance, so its balance is the plain sum of what
+    /// is on it until it is first corrected. Dutch, as content, like the default categories.
+    /// </summary>
+    public const string DefaultAccountName = "Betaalrekening";
+
+    /// <summary>
+    /// A MoneyBud used for the first time: the default categories, the default account, and nothing
+    /// else — nothing budgeted, nothing spent, no income.
     ///
-    /// <para>The constructor, by contrast, gives an empty ledger. That is what the scenarios start
-    /// from unless they are about the first start, which is how the suite proves that no other
-    /// scenario leans on the defaults being there.</para>
+    /// <para>The constructor, by contrast, gives an empty ledger with a pool account of the
+    /// caller's naming. That is what the scenarios start from unless they are about the first start,
+    /// which is how the suite proves that no other scenario leans on the defaults being there.</para>
     /// </summary>
     public static Ledger StartNew(TimeProvider clock, BudgetPeriodCalendar? calendar = null)
     {
-        var ledger = new Ledger(clock, calendar);
+        var ledger = new Ledger(clock, DefaultAccountName, calendar);
         foreach (var name in DefaultCategoryNames) ledger.AddCategory(name);
         return ledger;
     }
@@ -89,12 +126,22 @@ public sealed class Ledger
         var keys = new Dictionary<Category, int>();
         foreach (var category in categoriesInOrderAdded) keys.Add(category, keys.Count + 1);
 
+        var accountKeys = new Dictionary<Account, int>();
+        foreach (var account in accountsInOrderAdded) accountKeys.Add(account, accountKeys.Count + 1);
+
         return new LedgerSnapshot(
             categoriesInOrderAdded.Select(c => new CategorySnapshot(keys[c], c.Name, archived.Contains(c))).ToList(),
             budgets.Select(b => new BudgetSnapshot(keys[b.Key.Category], b.Key.PeriodStart, b.Value)).ToList(),
-            expenses.Select(e => new ExpenseSnapshot(e.Id, e.Amount, e.Date, keys[e.Category], e.Label)).ToList(),
-            incomes.Select(i => new IncomeSnapshot(i.Id, i.Amount, i.Date, i.Label)).ToList(),
-            lastEntryId);
+            expenses.Select(e => new ExpenseSnapshot(
+                e.Id, e.Amount, e.Date, keys[e.Category], e.Label, accountKeys[e.Account])).ToList(),
+            incomes.Select(i => new IncomeSnapshot(i.Id, i.Amount, i.Date, i.Label, accountKeys[i.Account])).ToList(),
+            lastEntryId,
+            accountsInOrderAdded.Select(a => new AccountSnapshot(accountKeys[a], a.Name)).ToList(),
+            accountKeys[pool],
+            transfers.Select(t => new TransferSnapshot(
+                t.Id, t.Amount, t.Date, accountKeys[t.From], accountKeys[t.To])).ToList(),
+            balanceCorrections.Select(c => new BalanceCorrectionSnapshot(
+                c.Id, c.Date, accountKeys[c.Account], c.Balance, c.IsStartingBalance)).ToList());
     }
 
     /// <summary>
@@ -105,8 +152,11 @@ public sealed class Ledger
     /// <see cref="InvalidDataException"/> for any that is broken — a name the name rule does not
     /// store, two names the rule counts as one, a budget or an expense pointing at no category, a
     /// budget below zero or outside a period's first day, an entry of zero or less, an income
-    /// without a label, an id used twice or beyond the last one issued. Data like that cannot be
-    /// read (arc42 §12, <i>When the data cannot be read</i>).</para>
+    /// without a label, an id used twice or beyond the last one issued — across all four kinds of
+    /// entry, since they share one counter — an account name the rule does not store or two the
+    /// rule counts as one, a pool account or an entry pointing at no account, a transfer between one
+    /// account and itself, or an account with two starting balances. Data like that cannot be read
+    /// (arc42 §12, <i>When the data cannot be read</i>).</para>
     ///
     /// <para>Dates are not checked against today. An expense cannot be <i>recorded</i> in the
     /// future, but one recorded today is still valid kept data if the clock is later turned
@@ -117,9 +167,24 @@ public sealed class Ledger
     {
         var ledger = new Ledger(clock, calendar);
         var byKey = new Dictionary<int, Category>();
+        var accountByKey = new Dictionary<int, Account>();
 
         if (snapshot.LastEntryId < 0)
             throw Invalid("the last entry id issued is below zero");
+
+        foreach (var kept in snapshot.Accounts)
+        {
+            if (kept.Name is null || NameRule.Normalise(kept.Name) != kept.Name)
+                throw Invalid($"account {kept.Key} has a name that is not stored as the name rule stores it");
+            if (accountByKey.ContainsKey(kept.Key))
+                throw Invalid($"account key {kept.Key} is used twice");
+            if (ledger.accounts.ContainsKey(kept.Name))
+                throw Invalid($"\"{kept.Name}\" is two accounts under the name rule");
+
+            accountByKey.Add(kept.Key, ledger.NewAccount(kept.Name));
+        }
+
+        ledger.pool = AccountFor(snapshot.PoolAccount);
 
         foreach (var kept in snapshot.Categories)
         {
@@ -155,7 +220,8 @@ public sealed class Ledger
             CheckEntry(kept.Id, kept.Amount);
             if (kept.Label is not null && NormaliseLabel(kept.Label) != kept.Label)
                 throw Invalid($"expense {kept.Id} has a label that is not stored as labels are");
-            ledger.expenses.Add(new Expense(kept.Id, kept.Amount, kept.Date, CategoryFor(kept.Category), kept.Label));
+            ledger.expenses.Add(new Expense(
+                kept.Id, kept.Amount, kept.Date, CategoryFor(kept.Category), kept.Label, AccountFor(kept.Account)));
         }
 
         foreach (var kept in snapshot.Incomes)
@@ -163,7 +229,26 @@ public sealed class Ledger
             CheckEntry(kept.Id, kept.Amount);
             if (kept.Label is null || NormaliseLabel(kept.Label) != kept.Label)
                 throw Invalid($"income {kept.Id} has no label, or one not stored as labels are");
-            ledger.incomes.Add(new Income(kept.Id, kept.Amount, kept.Date, kept.Label));
+            ledger.incomes.Add(new Income(kept.Id, kept.Amount, kept.Date, kept.Label, AccountFor(kept.Account)));
+        }
+
+        foreach (var kept in snapshot.Transfers)
+        {
+            CheckEntry(kept.Id, kept.Amount);
+            if (kept.From == kept.To)
+                throw Invalid($"transfer {kept.Id} is from an account to itself");
+            ledger.transfers.Add(new Transfer(kept.Id, kept.Amount, kept.Date, AccountFor(kept.From), AccountFor(kept.To)));
+        }
+
+        var started = new HashSet<Account>();
+        foreach (var kept in snapshot.BalanceCorrections)
+        {
+            CheckId(kept.Id);
+            var account = AccountFor(kept.Account);
+            if (kept.IsStartingBalance && !started.Add(account))
+                throw Invalid($"\"{account.Name}\" has two starting balances");
+            ledger.balanceCorrections.Add(new BalanceCorrection(
+                kept.Id, kept.Date, account, kept.Balance, kept.IsStartingBalance));
         }
 
         ledger.lastEntryId = snapshot.LastEntryId;
@@ -187,14 +272,22 @@ public sealed class Ledger
         Category CategoryFor(int key) =>
             byKey.TryGetValue(key, out var category) ? category : throw Invalid($"there is no category {key}");
 
+        Account AccountFor(int key) =>
+            accountByKey.TryGetValue(key, out var account) ? account : throw Invalid($"there is no account {key}");
+
         void CheckEntry(int id, Money amount)
+        {
+            CheckId(id);
+            if (amount.Cents <= 0)
+                throw Invalid($"entry {id} is not more than zero");
+        }
+
+        void CheckId(int id)
         {
             if (id < 1 || id > snapshot.LastEntryId)
                 throw Invalid($"entry id {id} was never issued");
             if (!ids.Add(id))
                 throw Invalid($"entry id {id} is used twice");
-            if (amount.Cents <= 0)
-                throw Invalid($"entry {id} is not more than zero");
         }
 
         static InvalidDataException Invalid(string what) => new($"The kept ledger cannot be read: {what}.");
@@ -583,10 +676,15 @@ public sealed class Ledger
     /// is not refused: the expense is recorded and brings it back, and the result says so
     /// (arc42 §12). That happens only once every other check has passed — bringing back is a
     /// side-effect of recording, so a refused expense leaves the category archived.</para>
+    ///
+    /// <para>The expense is on <paramref name="account"/>, or on the <b>pool account</b> when none
+    /// is given (arc42 §12, *An expense defaults to the pool account*). An account is picked from a
+    /// list, never typed, so it is never refused: one that is not in the ledger <b>throws</b>.</para>
     /// </summary>
     public RecordExpenseResult RecordExpense(
-        decimal amountInEuros, string? categoryName, DateOnly date, string? label = null)
+        decimal amountInEuros, string? categoryName, DateOnly date, string? label = null, Account? account = null)
     {
+        var on = CheckIsMine(account ?? pool);
         var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
         if (refusal is { } reason)
             return RecordExpenseResult.Refused(reason);
@@ -594,7 +692,7 @@ public sealed class Ledger
         var broughtBack = archived.Remove(category!);
 
         var expense = new Expense(
-            ++lastEntryId, Money.FromEuros(amountInEuros), date, category!, NormaliseLabel(label));
+            ++lastEntryId, Money.FromEuros(amountInEuros), date, category!, NormaliseLabel(label), on);
         expenses.Add(expense);
         return RecordExpenseResult.Recorded(expense, broughtBack);
     }
@@ -618,20 +716,27 @@ public sealed class Ledger
     /// category does not, because that is correcting history, not using the category
     /// again.</para>
     ///
+    /// <para><paramref name="account"/> moves the expense to another account; left out, it stays on
+    /// the one it is on. Only the balances move: the id, and so the moment it was first recorded,
+    /// stay as they were.</para>
+    ///
     /// <para><b>Throws</b> for an expense that is not in the ledger, such as one already removed.
     /// A change is made from the expense's row, so that is not something the user can do.</para>
     /// </summary>
     public ChangeExpenseResult ChangeExpense(
-        Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label)
+        Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label,
+        Account? account = null)
     {
         var index = IndexOf(expense);
         var current = expenses[index];
+        var on = CheckIsMine(account ?? current.Account);
 
         if (Money.IsWholeCents(amountInEuros)
             && Money.FromEuros(amountInEuros) == current.Amount
             && Find(categoryName) == current.Category
             && date == current.Date
-            && NormaliseLabel(label) == current.Label)
+            && NormaliseLabel(label) == current.Label
+            && on == current.Account)
             return ChangeExpenseResult.Unchanged(current);
 
         var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
@@ -646,6 +751,7 @@ public sealed class Ledger
             Date = date,
             Category = category!,
             Label = NormaliseLabel(label),
+            Account = on,
         };
         expenses[index] = changed;
         return ChangeExpenseResult.Changed(changed, broughtBack);
@@ -723,13 +829,18 @@ public sealed class Ledger
     /// <para><b>The date is not checked at all.</b> An income may be dated in the future and
     /// joins its period's <i>Unassigned</i> from the moment it is recorded — see
     /// <see cref="IncomeRefusal"/> for why that differs from an expense.</para>
+    ///
+    /// <para>The income is on <paramref name="account"/>, or on the pool account when none is given,
+    /// as for an expense. A future-dated income reaches that account's balance only on its
+    /// date.</para>
     /// </summary>
-    public RecordIncomeResult RecordIncome(decimal amountInEuros, string? label, DateOnly date)
+    public RecordIncomeResult RecordIncome(decimal amountInEuros, string? label, DateOnly date, Account? account = null)
     {
+        var on = CheckIsMine(account ?? pool);
         if (CheckIncome(amountInEuros, label) is { } refusal)
             return RecordIncomeResult.Refused(refusal);
 
-        var income = new Income(++lastEntryId, Money.FromEuros(amountInEuros), date, NormaliseLabel(label)!);
+        var income = new Income(++lastEntryId, Money.FromEuros(amountInEuros), date, NormaliseLabel(label)!, on);
         incomes.Add(income);
         return RecordIncomeResult.Recorded(income);
     }
@@ -737,8 +848,9 @@ public sealed class Ledger
     /// <summary>
     /// Changes an income to the amount, label and date given, or refuses the change for exactly
     /// one of recording's reasons. Everything <see cref="ChangeExpense"/> says holds here too:
-    /// judged as recording now, never refused when nothing changed, and an overwrite that keeps the
-    /// income's place. A future date is allowed, as it is when recording.
+    /// judged as recording now, never refused when nothing changed, an overwrite that keeps the
+    /// income's place, and an account left out stays as it is. A future date is allowed, as it is
+    /// when recording.
     ///
     /// <para>Lowering an income, or moving it out of its period, may leave that period
     /// <i>Over-assigned</i>. Allowed, shown with the marker, and nothing more is said — in a past
@@ -746,15 +858,18 @@ public sealed class Ledger
     ///
     /// <para><b>Throws</b> for an income that is not in the ledger.</para>
     /// </summary>
-    public ChangeIncomeResult ChangeIncome(Income income, decimal amountInEuros, string? label, DateOnly date)
+    public ChangeIncomeResult ChangeIncome(
+        Income income, decimal amountInEuros, string? label, DateOnly date, Account? account = null)
     {
         var index = IndexOf(income);
         var current = incomes[index];
+        var on = CheckIsMine(account ?? current.Account);
 
         if (Money.IsWholeCents(amountInEuros)
             && Money.FromEuros(amountInEuros) == current.Amount
             && NormaliseLabel(label) == current.Label
-            && date == current.Date)
+            && date == current.Date
+            && on == current.Account)
             return ChangeIncomeResult.Unchanged(current);
 
         if (CheckIncome(amountInEuros, label) is { } refusal)
@@ -765,6 +880,7 @@ public sealed class Ledger
             Amount = Money.FromEuros(amountInEuros),
             Date = date,
             Label = NormaliseLabel(label)!,
+            Account = on,
         };
         incomes[index] = changed;
         return ChangeIncomeResult.Changed(changed);
@@ -864,4 +980,354 @@ public sealed class Ledger
     /// </summary>
     public bool IsOverBudget(string categoryName, BudgetPeriod period) =>
         RemainingFor(categoryName, period).IsNegative;
+
+    // ================================================================== accounts
+
+    /// <summary>
+    /// Every account, <b>the pool account first</b>, then the rest in the order added — the order
+    /// of the strip and of every form's account list (arc42 §12, <i>Accounts and net worth</i>).
+    /// Making another account the pool moves it to the front, and the old pool back to its place
+    /// in the order added. A renamed account keeps its place.
+    /// </summary>
+    public IReadOnlyList<Account> Accounts =>
+        [pool, .. accountsInOrderAdded.Where(a => a != pool)];
+
+    /// <summary>
+    /// The one account a new income or expense starts out on, when nothing else is chosen (arc42
+    /// §12, <i>The pool account</i>). There is always exactly one.
+    /// </summary>
+    public Account PoolAccount => pool;
+
+    /// <summary>The account a name refers to under the name rule, or null.</summary>
+    public Account? AccountNamed(string? name) =>
+        NameRule.Normalise(name) is { } stored && accounts.TryGetValue(stored, out var account) ? account : null;
+
+    /// <summary>
+    /// Adds an account, or refuses it for exactly one reason: a name that trims to nothing, then a
+    /// name another account has, then a starting balance finer than a cent (arc42 §12).
+    ///
+    /// <para>A name another account has is <b>refused</b>, where a category's is handed back: handing
+    /// the account back would drop the starting balance just typed. A category's name is free, since
+    /// an account and a category are different dimensions.</para>
+    ///
+    /// <para>A <paramref name="startingBalance"/> is recorded as the account's first
+    /// <see cref="BalanceCorrection"/>, dated today: what the bank says the account holds now. It
+    /// may be zero or negative. <b>Null</b> — the field left empty — is <b>no starting balance</b>:
+    /// the account's balance is then the plain sum of what is on it until it is first corrected,
+    /// like the account a first start comes with. That is not the same as 0, which is a balance
+    /// checked and has in it everything dated before today.</para>
+    /// </summary>
+    public AddAccountResult AddAccount(string? name, decimal? startingBalance)
+    {
+        var stored = NameRule.Normalise(name);
+        if (stored is null)
+            return AddAccountResult.Refused(AccountRefusal.NameMissing);
+
+        if (accounts.ContainsKey(stored))
+            return AddAccountResult.Refused(AccountRefusal.NameTaken);
+
+        if (startingBalance is { } typed && !Money.IsWholeCents(typed))
+            return AddAccountResult.Refused(AccountRefusal.AmountFinerThanCent);
+
+        var account = NewAccount(stored);
+        if (startingBalance is { } balance)
+            balanceCorrections.Add(new BalanceCorrection(
+                ++lastEntryId, Today, account, Money.FromEuros(balance), IsStartingBalance: true));
+
+        return AddAccountResult.Added(account);
+    }
+
+    /// <summary>
+    /// Gives an account a new name, under the rules for adding one: refused when it trims to
+    /// nothing or another account has it; a new spelling of its own name is a rename; the name
+    /// exactly as it is changes nothing. It stays the same account, in the same place, with
+    /// everything on it. <b>Throws</b> for an account that is not in the ledger.
+    /// </summary>
+    public RenameAccountResult RenameAccount(Account account, string? newName)
+    {
+        CheckIsMine(account);
+
+        var stored = NameRule.Normalise(newName);
+        if (stored is null)
+            return RenameAccountResult.Refused(RenameRefusal.NameMissing);
+
+        if (stored == account.Name)
+            return RenameAccountResult.Unchanged(account);
+
+        if (accounts.TryGetValue(stored, out var holder) && holder != account)
+            return RenameAccountResult.Refused(RenameRefusal.NameTaken);
+
+        var oldName = account.Name;
+        accounts.Remove(oldName);
+        account.Name = stored;
+        accounts.Add(stored, account);
+
+        return RenameAccountResult.Renamed(oldName, account);
+    }
+
+    /// <summary>
+    /// Whether an account can be deleted: it is <b>unused</b> — no income, expense or transfer is on
+    /// it now, whatever was once — and it is not the pool account (arc42 §12). Its own starting
+    /// balance and balance corrections do not count as use: deleting is for an account added by
+    /// mistake, and those are the mistake.
+    /// </summary>
+    public bool CanDeleteAccount(Account account) =>
+        account != pool
+        && accountsInOrderAdded.Contains(account)
+        && !expenses.Any(e => e.Account == account)
+        && !incomes.Any(i => i.Account == account)
+        && !transfers.Any(t => t.From == account || t.To == account);
+
+    /// <summary>
+    /// Deletes an unused account, with its starting balance and balance corrections. Never asks
+    /// first, and is announced afterwards, as deleting a category is (arc42 §12). Its name is free,
+    /// and adding it again makes a new account, last in the order. <b>Throws</b> unless
+    /// <see cref="CanDeleteAccount"/>: the act is offered only on such an account.
+    /// </summary>
+    public Account DeleteAccount(Account account)
+    {
+        if (!CanDeleteAccount(account))
+            throw new InvalidOperationException($"\"{account.Name}\" cannot be deleted.");
+
+        accounts.Remove(account.Name);
+        accountsInOrderAdded.Remove(account);
+        balanceCorrections.RemoveAll(c => c.Account == account);
+        return account;
+    }
+
+    /// <summary>
+    /// Makes an account the pool account. That changes which account a <b>new</b> entry starts out
+    /// on and nothing else: every entry already recorded keeps its account (arc42 §12). <b>Throws</b>
+    /// for an account that is not in the ledger, or that is already the pool — the act is offered
+    /// only on the others.
+    /// </summary>
+    public void MakePool(Account account)
+    {
+        CheckIsMine(account);
+        if (account == pool)
+            throw new InvalidOperationException($"\"{account.Name}\" is already the pool account.");
+
+        pool = account;
+    }
+
+    // ------------------------------------------------------------------ transfers
+
+    /// <summary>
+    /// Records a transfer, or refuses it for exactly one reason, in this order: the same account at
+    /// both ends, an amount not above zero, an amount finer than a cent, a date after today (arc42
+    /// §12). It moves two balances and no budget figure. <b>Throws</b> for an account that is not in
+    /// the ledger.
+    /// </summary>
+    public RecordTransferResult RecordTransfer(decimal amountInEuros, Account from, Account to, DateOnly date)
+    {
+        if (CheckTransfer(amountInEuros, from, to, date) is { } refusal)
+            return RecordTransferResult.Refused(refusal);
+
+        var transfer = new Transfer(++lastEntryId, Money.FromEuros(amountInEuros), date, from, to);
+        transfers.Add(transfer);
+        return RecordTransferResult.Recorded(transfer);
+    }
+
+    /// <summary>
+    /// Changes a transfer, judged as recording it now would be, and never refused when nothing
+    /// changed — as <see cref="ChangeExpense"/>. It keeps its id, and so the moment it was first
+    /// recorded. <b>Throws</b> for a transfer that is not in the ledger.
+    /// </summary>
+    public ChangeTransferResult ChangeTransfer(
+        Transfer transfer, decimal amountInEuros, Account from, Account to, DateOnly date)
+    {
+        var index = IndexOf(transfer);
+        var current = transfers[index];
+
+        if (Money.IsWholeCents(amountInEuros)
+            && Money.FromEuros(amountInEuros) == current.Amount
+            && from == current.From
+            && to == current.To
+            && date == current.Date)
+            return ChangeTransferResult.Unchanged(current);
+
+        if (CheckTransfer(amountInEuros, from, to, date) is { } refusal)
+            return ChangeTransferResult.Refused(refusal);
+
+        var changed = current with { Amount = Money.FromEuros(amountInEuros), From = from, To = to, Date = date };
+        transfers[index] = changed;
+        return ChangeTransferResult.Changed(changed);
+    }
+
+    /// <summary>Removes a transfer, once the user has confirmed. <b>Throws</b> for one not in the ledger.</summary>
+    public void RemoveTransfer(Transfer transfer) => transfers.RemoveAt(IndexOf(transfer));
+
+    private TransferRefusal? CheckTransfer(decimal amountInEuros, Account from, Account to, DateOnly date)
+    {
+        CheckIsMine(from);
+        CheckIsMine(to);
+
+        if (from == to)
+            return TransferRefusal.SameAccount;
+
+        if (amountInEuros <= 0)
+            return TransferRefusal.AmountNotPositive;
+
+        if (!Money.IsWholeCents(amountInEuros))
+            return TransferRefusal.AmountFinerThanCent;
+
+        if (date > Today)
+            return TransferRefusal.DateInFuture;
+
+        return null;
+    }
+
+    private int IndexOf(Transfer transfer)
+    {
+        var index = transfers.FindIndex(t => t.Id == transfer.Id);
+        return index >= 0
+            ? index
+            : throw new InvalidOperationException($"Transfer {transfer.Id} is not in the ledger.");
+    }
+
+    // ------------------------------------------------------------------ balance corrections
+
+    /// <summary>
+    /// Records the balance the bank shows today for an account, as a <see cref="BalanceCorrection"/>
+    /// dated today (arc42 §12). Zero and below zero are balances; the only refusal is a balance
+    /// finer than a cent. Typing the figure MoneyBud already has is recorded too, with a difference
+    /// of nothing: it is a check that the balance is right. <b>Throws</b> for an account not in the
+    /// ledger.
+    /// </summary>
+    public CorrectBalanceResult CorrectBalance(Account account, decimal balanceInEuros)
+    {
+        CheckIsMine(account);
+        if (!Money.IsWholeCents(balanceInEuros))
+            return CorrectBalanceResult.RefusedFinerThanCent();
+
+        var correction = new BalanceCorrection(
+            ++lastEntryId, Today, account, Money.FromEuros(balanceInEuros), IsStartingBalance: false);
+        balanceCorrections.Add(correction);
+        return CorrectBalanceResult.Recorded(correction);
+    }
+
+    /// <summary>
+    /// Removes a balance correction or a starting balance, once the user has confirmed. The balance
+    /// is then worked out from the account's previous typed balance, or from none. There is no
+    /// changing one: to change it, correct again. <b>Throws</b> for one not in the ledger.
+    /// </summary>
+    public void RemoveBalanceCorrection(BalanceCorrection correction)
+    {
+        var index = balanceCorrections.FindIndex(c => c.Id == correction.Id);
+        if (index < 0)
+            throw new InvalidOperationException($"Balance correction {correction.Id} is not in the ledger.");
+        balanceCorrections.RemoveAt(index);
+    }
+
+    // ------------------------------------------------------------------ balances
+
+    /// <summary>
+    /// An account's <i>Balance</i> today, worked out and never stored (arc42 §12, ADR 0008): its
+    /// latest typed balance, plus every income, expense and transfer on it dated today or earlier
+    /// that the typed balance does not already have in it (<see cref="Holds"/>). With no typed
+    /// balance at all, it is the plain sum of those, whatever their dates.
+    ///
+    /// <para>"Today or earlier" is what keeps a future-dated income out until its date: net worth is
+    /// what you have today. Nothing about budgets enters into it.</para>
+    /// </summary>
+    public Money BalanceOf(Account account)
+    {
+        var latest = TypedBalancesOf(account).LastOrDefault();
+        var moved = MovementsOn(account)
+            .Where(m => m.Entry.Date <= Today && (latest is null || !Holds(latest, m.Entry)))
+            .Select(m => m.Amount);
+
+        return (latest?.Balance ?? Money.Zero) + Money.Sum(moved);
+    }
+
+    /// <summary>Net worth: the sum of every account's balance today (arc42 §12).</summary>
+    public Money NetWorth => Money.Sum(accountsInOrderAdded.Select(BalanceOf));
+
+    /// <summary>
+    /// Whether an account's balance is below zero. Exactly zero is not overdrawn. Shown with the
+    /// marker, never blocked or warned about (arc42 §12).
+    /// </summary>
+    public bool IsOverdrawn(Account account) => BalanceOf(account).IsNegative;
+
+    /// <summary>
+    /// How far a balance correction was from what MoneyBud had worked out just before it: what was
+    /// typed, minus the previous typed balance (or nothing) plus everything this one has in it that
+    /// the previous one did not. Negative when MoneyBud had more. <b>Worked out afresh</b>, so it
+    /// always shows what is <i>still unexplained</i>: record a forgotten receipt dated before it and
+    /// the difference shrinks, while the balance stays what was typed (arc42 §12).
+    ///
+    /// <para>Null for a starting balance, which corrected nothing.</para>
+    /// </summary>
+    public Money? DifferenceOf(BalanceCorrection correction)
+    {
+        if (correction.IsStartingBalance) return null;
+
+        var typed = TypedBalancesOf(correction.Account);
+        var index = typed.FindIndex(c => c.Id == correction.Id);
+        if (index < 0)
+            throw new InvalidOperationException($"Balance correction {correction.Id} is not in the ledger.");
+
+        var previous = index > 0 ? typed[index - 1] : null;
+        var since = MovementsOn(correction.Account)
+            .Where(m => Holds(correction, m.Entry) && (previous is null || !Holds(previous, m.Entry)))
+            .Select(m => m.Amount);
+
+        return correction.Balance - ((previous?.Balance ?? Money.Zero) + Money.Sum(since));
+    }
+
+    /// <summary>
+    /// Everything on an account, in every period: its starting balance and balance corrections, its
+    /// transfers either way, and the incomes and expenses on it. <b>Newest first</b>: by date, and on
+    /// one date newest recorded first, as the Overview's lists are.
+    /// </summary>
+    public IReadOnlyList<IEntry> HistoryOf(Account account) =>
+        MovementsOn(account).Select(m => m.Entry)
+            .Concat(balanceCorrections.Where(c => c.Account == account))
+            .OrderByDescending(e => e.Date)
+            .ThenByDescending(e => e.Id)
+            .ToList();
+
+    /// <summary>
+    /// Whether a typed balance already has an entry in it: the entry is dated before the typed
+    /// balance's day, or on that day and recorded before it (arc42 §12, <i>A typed balance is what
+    /// the bank said that day</i>). A date has no time of day, so on the day itself only the order of
+    /// recording — the ids — can tell. A changed entry keeps its id, and so its first recording.
+    /// </summary>
+    private static bool Holds(BalanceCorrection typed, IEntry entry) =>
+        entry.Date < typed.Date || (entry.Date == typed.Date && entry.Id < typed.Id);
+
+    private List<BalanceCorrection> TypedBalancesOf(Account account) =>
+        balanceCorrections.Where(c => c.Account == account).OrderBy(c => c.Date).ThenBy(c => c.Id).ToList();
+
+    /// <summary>
+    /// What each income, expense and transfer on an account does to its balance: an income adds, an
+    /// expense takes away, and a transfer takes away from where it came from and adds where it went.
+    /// </summary>
+    private IEnumerable<(IEntry Entry, Money Amount)> MovementsOn(Account account)
+    {
+        foreach (var income in incomes.Where(i => i.Account == account)) yield return (income, income.Amount);
+        foreach (var expense in expenses.Where(e => e.Account == account)) yield return (expense, -expense.Amount);
+        foreach (var transfer in transfers)
+        {
+            if (transfer.From == account) yield return (transfer, -transfer.Amount);
+            if (transfer.To == account) yield return (transfer, transfer.Amount);
+        }
+    }
+
+    private Account NewAccount(string name)
+    {
+        var account = new Account(name);
+        accounts.Add(name, account);
+        accountsInOrderAdded.Add(account);
+        return account;
+    }
+
+    /// <summary>
+    /// The account itself, when it is one of this ledger's. An account is picked from a list, never
+    /// typed, so one that is not here is a mistake in the caller: <b>throws</b>.
+    /// </summary>
+    private Account CheckIsMine(Account account) =>
+        accountsInOrderAdded.Contains(account)
+            ? account
+            : throw new InvalidOperationException($"\"{account.Name}\" is not an account in this ledger.");
 }

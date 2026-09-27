@@ -354,9 +354,11 @@ public sealed class ScreenSteps(SpecContext context)
             row["label"] is "" ? null : row["label"],
             SpecParsing.MoneyAmount(row["amount"])));
 
-        var actual = OverviewOf(which).Expenses.Select(e => (e.Date, e.Category, e.Label, e.Amount));
+        var lines = OverviewOf(which).Expenses;
+        var actual = lines.Select(e => (e.Date, e.Category, e.Label, e.Amount));
 
         Assert.Equal(expected, actual);
+        AssertAccountColumn(table, lines.Select(e => e.AccountName));
     }
 
     [Then(@"^the incomes listed in the (current|previous|next) budget period should be exactly these, in this order:$")]
@@ -365,9 +367,20 @@ public sealed class ScreenSteps(SpecContext context)
         var expected = table.Rows.Select(row => (
             Ledger.Date(row["date"]), row["label"], SpecParsing.MoneyAmount(row["amount"])));
 
-        var actual = OverviewOf(which).Incomes.Select(i => (i.Date, i.Label, i.Amount));
+        var lines = OverviewOf(which).Incomes;
+        var actual = lines.Select(i => (i.Date, i.Label, i.Amount));
 
         Assert.Equal(expected, actual);
+        AssertAccountColumn(table, lines.Select(i => i.AccountName));
+    }
+
+    // The account a row names, checked only where the table has the column; a blank cell is a row
+    // that names none, because its entry is on the pool account (features/show-accounts.feature).
+    private static void AssertAccountColumn(Table table, IEnumerable<string?> named)
+    {
+        if (!table.ContainsColumn("account")) return;
+
+        Assert.Equal(table.Rows.Select(row => row["account"] is "" ? null : row["account"]), named);
     }
 
     [Then(@"^no expenses should be listed in the (current|previous|next) budget period$")]

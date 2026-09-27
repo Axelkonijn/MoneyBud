@@ -12,7 +12,7 @@ public sealed class CorrectionTests
 {
     private static readonly DateOnly Today = new(2026, 3, 15);
 
-    private readonly Ledger ledger = new(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)));
+    private readonly Ledger ledger = new(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)), "Bank");
 
     private BudgetPeriod Current => ledger.CurrentPeriod;
 

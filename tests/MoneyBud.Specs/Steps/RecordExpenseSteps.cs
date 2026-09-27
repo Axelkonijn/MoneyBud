@@ -127,12 +127,23 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void WhenIRecordAnExpenseLabelled(string amount, string category, string label) =>
         Record(amount, category, label, date: null);
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+)")]
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
     public void WhenIRecordAnExpenseLabelledAndDated(
         string amount, string category, string label, string date) =>
         Record(amount, category, label, date);
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" dated (?:on )?(.+)")]
+    // On an account chosen from the form's list, rather than the one it starts out on
+    // (record-on-an-account.feature).
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" on the account ""([^""]*)""")]
+    public void WhenIRecordAnExpenseLabelledOnTheAccount(string amount, string category, string label, string account) =>
+        Record(amount, category, label, date: null, account);
+
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""")]
+    public void WhenIRecordAnExpenseLabelledAndDatedOnTheAccount(
+        string amount, string category, string label, string date, string account) =>
+        Record(amount, category, label, date, account);
+
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
     public void WhenIRecordAnExpenseDated(string amount, string category, string date) =>
         Record(amount, category, label: null, date);
 
@@ -246,10 +257,23 @@ public sealed class RecordExpenseSteps(SpecContext context)
 
     // Through the screen, with the amount as typed. A date the step does not name is left out
     // rather than filled in here, so that the screen's own default is what decides it.
-    private void Record(string amount, string? category, string? label, string? date) =>
-        context.Record(context.App.RecordExpense(
-            amount, category, label, date is null ? null : Ledger.Date(date))
-            ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+    private void Record(string amount, string? category, string? label, string? date, string? account = null)
+    {
+        var day = date is null ? null : (DateOnly?)Ledger.Date(date);
+        if (account is null)
+        {
+            context.Record(context.App.RecordExpense(amount, category, label, day)
+                ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+            return;
+        }
+
+        // Another account is chosen in the form's list, so the whole entry goes through the form.
+        var form = context.App.ExpenseForm;
+        (form.Amount, form.Category, form.Label) = (amount, category, label);
+        form.Date = day?.ToDateTime(TimeOnly.MinValue);
+        form.ChosenAccount = Ledger.Account(account);
+        context.Record(form.Record() ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+    }
 
     // A change is refused in recording's words (change-an-entry.feature), so these steps answer
     // for the change when that is what was just done, and for the last recording otherwise.

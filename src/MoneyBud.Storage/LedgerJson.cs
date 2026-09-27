@@ -12,30 +12,38 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 1,
-///   "lastEntryId": 2,
+///   "version": 2,
+///   "lastEntryId": 4,
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false } ],
 ///   "budgets":    [ { "category": 1, "periodStart": "2026-03-01", "cents": 40000 } ],
-///   "expenses":   [ { "id": 1, "cents": 3215, "date": "2026-03-15", "category": 1, "label": "Albert Heijn" } ],
-///   "incomes":    [ { "id": 2, "cents": 183245, "date": "2026-03-15", "label": "Salaris" } ]
+///   "accounts":   [ { "key": 1, "name": "Betaalrekening" }, { "key": 2, "name": "Contant" } ],
+///   "poolAccount": 1,
+///   "expenses":   [ { "id": 1, "cents": 3215, "date": "2026-03-15", "category": 1, "label": "Albert Heijn", "account": 1 } ],
+///   "incomes":    [ { "id": 2, "cents": 183245, "date": "2026-03-15", "label": "Salaris", "account": 1 } ],
+///   "transfers":  [ { "id": 3, "cents": 5000, "date": "2026-03-15", "from": 1, "to": 2 } ],
+///   "balanceCorrections": [ { "id": 4, "date": "2026-03-15", "account": 1, "cents": 175000, "starting": false } ]
 /// }
 /// </code>
 ///
 /// <para><b>Amounts are whole cents, as JSON integers</b> — exactly what <see cref="Money"/>
 /// holds, so nothing is parsed from decimal text and nothing can round (arc42 §8.2). <b>Dates are
 /// <c>yyyy-MM-dd</c></b>, with no time and no zone. <b>Categories are referred to by key</b>, never
-/// by name (<see cref="LedgerSnapshot"/>). An expense with no label has <c>"label": null</c>.</para>
+/// by name (<see cref="LedgerSnapshot"/>), and so are <b>accounts</b>. An expense with no label has
+/// <c>"label": null</c>. <b>No balance is written</b>: a balance is worked out from the typed
+/// balances and the entries (ADR 0008), so there is no figure in the file that could disagree with
+/// them.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-1 document is not read at all.
+/// <para>Reading is strict: anything that is not a whole version-2 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
-/// (§12, <i>When the data cannot be read</i>). There is no older version to read: until the
-/// switch to real use, a new version need not read an older one's data (§12). Properties this
-/// version does not know are ignored.</para>
+/// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
+/// read either: the stakeholder ruled that data saved before accounts is started afresh rather than
+/// carried over (§12, <i>Accounts and net worth</i>; <i>Demo data may not survive a new version</i>).
+/// Properties this version does not know are ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 1;
+    public const int Version = 2;
     private const string Format = "MoneyBud";
 
     public static string Write(LedgerSnapshot snapshot)
@@ -74,6 +82,18 @@ public static class LedgerJson
             }
             json.WriteEndArray();
 
+            json.WriteStartArray("accounts");
+            foreach (var a in snapshot.Accounts)
+            {
+                json.WriteStartObject();
+                json.WriteNumber("key", a.Key);
+                json.WriteString("name", a.Name);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
+            json.WriteNumber("poolAccount", snapshot.PoolAccount);
+
             json.WriteStartArray("expenses");
             foreach (var e in snapshot.Expenses)
             {
@@ -83,6 +103,7 @@ public static class LedgerJson
                 json.WriteString("date", Date(e.Date));
                 json.WriteNumber("category", e.Category);
                 json.WriteString("label", e.Label);
+                json.WriteNumber("account", e.Account);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -95,6 +116,33 @@ public static class LedgerJson
                 json.WriteNumber("cents", i.Amount.Cents);
                 json.WriteString("date", Date(i.Date));
                 json.WriteString("label", i.Label);
+                json.WriteNumber("account", i.Account);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
+            json.WriteStartArray("transfers");
+            foreach (var t in snapshot.Transfers)
+            {
+                json.WriteStartObject();
+                json.WriteNumber("id", t.Id);
+                json.WriteNumber("cents", t.Amount.Cents);
+                json.WriteString("date", Date(t.Date));
+                json.WriteNumber("from", t.From);
+                json.WriteNumber("to", t.To);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
+            json.WriteStartArray("balanceCorrections");
+            foreach (var c in snapshot.BalanceCorrections)
+            {
+                json.WriteStartObject();
+                json.WriteNumber("id", c.Id);
+                json.WriteString("date", Date(c.Date));
+                json.WriteNumber("account", c.Account);
+                json.WriteNumber("cents", c.Balance.Cents);
+                json.WriteBoolean("starting", c.IsStartingBalance);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -124,9 +172,16 @@ public static class LedgerJson
                 Array(root, "categories", c => new CategorySnapshot(Int(c, "key"), Text(c, "name"), Bool(c, "archived"))),
                 Array(root, "budgets", b => new BudgetSnapshot(Int(b, "category"), DateOf(b, "periodStart"), Cents(b))),
                 Array(root, "expenses", e => new ExpenseSnapshot(
-                    Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"))),
-                Array(root, "incomes", i => new IncomeSnapshot(Int(i, "id"), Cents(i), DateOf(i, "date"), Text(i, "label"))),
-                Int(root, "lastEntryId"));
+                    Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"), Int(e, "account"))),
+                Array(root, "incomes", i => new IncomeSnapshot(
+                    Int(i, "id"), Cents(i), DateOf(i, "date"), Text(i, "label"), Int(i, "account"))),
+                Int(root, "lastEntryId"),
+                Array(root, "accounts", a => new AccountSnapshot(Int(a, "key"), Text(a, "name"))),
+                Int(root, "poolAccount"),
+                Array(root, "transfers", t => new TransferSnapshot(
+                    Int(t, "id"), Cents(t), DateOf(t, "date"), Int(t, "from"), Int(t, "to"))),
+                Array(root, "balanceCorrections", c => new BalanceCorrectionSnapshot(
+                    Int(c, "id"), DateOf(c, "date"), Int(c, "account"), Cents(c), Bool(c, "starting"))));
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)

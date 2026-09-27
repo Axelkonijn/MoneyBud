@@ -7,6 +7,9 @@
 #
 # An expense is listed with its date, its category, its label and its amount. An income is listed
 # with its date, its label and its amount. An income names no category, so there is none to list.
+# Since the accounts increment, a row also names its account when that is not the pool account,
+# which the list steps check as an ACCOUNT column where a table has one (show-accounts.feature).
+# No table in this file has one, and every entry here is on the pool account.
 # An expense's label is optional. An empty label cell below means the expense has no label, not a
 # label made of nothing. Labels are listed as stored, which is trimmed (record-expense.feature,
 # record-income.feature).

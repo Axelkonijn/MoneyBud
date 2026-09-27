@@ -10,9 +10,11 @@
 # never changes here. Its Remaining (Budget minus spent) moves only because its Budget does.
 #
 # Scope of this capability, per the assigning increment (glossary: "Nothing here blocks the
-# assigning increment"). There are no accounts, so every category is unbacked and assigning moves
-# no money anywhere. These are out, and no scenario below touches them: backed categories,
-# accounts, the pool account and overdrawing it; the one action that assigns last period's plan in
+# assigning increment"). No category is backed: accounts exist since the accounts increment, but
+# backing waits for the increment after it. So every category is unbacked, and assigning moves no
+# money anywhere and changes no account's balance (show-accounts.feature). These are out, and no
+# scenario below touches them: backed categories, the pool account as the source of a movement
+# and overdrawing it by assigning; the one action that assigns last period's plan in
 # full, and anything else about a period opening (since built, in take-over-a-plan.feature); the
 # end-of-period sweep; any UI.
 #

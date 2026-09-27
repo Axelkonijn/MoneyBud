@@ -85,6 +85,13 @@ one-off entry**: the capability table above lists the two together because the s
 both, permanently, and entering an amount by hand stays first-class once schedules exist
 ([§12](12-glossary.md), *Income may be dated in the future*).
 
+**Accounts and net worth are built**, in the ninth increment (settled, specified and built on
+2026-09-27; [§12](12-glossary.md), *Accounts and net worth*): accounts with balances, every income
+and expense on an account, net worth on screen, and transfers between accounts. So the second
+question above, "how am I doing?", has an answer on screen for the first time. A balance is worked out
+from the entries, never stored ([ADR 0008](../decisions/0008-balance-is-worked-out.md)). Backing a
+category with an account comes in the next increment, and the end-of-period sweep after that.
+
 ## 1.2 Quality Goals
 
 Ranked. These are what architectural decisions get judged against.

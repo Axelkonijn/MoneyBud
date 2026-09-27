@@ -19,7 +19,7 @@ Each has its own record or section; this table is the map, not the reasoning.
 | **Money** | A signed `Money` value type over a whole number of cents; sub-cent amounts refused rather than rounded; direction carried by the transaction type; no currency field | [ADR 0003](../decisions/0003-money-representation.md), [§8.2](08-crosscutting-concepts.md) |
 | **Decomposition** | Four source projects: the domain; a **presentation layer with no UI toolkit**, holding everything the screen decides; a thin Avalonia desktop; and, since the persistence increment, a storage project that knows the domain and nothing else. One specification project runs the scenarios against all but the desktop, with no window | [ADR 0006](../decisions/0006-three-source-projects.md), which supersedes the "two projects" of [ADR 0004](../decisions/0004-solution-layout.md) and is amended by [ADR 0007](../decisions/0007-keeping-the-ledger.md); [§5](05-building-block-view.md) |
 | **Persistence** | **One JSON file, `moneybud.json`, in the user's local application data**, written whole after every change that alters the ledger, through a temporary file and a rename, and held by one MoneyBud at a time. Amounts are whole cents, and categories are linked by a key that exists only in the file. Its own project, `MoneyBud.Storage`, behind a port in the domain. Settled with the stakeholder and built on 2026-09-26 | [ADR 0007](../decisions/0007-keeping-the-ledger.md), [§8.3](08-crosscutting-concepts.md), [§12](12-glossary.md) |
-| **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned* | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md) |
+| **Domain shape** | Purpose without location; the plan and the actual meeting in exactly one derived figure, *Remaining*; income forming a pool that belongs to neither layer, *Unassigned*. **Since the accounts increment, location too**: every income and expense on an account, and a balance worked out from the entries, never stored, with a typed balance as a dated statement | [§8.1](08-crosscutting-concepts.md), [§12](12-glossary.md), [ADR 0008](../decisions/0008-balance-is-worked-out.md) |
 
 Read together, these say: **a domain library, a screen over it, and an executable specification
 that reaches both.** For four increments the first and third were the whole of it. The fifth added
@@ -85,7 +85,11 @@ Two things hold it back, and both are recorded rather than solved:
 
 The decision that would serve it most belongs to a later increment: the account default
 ([§12](12-glossary.md)). The other one this paragraph used to name, the one-action carry-over of
-last period's budgets, is built (above).
+last period's budgets, is built (above). **The account default is built**, in the accounts
+increment (2026-09-27): the account is the last field on the expense and income forms, a list
+pre-filled with the pool account, so an entry on the usual account asks nothing more than it did
+before accounts ([§12](12-glossary.md), *Every income and expense is on an account*). Its known weak
+spot, a cash expense left on the pool account, is now live ([§11](11-risks-and-technical-debt.md)).
 
 ### 3. Adaptability — **genuinely served**
 

@@ -26,6 +26,14 @@ internal static partial class SpecParsing
 
     public static Money MoneyAmount(string text) => Money.FromEuros(Amount(text));
 
+    /// <summary>The account a scenario names, which must exist (features/show-accounts.feature).</summary>
+    public static Account Account(this Ledger ledger, string name) =>
+        ledger.AccountNamed(name) ?? throw new ArgumentException($"There is no account \"{name}\".", nameof(name));
+
+    /// <summary>An account named in a step, or null when the step named none.</summary>
+    public static Account? AccountOrNull(this Ledger ledger, string? name) =>
+        name is null ? null : ledger.Account(name);
+
     /// <summary>Resolves "current", "previous" or "next" against the ledger's own calendar.</summary>
     public static BudgetPeriod Period(this Ledger ledger, string which) => which switch
     {
@@ -67,8 +75,8 @@ internal static partial class SpecParsing
     private static partial Regex NamedPeriod();
 
     /// <summary>
-    /// Resolves a date as the scenarios phrase it: "today", "tomorrow", or a day of a named
-    /// budget period. A null phrase means the step named no date, which means today.
+    /// Resolves a date as the scenarios phrase it: "today", "yesterday", "tomorrow", or a day of a
+    /// named budget period. A null phrase means the step named no date, which means today.
     /// </summary>
     public static DateOnly Date(this Ledger ledger, string? phrase)
     {
@@ -80,6 +88,8 @@ internal static partial class SpecParsing
                 return ledger.Today;
             case "tomorrow":
                 return ledger.Today.AddDays(1);
+            case "yesterday":
+                return ledger.Today.AddDays(-1);
         }
 
         var match = DayOfPeriod().Match(phrase.Trim());

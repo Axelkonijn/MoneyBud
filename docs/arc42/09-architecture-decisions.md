@@ -16,7 +16,8 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006 | 2026-09-26 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008**, by a dated note | 2026-09-26 |
+| [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2 | 2026-09-27 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -121,3 +122,18 @@ is kept, so ADR 0007's file format stands at version 1. The one choice with any 
 taking a plan over calls `Assign` once per figure instead of writing budgets itself, which keeps one
 writer of a *Budget*. That applies a rule [§8.1](08-crosscutting-concepts.md) already recorded,
 rather than making a new one, and it is recorded there.
+
+**The accounts increment added one: ADR 0008**, approved at its plan gate on 2026-09-27 and built the
+same day. The stakeholder's rulings (§12, *Accounts and net worth*) are requirements, as persistence's
+were: a balance is worked out and a hand edit is a balance correction. How to hold them in code and
+on disk is not a requirement. It answers the question [§11](11-risks-and-technical-debt.md) asked to
+have settled before accounts were built, because the choice "shapes how balances are stored". That
+passes this section's test on both counts: costly to reverse once data is real, and sure to draw a
+"why on earth" without its reasoning. **No balance is stored**, in memory or in the file. A typed
+balance is a dated entry holding the balance itself. All four entry kinds share one id counter, which
+is the recording order. A cache of balances was rejected as a second author inside MoneyBud.
+
+**It takes ADR 0007's format to version 2, without superseding 0007.** 0007 decided the file, its
+strictness and its keys, and all of that stands. It also said that a change of format is a new
+version number, and that until real use an older file is simply unreadable. 0008 does exactly that,
+so 0007 carries a dated note pointing to it, as 0006 does for 0007.

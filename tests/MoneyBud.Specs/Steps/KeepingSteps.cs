@@ -51,7 +51,7 @@ public sealed class KeepingSteps(SpecContext context)
         File.Delete(context.DataFile);
     }
 
-    [Given(@"^MoneyBud has kept data that (is damaged|is blank, with nothing at all in it|was written by a newer version of MoneyBud|cannot be reached)$")]
+    [Given(@"^MoneyBud has kept data that (is damaged|is blank, with nothing at all in it|was written by a newer version of MoneyBud|was written by a version without accounts|cannot be reached)$")]
     public void GivenMoneyBudHasKeptData(string problem)
     {
         WriteKeptData(problem switch
@@ -59,7 +59,8 @@ public sealed class KeepingSteps(SpecContext context)
             "is damaged" => Encoding.UTF8.GetBytes(Damaged),
             "is blank, with nothing at all in it" => [],
             "was written by a newer version of MoneyBud" => Encoding.UTF8.GetBytes(WrittenByANewerVersion()),
-            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0))),
+            "was written by a version without accounts" => Encoding.UTF8.GetBytes(WrittenBeforeAccounts),
+            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0, [new(1, "Bank")], 1, [], []))),
         });
 
         // Readable data, out of reach: a folder stands where MoneyBud claims its data, so the
@@ -280,14 +281,19 @@ public sealed class KeepingSteps(SpecContext context)
     // buttons are bound to those and nothing else. Both are listed in full, so a new act — one to
     // save, or to start over — fails here until it is looked at. None of those listed saves data or
     // starts over: the forms' Submit records or saves an entry, Remove asks to remove one, and
-    // TakeOver takes a plan over, which only assigns.
+    // TakeOver takes a plan over, which only assigns. The accounts increment's acts add, rename,
+    // delete, correct and move between accounts, and open and close a history; none keeps data or
+    // clears it.
     [Then(@"^MoneyBud should offer no act for (saving|starting over)$")]
     public void ThenMoneyBudShouldOfferNoActFor(string _)
     {
         string[] screen =
         [
-            "ArchiveCommand", "CancelRenameCommand", "ConfirmCommand", "DeclineCommand", "DeleteCommand",
-            "EditExpenseCommand", "EditIncomeCommand", "RenameCommand", "StartRenameCommand",
+            "ArchiveCommand", "CancelAccountRenameCommand", "CancelRenameCommand", "CloseHistoryCommand",
+            "ConfirmCommand", "CorrectOpenBalanceCommand", "DeclineCommand", "DeleteCommand",
+            "DeleteOpenAccountCommand", "EditExpenseCommand", "EditIncomeCommand", "EditTransferCommand",
+            "MakeOpenAccountPoolCommand", "OpenHistoryCommand", "RemoveFromHistoryCommand", "RenameCommand",
+            "SaveAccountRenameCommand", "StartAccountRenameCommand", "StartRenameCommand",
             "StepBackCommand", "StepForwardCommand", "TakeOverCommand",
         ];
         Assert.Equal(screen, CommandsOf(App));
@@ -296,12 +302,13 @@ public sealed class KeepingSteps(SpecContext context)
         {
             ["ExpenseForm"] = App.ExpenseForm, ["IncomeForm"] = App.IncomeForm,
             ["AssignForm"] = App.AssignForm, ["CategoryForm"] = App.CategoryForm,
+            ["AccountForm"] = App.AccountForm, ["TransferForm"] = App.TransferForm,
         };
         var offered = screen.ToHashSet();
         foreach (var (name, form) in forms)
         {
             var commands = CommandsOf(form);
-            Assert.Subset(new HashSet<string>(["SubmitCommand", "CancelCommand", "RemoveCommand",
+            Assert.Subset(new HashSet<string>(["SubmitCommand", "CancelCommand", "RemoveCommand", "OpenCommand",
                                                "EarlierPeriodCommand", "LaterPeriodCommand"]), commands.ToHashSet());
             offered.UnionWith(commands);
         }
@@ -326,12 +333,27 @@ public sealed class KeepingSteps(SpecContext context)
     // A file cut off in the middle, as a damaged disk or an editor might leave it.
     private const string Damaged = "{\n  \"format\": \"MoneyBud\",\n  \"version\": 1,\n  \"lastEntryId\": 3,\n  \"categ";
 
+    // A whole, valid document as the version before accounts wrote it: version 1, whose entries name
+    // no account. Written out rather than made, because this MoneyBud no longer writes it.
+    private const string WrittenBeforeAccounts = """
+        {
+          "format": "MoneyBud",
+          "version": 1,
+          "lastEntryId": 1,
+          "categories": [ { "key": 1, "name": "Groceries", "archived": false } ],
+          "budgets": [],
+          "expenses": [ { "id": 1, "cents": 3215, "date": "2026-03-15", "category": 1, "label": "Kiosk" } ],
+          "incomes": []
+        }
+        """;
+
     private static string WrittenByANewerVersion()
     {
-        var snapshot = new LedgerSnapshot([new CategorySnapshot(1, "Groceries", false)], [], [], [], 0);
+        var snapshot = new LedgerSnapshot(
+            [new CategorySnapshot(1, "Groceries", false)], [], [], [], 0, [new AccountSnapshot(1, "Bank")], 1, [], []);
         var text = LedgerJson.Write(snapshot);
-        Assert.Contains("\"version\": 1", text);
-        return text.Replace("\"version\": 1", $"\"version\": {LedgerJson.Version + 1}");
+        Assert.Contains($"\"version\": {LedgerJson.Version}", text);
+        return text.Replace($"\"version\": {LedgerJson.Version}", $"\"version\": {LedgerJson.Version + 1}");
     }
 
     private void WriteKeptData(byte[] bytes)
