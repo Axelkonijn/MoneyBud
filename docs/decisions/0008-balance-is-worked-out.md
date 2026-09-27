@@ -7,6 +7,13 @@ as 0007's consequences foresaw for any change of format. Nothing 0007 decided is
 file, written whole, strict reading, keys that exist only in the file. 0007 carries a dated note that
 points here.
 
+> **Note, 2026-09-27, later the same day.** Backing arrived as this record expected, writing entries
+> and not balances ([ADR 0009](0009-movements-are-entries.md)). A fifth entry kind, `Movement`,
+> shares the id counter, and `BalanceOf` and `HistoryOf` include it. A backing's marks also draw ids
+> from the counter without being entries. The rule for what a typed balance holds (decision 4) is
+> now `EntryMark`, used for backing as well. The file format is version 3. Everything this record
+> decided stands. The body is unchanged.
+
 ## Context
 
 [§11](../arc42/11-risks-and-technical-debt.md) carried a risk for as long as accounts were planned:

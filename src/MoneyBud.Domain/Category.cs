@@ -21,8 +21,9 @@ namespace MoneyBud.Domain;
 /// ledger's use of the category rather than about the category, and an expense recorded against
 /// it last year should not change because the category was put away today.</para>
 ///
-/// <para>In this increment a category is only its name. Backing accounts and a default backing
-/// account (§12, *Account-backed categories*) arrive with the location dimension.</para>
+/// <para>Whether a category is <i>backed</i>, and by which account, is not on this type either, for
+/// the same reason: it is the ledger's to know and to change (<see cref="Ledger.SetBacking"/>, §12,
+/// <i>Backing and Accumulated</i>).</para>
 /// </summary>
 public sealed class Category
 {

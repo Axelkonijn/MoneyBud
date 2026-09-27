@@ -60,6 +60,13 @@ public sealed record Question(string Text);
 /// works says once, on the same line, that everything is saved again.</item>
 /// <item><see cref="Close"/> tries once more, and asks nothing whatever comes of it.</item>
 /// </list>
+///
+/// <para><b>Settling</b> (§12, <i>Backing and Accumulated</i>; ADR 0009): money planned for a period
+/// that has begun moves when MoneyBud opens and on every <see cref="Tick"/>, and what moved is kept.
+/// Every act that changes the ledger settles first as well, inside the ledger, and is kept with the
+/// act. The one gap — an act that is then refused, straight after a period began — leaves the moved
+/// money unsaved until the next change; nothing is lost, since the next start settles the kept data
+/// the same way.</para>
 /// </summary>
 public sealed partial class MoneyBudApp : ObservableObject
 {
@@ -78,6 +85,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         CategoryForm = new CategoryForm(this);
         AccountForm = new AccountForm(this);
         TransferForm = new TransferForm(this);
+
+        if (Ledger.Settle()) Keep();
     }
 
     public Ledger Ledger { get; }
@@ -101,7 +110,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     public PeriodOverview Overview => OverviewFor(ShownPeriod);
 
     /// <summary>The Overview any period would show if it were on screen.</summary>
-    public PeriodOverview OverviewFor(BudgetPeriod period) => PeriodOverview.Of(Ledger, period, Renaming);
+    public PeriodOverview OverviewFor(BudgetPeriod period) =>
+        PeriodOverview.Of(Ledger, period, Renaming, BackingChoices, (name, account) => SetBacking(name, account));
 
     /// <summary>
     /// The categories suggested when recording an expense or assigning: those offered for new
@@ -248,12 +258,13 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// Once a minute, from the Desktop's timer: looks again, so the current-period label moves when
-    /// a period ends, and tries again to save when a save has failed — so that once saving works
-    /// again, the changes are kept with nothing done (§12).
+    /// a period ends; moves the money planned for a period that has just begun, and keeps it; and
+    /// tries again to save when a save has failed — so that once saving works again, the changes are
+    /// kept with nothing done (§12).
     /// </summary>
     public void Tick()
     {
-        if (IsUnsaved) Keep();
+        if (Ledger.Settle() | IsUnsaved) Keep();
         Refresh();
     }
 
@@ -665,6 +676,29 @@ public sealed partial class MoneyBudApp : ObservableObject
         }
     }
 
+    private IReadOnlyList<BackingChoice> backingChoices = [];
+    private IReadOnlyList<Account>? backingChoicesFor;
+
+    /// <summary>
+    /// The <i>Staat op</i> list every category row offers. Made anew only when
+    /// <see cref="AccountChoices"/> is, so for as long as the accounts, their order and their names
+    /// stay the same a refresh does not hand every row's list a new collection.
+    /// </summary>
+    public IReadOnlyList<BackingChoice> BackingChoices
+    {
+        get
+        {
+            var accounts = AccountChoices;
+            if (!ReferenceEquals(accounts, backingChoicesFor))
+            {
+                backingChoices = PeriodOverview.BackingChoicesOf(Ledger);
+                backingChoicesFor = accounts;
+            }
+
+            return backingChoices;
+        }
+    }
+
     /// <summary>Net worth, <i>Vermogen</i>: every balance today, summed.</summary>
     public Money NetWorth => Ledger.NetWorth;
 
@@ -867,6 +901,28 @@ public sealed partial class MoneyBudApp : ObservableObject
         Ledger.RemoveBalanceCorrection(correction);
         Tell(Tekst.BalanceCorrectionRemoved(correction), landedIn: null);
     });
+
+    // ------------------------------------------------------------------ backing
+
+    /// <summary>
+    /// A choice in a category row's <i>Staat op</i> list: backs the category, points its backing at
+    /// another account, or — given null — removes it (arc42 §12, <i>Backing and Accumulated</i>).
+    /// Never asks first, and says afterwards what moved, or only the backing when nothing did. Kept,
+    /// like every act that goes through.
+    ///
+    /// <para><b>Choosing what is already set does nothing at all</b>: nothing moves, nothing is said,
+    /// what was said stays, and nothing is redrawn. A list writes back what it shows whenever it is
+    /// redrawn, so this is called that way after every act, and must leave the screen exactly as the
+    /// act left it.</para>
+    /// </summary>
+    public SetBackingResult SetBacking(string categoryName, Account? account)
+    {
+        var result = Ledger.SetBacking(categoryName, account);
+        if (result.Outcome != BackingOutcome.Unchanged)
+            Tell(Tekst.BackingSet(result), landedIn: null);
+
+        return result;
+    }
 
     // ------------------------------------------------------------------ an account's history
 

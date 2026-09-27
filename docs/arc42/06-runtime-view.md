@@ -14,7 +14,8 @@ is wasted effort — pick the ones where the collaboration is non-obvious.
 > section describes internal collaboration.
 
 This section became writable with the fifth increment, when a second building block that does
-something arrived ([§5](05-building-block-view.md)). Four interactions are worth drawing.
+something arrived ([§5](05-building-block-view.md)). These interactions are worth drawing or
+describing.
 
 - **Recording an expense through the screen.** Every act the user can take follows its shape, so it
   is not repeated for income, assigning or categories. Changing an entry and renaming a category
@@ -27,6 +28,10 @@ something arrived ([§5](05-building-block-view.md)). Four interactions are wort
   the calls is the point, and none can be read off the static view.
 - **How a balance is worked out**, since the accounts increment, in words. No building block holds
   a balance, so where one comes from is exactly what the static view cannot show.
+- **Settling, and the backing act**, since the backing increment, in words. It is the one thing
+  MoneyBud does because a period began rather than because it was asked, and it runs from three
+  places: inside every act, when the screen opens and on the timer
+  ([ADR 0009](../decisions/0009-movements-are-entries.md)).
 
 ## Recording an expense through the screen
 
@@ -84,7 +89,8 @@ What the diagram shows that the static view does not:
   can notice that. If it ever matters, the place to cache is once per `Refresh`.
 
 **The same `Refresh` runs on a timer.** Once a minute the Desktop calls `MoneyBudApp.Tick`, which
-retries a save that failed (below) and then refreshes, so that the *Huidige periode* label follows
+settles money planned for a period that has begun (*Settling*, below), retries a save that failed
+(below) and then refreshes, so that the *Huidige periode* label follows
 the clock when a period ends while MoneyBud is open ([§8.4](08-crosscutting-concepts.md)).
 
 **The scenarios enter at `MoneyBudApp`**, not at the window. Every *When* step makes the same call
@@ -151,6 +157,70 @@ No code has to know that both should change, because neither is stored. The once
 runs the same reads, which is how a future-dated income reaches its balance on its date without any
 act.
 
+**Since the backing increment `BalanceOf` also adds movements** on either side of the account, as it
+adds transfers, and leaves out a movement from an account to itself. Nothing else about this
+changed: a movement is an entry, and a balance is still worked out from the entries.
+
+## Settling: money MoneyBud moves because a period began
+
+Since the backing increment ([ADR 0009](../decisions/0009-movements-are-entries.md)). Money assigned
+to a backed category for a later period is not written when it is assigned. It is written when that
+period begins, by `Ledger.Settle`, because only then is it known which account backs the category and
+which account is the pool. The static view shows `Settle` as one member. What it cannot show is that
+three callers share it, and why their order matters.
+
+**Inside the ledger, before every act.** Every `Ledger` member that changes the ledger calls `Settle`
+first. So the first act on or after a period's first day writes that period's movements before it
+does its own work. A balance correction typed on 1 November therefore gets an id higher than the
+movements settled for 1 November, and holds them, which is what the scenarios assert. An assignment
+made on that day moves money on top of the settled amount, not before it.
+
+**`MoneyBudApp`, when it is made.** `MoneyBudStart` loads the ledger and makes the screen. The
+constructor calls `Settle`, and if anything moved it calls `Keep`, so a start after days away saves
+the movements before the user sees the strip. The balances shown at once are right.
+
+**`MoneyBudApp.Tick`, once a minute.** `Tick` calls `Settle`, and saves if anything moved or if an
+earlier save failed. Then it refreshes. So when a period begins while MoneyBud is open, the money
+moves within a minute, without an act, and the strip shows it.
+
+**`Settle` itself** looks at each period that began after `settledThrough` and on or before today, in
+order. For each backed category with a *Budget* above zero there, it writes an `In` movement from
+the pool account to the backing account, dated the period's first day, with the next id. Then it sets
+`settledThrough` to today. A second call the same day finds nothing to do. **It can see the backing
+and the pool account of that day, however late it runs**, because nothing can change the ledger
+between that day and the first act, start or tick after it, and each of those settles first.
+
+**The one gap.** An act that settles and is then refused does not save. It has changed nothing of its
+own, and only an act that changes the ledger saves (`Tell(changed:)`, below). The movements its
+settling wrote stay unsaved until the next change. The tick does not save them either: its own
+`Settle` finds nothing left to do, and nothing is marked unsaved, so `Close` makes no last attempt.
+Nothing is lost all the same. If MoneyBud closes or crashes first, the next start settles the kept
+data again, from the same `settledThrough`, and writes the same movements, because nothing could have
+changed in between.
+
+**A read never settles.** `PeriodOverview.Of`, `BalanceOf`, `AccumulatedFor` and the rest only read.
+In the minute between a period beginning and the next tick, *Opgebouwd* counts that period's
+*Budget* as planned, since it has not been settled yet, so the figure does not dip and then recover.
+
+## Backing a category: one choice, at most one movement
+
+`CategoryRow.ChosenBacking` is bound two-way to the row's *Staat op* list. When it is set, it calls
+`MoneyBudApp.SetBacking`, which calls `Ledger.SetBacking`.
+
+- **The choice already set is recognised first, before settling**, and returns `Unchanged`.
+  `MoneyBudApp` then says nothing, saves nothing and redraws nothing. This matters because every
+  row's list writes back its current choice whenever the rows are redrawn, and that happens after
+  every act. If the write-back counted as an act, it would replace the last act's notice.
+- **Otherwise the ledger settles**, then works out what moves under the backing being left: this
+  period's *Remaining* when backing, or `ThereFor` when re-pointing or unbacking. It then writes the
+  new backing, with a fresh mark from the id counter, and at most one movement.
+- **`MoneyBudApp` announces the result** through `Tekst.BackingSet`. The notice names the money only
+  when it moved between two accounts. It saves through `Tell` like any act, and the rows are redrawn.
+  Their lists write back the new choice, which is now the one set, so nothing further happens.
+
+`Assign` in the current period follows the same pattern inside the ledger: settle, write the budget,
+then write one movement for a backed category.
+
 ## Starting MoneyBud: claim, then load, then check
 
 Since the persistence increment. What the user meets is ruled in [§12](12-glossary.md), *What
@@ -183,7 +253,7 @@ sequenceDiagram
             Start->>Ledger: StartNew (the six defaults, nothing saved yet)
         else moneybud.json is there
             Store->>Json: Read(text)
-            alt not a whole version-1 document
+            alt not a whole version-3 document
                 Json-->>Store: null
                 Store-->>Start: Unreadable
                 Start->>Store: Dispose()
@@ -200,6 +270,7 @@ sequenceDiagram
             end
         end
         Start-->>Desktop: Opened(new MoneyBudApp(ledger, store))
+        Note over Start,Ledger: the new MoneyBudApp calls Ledger.Settle(),<br/>and saves if money planned for a period that has begun moved
     end
     Note over Desktop: Opened: the main window, on the current period<br/>Refused: a small window with the refusal's text, and OK closes MoneyBud
 ```
@@ -209,7 +280,7 @@ What the diagram shows that the static view does not:
 - **The claim comes before the load.** A second start is refused before it reads a byte, so it never
   reads a file the first MoneyBud is part-way through replacing.
 - **Three different failures end in one answer.** A folder that cannot be reached, a file that is
-  not a whole version-1 document, and a document that breaks a domain rule are found in three
+  not a whole document of the current version, and a document that breaks a domain rule are found in three
   different places: the store, the format and the ledger. All three become `CannotRead`, and in none
   of them has anything been written to the data file. That is the ruling "say so, touch nothing,
   close". `MoneyBudStart` lets go of the store at once, so a later start can claim it.
@@ -217,7 +288,14 @@ What the diagram shows that the static view does not:
   message's text is `StartResult.Refused.Text`, from `Tekst`.
 - **A first start writes nothing.** The folder and `moneybud.lock` are made by the claim, but
   `moneybud.json` first appears with the first change. Closing straight away leaves the next start
-  exactly where this one began.
+  exactly where this one began. A new ledger has settled through today, so settling writes nothing
+  either.
+- **The version in the diagram is the current one**: version 1 when this was drawn, version 2 since
+  the accounts increment, and version 3 since the backing increment. Every older version is met as
+  unreadable ([ADR 0009](../decisions/0009-movements-are-entries.md)).
+- **Loaded data may be saved at once.** Since the backing increment, a start on or after the first
+  day of a period that has not been settled moves that period's planned money and saves it before
+  the user does anything (*Settling*, above).
 
 ## Saving after an act, and a save that fails
 
@@ -232,7 +310,7 @@ sequenceDiagram
     participant Store as FileLedgerStore
     participant Json as LedgerJson
 
-    Note over App: an act went through (recorded, changed, removed,<br/>assigned, plan taken over, added, archived, renamed, deleted)
+    Note over App: an act went through (recorded, changed, removed,<br/>assigned, plan taken over, added, archived, renamed, deleted,<br/>backing set), having settled first inside the ledger
     App->>App: Tell(text, landedIn, changed)
     alt changed nothing (already there, assign 0, clipped in full against 0)
         Note over App: said, not saved
@@ -254,7 +332,8 @@ sequenceDiagram
 
     loop once a minute
         Timer->>App: Tick()
-        opt IsUnsaved
+        App->>Ledger: Settle()
+        opt Settle moved money, or IsUnsaved
             App->>Store: TrySave(the whole ledger, as above)
         end
         App->>App: Refresh
@@ -275,8 +354,11 @@ What the diagram shows that the static view does not:
 - **The save line is not the notice.** `SaveLine` is its own property, and the window shows it as a
   line of its own beside the notice and the question ([§8.4](08-crosscutting-concepts.md)). "Not
   saved" stays until a save works, stepping included. "Saved again" stays until the next act or step.
-- **The timer is the Desktop's; what it does is the presentation layer's.** `Tick` retries only when
-  something is unsaved, so on a healthy disk the timer writes nothing.
+- **The timer is the Desktop's; what it does is the presentation layer's.** `Tick` saves only when
+  something is unsaved or, since the backing increment, when settling moved money because a period
+  began. So on a healthy disk the timer writes at most once a period.
+- **Choosing the backing already set is not an act.** It reaches neither the ledger's settling nor
+  `Tell`, so it neither saves nor retries (*Backing a category*, above).
 
 ## Closing
 

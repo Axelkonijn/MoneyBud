@@ -11,6 +11,11 @@ points here.
 > [ADR 0008](0008-balance-is-worked-out.md). It adds accounts, the pool account, an account on every
 > expense and income, transfers and balance corrections, and still no balance. Version 1, the format
 > shown below, is refused. Everything else this record decided stands. The body is unchanged.
+>
+> **Note, 2026-09-27, later the same day.** The file format is **version 3** since the backing
+> increment, [ADR 0009](0009-movements-are-entries.md). It adds a backing on each category, the
+> movements MoneyBud made for categories, and `settledThrough`. Version 2 is refused as well as
+> version 1. The stakeholder did not mind starting over, and one format read is one way in fewer.
 
 ## Context
 

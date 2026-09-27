@@ -14,6 +14,17 @@ public enum Marker
     Over,
 }
 
+/// <summary>
+/// One choice in a category row's <i>Staat op</i> list: an account, or <see cref="Tekst.NoBacking"/>
+/// for none (arc42 §12, <i>On screen: Staat op and Opgebouwd</i>).
+/// </summary>
+public sealed record BackingChoice(Account? Account)
+{
+    public string Text => Account?.Name ?? Tekst.NoBacking;
+
+    public override string ToString() => Text;
+}
+
 /// <summary>A category's row on the Overview: its <i>Budget</i>, what was spent, and <i>Remaining</i>.</summary>
 public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money Remaining, bool IsArchived)
 {
@@ -45,6 +56,43 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
 
     /// <summary>"plan: € 400,00", or null when the row shows no plan figure.</summary>
     public string? PlanText => PlanFigure is { } figure ? Tekst.PlanFigure(figure) : null;
+
+    /// <summary>
+    /// The category's <i>Accumulated</i> as the period shown sees it, on screen <i>Opgebouwd</i> (arc42
+    /// §12). Null for a category that is not backed, which shows none at all, not a zero.
+    /// </summary>
+    public Money? Accumulated { get; init; }
+
+    /// <summary>Below zero, <i>Accumulated</i> carries the one marker, badge <i>Rood</i>. Exactly zero does not.</summary>
+    public Marker AccumulatedMarker => Accumulated is { IsNegative: true } ? Marker.Over : Marker.None;
+
+    public bool IsAccumulatedBelowZero => AccumulatedMarker == Marker.Over;
+
+    /// <summary>"Opgebouwd: € 600,00" under the row's figures, or null for an unbacked category.</summary>
+    public string? AccumulatedText => Accumulated is { } accumulated ? Tekst.AccumulatedFigure(accumulated) : null;
+
+    /// <summary>The account backing the category, or null. Today's backing, whichever period is shown.</summary>
+    public Account? BackingAccount { get; init; }
+
+    /// <summary>The <i>Staat op</i> list: none, then every account in the strip's order.</summary>
+    public IReadOnlyList<BackingChoice> BackingChoices { get; init; } = [];
+
+    /// <summary>
+    /// What the <i>Staat op</i> list shows and sets. Choosing hands the category and the account to
+    /// the screen, which backs, re-points or unbacks it. A list writes back what it shows, and
+    /// nothing while its items are replaced: nothing is ignored here, and what it shows is ignored
+    /// by <see cref="MoneyBudApp.SetBacking"/>, which changes nothing for the backing already set.
+    /// </summary>
+    public BackingChoice? ChosenBacking
+    {
+        get => BackingChoices.FirstOrDefault(c => c.Account == BackingAccount);
+        set
+        {
+            if (value is not null) ChooseBacking?.Invoke(Name, value.Account);
+        }
+    }
+
+    internal Action<string, Account?>? ChooseBacking { get; init; }
 
     public bool IsOverBudget => Marker == Marker.Over;
     public string BudgetText => Tekst.Euro(Budget);
@@ -122,8 +170,14 @@ public sealed record PeriodOverview(
     public string? RingHint => Ring.IsEmpty ? Tekst.EmptyRing : null;
 
     /// <param name="renaming">The name of the category being renamed, if any, whose row shows a text box.</param>
-    public static PeriodOverview Of(Ledger ledger, BudgetPeriod period, string? renaming = null)
+    /// <param name="backingChoices">The <i>Staat op</i> list every row offers; made afresh when not given.</param>
+    /// <param name="chooseBacking">What choosing in a row's <i>Staat op</i> list does; nothing when not given.</param>
+    public static PeriodOverview Of(
+        Ledger ledger, BudgetPeriod period, string? renaming = null,
+        IReadOnlyList<BackingChoice>? backingChoices = null, Action<string, Account?>? chooseBacking = null)
     {
+        var choices = backingChoices ?? BackingChoicesOf(ledger);
+
         var offer = ledger.PlanOfferedIn(period);
 
         // The display rule decides which categories are listed, in the order they were added.
@@ -145,6 +199,10 @@ public sealed record PeriodOverview(
                 CanDelete = ledger.CanDelete(c.Name),
                 IsRenaming = c.Name == renaming,
                 PlanFigure = offer?.FigureFor(c),
+                Accumulated = ledger.AccumulatedFor(c.Name, period),
+                BackingAccount = ledger.BackingOf(c.Name),
+                BackingChoices = choices,
+                ChooseBacking = chooseBacking,
             })
             .OrderByDescending(r => r.Budget.Cents)
             .ThenByDescending(r => r.PlanFigure?.Cents ?? 0)
@@ -171,6 +229,13 @@ public sealed record PeriodOverview(
 
         string? NameUnlessPool(Account account) => account == ledger.PoolAccount ? null : account.Name;
     }
+
+    /// <summary>
+    /// The <i>Staat op</i> list: "—" for none, then the accounts in the strip's order, the pool
+    /// account first — every account can back a category, the pool account included (§12).
+    /// </summary>
+    public static IReadOnlyList<BackingChoice> BackingChoicesOf(Ledger ledger) =>
+        [new BackingChoice(null), .. ledger.Accounts.Select(a => new BackingChoice(a))];
 
     /// <summary>
     /// Newest date first, and on the same date newest recorded first (§12). The ledger lists in

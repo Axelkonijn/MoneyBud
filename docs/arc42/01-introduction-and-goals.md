@@ -91,6 +91,12 @@ and expense on an account, net worth on screen, and transfers between accounts. 
 question above, "how am I doing?", has an answer on screen for the first time. A balance is worked out
 from the entries, never stored ([ADR 0008](../decisions/0008-balance-is-worked-out.md)). Backing a
 category with an account comes in the next increment, and the end-of-period sweep after that.
+**Backing is built**, in the tenth increment (settled, specified and built on 2026-09-27;
+[§12](12-glossary.md), *Backing and Accumulated*): one backing account per category or none,
+assigning to a backed category really moving money, and its *Accumulated* (*Opgebouwd*) shown on its
+row. So a savings goal now has progress on screen, the figure the "moving out" goal above is measured
+against. The money MoneyBud moves is written as entries, never as balances
+([ADR 0009](../decisions/0009-movements-are-entries.md)). The end-of-period sweep is next.
 
 ## 1.2 Quality Goals
 

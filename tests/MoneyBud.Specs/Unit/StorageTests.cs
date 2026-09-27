@@ -33,7 +33,9 @@ public sealed class StorageTests : IDisposable
     /// A ledger with one of everything that has to survive: an archived category, a renamed one
     /// and a new one on its old name, a budget taken back to zero, a budget in the next period, an
     /// expense with no label, a future-dated income, and a removed entry above the rest, so the
-    /// last id issued is not the largest one kept.
+    /// last id issued is not the largest one kept. Since backing: a category backed, re-pointed, and
+    /// one backed by the pool account, with money moved every way, and money planned for the next
+    /// period that has not moved yet.
     /// </summary>
     private Ledger Everything()
     {
@@ -53,6 +55,19 @@ public sealed class StorageTests : IDisposable
         ledger.AddCategory("Groceries");
         ledger.RecordExpense(12.50m, "Groceries", Today, "Kiosk");
         ledger.ArchiveCategory("Magazines");
+
+        ledger.AddAccount("Deposit", 0m);
+        ledger.AddAccount("Broker", null);
+        ledger.AddCategory("Savings");
+        ledger.AddCategory("Holiday");
+        ledger.SetBacking("Savings", ledger.AccountNamed("Deposit"));
+        ledger.Assign(300m, "Savings", ledger.CurrentPeriod);
+        ledger.Assign(-20m, "Savings", ledger.CurrentPeriod);
+        ledger.Assign(200m, "Savings", ledger.Calendar.Next(ledger.CurrentPeriod));
+        ledger.SetBacking("Savings", ledger.AccountNamed("Broker"));
+        ledger.SetBacking("Holiday", ledger.PoolAccount);
+        ledger.Assign(50m, "Holiday", ledger.CurrentPeriod);
+
         var removed = ledger.RecordExpense(3.50m, "Food", Today, "Coffee").Expense!;
         ledger.RemoveExpense(removed);
         return ledger;
@@ -69,7 +84,7 @@ public sealed class StorageTests : IDisposable
         Assert.Equal(text, LedgerJson.Write(restored.ToSnapshot()));
 
         var now = restored.CurrentPeriod;
-        Assert.Equal(["Food", "Hobby", "Groceries"], restored.CategoriesOffered.Select(c => c.Name));
+        Assert.Equal(["Food", "Hobby", "Groceries", "Savings", "Holiday"], restored.CategoriesOffered.Select(c => c.Name));
         Assert.Equal(["Magazines"], restored.ArchivedCategories.Select(c => c.Name));
         Assert.Equal(Money.FromCents(40000), restored.BudgetFor("Food", now));
         Assert.Equal(Money.FromCents(35000), restored.BudgetFor("Food", restored.Calendar.Next(now)));
@@ -80,7 +95,35 @@ public sealed class StorageTests : IDisposable
             [(3, "Albert Heijn", 3215L, "Food"), (5, "Kiosk", 1250L, "Groceries")],
             restored.ExpensesIn(now).Select(e => (e.Id, e.Label, e.Amount.Cents, e.Category.Name)));
         Assert.Null(Assert.Single(restored.ExpensesIn(restored.Calendar.Previous(now))).Label);
-        Assert.Equal(Money.FromCents(190000), restored.UnassignedIn(restored.Calendar.Next(now)) + Money.FromCents(35000));
+        Assert.Equal(Money.FromCents(190000), restored.UnassignedIn(restored.Calendar.Next(now)) + Money.FromCents(55000));
+
+        var broker = restored.AccountNamed("Broker")!;
+        var deposit = restored.AccountNamed("Deposit")!;
+        Assert.Equal(broker, restored.BackingOf("Savings"));
+        Assert.Equal(restored.PoolAccount, restored.BackingOf("Holiday"));
+        Assert.Null(restored.BackingOf("Food"));
+        Assert.Equal(Money.FromCents(28000), restored.BalanceOf(broker));
+        Assert.Equal(Money.Zero, restored.BalanceOf(deposit));
+        Assert.Equal(Money.FromCents(28000), restored.AccumulatedFor("Savings", now));
+        Assert.Equal(Money.FromCents(48000), restored.AccumulatedFor("Savings", restored.Calendar.Next(now)));
+        Assert.Equal(Money.FromCents(5000), restored.AccumulatedFor("Holiday", now));
+        Assert.Equal(
+            [MovementReason.Repointed, MovementReason.Assigned, MovementReason.Assigned],
+            restored.HistoryOf(deposit).OfType<Movement>().Select(m => m.Reason));
+    }
+
+    [Fact]
+    public void Money_planned_for_a_later_period_still_moves_on_its_day_after_starting_again()
+    {
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(LedgerJson.Write(Everything().ToSnapshot()))!, clock);
+        var april = restored.Calendar.Next(restored.CurrentPeriod);
+
+        clock.Now = new DateTimeOffset(april.FirstDay.AddDays(4).ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero);
+
+        Assert.True(restored.Settle());
+        var moved = Assert.Single(restored.HistoryOf(restored.AccountNamed("Broker")!).OfType<Movement>(), m => m.Date == april.FirstDay);
+        Assert.Equal(Money.FromCents(20000), moved.Amount);
+        Assert.False(restored.Settle());
     }
 
     [Fact]
@@ -90,8 +133,8 @@ public sealed class StorageTests : IDisposable
 
         var next = restored.RecordExpense(1m, "Food", Today).Expense!;
 
-        // Coffee was 6, and removed: 6 is still never issued again.
-        Assert.Equal(7, next.Id);
+        // Coffee was 14, and removed: 14 is still never issued again.
+        Assert.Equal(15, next.Id);
     }
 
     [Fact]
@@ -122,13 +165,20 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 1, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 3, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 2", "\"version\": 3") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 2", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 2", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 2,", "") },
+        { "a newer version", Valid().Replace("\"version\": 3", "\"version\": 4") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 3", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 3", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 3", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 3,", "") },
+        { "no movements", Valid().Replace("\"movements\"", "\"bewegingen\"") },
+        { "no day settled through", Valid().Replace("\"settledThrough\"", "\"verrekendTot\"") },
+        { "a category without its backing", Valid().Replace("\"backing\": null", "\"steun\": null") },
+        { "a backing without its marks", Valid().Replace("\"hereSince\"", "\"hierSinds\"") },
+        { "a movement for a reason this version does not know", Valid().Replace("\"reason\": \"backed\"", "\"reason\": \"swept\"") },
+        { "a movement in a direction written as a number", Valid().Replace("\"direction\": \"in\"", "\"direction\": 0") },
         { "no accounts", Valid().Replace("\"accounts\"", "\"rekeningen\"") },
         { "no pool account", Valid().Replace("\"poolAccount\"", "\"hoofdrekening\"") },
         { "entries naming no account", Valid().Replace("\"account\":", "\"rekening\":") },
@@ -144,7 +194,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_2_document_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_3_document_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -158,8 +208,15 @@ public sealed class StorageTests : IDisposable
         ledger.RecordIncome(1832.45m, "Salaris", Today);
         ledger.Assign(400m, "Groceries", ledger.CurrentPeriod);
         ledger.RecordExpense(32.15m, "Groceries", Today, "Albert Heijn");
+        ledger.AddAccount("Deposit", 0m);
+        ledger.AddCategory("Savings");
+        ledger.Assign(100m, "Savings", ledger.CurrentPeriod);
+        ledger.SetBacking("Savings", ledger.AccountNamed("Deposit"));
         var text = LedgerJson.Write(ledger.ToSnapshot());
         Assert.NotNull(LedgerJson.Read(text));
+        Assert.Contains("\"backing\": null", text);
+        Assert.Contains("\"reason\": \"backed\"", text);
+        Assert.Contains("\"direction\": \"in\"", text);
         return text;
     }
 
@@ -181,9 +238,13 @@ public sealed class StorageTests : IDisposable
                 IReadOnlyList<ExpenseSnapshot>? expenses = null, IReadOnlyList<IncomeSnapshot>? incomes = null,
                 int last = 2, IReadOnlyList<AccountSnapshot>? accounts = null, int pool = 1,
                 IReadOnlyList<TransferSnapshot>? transfers = null,
-                IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null) =>
+                IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null,
+                IReadOnlyList<MovementSnapshot>? movements = null) =>
                 new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
-                    accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? []);
+                    accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today);
+
+            MovementSnapshot movement = new(1, Today, 1, 1, 2, Money.FromCents(100), MovementReason.Assigned, MovementDirection.In);
+            BackingSnapshot backing = new(2, new EntryMark(Today, 1), new EntryMark(Today, 1));
 
             return new()
             {
@@ -221,6 +282,17 @@ public sealed class StorageTests : IDisposable
                 { "an id never issued", With(expenses: [expense with { Id = 3 }]) },
                 { "an id of zero", With(expenses: [expense with { Id = 0 }]) },
                 { "a last id below zero", With(last: -1) },
+                { "a movement for no category", With(movements: [movement with { Category = 9 }]) },
+                { "a movement from no account", With(movements: [movement with { From = 9 }]) },
+                { "a movement of zero", With(movements: [movement with { Amount = Money.Zero }]) },
+                { "an id used by a movement and an expense", With(expenses: [expense], movements: [movement]) },
+                { "a backing movement going out", With(movements: [movement with { Reason = MovementReason.Backed, Direction = MovementDirection.Out }]) },
+                { "an unbacking movement going in", With(movements: [movement with { Reason = MovementReason.Unbacked }]) },
+                { "an assignment moved along", With(movements: [movement with { Direction = MovementDirection.Along }]) },
+                { "a re-pointing from an account to itself", With(movements: [movement with { To = 1, Reason = MovementReason.Repointed, Direction = MovementDirection.Along }]) },
+                { "a backing by no account", With(categories: [groceries with { Backing = backing with { Account = 9 } }], last: 3) },
+                { "a backing marked with an entry's id", With(categories: [groceries with { Backing = backing }], expenses: [expense]) },
+                { "a backing marked with an id never issued", With(categories: [groceries with { Backing = backing with { HereSince = new EntryMark(Today, 5) } }]) },
             };
         }
     }
@@ -240,7 +312,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [new(1, new DateOnly(9999, 12, 1), Money.FromCents(100))], [], [], 0,
-            [new(1, "Bank")], 1, [], []);
+            [new(1, "Bank")], 1, [], [], [], Today);
 
         Assert.Throws<InvalidDataException>(() => Ledger.FromSnapshot(snapshot, clock));
     }
@@ -252,7 +324,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [], [new(1, Money.FromCents(100), Today.AddDays(5), 1, null, 1)], [], 1,
-            [new(1, "Bank")], 1, [], []);
+            [new(1, "Bank")], 1, [], [], [], Today);
 
         Assert.Single(Ledger.FromSnapshot(snapshot, clock).ExpensesIn(new BudgetPeriod(Today, Today.AddDays(30))));
     }
@@ -461,6 +533,59 @@ public sealed class StorageTests : IDisposable
         Assert.Equal(1, store.Saves);
         Assert.True(store.Disposed);
     }
+
+    // Backing (ADR 0009): money planned for a period that has begun moves when MoneyBud opens and on
+    // the minute's tick, and what moved is kept; a tick with nothing to move keeps nothing.
+    [Fact]
+    public void Money_moved_on_opening_or_on_a_tick_is_kept_and_a_tick_with_nothing_to_move_keeps_nothing()
+    {
+        var store = new CountingStore();
+        var ledger = new Ledger(clock, "Bank");
+        ledger.AddCategory("Savings");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        ledger.SetBacking("Savings", deposit);
+        var april = ledger.Calendar.Next(ledger.CurrentPeriod);
+        var may = ledger.Calendar.Next(april);
+        ledger.Assign(40m, "Savings", april);
+        ledger.Assign(60m, "Savings", may);
+
+        clock.Now = Noon(april.FirstDay);
+        var app = new MoneyBudApp(ledger, store);
+        Assert.Equal(1, store.Saves);
+
+        app.Tick();
+        Assert.Equal(1, store.Saves);
+
+        clock.Now = Noon(may.FirstDay);
+        app.Tick();
+        Assert.Equal(2, store.Saves);
+        Assert.Equal(Money.FromCents(10000), ledger.BalanceOf(deposit));
+    }
+
+    // A list on screen writes back what it shows after every redraw. Choosing the backing already
+    // set must leave the screen as the act before it left it: nothing said, nothing kept.
+    [Fact]
+    public void Choosing_the_backing_already_set_says_nothing_keeps_nothing_and_leaves_what_was_said()
+    {
+        var store = new CountingStore();
+        var ledger = new Ledger(clock, "Bank");
+        ledger.AddCategory("Savings");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        var app = new MoneyBudApp(ledger, store);
+        app.SetBacking("Savings", deposit);
+        var said = app.Notice;
+        Assert.Equal(1, store.Saves);
+
+        var row = Assert.Single(app.Overview.Rows);
+        row.ChosenBacking = row.ChosenBacking;
+        row.ChosenBacking = null;
+        app.SetBacking("Savings", deposit);
+
+        Assert.Same(said, app.Notice);
+        Assert.Equal(1, store.Saves);
+    }
+
+    private static DateTimeOffset Noon(DateOnly day) => new(day.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero);
 
     private sealed class CountingStore : ILedgerStore
     {

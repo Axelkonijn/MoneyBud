@@ -90,6 +90,10 @@ public sealed class SharedSteps(SpecContext context)
             case SpecContext.PoolMade made:
                 Assert.NotNull(made.Account);
                 break;
+            case SetBackingResult backing:
+                // Never refused and never confirmed: it went through, or changed nothing.
+                Assert.NotNull(backing.Category);
+                break;
             default:
                 throw NothingAttempted();
         }

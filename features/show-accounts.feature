@@ -23,8 +23,10 @@
 #   - An income dated in the future counts in its period's Unassigned from the moment it is recorded,
 #     as before, but reaches its account's Balance, and so net worth, only on its date. That is where
 #     net worth and Unassigned disagree by design (glossary: "The central distinction").
-#   - NO CATEGORY IS BACKED in this increment. Assigning is planning only and moves no money, so it
-#     changes no Balance, even to a category that shares its name with an account.
+#   - Assigning to an UNBACKED category is planning only and moves no money, so it changes no
+#     Balance, even to a category that shares its name with an account. Every category starts out
+#     unbacked. Assigning to a BACKED category moves money from the pool account to its backing
+#     account: that came with the backing increment (back-a-category.feature and the files it names).
 #   - An account whose Balance is BELOW ZERO is OVERDRAWN. It is shown with the same marker as Over
 #     budget and Over-assigned, with a badge of its own that reads "Rood". It is never blocked and
 #     never warned about. Exactly zero is not overdrawn. The badge was ruled by the stakeholder on
@@ -32,12 +34,13 @@
 #   - NET WORTH BELOW ZERO carries THE SAME MARKER, badge "Rood" too. Exactly zero does not. Ruled by
 #     the stakeholder on 2026-09-27.
 #   - Clicking an account opens its HISTORY, NEWEST FIRST: its starting balance, its balance
-#     corrections, its transfers, and the incomes and expenses on it. It covers EVERY PERIOD, not
-#     the one on screen. In the history, TRANSFERS CAN BE CHANGED AND REMOVED, and A BALANCE
-#     CORRECTION (a starting balance included) CAN BE REMOVED. INCOMES AND EXPENSES ARE LISTED THERE
-#     BUT NOT CHANGED OR REMOVED THERE: that is done from the Overview's lists only, as before. Ruled
-#     by the stakeholder on 2026-09-27. The Overview's income and expense lists stay incomes and
-#     expenses only.
+#     corrections, its transfers, and the incomes and expenses on it, and, since the backing
+#     increment, the money MoneyBud moved on a category's behalf (show-moved-money.feature). It
+#     covers EVERY PERIOD, not the one on screen. In the history, TRANSFERS CAN BE CHANGED AND
+#     REMOVED, and A BALANCE CORRECTION (a starting balance included) CAN BE REMOVED. INCOMES AND
+#     EXPENSES ARE LISTED THERE BUT NOT CHANGED OR REMOVED THERE: that is done from the Overview's
+#     lists only, as before. Ruled by the stakeholder on 2026-09-27. The Overview's income and expense
+#     lists stay incomes and expenses only.
 #   - An income or expense row on the Overview NAMES ITS ACCOUNT ONLY WHEN THAT IS NOT THE POOL
 #     ACCOUNT. A row reads the pool account as it is when shown, so after another account is made
 #     the pool, rows on the old pool gain its name and rows on the new one lose theirs (derived).
@@ -49,7 +52,9 @@
 # START comes with is "Betaalrekening" (start-moneybud.feature), and no scenario outside the
 # first-start ones depends on it. Every income and expense a scenario records without naming an
 # account is on the pool account, which is how the scenarios of earlier increments stay as they
-# were.
+# were. The one exception is an expense against a BACKED category, which starts out on its backing
+# account (spend-against-a-backed-category.feature). No scenario outside the backing files backs a
+# category.
 #
 # Reading the steps. These are shared by all six accounts files:
 #   - "I have an account "X" with a starting balance of N euro" means X was added earlier, with
@@ -65,7 +70,8 @@
 #   - "I have deleted the account "X"" is manage-accounts.feature's act, done earlier, as a Given.
 #   - "... on the account "X"", at the end of a step that records an income or an expense, means
 #     that account was chosen for it. Without it, the entry is on the account a new entry starts out
-#     on, which is the pool account.
+#     on, which is the pool account, or, for an expense against a backed category, its backing
+#     account.
 #   - "yesterday" is the day before today. Every scenario that uses it fixes today as the last day
 #     of the current budget period, so yesterday is in the current budget period too.
 #   - "the balance of "X" should be N euro" is the Balance the strip shows for X. "net worth should
@@ -264,9 +270,9 @@ Feature: See my accounts and my net worth
     And net worth should be 0.00 euro
     And net worth should not be marked below zero
 
-  # No category is backed yet, so assigning moves no money, even to the category Savings while there
-  # is an account Savings. The two share a name and nothing else: they are different dimensions.
-  Scenario: Assigning to a category moves no money, so no balance changes
+  # Savings is not backed, so assigning to it moves no money, even while there is an account Savings.
+  # The two share a name and nothing else: they are different dimensions.
+  Scenario: Assigning to an unbacked category moves no money, so no balance changes
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Savings" with a starting balance of 5000 euro
     And I have a category "Savings"
@@ -282,9 +288,10 @@ Feature: See my accounts and my net worth
   # An overdrawn account carries the marker, and nothing stops it
   #
   # Reachable in this increment by an expense or a transfer out of an account that has not got the
-  # money, and by a negative starting balance (add-an-account.feature) or balance correction. Not by
-  # assigning (above). Exactly zero is the account spent down to nothing, not overdrawn, the same
-  # line Over budget draws.
+  # money, and by a negative starting balance (add-an-account.feature) or balance correction. Since
+  # the backing increment, also by assigning to a backed category, and by backing, unbacking or
+  # re-pointing a category (back-a-category.feature, assign-to-a-backed-category.feature). Exactly
+  # zero is the account spent down to nothing, not overdrawn, the same line Over budget draws.
   # ----------------------------------------------------------------------------------
 
   Scenario Outline: An account below zero is shown as overdrawn, and exactly zero is not

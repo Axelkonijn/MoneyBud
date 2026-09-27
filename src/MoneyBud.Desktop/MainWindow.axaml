@@ -388,6 +388,11 @@
                 <Border Classes="marker" IsVisible="{Binding IsOverBudget}" HorizontalAlignment="Center">
                   <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
                 </Border>
+                <TextBlock Text="{Binding AccumulatedText}" Classes="caption" HorizontalAlignment="Center"
+                           IsVisible="{Binding AccumulatedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <Border Classes="marker" IsVisible="{Binding IsAccumulatedBelowZero}" HorizontalAlignment="Center">
+                  <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
+                </Border>
               </StackPanel>
               </Panel>
             </StackPanel>
@@ -424,7 +429,9 @@
 
           <!-- One row per category the period shows, in the ring's order. Under each name, its
                acts: Hernoemen always, Archiveren while in use, Verwijderen only when it has no
-               history anywhere — two separate buttons, so nothing is decided for the user. -->
+               history anywhere — two separate buttons, so nothing is decided for the user — and
+               the Staat op list, which backs, re-points or unbacks it. A backed row shows
+               Opgebouwd under its figures (arc42 §12, On screen: Staat op and Opgebouwd). -->
           <Grid Grid.Row="3" ColumnDefinitions="18,*,104,86,92,90" Margin="0,0,0,4">
             <TextBlock Grid.Column="1" Classes="caption" Text="{x:Static p:Tekst.Category}" />
             <TextBlock Grid.Column="2" Classes="caption" Text="{x:Static p:Tekst.Budget}" TextAlignment="Right" />
@@ -435,10 +442,10 @@
             <ItemsControl ItemsSource="{Binding Overview.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="p:CategoryRow">
-                  <Grid ColumnDefinitions="18,*,104,86,92,90" Margin="0,3">
+                  <Grid ColumnDefinitions="18,*,104,86,92,90" RowDefinitions="Auto,Auto" Margin="0,3">
                     <Ellipse Width="10" Height="10" VerticalAlignment="Center"
                              Fill="{Binding SliceIndex, Converter={x:Static d:SliceColours.Swatch}}" />
-                    <StackPanel Grid.Column="1" Spacing="1">
+                    <StackPanel Grid.Column="1" Grid.RowSpan="2" Spacing="1">
                       <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsRenaming}">
                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                         <TextBlock Text="{x:Static p:Tekst.Archived}" Classes="caption"
@@ -454,6 +461,16 @@
                         <Button Classes="link" Content="{x:Static p:Tekst.Delete}" IsVisible="{Binding CanDelete}"
                                 Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).DeleteCommand}"
                                 CommandParameter="{Binding Name}" />
+                        <TextBlock Text="{x:Static p:Tekst.BackingAccount}" Classes="caption"
+                                   VerticalAlignment="Center" Margin="8,0,4,0" />
+                        <ComboBox ItemsSource="{Binding BackingChoices}" SelectedItem="{Binding ChosenBacking}"
+                                  MinWidth="90" MinHeight="0" Height="24" FontSize="12" Padding="6,0" Margin="0" VerticalAlignment="Center">
+                          <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="p:BackingChoice">
+                              <TextBlock Text="{Binding Text}" />
+                            </DataTemplate>
+                          </ComboBox.ItemTemplate>
+                        </ComboBox>
                       </StackPanel>
 
                       <!-- Renaming: the name becomes a box, which starts out holding it. -->
@@ -478,6 +495,13 @@
                     <Border Grid.Column="5" Classes="marker" IsVisible="{Binding IsOverBudget}"
                             HorizontalAlignment="Center">
                       <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
+                    </Border>
+                    <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding AccumulatedText}"
+                               TextAlignment="Right" Classes="caption"
+                               IsVisible="{Binding AccumulatedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                    <Border Grid.Row="1" Grid.Column="5" Classes="marker" IsVisible="{Binding IsAccumulatedBelowZero}"
+                            HorizontalAlignment="Center">
+                      <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
                     </Border>
                   </Grid>
                 </DataTemplate>

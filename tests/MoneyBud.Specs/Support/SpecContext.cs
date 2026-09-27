@@ -326,6 +326,8 @@ public sealed class SpecContext : IDisposable
 
     public void RecordPoolMade(Account account) => LastAttempt = new PoolMade(account);
 
+    public void Record(SetBackingResult result) => LastAttempt = result;
+
     public sealed record AccountDeleted(Account Account);
 
     public sealed record PoolMade(Account Account);

@@ -253,10 +253,10 @@ public sealed class AccountSteps(SpecContext context)
         {
             Assert.Equal(Ledger.Date(row["date"]), line.Date);
             Assert.Equal(row["entry"], KindName(line.Kind));
-            Check("category", (line.Entry as Expense)?.Category.Name);
+            Check("category", line.Entry switch { Expense e => e.Category.Name, Movement m => m.Category.Name, _ => null });
             Check("label", line.Entry switch { Expense e => e.Label, Income i => i.Label, _ => null });
-            Check("from", (line.Entry as Transfer)?.From.Name);
-            Check("to", (line.Entry as Transfer)?.To.Name);
+            Check("from", line.Entry switch { Transfer t => t.From.Name, Movement m => m.From.Name, _ => null });
+            Check("to", line.Entry switch { Transfer t => t.To.Name, Movement m => m.To.Name, _ => null });
             CheckMoney("amount", line.Amount);
             CheckMoney("balance", line.Balance);
             CheckMoney("difference", line.Difference);
@@ -601,6 +601,7 @@ public sealed class AccountSteps(SpecContext context)
         HistoryKind.Transfer => "transfer",
         HistoryKind.Income => "income",
         HistoryKind.Expense => "expense",
+        HistoryKind.Movement => "movement",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
     };
 

@@ -30,11 +30,16 @@ public sealed record LedgerSnapshot(
     IReadOnlyList<AccountSnapshot> Accounts,
     int PoolAccount,
     IReadOnlyList<TransferSnapshot> Transfers,
-    IReadOnlyList<BalanceCorrectionSnapshot> BalanceCorrections);
+    IReadOnlyList<BalanceCorrectionSnapshot> BalanceCorrections,
+    IReadOnlyList<MovementSnapshot> Movements,
+    DateOnly SettledThrough);
 
 public sealed record AccountSnapshot(int Key, string Name);
 
-public sealed record CategorySnapshot(int Key, string Name, bool IsArchived);
+public sealed record CategorySnapshot(int Key, string Name, bool IsArchived, BackingSnapshot? Backing = null);
+
+/// <summary>A category's backing: the account's key and the two marks (<see cref="Domain.Backing"/>).</summary>
+public sealed record BackingSnapshot(int Account, EntryMark AccumulatingSince, EntryMark HereSince);
 
 /// <summary>
 /// A category's <i>Budget</i> in the period that starts on <see cref="PeriodStart"/>. A budget of
@@ -49,3 +54,7 @@ public sealed record IncomeSnapshot(int Id, Money Amount, DateOnly Date, string 
 public sealed record TransferSnapshot(int Id, Money Amount, DateOnly Date, int From, int To);
 
 public sealed record BalanceCorrectionSnapshot(int Id, DateOnly Date, int Account, Money Balance, bool IsStartingBalance);
+
+public sealed record MovementSnapshot(
+    int Id, DateOnly Date, int Category, int From, int To, Money Amount,
+    MovementReason Reason, MovementDirection Direction);

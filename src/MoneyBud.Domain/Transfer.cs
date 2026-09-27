@@ -13,7 +13,7 @@ namespace MoneyBud.Domain;
 /// <see cref="To"/>, which are always two different accounts. It may not be dated in the future:
 /// it reports money that has moved.</para>
 ///
-/// <para>Backing and the sweep will later make movements of this same kind on MoneyBud's own
-/// initiative. This is the user making one.</para>
+/// <para>Backing makes moves of the same shape on MoneyBud's own initiative, as a
+/// <see cref="Movement"/>, and the sweep will too. This is the user making one.</para>
 /// </summary>
 public sealed record Transfer(int Id, Money Amount, DateOnly Date, Account From, Account To) : IEntry;

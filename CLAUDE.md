@@ -47,6 +47,7 @@ quietly.
 | `docs/stakeholder/` | **Read these first.** Stakeholder interviews, in Dutch, verbatim after cleanup. Source material — never rewritten. New wishes go in a new round, not by editing old ones. Feedback given in English is translated, and the round says so at the top |
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
+| `docs/plans/` | An increment's implementation plan, when it is too long to keep here. Written at stage 4, approved at the second gate |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
 | `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
 | `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
@@ -89,7 +90,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1183 passing: 734 scenario cases, 449 developer unit tests
+dotnet test  MoneyBud.slnx     # 1331 passing: 822 scenario cases, 509 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -97,11 +98,11 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-27, after increment 9 (accounts and net worth) was built, reviewed, documented, tried and approved by Axel, and merged into `main`. Update this when a stage completes._
+_Last updated 2026-09-27, after increment 10 (backing) was tried by Axel and merged into `main`. Next: the sweep, from stage 1. Update this when a stage completes._
 
-**Done: all five stages, nine times — for `record-expense`, `record-income`, categories,
-assigning, the desktop UI, correcting things, keeping data, opening a period, and accounts.** All
-nine are built and green, tried by Axel and merged into `main`.
+**Done: all five stages, ten times — for `record-expense`, `record-income`, categories,
+assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, and
+backing.** All ten are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -145,8 +146,10 @@ line), `MoneyBudStart`, `PeriodOverview` and `Ring`, the entry forms (with their
 increment 9: `Account`, `NameRule` (the name rule, shared; `CategoryName` forwards to it), `IEntry`,
 `Transfer`, `BalanceCorrection` and the results in `AccountResults.cs`; `Ledger.BalanceOf`,
 `DifferenceOf`, `NetWorth`, `HistoryOf`, `Accounts`/`PoolAccount`; `AccountLine`, `HistoryLine`,
-`AccountForm` and `TransferForm` in Presentation; file format version 2 (ADR 0008). No backed
-categories yet — the next increment.
+`AccountForm` and `TransferForm` in Presentation; file format version 2 (ADR 0008). Since increment
+10: `Movement` (with `MovementReason`, `MovementDirection`), `EntryMark`, `Backing`, `SetBackingResult`;
+`Ledger.SetBacking`, `BackingOf`, `ThereFor`, `AccumulatedFor`, `Settle`; `BackingChoice` and the
+row's `Accumulated`/`ChosenBacking` in Presentation; file format version 3 (ADR 0009).
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -420,6 +423,43 @@ window with every test green. Keep the rule: plain values, null ignored, default
 that change them (`MakePool`, `AddAccount`), and the forms told **after** the redraw. Check a change
 here with a headless run of the window.
 
+**Increment 10 — backing and *Accumulated* — is done and green**, built on branch
+`increment-10-backing` (2026-09-27), tried by Axel the same day ("voor de rest ziet het er goed uit")
+and merged into `main`. His one remark was that the *Staat op* caption did not line up with its list:
+the app's style gave the `ComboBox` a margin, now `Margin="0"`, which a measured headless run
+confirmed.
+
+- **Stage 1–2 done** on 2026-09-27: every ruling, follow-up and derivation is in §12 *Backing and
+  Accumulated* — read it first. In one line: one backing account per category; assigning moves money
+  pool → backing account on the day assigned (a later period's on its first day, to whatever backs it
+  then); backing moves this period's unspent *Remaining*; unbacking and re-pointing move "what is
+  there for it" (Axel's own revision); *Opgebouwd* counts from the last backing, up to the period on
+  screen; on screen *Staat op* and *Opgebouwd*.
+- **Stage 3 done:** five new feature files (`back-a-category`, `assign-to-a-backed-category`,
+  `spend-against-a-backed-category`, `show-accumulated`, `show-moved-money`; 62 scenarios, 84 cases)
+  plus additions to `start-moneybud` and `keep-data` and comment edits to five approved files —
+  **approved by Axel at the first gate** on 2026-09-27.
+- **Stage 4 done:** [the plan](docs/plans/increment-10-backing.md) **approved at the second gate** on
+  2026-09-27. D1 as recommended ([ADR 0009](docs/decisions/0009-movements-are-entries.md)): every move
+  is a stored `Movement`, and planned money is written by `Ledger.Settle` on the period's first day.
+  D2 Axel left open ("I dont mind starting over"): **version-2 data is refused**, not read.
+- **Stage 5 done except Axel's try.** Built the same day. `spec-reviewer` found no faked scenario and
+  no money defect, and three low items. Two are fixed: money moved from the pool account to itself no
+  longer blocks deleting a category, and the "no Accumulated" step now requires the row. The third,
+  picking the account already shown not sticking, Axel accepted. A headless run of the real window
+  passed: list write-backs move no money and say nothing, and the form's account follows the category.
+- **Ruled at the build** (all in §12 *Backing: chosen in the build*, each on the recommendation):
+  when the pool account backs a category, re-pointing takes its money along, which overrides the
+  plan's wording. A category with money moved for it **between two accounts** cannot be deleted. **An
+  archived backed category is shown in the current and later periods while its Opgebouwd there is not
+  zero**, with one new scenario in `show-accumulated`. One line of `assign-to-a-backed-category` was
+  amended to assert that a row is hidden.
+
+**Watch out for:** every act that changes the ledger calls `Ledger.Settle()` first, which writes the
+money planned for any period that has begun. The screen settles on opening and on every `Tick`. A new
+mutator on `Ledger` must call it too. `SetBacking` to the backing already set must stay a complete
+no-op (no settle, no notice, no save): each row's *Staat op* list writes back on every redraw.
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code.
 Put questions to Axel as multiple choice with a recommendation (`AskUserQuestion`); that worked well
 for persistence and for opening a period.
@@ -430,10 +470,10 @@ Order agreed with Axel on 2026-09-26:
 2. **Persistence — done** (increment 7, above).
 3. **Opening a period — done** (increment 8, above).
 4. **Accounts and net worth — done** (increment 9, above).
-5. **Backing and *Accumulated* — start here, at stage 1.** Its first
-   question is already written down: §12 *A question for the backing increment* (what purpose money
-   the user already had carries).
-6. **The sweep** — after backing, which it depends on.
+5. **Backing and *Accumulated* — done** (increment 10, above).
+   **Start here in a new conversation: the sweep, from stage 1** — a conversation with Axel.
+6. **The sweep** — next. Its destination must be backed, which it now can be. The open question
+   about an income back-dated into a swept period (below) goes live with it.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:

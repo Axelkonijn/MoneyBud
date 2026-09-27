@@ -61,9 +61,26 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Twenty-six feature files exist. **All twenty-six are approved and bound, and every scenario in them
-passes**: 734 scenario cases, beside 449 developer unit tests, 1183 in all (2026-09-27). The latest,
-the accounts increment's six, were built with that increment.
+Thirty-one feature files exist. **All thirty-one are approved and bound, and every scenario in them
+passes**: 822 scenario cases, beside 509 developer unit tests, 1331 in all (2026-09-27). The latest,
+the backing increment's five, were built with that increment.
+
+The backing increment's five files — `back-a-category.feature`, `assign-to-a-backed-category.feature`,
+`spend-against-a-backed-category.feature`, `show-accumulated.feature` and `show-moved-money.feature`
+— were **approved at the scenario gate on 2026-09-27**, with scenarios added to
+`start-moneybud.feature` and `keep-data.feature` and header comments edited in five earlier files.
+They are bound since that increment was built, the same day, in `BackingSteps.cs`. Two changes came
+with the build, both approved by the stakeholder on 2026-09-27: one line of
+`assign-to-a-backed-category.feature` now asserts that an archived category pulled back to zero is
+not shown, instead of asking for the figure of a row no screen shows, and `show-accumulated.feature`
+gained a scenario for his ruling that an archived backed category is shown while money is built up
+for it.
+`back-a-category.feature` explains the steps the five share. The increment added an `accumulated`
+and an `accumulated marked` column to `overview.feature`'s categories-table step, an `accumulated`
+column to `point-at-a-slice.feature`'s slice step, and the entry kind `movement` to
+`show-accounts.feature`'s history step. That table's columns are now each checked on their own, so a
+table may give the Budget without the rest. Recording an expense in a step now goes through the
+expense form, so an account left unnamed is the one the form shows once the category is typed.
 
 The accounts increment's six files — `add-an-account.feature`, `record-on-an-account.feature`,
 `correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature` and
@@ -102,5 +119,6 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | Planning | `assign-to-category.feature`, `take-over-a-plan.feature` |
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
 | Accounts | `add-an-account.feature`, `record-on-an-account.feature`, `correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature`, `show-accounts.feature` — approved and bound 2026-09-27 |
+| Backing | `back-a-category.feature`, `assign-to-a-backed-category.feature`, `spend-against-a-backed-category.feature`, `show-accumulated.feature`, `show-moved-money.feature` — approved and bound 2026-09-27 |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |
