@@ -7,7 +7,8 @@ know regardless of which part of the system they're touching.
 ---
 
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
-built, since 2026-09-26. Opening a period is built, and appears in §8.1 and §8.4._
+built, since 2026-09-26. Opening a period, accounts and backing are built, and appear in §8.1, §8.3
+and §8.4._
 
 ## 8.1 Domain Model
 
@@ -37,7 +38,7 @@ Money handling is not repeated here. It is [§8.2](#82-money-handling) and
   ledger cannot have none. `Accounts` lists it first.
 - **Four entry kinds implement `IEntry`**: `Expense`, `Income`, `Transfer` and `BalanceCorrection`.
   They draw their ids from one counter, and the id is the recording order across kinds. A change
-  keeps the id.
+  keeps the id. **Five since the backing increment**, with `Movement` (next subsection).
 - **No balance is stored.** `BalanceOf` is the latest typed balance, by date then id, plus every
   entry on the account that it does not hold (`Holds`: dated before its day, or on its day with a
   lower id) and that is dated today or earlier. With no typed balance it is the plain sum. `NetWorth`,
@@ -50,8 +51,8 @@ Money handling is not repeated here. It is [§8.2](#82-money-handling) and
   carry one refusal each, in a fixed order, and nothing refuses for an overdraft. Misuse the screen
   cannot reach throws, as before: an account not in the ledger, deleting a used account or the pool,
   making the pool the pool.
-- **Backing is still absent, not stubbed.** There is no backing account on a category and no
-  *Accumulated* (the table below).
+- **Backing is built**, since the backing increment (2026-09-27), and is where the two dimensions
+  meet (next subsection). Until then this bullet read: "Backing is still absent, not stubbed."
 
 #### How this section read until 2026-09-27
 
@@ -80,6 +81,60 @@ money leaving the system has nowhere to leave from, which is the last row of
 written between the two said that how the balance ruling is expressed in the domain and kept on disk
 was for the plan. The plan answered it with ADR 0008.
 
+### Where the dimensions meet: backing, movements and settling
+
+Since the backing increment (2026-09-27; [§12](12-glossary.md), *Backing and Accumulated*;
+[ADR 0009](../decisions/0009-movements-are-entries.md)). The rulings are in §12. What the code adds
+to them:
+
+- **Money MoneyBud moves is an entry, not a change to a balance.** `Movement` is a fifth `IEntry`: a
+  date, the category, from, to, a positive amount, a `MovementReason` and a `MovementDirection`. It
+  is written on the day the money moves and never changed. So "no balance is stored" holds with an
+  automatic writer too: `BalanceOf` adds movements as it adds transfers. The **direction** is stored
+  because the accounts cannot say it. When the pool account backs a category, a movement goes from
+  the pool to the pool, and only what it was for says whether it adds to *Accumulated* or takes from
+  it.
+- **Settling is the one thing the ledger does because a period began.** `Ledger.Settle` writes the
+  money planned for each period that has begun since `settledThrough`, with the backing and pool
+  account of that day, and moves `settledThrough` to today. Every act that changes the ledger calls
+  it first. So "nothing acts when a period opens" (the carry-over row, below) is no longer true
+  without exception, and this is the exception. It is kept to one member with one piece of state,
+  and the sweep is meant to use the same step. The runtime is in [§6](06-runtime-view.md).
+- **Two figures, two questions, and neither stored.** `ThereFor` is location-side: what is in the
+  backing account for the category since that account became its backing, counting only expenses
+  paid from that account. `AccumulatedFor` is purpose-side: what has moved in since the category was
+  last backed, counting its expenses on any account, up to the period asked about, plus what is
+  planned but not yet settled. They differ on purpose ([§12](12-glossary.md), *Backing can be set,
+  changed or removed at any time*, follow-up). `ThereFor` counts movements by direction, so money
+  moved from the pool to the pool while the pool backed the category is still there for it, and
+  re-pointing takes it along. Ruled that way after the build, superseding the plan's wording
+  ([§12](12-glossary.md), *Backing: ruled after the build*, ruling 1).
+- **One "after this" rule, `EntryMark`**, a date and an id. A balance correction holds every entry not
+  after it ([ADR 0008](../decisions/0008-balance-is-worked-out.md)). The expenses that lower
+  *Accumulated* are those after the backing. `Backing` carries two marks, `AccumulatingSince` and
+  `HereSince`, because the two figures count from different moments: re-pointing resets only the
+  second. A mark draws its id from the entries' counter without being an entry, so it orders against
+  an expense recorded the same day.
+- **"Shows, never blocks" is held by the result type again.** `SetBackingResult` has no refusal. Its
+  `BackingOutcome` is `Backed`, `Repointed`, `Unbacked` or `Unchanged`, and it carries the movement,
+  if one was written. `Unchanged`, the backing already set, is recognised **before** settling. It
+  exists because the screen's lists write back what they show, and that must be safe, like an
+  unchanged save of an entry. A name that is no category, or an account from another ledger, throws:
+  both are picked from lists, so the user cannot reach them.
+- **`Assign` stays the only writer of a *Budget*, and gains a second write.** For a backed category in
+  the current period, it also writes one movement: the amount in, or for a negative amount the smaller
+  of what the clip let through and `ThereFor`, back out. A later period's budget moves only when that
+  period is settled.
+- **Used, and deletable, read the movements.** `CanDeleteAccount` is false while an account backs a
+  category or has a movement on it. `CanDelete` for a category is false while a movement between two
+  **different** accounts stands for it (`m.From != m.To`), and `DeleteCategory` removes its remaining
+  pool-to-pool movements with it. As first built, any movement blocked deleting; `spec-reviewer`
+  found that too broad, and the stakeholder ruled the narrower rule after the build. It extends
+  "history" for backing without bringing back "never touched" ([§12](12-glossary.md), *Backing:
+  ruled after the build*, ruling 2).
+- **`HasBudget` is not a fourth reader.** Settling and `AccumulatedFor` read the budgets' figures,
+  `> 0`, and do not call it (*The two layers meet in exactly one method*, below).
+
 ### The two layers meet in exactly one method
 
 §12's second distinction — the **plan** and the **actual** — is the one the code is arranged
@@ -99,7 +154,9 @@ own:
 - **Recording an expense never touches a budget, and assigning never touches an expense.**
   `RecordExpense` appends an `Expense` and does nothing else; `Assign` writes a budget and does
   nothing else. "Assigning spends nothing" and "spending does not re-plan" are both true because
-  neither operation can reach the other's storage.
+  neither operation can reach the other's storage. **Since the backing increment `Assign` also
+  writes a movement for a backed category**, which is location, not the actual layer: it still
+  touches no expense, and recording an expense still touches no budget and writes no movement.
 - **Recording an income touches neither layer.** `RecordIncome` appends an `Income` and stops.
   Because a budget is reachable only from `Assign` and an expense only from `RecordExpense`,
   *Recording income leaves every category's plan and spending untouched*
@@ -429,6 +486,12 @@ in the order they were added, so a category brought back keeps its first place. 
 from the clock on every call, so a period that was current becomes past the moment the next one
 begins, with nothing rebuilt around it.
 
+**Since backing, a third clause** (ruled after the build, 2026-09-27): an archived backed category
+is also shown in the current period and later ones while its *Accumulated* there is not zero. It is
+`|| (plannable && AccumulatedFor(c.Name, period) is { Cents: not 0 })`, so it reads the figure the
+row shows and nothing else. Keeping the rule in one query is what made this one line: the rows, the
+ring and the "shown" steps all follow it.
+
 **Why in the domain, and not in the view.** Which categories a period has anything to say about is a
 fact about the model, and it is the same fact for any view: a second screen, a mobile one, a report.
 How they are ordered on the Overview, largest *Budget* first, is the screen's, and lives in
@@ -499,18 +562,23 @@ is approved. **Carry-over** at period opening left when the opening-a-period inc
 `Ledger.PlanOfferedIn` and `Ledger.TakeOverPlan` exist, and
 [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature) is approved and green. It had
 been put out of the assigning increment's scope as a slice of its own. Its row said that nothing
-acts when a period opens, and that is still true: the offer is a state worked out whenever it is
-asked for, not an event handled at the boundary. **The location dimension** left when the accounts
+acts when a period opens, and that is still true of the offer: it is a state worked out whenever it
+is asked for, not an event handled at the boundary. **Since the backing increment one thing does act
+when a period begins**: settling, which writes that period's planned money for backed categories
+(*Where the dimensions meet*, above). **The location dimension** left when the accounts
 increment was built (2026-09-27): *Account*, *Location*, *Balance*, *Net worth*, *Overdrawn* and the
 *pool account* as a default, with *Transfer*, *Balance correction* and *Starting balance*, which
-arrived with it (*Both dimensions are built*, above). Read the absence of a §12 term from this table
+arrived with it (*Both dimensions are built*, above). **Backing** left when the backing increment
+was built (2026-09-27): *Account-backed category*, *Backing account*, *Accumulated*, the backed half
+of assigning, and the *pool account* as the source of MoneyBud's own movements for a category
+(*Where the dimensions meet*, above). Its row said the question of how a movement for a later period
+is held was for the plan, and ADR 0009 answered it. Read the absence of a §12 term from this table
 as "built", not as "nobody wrote a row for it".
 
 | §12 concept | Why there is no code |
 |---|---|
-| *Account-backed category*, *Backing account*, *Accumulated* | All three are relationships between a category and an account. Accounts exist since the accounts increment, but backing was left to the next one, by the stakeholder's ruling ([§12](12-glossary.md), *What this increment covers, and what waits*). This includes the **backed half of assigning**, where assigning really moves money out of a source it may overdraw. So every category is still unbacked and `Assign` is planning only |
-| *Sweep*, *Sweep destination*, and the *pool account* as a **source** | §12 requires a sweep destination to be account-backed, so the sweep cannot run before backing exists ([§11](11-risks-and-technical-debt.md)). The *pool account* itself is built, as the default for every new entry (`Ledger.PoolAccount`). Its role as the source of MoneyBud's own movements waits for backing and the sweep |
-| *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. Nothing acts on a period boundary yet |
+| *Sweep*, *Sweep destination*, and the *pool account* as the sweep's **source** | The next increment. §12 requires a sweep destination to be account-backed, which it now can be. The *pool account* is built as the default for every new entry and as the source of every movement for a backed category. Its role as the source of the sweep waits for the sweep. Settling is the step the sweep is meant to use at a period's end ([ADR 0009](../decisions/0009-movements-are-entries.md)) |
+| *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. The only thing that acts on a period boundary is settling, which moves planned money for backed categories and computes no leftover |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
 | A period **closing** | Not missing — deliberately impossible. `BudgetPeriod` is a pair of dates with no state at all, so there is nothing that could ever refuse an expense on grounds of age (§12, *Ending versus closing*) |
@@ -550,7 +618,15 @@ premise fails and this decision must be reopened rather than assumed. Known cand
 - Percentage-based budgeting — "20% of income to savings".
 
 Anyone adding one of these should treat "we never round" as no longer true until it has been
-re-argued. **A second currency belongs on that list as well** — a conversion rate is a computed
+re-argued.
+
+**Backing is the first feature that moves an amount MoneyBud worked out, and it does not reopen the
+rule** (2026-09-27). What moves at backing is a *Remaining*, a *Budget* minus expenses. What moves at
+unbacking and re-pointing is what is there for the category: movements in, minus movements out, minus
+expenses. Both are sums and differences of whole-cent amounts that were typed, so they are whole cents
+by addition alone, and nothing is divided or split. A backing that split money across several
+accounts would be on the list above. Several backing accounts per category are deferred
+([§12](12-glossary.md), *What the backing increment covers, and what waits*). **A second currency belongs on that list as well** — a conversion rate is a computed
 amount, and the "no currency field" rule below would be reopened at the same moment.
 
 ### Decided: in code, an amount is a `Money` value type over a `long` of cents
@@ -660,6 +736,10 @@ nothing in [§12](12-glossary.md)'s income rules changes anything in this sectio
 that do differ between income and expense, the required label and future-dating, are not money
 rules and are settled there rather than here.
 
+**It covers MoneyBud's own movements too**, as it covers transfers. A `Movement`'s amount is a
+positive magnitude from one account to another, and which way it counts for *Accumulated* is its
+`MovementDirection`, never a sign. A negative assignment writes a new movement going the other way.
+
 Nor does it say anything about the **plan** layer. Whether an amount may be assigned negatively and
 whether a *Budget* may be negative are questions about assigning, not about transactions; they are
 settled in [§12](12-glossary.md) — yes, and no — and neither follows from or affects this rule.
@@ -705,7 +785,9 @@ numbers are read here with `GetInt64`, which refuses a fraction rather than trun
 revisited*, above). If MoneyBud ever computes an amount finer than a cent, the file has nowhere to
 put it, and that is deliberate. The stored form **may change freely between versions until the
 switch to real use**, at least up to and including the accounts increment
-([§12](12-glossary.md), *Demo data may not survive a new version*, *Real use before accounts*).
+([§12](12-glossary.md), *Demo data may not survive a new version*, *Real use before accounts*). The
+backing increment changed it again, to version 3, with the stakeholder's leave. A movement's amount
+is stored as cents like every other entry's.
 
 ### Still open
 
@@ -733,6 +815,20 @@ ruling that data saved before accounts is not carried over (*What the stakeholde
 rows). `Ledger.FromSnapshot` checks the new rules too: an entry or a pool account pointing at no
 account, a transfer from an account to itself, two starting balances on one account, and ids unique
 across all four kinds of entry. Where this section says "version 1" below, it was written before.
+
+**The backing increment took the file to version 3** (2026-09-27,
+[ADR 0009](../decisions/0009-movements-are-entries.md)). It adds `backing` on each category (null, or
+the account's key and two marks, `accumulatingSince` and `hereSince`, each a date and an id),
+`movements` (id, date, category, `from`, `to`, cents, and `reason` and `direction` as words), and
+`settledThrough`. Still no balance, and no *Accumulated*: both are worked out. **Version 2 is refused
+as unreadable, as version 1 is.** The plan recommended reading it, and the stakeholder left it to the
+build: *"Chose what is best for you. I dont mind starting over"*. The build chose one way in rather
+than two, since nothing would be kept that he minds losing ([§12](12-glossary.md), *Demo data may
+not survive a new version*). `Ledger.FromSnapshot` checks the new rules too: a movement's direction
+must fit its reason, a re-pointing must be between two accounts, a backing's marks must be ids issued
+and no entry's, and ids are unique across all five kinds. **A start may now save straight away**:
+when a period has begun since `settledThrough`, its planned money is moved and kept before the user
+does anything ([§6](06-runtime-view.md), *Settling*).
 
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
@@ -773,7 +869,7 @@ the code at the close of the increment:
 | Ruling | What it means for the build, and how it is built |
 |---|---|
 | **Everything is kept**, as one continuous history, indefinitely. No fresh start per year | Nothing is pruned or archived by age. Periods never close, so there is no boundary to cut at. **Built:** `Ledger.ToSnapshot` takes every category, budget, expense and income, and nothing anywhere removes kept data by age |
-| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
+| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
 | **Saved automatically after every change.** No save button. **A save that works says nothing** | Every act that changes the ledger ends with the data written. There is no save act and no "save now" state to offer, and no notice for a save that succeeds. **Built:** `MoneyBudApp.Tell` calls `Keep` after every act that went through **and changed the ledger** (`Tell(changed:)`). Adding a name already there, assigning zero and a negative assignment clipped in full against a *Budget* of zero are said but not saved. A refusal, an unchanged save and a declined question never reach `Tell`. A save that works sets nothing the screen shows, unless it ends a failure (below). The scenario "offer no act for saving" lists every command of the screen and the forms in full, and checks every `Command` binding in the window's markup against them |
 | **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
 | **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
@@ -785,7 +881,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008) |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -930,7 +1026,8 @@ nothing. It raises property changes so that whatever is bound looks again. Every
 **The Desktop also calls it once a minute**, through `MoneyBudApp.Tick`, and that is the only thing
 that moves the *Huidige periode* label when a period ends while MoneyBud is open. Since the
 persistence increment `Tick` first retries a save that failed, if one did (*Keeping the ledger*,
-below). The consequence, stated so it is not
+below). Since the backing increment it settles first, so money planned for a period that has just
+begun moves within the minute and is kept (*Backing on screen*, below). The consequence, stated so it is not
 rediscovered: **for up to a minute after a period boundary the screen can be out of date.** The label
 can still read *Huidige periode*, and in-use categories with no history can still be listed in a
 period that has just become past. An assignment made in that minute is refused as past, because the
@@ -972,7 +1069,9 @@ not put to the stakeholder: a rename rewriting the category box, stepping cancel
 which acts drop a waiting question, the archive button's new place, the question's two answers, and
 the rename box losing focus on the minute's refresh. They sit in §12, *Chosen in the build, not put
 to the stakeholder*, beside the rulings each one fills in. **Opening a period's are there too**, under
-*Taking a plan over: chosen in the build, not put to the stakeholder*, for the same reason.
+*Taking a plan over: chosen in the build, not put to the stakeholder*, for the same reason. So are the
+accounts increment's (*Accounts: chosen in the build*) and the backing increment's (*Backing: chosen
+in the build, not put to the stakeholder*).
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -1117,6 +1216,50 @@ its text to `OfferText` and its command to `TakeOverCommand`. The grey figure is
 markup test covers either, and a headless run of the real window checked both
 ([§11](11-risks-and-technical-debt.md), the Desktop row).
 
+### Backing on screen
+
+The rulings are in [§12](12-glossary.md), *Backing and Accumulated*. The build's own readings are in
+*Backing: chosen in the build, not put to the stakeholder*, there. How the presentation layer holds
+them:
+
+- **Each `CategoryRow` carries its backing.** `BackingAccount` is today's backing, the same in every
+  period. `BackingChoices` is "—" and then the accounts in the strip's order. `Accumulated` is
+  `Ledger.AccumulatedFor` the period being built, null for an unbacked category. `AccumulatedText`
+  is *"Opgebouwd: € 600,00"*, and `AccumulatedMarker` is the one marker below zero, badge *Rood*.
+  The pointed slice's details read the same row, so the ring's hole shows *Opgebouwd* too.
+- **`ChosenBacking` is the two-way binding, and writing it is the act.** Its getter is the choice
+  matching `BackingAccount`. Its setter calls `MoneyBudApp.SetBacking`, and ignores a null written
+  while the list is rebuilt. `SetBacking` does nothing at all for the backing already set, so the
+  list writing back what it shows, on first show and on every redraw, moves no money, says nothing
+  and saves nothing.
+- **`BackingChoices` is one collection shared by every row**, made anew only when `AccountChoices` is,
+  so when the accounts, their order or their names change. That is the accounts increment's rule for
+  lists (*Accounts: chosen in the build*), applied to a list on every row. A new collection on every
+  refresh would make each row's list let go of its choice once a minute.
+- **The expense form's account follows the category typed** until the user picks one.
+  `ExpenseForm.ChosenAccount` reads the picked account, or else the typed category's backing account,
+  or else the pool account. A write of the account already shown is taken as the list writing back,
+  and any other account as a pick. That is the one inference the form makes from its list, kept as
+  small as it can be. So picking the account already shown does not stick, which the stakeholder
+  accepted after the build, because telling that pick apart would need the window to decide what a
+  click means ([§12](12-glossary.md), *Backing: ruled after the build*, ruling 5). An entry being
+  changed keeps its own account.
+- **Settling is kept by the screen.** The constructor settles and saves if anything moved. `Tick`
+  settles and saves if anything moved or an earlier save failed. An act settles inside the ledger,
+  and what moved is saved with the act. The gap, a refused act straight after a period began, is
+  in [§6](06-runtime-view.md).
+- **The words are `Tekst.BackingAccount`, *Staat op*, and `Tekst.Accumulated`, *Opgebouwd***, two
+  rows of §12's display-terms table that `TekstTests` holds. "—" is `Tekst.NoBacking`, a symbol and
+  not a term. The notices and the movement row's wording are copy (`Tekst.BackingSet` and the history
+  line's text).
+
+**The Desktop only binds.** The *Staat op* `ComboBox` beside *Hernoemen* binds to `BackingChoices` and
+`ChosenBacking`. The *Opgebouwd* caption under the row's figures binds to `AccumulatedText` and its
+marker. Movement rows in the history bind like transfer rows, with no *Wijzigen* and no
+*Verwijderen*. No markup test covers any of it. **A headless run of the real window checked the
+write-back**: the lists writing back on first show and when the accounts changed moved no money and
+announced nothing ([§11](11-risks-and-technical-debt.md), the Desktop row).
+
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
 `RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
@@ -1203,6 +1346,32 @@ licence to leave a decision in the window because a text test could reach it. A 
 - **"MoneyBud should offer no act for saving / starting over"** lists `TakeOverCommand` among the
   screen's commands, as an act that only assigns.
 
+**How the backing scenarios reach the screen** (`BackingSteps`, with additions to `ScreenSteps`,
+`AccountSteps`, `RecordExpenseSteps`, `KeepingSteps` and `SharedSteps`):
+
+- **Setting and removing a backing** goes through `MoneyBudApp.SetBacking`, the door the row's list
+  uses. The notices are checked against what `Tekst.BackingSet` makes, so the wording stays copy. The
+  short "is now backed by …" step is anchored, so that it does not also match the long form that
+  names the money.
+- **The categories and slice tables gained `accumulated` and `accumulated marked` columns**, read
+  from the row and the slice. The history table gained the entry kind `movement` and the columns
+  `category`, `from` and `to`. *Accumulated* Givens check the figure and set nothing.
+- **The expense form's account** is typed and chosen through the form itself ("I type … as the
+  category of the new expense", "I choose the account … for the new expense"), and read back from
+  `ChosenAccount`.
+- **"The next budget period begins while MoneyBud is open" now calls `MoneyBudApp.Tick`**, which is
+  what the Desktop's timer calls, so a scenario sees the money settled by the tick. It used to call
+  `Refresh`. The "…before the Overview is next drawn" variant only moves the clock, and the act that
+  follows settles first.
+- **"Accumulated for … should be N" always reads the row.** As first built it fell back to the figure
+  a hidden row would show, for one approved scenario that asserted *Accumulated* on an archived
+  category whose row the display rule hides. **That scenario line was amended with the stakeholder's
+  approval** (2026-09-27): it now asserts that the category is not shown, and the fallback is gone
+  ([§12](12-glossary.md), *Backing: ruled after the build*, ruling 4).
+- **The new display clause has its scenario**: an archived backed category with money built up is
+  shown in the current period and later ones until it is unbacked, the last scenario of
+  `show-accumulated.feature`, added after the gate with the ruling.
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -1238,6 +1407,32 @@ plan is taken over. The accounts increment added `AccountTests`, which covers:
 `StorageTests` now reads version 2 and refuses version 1. `WindowMarkupTests` holds the account list
 last on both entry forms and the transfer form's order, Van → Naar → Bedrag → Datum. ADR 0004's rule
 applies to them unchanged: a unit test is never the reason a behaviour exists.
+
+The backing increment added `BackingTests`, which covers:
+
+- what is there for a category: only expenses paid from the backing account count, a third account's
+  do not, it can go below zero, and when the pool account backs the category what was assigned is
+  there and goes along on re-pointing;
+- *Accumulated*: none for an unbacked category, €0 before anything moved, what is planned in a later
+  period, money not yet settled counted as planned so the figure does not change when it moves, and
+  starting over after unbacking but not after re-pointing;
+- the cap on a negative assignment, and nothing moved when nothing is there;
+- settling: nothing today for a later period, each period's money once on its first day to the
+  backing of that moment, nothing for a category unbacked since, every act settling first so a balance
+  correction that day holds the movement, and a clock turned back settling nothing and forgetting
+  nothing;
+- the backing already set changing nothing, a pool-to-pool movement not counting as money moved, and
+  backing an archived category leaving it archived;
+- what counts as used: an account that backs a category or has a movement, and a category money was
+  moved for between two accounts, while a pool-to-pool movement does not block deleting and goes
+  with the category; deleting a category with no history taking its backing with it; and the
+  non-cases that throw.
+
+`StorageTests` now reads version 3, refuses versions 1 and 2, and keeps backings, movements and
+`settledThrough` exactly. `FormTests` covers the expense form's account following the category and
+sticking once picked, including the write-back of the account already shown, and the *Staat op*
+list's choices and its shared collection. `TekstTests` holds *Staat op* and *Opgebouwd* to §12's
+table.
 
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
@@ -1304,3 +1499,13 @@ feature files, 174 cases, and from the scenarios added to `start-moneybud.featur
 `keep-data.feature`. `spec-reviewer` found no faked scenario, one vacuous scenario and some defects,
 all fixed. A headless run of the real window found how the forms must hold their accounts
 ([§12](12-glossary.md), *Accounts: chosen in the build, not put to the stakeholder*).
+
+**At the close of the backing increment** (2026-09-27): **1331 tests passing** with zero warnings.
+That is 822 scenario cases, 88 more than the 734 above, and 509 developer unit tests, 60 more than
+the 449 above. The new cases come from the five backing feature files, 85 cases, and from the
+scenarios added to `start-moneybud.feature` and `keep-data.feature`. Three of the tests came with the
+rulings made after the build: the scenario for the new display clause, and the unit tests for
+deleting a category, or an account, that has only movements from an account to itself — the
+account case applying ruling 2's reason to accounts. Before them the count was 1328 (821 and 507). A headless run of the real
+window checked that the *Staat op* lists writing back what they show, on first show and when the
+accounts change, move no money and announce nothing.

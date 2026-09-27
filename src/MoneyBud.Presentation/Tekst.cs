@@ -65,6 +65,8 @@ public static class Tekst
     public const string CorrectBalance = "Saldo corrigeren";
     public const string AddAccount = "Rekening toevoegen";
     public const string Overdrawn = "Rood";
+    public const string BackingAccount = "Staat op";
+    public const string Accumulated = "Opgebouwd";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -76,6 +78,10 @@ public static class Tekst
     public const string Cancel = "Annuleren";
     public const string Close = "Sluiten";
     public const string AreYouSure = "Weet je het zeker?";
+
+    // The Staat op list's choice for no backing: a symbol, not a term (§12, *Proposed display terms
+    // for backing*).
+    public const string NoBacking = "—";
 
     // Words the table does not fix, used as headings and hints.
     public const string Expenses = "Uitgaven";
@@ -366,6 +372,7 @@ public static class Tekst
         Domain.Transfer t => $"{Transfer} {From.ToLowerInvariant()} {Quoted(t.From.Name)} {To.ToLowerInvariant()} {Quoted(t.To.Name)}",
         Domain.Income i => $"{Income} {Quoted(i.Label)}",
         Domain.Expense e => $"{Expense} {Quoted(e.Category.Name)}" + (e.Label is { } label ? $", {label}" : ""),
+        Domain.Movement m => MovementText(m),
         _ => throw new InvalidOperationException($"{line.Entry.GetType().Name} is not in a history."),
     };
 
@@ -379,6 +386,55 @@ public static class Tekst
         correction.IsStartingBalance
             ? $"{StartingBalance} van {Quoted(correction.Account.Name)}"
             : $"{BalanceCorrection} van {Quoted(correction.Account.Name)} naar {Euro(correction.Balance)}";
+
+    // ------------------------------------------------------------------ backing (§12, *Backing and Accumulated*)
+
+    /// <summary>What a backed category's row shows under its figures: "Opgebouwd: € 600,00".</summary>
+    public static string AccumulatedFigure(Money accumulated) => $"{Accumulated}: {Euro(accumulated)}";
+
+    /// <summary>
+    /// Said once a backing is set, pointed elsewhere or removed. It names the money that moved, and
+    /// when none moved names only the backing, saying nothing about money (§12, <i>Backing,
+    /// re-pointing and unbacking are announced, never confirmed</i>). The sentences are copy; the
+    /// shape is the ruling. Money moved from the pool account to itself moved nothing anyone can
+    /// see, so it is not named either.
+    /// </summary>
+    public static string BackingSet(SetBackingResult result)
+    {
+        var name = Quoted(result.Category.Name);
+        var moved = result.MovedMoney ? result.Moved : null;
+
+        return result.Outcome switch
+        {
+            BackingOutcome.Backed or BackingOutcome.Repointed => moved is null
+                ? $"{name} staat nu op {Quoted(result.After!.Name)}."
+                : $"{name} staat nu op {Quoted(result.After!.Name)}: {Euro(moved.Amount)} overgeboekt van {Quoted(moved.From.Name)}.",
+            BackingOutcome.Unbacked => moved is null
+                ? $"{name} staat niet meer op {Quoted(result.Before!.Name)}."
+                : $"{name} staat niet meer op {Quoted(result.Before!.Name)}: {Euro(moved.Amount)} teruggeboekt naar {Quoted(moved.To.Name)}.",
+            BackingOutcome.Unchanged => throw new InvalidOperationException("Nothing changed, so nothing is said."),
+        };
+    }
+
+    /// <summary>
+    /// What a movement's row in an account's history says: what caused it, the category, and the two
+    /// accounts — "Toegewezen aan "Sparen" — van "Betaalrekening" naar "Spaarrekening"". The amount
+    /// is the row's own column. Copy (§12, <i>Moved money in the account's history</i>).
+    /// </summary>
+    private static string MovementText(Domain.Movement movement)
+    {
+        var name = Quoted(movement.Category.Name);
+        var what = (movement.Reason, movement.Direction) switch
+        {
+            (MovementReason.Assigned, MovementDirection.Out) => $"Teruggezet van {name}",
+            (MovementReason.Assigned, _) => $"Toegewezen aan {name}",
+            (MovementReason.Backed, _) => $"{name} staat op {Quoted(movement.To.Name)}",
+            (MovementReason.Unbacked, _) => $"{name} staat niet meer op {Quoted(movement.From.Name)}",
+            (MovementReason.Repointed, _) => $"{name} staat nu op {Quoted(movement.To.Name)}",
+        };
+
+        return $"{what} — {From.ToLowerInvariant()} {Quoted(movement.From.Name)} {To.ToLowerInvariant()} {Quoted(movement.To.Name)}";
+    }
 
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>
     public static string WentInto(BudgetPeriod period) => $"Dit staat in {PeriodName(period)}.";

@@ -50,15 +50,16 @@ public sealed class ScreenSteps(SpecContext context)
         else App.StepForward();
     }
 
-    // The clock moves on and MoneyBud is not restarted. Refresh is what the Desktop's timer calls;
-    // it only tells the screen to look again, so the step does exactly what the running app does.
+    // The clock moves on and MoneyBud is not restarted. Tick is what the Desktop's timer calls: it
+    // moves the money planned for the period that began (backing), and tells the screen to look
+    // again, so the step does exactly what the running app does.
     //
     // Anchored, so that it cannot also be read as the start of the step below.
     [When(@"^the next budget period begins while MoneyBud is open$")]
     public void WhenTheNextBudgetPeriodBeginsWhileMoneyBudIsOpen()
     {
         WhenTheNextBudgetPeriodBeginsBeforeTheOverviewIsNextDrawn();
-        App.Refresh();
+        App.Tick();
     }
 
     // The same, stopped before the timer's redraw: what was on screen is still there, such as a
@@ -274,6 +275,9 @@ public sealed class ScreenSteps(SpecContext context)
             (expected["category"], SpecParsing.MoneyAmount(expected["budget"]), SpecParsing.MoneyAmount(expected["spent"]),
              SpecParsing.MoneyAmount(expected["remaining"]), YesNo(expected["over budget"]) ? Marker.Over : Marker.None),
             (row.Name, row.Budget, row.Spent, row.Remaining, row.Marker));
+
+        // What the ring's hole shows is the row's own Opgebouwd (show-accumulated.feature).
+        if (table.ContainsColumn("accumulated")) AssertAccumulatedColumns(table, expected, row);
     }
 
     [Then(@"^the slice pointed at should show Unassigned of (\S+) euro$")]
@@ -312,9 +316,9 @@ public sealed class ScreenSteps(SpecContext context)
 
     // ------------------------------------------------------------------- Then: rows
 
-    // Checks the columns the table has: only the names and their order, or the figures and the
-    // marker as well, or the grey plan figure — "none" for a row that shows none at all
-    // (take-over-a-plan.feature).
+    // Checks the columns the table has, each on its own: only the names and their order, or any of
+    // the figures and the marker as well, or the grey plan figure — "none" for a row that shows none
+    // at all (take-over-a-plan.feature) — or Opgebouwd (back-a-category.feature).
     [Then(@"^the categories shown in the (current|previous|next) budget period should be exactly these, in this order:$")]
     public void ThenTheCategoriesShownShouldBeExactly(string which, Table table)
     {
@@ -324,16 +328,31 @@ public sealed class ScreenSteps(SpecContext context)
         foreach (var (expected, actual) in table.Rows.Zip(rows))
         {
             if (table.ContainsColumn("budget"))
-            {
                 Assert.Equal(SpecParsing.MoneyAmount(expected["budget"]), actual.Budget);
+            if (table.ContainsColumn("spent"))
                 Assert.Equal(SpecParsing.MoneyAmount(expected["spent"]), actual.Spent);
+            if (table.ContainsColumn("remaining"))
                 Assert.Equal(SpecParsing.MoneyAmount(expected["remaining"]), actual.Remaining);
+            if (table.ContainsColumn("over budget"))
                 Assert.Equal(YesNo(expected["over budget"]) ? Marker.Over : Marker.None, actual.Marker);
-            }
 
             if (table.ContainsColumn("plan"))
                 AssertPlanFigure(expected["plan"] is "none" ? null : SpecParsing.MoneyAmount(expected["plan"]), actual);
+
+            if (table.ContainsColumn("accumulated"))
+                AssertAccumulatedColumns(table, expected, actual);
         }
+    }
+
+    // A blank cell is a row that shows no Opgebouwd at all; "accumulated marked" is its marker, badge
+    // "Rood" (back-a-category.feature). A table without the columns checks neither.
+    private static void AssertAccumulatedColumns(Table table, DataTableRow expected, CategoryRow actual)
+    {
+        BackingSteps.AssertAccumulated(
+            expected["accumulated"] is "" ? null : SpecParsing.MoneyAmount(expected["accumulated"]), actual);
+
+        if (table.ContainsColumn("accumulated marked"))
+            Assert.Equal(YesNo(expected["accumulated marked"]) ? Marker.Over : Marker.None, actual.AccumulatedMarker);
     }
 
     /// <summary>The row's grey figure, both as a figure and as what the row shows.</summary>

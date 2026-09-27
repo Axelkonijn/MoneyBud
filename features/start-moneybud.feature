@@ -10,7 +10,10 @@
 #     account, and it has NO STARTING BALANCE. So its balance is the plain sum of what is on it,
 #     whatever the dates, until I first correct it, and entries dated before the first start move
 #     it. Only a balance I actually type has earlier entries in it. Like the categories, its name is
-#     Dutch because it is content MoneyBud ships with. "No data yet" covers the very first start and
+#     Dutch because it is content MoneyBud ships with. NO CATEGORY IS BACKED, Sparen included: with
+#     the pool account as the only account, backing Sparen is mine to do, once I have added an
+#     account for it (glossary: "A first start leaves Sparen unbacked", settled by the stakeholder on
+#     2026-09-27 for the backing increment). "No data yet" covers the very first start and
 #     a start after I have deleted what MoneyBud kept. Deleting it myself is the only way to start
 #     over: MoneyBud has no act for it.
 #   - KEPT DATA. MoneyBud opens it as it was left, and does NOT add the default categories back, nor
@@ -73,7 +76,9 @@
 #   - The account steps ("the accounts should be exactly these", "the pool account should be",
 #     "nothing should be in the history of", "the balance of", "net worth", "I correct the balance
 #     of", "I rename the account") are explained in show-accounts.feature and the accounts files
-#     it names.
+#     it names. The backing steps ("should not be backed", "the choices offered for the backing
+#     account of", "I set the backing account of", "Accumulated for") are explained in
+#     back-a-category.feature.
 #   - Every other step is reused unchanged from the file that introduced it.
 #
 # The names, labels and amounts are synthetic test data. The six default category names and
@@ -139,6 +144,23 @@ Feature: Start MoneyBud
     And I record an expense of 12.50 euro for "Boodschappen" labelled "Bakker" dated yesterday
     Then the balance of "Betaalrekening" should still be 1800 euro
     And net worth should still be 1800 euro
+
+  # Ruled by the stakeholder on 2026-09-27: MoneyBud does not back Sparen, the user does. Its only
+  # account is the pool account, which could back it, but a savings account is the usual choice, so
+  # the scenario adds one. "Spaarrekening" is test data here, not content MoneyBud ships with.
+  Scenario: A first start leaves Sparen unbacked, for me to back once I have added an account for it
+    Given I have never used MoneyBud
+    When I start MoneyBud
+    Then "Sparen" should not be backed
+    And "Sparen" should show no Accumulated in the current budget period
+    And the choices offered for the backing account of "Sparen" should be exactly these, in this order:
+      | choice         |
+      | none           |
+      | Betaalrekening |
+    When I add an account "Spaarrekening" with a starting balance of 0 euro
+    And I set the backing account of "Sparen" to "Spaarrekening"
+    Then the backing account of "Sparen" should be "Spaarrekening"
+    And Accumulated for "Sparen" in the current budget period should be 0.00 euro
 
   # ----------------------------------------------------------------------------------
   # Kept data: opened as it was left, and the defaults are not added back

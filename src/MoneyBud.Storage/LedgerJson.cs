@@ -12,16 +12,22 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 2,
-///   "lastEntryId": 4,
-///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false } ],
+///   "version": 3,
+///   "lastEntryId": 7,
+///   "settledThrough": "2026-03-15",
+///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
+///                  { "key": 2, "name": "Sparen", "archived": false,
+///                    "backing": { "account": 2, "accumulatingSince": { "date": "2026-03-15", "id": 5 },
+///                                 "hereSince": { "date": "2026-03-15", "id": 5 } } } ],
 ///   "budgets":    [ { "category": 1, "periodStart": "2026-03-01", "cents": 40000 } ],
 ///   "accounts":   [ { "key": 1, "name": "Betaalrekening" }, { "key": 2, "name": "Contant" } ],
 ///   "poolAccount": 1,
 ///   "expenses":   [ { "id": 1, "cents": 3215, "date": "2026-03-15", "category": 1, "label": "Albert Heijn", "account": 1 } ],
 ///   "incomes":    [ { "id": 2, "cents": 183245, "date": "2026-03-15", "label": "Salaris", "account": 1 } ],
 ///   "transfers":  [ { "id": 3, "cents": 5000, "date": "2026-03-15", "from": 1, "to": 2 } ],
-///   "balanceCorrections": [ { "id": 4, "date": "2026-03-15", "account": 1, "cents": 175000, "starting": false } ]
+///   "balanceCorrections": [ { "id": 4, "date": "2026-03-15", "account": 1, "cents": 175000, "starting": false } ],
+///   "movements":  [ { "id": 6, "date": "2026-03-15", "category": 2, "from": 1, "to": 2, "cents": 20000,
+///                     "reason": "backed", "direction": "in" } ]
 /// }
 /// </code>
 ///
@@ -33,17 +39,24 @@ namespace MoneyBud.Storage;
 /// balances and the entries (ADR 0008), so there is no figure in the file that could disagree with
 /// them.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-2 document is not read at all.
+/// <para><b>Since version 3</b>, the backing increment (ADR 0009): a category's <c>backing</c>, or
+/// null, with the two marks it counts from; the <c>movements</c> MoneyBud made on categories' behalf,
+/// each with its reason and direction as words; and <c>settledThrough</c>, the day planned money has
+/// been moved up to.</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-3 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
 /// read either: the stakeholder ruled that data saved before accounts is started afresh rather than
 /// carried over (§12, <i>Accounts and net worth</i>; <i>Demo data may not survive a new version</i>).
+/// Nor is <b>version 2</b>, the form with accounts and without backing: the stakeholder did not mind
+/// starting over, and reading it was not worth a second way in (plan for increment 10, D2).
 /// Properties this version does not know are ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 2;
+    public const int Version = 3;
     private const string Format = "MoneyBud";
 
     public static string Write(LedgerSnapshot snapshot)
@@ -59,6 +72,7 @@ public static class LedgerJson
             json.WriteString("format", Format);
             json.WriteNumber("version", Version);
             json.WriteNumber("lastEntryId", snapshot.LastEntryId);
+            json.WriteString("settledThrough", Date(snapshot.SettledThrough));
 
             json.WriteStartArray("categories");
             foreach (var c in snapshot.Categories)
@@ -67,6 +81,18 @@ public static class LedgerJson
                 json.WriteNumber("key", c.Key);
                 json.WriteString("name", c.Name);
                 json.WriteBoolean("archived", c.IsArchived);
+                if (c.Backing is { } backing)
+                {
+                    json.WriteStartObject("backing");
+                    json.WriteNumber("account", backing.Account);
+                    WriteMark(json, "accumulatingSince", backing.AccumulatingSince);
+                    WriteMark(json, "hereSince", backing.HereSince);
+                    json.WriteEndObject();
+                }
+                else
+                {
+                    json.WriteNull("backing");
+                }
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -147,6 +173,22 @@ public static class LedgerJson
             }
             json.WriteEndArray();
 
+            json.WriteStartArray("movements");
+            foreach (var m in snapshot.Movements)
+            {
+                json.WriteStartObject();
+                json.WriteNumber("id", m.Id);
+                json.WriteString("date", Date(m.Date));
+                json.WriteNumber("category", m.Category);
+                json.WriteNumber("from", m.From);
+                json.WriteNumber("to", m.To);
+                json.WriteNumber("cents", m.Amount.Cents);
+                json.WriteString("reason", Word(m.Reason));
+                json.WriteString("direction", Word(m.Direction));
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
             json.WriteEndObject();
         }
 
@@ -169,7 +211,8 @@ public static class LedgerJson
                 return null;
 
             return new LedgerSnapshot(
-                Array(root, "categories", c => new CategorySnapshot(Int(c, "key"), Text(c, "name"), Bool(c, "archived"))),
+                Array(root, "categories", c => new CategorySnapshot(
+                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c))),
                 Array(root, "budgets", b => new BudgetSnapshot(Int(b, "category"), DateOf(b, "periodStart"), Cents(b))),
                 Array(root, "expenses", e => new ExpenseSnapshot(
                     Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"), Int(e, "account"))),
@@ -181,7 +224,11 @@ public static class LedgerJson
                 Array(root, "transfers", t => new TransferSnapshot(
                     Int(t, "id"), Cents(t), DateOf(t, "date"), Int(t, "from"), Int(t, "to"))),
                 Array(root, "balanceCorrections", c => new BalanceCorrectionSnapshot(
-                    Int(c, "id"), DateOf(c, "date"), Int(c, "account"), Cents(c), Bool(c, "starting"))));
+                    Int(c, "id"), DateOf(c, "date"), Int(c, "account"), Cents(c), Bool(c, "starting"))),
+                Array(root, "movements", m => new MovementSnapshot(
+                    Int(m, "id"), DateOf(m, "date"), Int(m, "category"), Int(m, "from"), Int(m, "to"), Cents(m),
+                    WordAs<MovementReason>(m, "reason"), WordAs<MovementDirection>(m, "direction"))),
+                DateOf(root, "settledThrough"));
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)
@@ -191,6 +238,40 @@ public static class LedgerJson
     }
 
     private static string Date(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static void WriteMark(Utf8JsonWriter json, string name, EntryMark mark)
+    {
+        json.WriteStartObject(name);
+        json.WriteString("date", Date(mark.Date));
+        json.WriteNumber("id", mark.Id);
+        json.WriteEndObject();
+    }
+
+    private static BackingSnapshot? BackingOf(JsonElement category)
+    {
+        var backing = category.GetProperty("backing");
+        if (backing.ValueKind == JsonValueKind.Null) return null;
+
+        return new BackingSnapshot(Int(backing, "account"), MarkOf(backing, "accumulatingSince"), MarkOf(backing, "hereSince"));
+    }
+
+    private static EntryMark MarkOf(JsonElement parent, string name)
+    {
+        var mark = parent.GetProperty(name);
+        return new EntryMark(DateOf(mark, "date"), Int(mark, "id"));
+    }
+
+    // Enum values as lower-case words, so the file reads plainly and a renumbered enum cannot
+    // change what a kept movement meant. A word this version does not know is not read.
+    private static string Word<T>(T value) where T : struct, Enum => value.ToString().ToLowerInvariant();
+
+    private static T WordAs<T>(JsonElement parent, string name) where T : struct, Enum
+    {
+        var word = Text(parent, name);
+        foreach (var value in Enum.GetValues<T>())
+            if (Word(value) == word) return value;
+        throw new FormatException($"\"{word}\" is not a {typeof(T).Name}.");
+    }
 
     private static List<T> Array<T>(JsonElement parent, string name, Func<JsonElement, T> read)
     {

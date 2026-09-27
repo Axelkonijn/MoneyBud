@@ -15,6 +15,9 @@
 #     corrections do not count, and they go with it. "On it" is read as it is NOW, as for a
 #     category (delete-a-category.feature): an account whose only entry was removed, or moved to
 #     another account, is unused. That reading is this file's, by analogy, and not a ruling.
+#     Since the backing increment, an account is also used while it BACKS A CATEGORY (ruled), and
+#     for good once MONEY HAS BEEN MOVED into or out of it on a category's behalf, even after the
+#     category is unbacked (derived). Those scenarios are in back-a-category.feature.
 #   - Deleting is NEVER CONFIRMED and is ANNOUNCED afterwards, EVEN WITH A STARTING BALANCE OTHER
 #     THAN ZERO. Ruled by the stakeholder: the only thing lost is a number just typed. Net worth
 #     changes accordingly.

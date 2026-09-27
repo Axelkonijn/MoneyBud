@@ -549,6 +549,127 @@ public sealed class FormTests
         Assert.Equal((bank, cash), (app.TransferForm.ChosenFrom, app.TransferForm.ChosenTo));
     }
 
+    // ------------------------------------------------------------------ backing (arc42 §12, Backing and Accumulated)
+
+    private Account BackSparen()
+    {
+        var savings = app.AddAccount("Spaarrekening", "")!.Account!;
+        app.SetBacking("Sparen", savings);
+        return savings;
+    }
+
+    [Theory]
+    [InlineData("Sparen", "Spaarrekening")]
+    [InlineData("  sparen ", "Spaarrekening")]
+    [InlineData("Boodschappen", "Betaalrekening")]
+    [InlineData("Spa", "Betaalrekening")]
+    [InlineData("Vakantie", "Betaalrekening")]
+    [InlineData(null, "Betaalrekening")]
+    public void A_new_expense_s_account_follows_the_category_typed(string? typed, string account)
+    {
+        BackSparen();
+        var told = new List<string?>();
+        app.ExpenseForm.PropertyChanged += (_, e) => told.Add(e.PropertyName);
+
+        app.ExpenseForm.Category = typed;
+
+        Assert.Equal(account, app.ExpenseForm.ChosenAccount.Name);
+        if (typed is not null) Assert.Contains(nameof(ExpenseForm.ChosenAccount), told);
+    }
+
+    // The list writes back the account it shows, and nothing while its items are replaced. Neither
+    // is a choice, so the account still follows what is typed next.
+    [Fact]
+    public void The_list_writing_back_what_it_shows_is_not_a_choice()
+    {
+        var savings = BackSparen();
+        var form = app.ExpenseForm;
+
+        form.ChosenAccount = form.ChosenAccount;
+        form.ChosenAccount = null!;
+        form.Category = "Sparen";
+        Assert.Same(savings, form.ChosenAccount);
+
+        form.ChosenAccount = form.ChosenAccount;
+        form.Category = "Boodschappen";
+        Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
+    }
+
+    [Fact]
+    public void An_account_picked_sticks_whatever_is_typed_and_only_for_that_expense()
+    {
+        var savings = BackSparen();
+        var cash = app.AddAccount("Contant", "")!.Account!;
+        var form = app.ExpenseForm;
+
+        form.ChosenAccount = cash;
+        form.Category = "Sparen";
+        Assert.Same(cash, form.ChosenAccount);
+
+        (form.Amount, form.Label) = ("5", "Fiets");
+        form.SubmitCommand.Execute(null);
+        Assert.Same(cash, Assert.Single(app.Overview.Expenses).Entry.Account);
+
+        form.Category = "Sparen";
+        Assert.Same(savings, form.ChosenAccount);
+    }
+
+    [Fact]
+    public void An_expense_being_changed_keeps_its_account_when_its_category_becomes_a_backed_one()
+    {
+        BackSparen();
+        app.RecordExpense("5", "Boodschappen", "Markt");
+        app.EditExpense(Assert.Single(app.Overview.Expenses));
+
+        app.ExpenseForm.Category = "Sparen";
+
+        Assert.Same(app.Ledger.PoolAccount, app.ExpenseForm.ChosenAccount);
+    }
+
+    [Fact]
+    public void Choosing_in_a_row_s_Staat_op_list_backs_the_category_and_shows_it()
+    {
+        var savings = app.AddAccount("Spaarrekening", "")!.Account!;
+        var row = app.Overview.Rows.Single(r => r.Name == "Sparen");
+        Assert.Equal(["—", "Betaalrekening", "Spaarrekening"], row.BackingChoices.Select(c => c.Text));
+        Assert.Equal("—", row.ChosenBacking!.Text);
+        Assert.Null(row.AccumulatedText);
+
+        row.ChosenBacking = row.BackingChoices.Single(c => c.Account == savings);
+
+        var backed = app.Overview.Rows.Single(r => r.Name == "Sparen");
+        Assert.Same(savings, backed.BackingAccount);
+        Assert.Equal("Spaarrekening", backed.ChosenBacking!.Text);
+        Assert.Equal("Opgebouwd: € 0,00", backed.AccumulatedText);
+        Assert.False(app.Notice!.IsRefusal);
+    }
+
+    // The same list for every row and every refresh, until the accounts change.
+    [Fact]
+    public void The_Staat_op_list_is_the_same_collection_until_the_accounts_change()
+    {
+        var before = app.BackingChoices;
+        app.Refresh();
+        Assert.Same(before, app.BackingChoices);
+        Assert.All(app.Overview.Rows, r => Assert.Same(before, r.BackingChoices));
+
+        app.AddAccount("Contant", "");
+        Assert.NotSame(before, app.BackingChoices);
+    }
+
+    [Fact]
+    public void Accumulated_below_zero_carries_the_marker_and_exactly_zero_does_not()
+    {
+        BackSparen();
+        app.Assign("10", "Sparen");
+        app.RecordExpense("10", "Sparen", "Fiets");
+        Assert.Equal(Marker.None, app.Overview.Rows.Single(r => r.Name == "Sparen").AccumulatedMarker);
+
+        app.RecordExpense("0,01", "Sparen", "Bel");
+        var row = app.Overview.Rows.Single(r => r.Name == "Sparen");
+        Assert.Equal((Marker.Over, true, "Opgebouwd: −€ 0,01"), (row.AccumulatedMarker, row.IsAccumulatedBelowZero, row.AccumulatedText));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

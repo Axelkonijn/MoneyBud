@@ -9,11 +9,14 @@
 #   - "Everything" is THE LEDGER: categories, archived or not, renamed ones with their history,
 #     budgets, expenses and incomes, and since the accounts increment ACCOUNTS too: each with its
 #     starting balance and balance corrections, the account every income and expense is on, the
-#     transfers, and which account is the pool account. So is the order things were recorded in,
-#     which decides whether an entry on a balance correction's day is in it
-#     (correct-a-balance.feature). WHAT IS ON SCREEN IS NOT KEPT: the period shown, an entry half
-#     typed, an entry being changed, a question waiting for an answer, a rename in progress. So
-#     MoneyBud ALWAYS OPENS ON THE CURRENT BUDGET PERIOD.
+#     transfers, and which account is the pool account. Since the backing increment, which account
+#     backs each category, and the money moved on a category's behalf, including money assigned for
+#     a later period that has not moved yet. So is the order things were recorded in, which decides
+#     whether an entry on a balance correction's day is in it (correct-a-balance.feature), and
+#     whether an expense on the day of backing counts against Accumulated
+#     (spend-against-a-backed-category.feature). WHAT IS ON SCREEN IS NOT KEPT: the period shown, an
+#     entry half typed, an entry being changed, a question waiting for an answer, a rename in
+#     progress. So MoneyBud ALWAYS OPENS ON THE CURRENT BUDGET PERIOD.
 #   - Kept AUTOMATICALLY AFTER EVERY CHANGE. There is no save button and no act of saving.
 #   - Only what went through is kept. A refused entry, a change not saved, a removal not confirmed
 #     and a rename not saved change nothing, so there is nothing of them to keep.
@@ -65,7 +68,8 @@
 #   - Every other step is reused unchanged from the file that introduced it, with the meaning that
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
 #     steps overview.feature's, the correcting steps change-an-entry.feature's and
-#     remove-an-entry.feature's, and the account steps show-accounts.feature's.
+#     remove-an-entry.feature's, the account steps show-accounts.feature's, and the backing steps
+#     back-a-category.feature's.
 #
 # The empty ledger every scenario starts from holds one account, "Bank", the pool account, with no
 # starting balance and nothing on it (show-accounts.feature). The names, labels and amounts are
@@ -366,6 +370,61 @@ Feature: Keep my data between runs
     And a new expense should start out on the account "Savings"
     When I add an account "Cash" with a starting balance of 10 euro
     Then I should be told that the account "Cash" was added
+
+  # ----------------------------------------------------------------------------------
+  # Backing is kept
+  # ----------------------------------------------------------------------------------
+
+  # One of each thing the backing increment added. 300 moved today, 50 was spent from Deposit, and
+  # 200 is planned for the next period, not moved yet. Starting again on that period's first day,
+  # the planned 200 moves then, and the rest is as it was.
+  Scenario: Backing, the money moved for a category and Accumulated are all there after starting again, and planned money still moves on its day
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have a category "Savings"
+    When I record an income of 2000 euro labelled "Salaris"
+    And I add an account "Deposit" with a starting balance of 0 euro
+    And I set the backing account of "Savings" to "Deposit"
+    And I assign 300 euro to "Savings" in the current budget period
+    And I assign 200 euro to "Savings" in the next budget period
+    And I record an expense of 50 euro for "Savings" labelled "Fiets" on the account "Deposit"
+    And I close MoneyBud and start it again
+    Then the backing account of "Savings" should be "Deposit"
+    And the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 1700.00 |
+      | Deposit | 250.00  |
+    And Accumulated for "Savings" in the current budget period should be 250 euro
+    And the history of "Deposit" should be exactly these, newest first:
+      | date  | entry            | category | label | from | to      | amount | balance |
+      | today | expense          | Savings  | Fiets |      |         | 50.00  |         |
+      | today | movement         | Savings  |       | Bank | Deposit | 300.00 |         |
+      | today | starting balance |          |       |      |         |        | 0.00    |
+    When I close MoneyBud, and start it again on the first day of the next budget period
+    Then the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 1500.00 |
+      | Deposit | 450.00  |
+    And Accumulated for "Savings" in the current budget period should be 450 euro
+    And the history of "Deposit" should be exactly these, newest first:
+      | date                                       | entry            | category | label | from | to      | amount | balance |
+      | the first day of the current budget period | movement         | Savings  |       | Bank | Deposit | 200.00 |         |
+      | the last day of the previous budget period | expense          | Savings  | Fiets |      |         | 50.00  |         |
+      | the last day of the previous budget period | movement         | Savings  |       | Bank | Deposit | 300.00 |         |
+      | the last day of the previous budget period | starting balance |          |       |      |         |        | 0.00    |
+
+  # Which expenses lower Accumulated depends, on the day of backing, on the order things were
+  # recorded in (spend-against-a-backed-category.feature). Voorschot came before the backing, and
+  # Fiets after it. 200 moved at the backing, and only Fiets counts against it. Were that order lost,
+  # Accumulated would read 70 or 200 instead of 170.
+  Scenario: Whether an expense was recorded before or after the backing, on the day of backing, is kept
+    Given I have an account "Deposit" with a starting balance of 0 euro
+    And I have a budget of 300 euro for "Savings" in the current budget period
+    And I have recorded an expense of 100 euro for "Savings" labelled "Voorschot" dated today on the account "Bank"
+    When I set the backing account of "Savings" to "Deposit"
+    And I record an expense of 30 euro for "Savings" labelled "Fiets" on the account "Bank"
+    And I close MoneyBud and start it again
+    Then Accumulated for "Savings" in the current budget period should be 170 euro
 
   # ----------------------------------------------------------------------------------
   # A kept entry is the same entry

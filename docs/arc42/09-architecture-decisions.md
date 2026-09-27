@@ -16,8 +16,9 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008**, by a dated note | 2026-09-26 |
-| [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2 | 2026-09-27 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009**, by dated notes | 2026-09-26 |
+| [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
+| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3 | 2026-09-27 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -137,3 +138,25 @@ is the recording order. A cache of balances was rejected as a second author insi
 strictness and its keys, and all of that stands. It also said that a change of format is a new
 version number, and that until real use an older file is simply unreadable. 0008 does exactly that,
 so 0007 carries a dated note pointing to it, as 0006 does for 0007.
+
+**The backing increment added one: ADR 0009**, approved at its plan gate on 2026-09-27 (decision D1
+of the plan) and built the same day. The rulings (§12, *Backing and Accumulated*) make MoneyBud move
+money by itself. Two of them decide the shape of the code: several amounts are fixed on their day,
+and money planned for a later period has no destination until that period's first day. The answer
+is that **every movement is a stored `Movement` entry, written on the day the money moves.** Money
+for a later period is written by **settling**, which runs before every act, at start and on every
+tick, with the backing and pool account of that day. The ledger keeps the day it has settled
+through. The rejected alternatives were working every movement out from new histories of
+assignments, backings and pool changes, and writing planned money at assigning time to today's
+backing account. It passes this section's test on both counts. It touches the file format, so it is
+costly to reverse once data is real. And the one place MoneyBud now acts when a period begins would
+certainly draw a "why on earth" without its reasoning. It is the question
+[§11](11-risks-and-technical-debt.md)'s balance-writing row had left for this plan.
+
+**It carries out ADR 0008 rather than superseding it.** 0008 expected backing to "write entries, not
+balances", and a balance is still their sum. What grew is the number of entry kinds sharing the
+counter, now five, and the holding rule, now shared with backing as `EntryMark`. So 0008 carries a
+dated note, and so does 0007 for version 3. **Version 2 is refused, not read**, against the plan's
+recommendation (D2). The stakeholder left it to the build ("I dont mind starting over"), and one
+format read is one way in fewer. That is recorded in 0009's consequences and in §12, not as a record
+of its own, because it applies an existing ruling rather than making a new decision.

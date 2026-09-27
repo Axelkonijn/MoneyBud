@@ -255,23 +255,19 @@ public sealed class RecordExpenseSteps(SpecContext context)
     private CategoryRow? RowOf(string category, string which) =>
         context.App.OverviewFor(Ledger.Period(which)).Rows.SingleOrDefault(r => r.Name == category);
 
-    // Through the screen, with the amount as typed. A date the step does not name is left out
-    // rather than filled in here, so that the screen's own default is what decides it.
+    // Through the expense form, as the user records one, with the amount as typed. A date the step
+    // does not name is left out rather than filled in here, so that the screen's own default is what
+    // decides it. An account the step does not name is left as the form shows it once the category
+    // is typed: the backing account of a backed category, the pool account otherwise
+    // (spend-against-a-backed-category.feature). One it names is picked in the form's list.
     private void Record(string amount, string? category, string? label, string? date, string? account = null)
     {
         var day = date is null ? null : (DateOnly?)Ledger.Date(date);
-        if (account is null)
-        {
-            context.Record(context.App.RecordExpense(amount, category, label, day)
-                ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
-            return;
-        }
-
-        // Another account is chosen in the form's list, so the whole entry goes through the form.
         var form = context.App.ExpenseForm;
         (form.Amount, form.Category, form.Label) = (amount, category, label);
         form.Date = day?.ToDateTime(TimeOnly.MinValue);
-        form.ChosenAccount = Ledger.Account(account);
+        if (account is not null) form.ChosenAccount = Ledger.Account(account);
+
         context.Record(form.Record() ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
     }
 

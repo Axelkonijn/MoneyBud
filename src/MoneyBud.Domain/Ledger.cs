@@ -42,8 +42,16 @@ namespace MoneyBud.Domain;
 /// <i>Unassigned</i>, every <i>Budget</i> and every <i>Remaining</i> answer exactly as they did
 /// before accounts existed.</para>
 ///
-/// <para>Not built yet: backed categories and <i>Accumulated</i>, and the end-of-period sweep
-/// (arc42 §12).</para>
+/// <para><b>Backing</b> (arc42 §12, <i>Backing and Accumulated</i>; ADR 0009) is where the two
+/// dimensions meet. A category may be backed by one account (<see cref="SetBacking"/>), and money
+/// then really moves for it: assigning moves the amount from the pool account to the backing
+/// account, and backing, unbacking and re-pointing move what belongs to the category. Every such
+/// move is a stored <see cref="Movement"/>, written on the day the money moves, so a balance is
+/// still the sum of what is on the account. Money assigned for a later period moves on that
+/// period's first day, written by <see cref="Settle"/>, which every act that changes the ledger
+/// calls first. A backed category shows <i>Accumulated</i> (<see cref="AccumulatedFor"/>).</para>
+///
+/// <para>Not built yet: the end-of-period sweep (arc42 §12).</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -58,14 +66,20 @@ public sealed class Ledger
     private Account pool = null!;
 
     // In the order recorded. A change replaces an entry where it stands, so the order stays the
-    // order the entries were first recorded in. All four kinds draw their ids from one counter, so
-    // an id also says which of two entries was recorded first — across kinds, which is what a
-    // balance correction on the day of an entry needs to know (IEntry).
+    // order the entries were first recorded in. All five kinds draw their ids from one counter, and
+    // so does every backing change, so an id also says which of two was recorded first — across
+    // kinds, which is what a balance correction on the day of an entry needs to know (IEntry).
     private readonly List<Expense> expenses = [];
     private readonly List<Income> incomes = [];
     private readonly List<Transfer> transfers = [];
     private readonly List<BalanceCorrection> balanceCorrections = [];
+    private readonly List<Movement> movements = [];
     private int lastEntryId;
+
+    private readonly Dictionary<Category, Backing> backings = [];
+
+    // The day money planned for later periods has been moved up to (Settle).
+    private DateOnly settledThrough;
 
     /// <summary>
     /// An empty ledger — no categories, nothing recorded — with one account, the pool account, named
@@ -78,6 +92,7 @@ public sealed class Ledger
         var stored = NameRule.Normalise(poolAccount)
             ?? throw new ArgumentException("The pool account needs a name.", nameof(poolAccount));
         pool = NewAccount(stored);
+        settledThrough = Today;
     }
 
     private Ledger(TimeProvider clock, BudgetPeriodCalendar? calendar)
@@ -130,7 +145,11 @@ public sealed class Ledger
         foreach (var account in accountsInOrderAdded) accountKeys.Add(account, accountKeys.Count + 1);
 
         return new LedgerSnapshot(
-            categoriesInOrderAdded.Select(c => new CategorySnapshot(keys[c], c.Name, archived.Contains(c))).ToList(),
+            categoriesInOrderAdded.Select(c => new CategorySnapshot(
+                keys[c], c.Name, archived.Contains(c),
+                backings.TryGetValue(c, out var b)
+                    ? new BackingSnapshot(accountKeys[b.Account], b.AccumulatingSince, b.HereSince)
+                    : null)).ToList(),
             budgets.Select(b => new BudgetSnapshot(keys[b.Key.Category], b.Key.PeriodStart, b.Value)).ToList(),
             expenses.Select(e => new ExpenseSnapshot(
                 e.Id, e.Amount, e.Date, keys[e.Category], e.Label, accountKeys[e.Account])).ToList(),
@@ -141,7 +160,11 @@ public sealed class Ledger
             transfers.Select(t => new TransferSnapshot(
                 t.Id, t.Amount, t.Date, accountKeys[t.From], accountKeys[t.To])).ToList(),
             balanceCorrections.Select(c => new BalanceCorrectionSnapshot(
-                c.Id, c.Date, accountKeys[c.Account], c.Balance, c.IsStartingBalance)).ToList());
+                c.Id, c.Date, accountKeys[c.Account], c.Balance, c.IsStartingBalance)).ToList(),
+            movements.Select(m => new MovementSnapshot(
+                m.Id, m.Date, keys[m.Category], accountKeys[m.From], accountKeys[m.To], m.Amount,
+                m.Reason, m.Direction)).ToList(),
+            settledThrough);
     }
 
     /// <summary>
@@ -152,11 +175,12 @@ public sealed class Ledger
     /// <see cref="InvalidDataException"/> for any that is broken — a name the name rule does not
     /// store, two names the rule counts as one, a budget or an expense pointing at no category, a
     /// budget below zero or outside a period's first day, an entry of zero or less, an income
-    /// without a label, an id used twice or beyond the last one issued — across all four kinds of
+    /// without a label, an id used twice or beyond the last one issued — across all five kinds of
     /// entry, since they share one counter — an account name the rule does not store or two the
     /// rule counts as one, a pool account or an entry pointing at no account, a transfer between one
-    /// account and itself, or an account with two starting balances. Data like that cannot be read
-    /// (arc42 §12, <i>When the data cannot be read</i>).</para>
+    /// account and itself, an account with two starting balances, a movement going a way its reason
+    /// does not, or a backing marked with an id that is an entry's or was never issued. Data like
+    /// that cannot be read (arc42 §12, <i>When the data cannot be read</i>).</para>
     ///
     /// <para>Dates are not checked against today. An expense cannot be <i>recorded</i> in the
     /// future, but one recorded today is still valid kept data if the clock is later turned
@@ -251,8 +275,44 @@ public sealed class Ledger
                 kept.Id, kept.Date, account, kept.Balance, kept.IsStartingBalance));
         }
 
+        foreach (var kept in snapshot.Movements)
+        {
+            CheckEntry(kept.Id, kept.Amount);
+            var fits = (kept.Reason, kept.Direction) switch
+            {
+                (MovementReason.Assigned, MovementDirection.In or MovementDirection.Out) => true,
+                (MovementReason.Backed, MovementDirection.In) => true,
+                (MovementReason.Unbacked, MovementDirection.Out) => true,
+                (MovementReason.Repointed, MovementDirection.Along) => kept.From != kept.To,
+                _ => false,
+            };
+            if (!fits)
+                throw Invalid($"movement {kept.Id} goes {kept.Direction} for a reason that does not go that way");
+            ledger.movements.Add(new Movement(
+                kept.Id, kept.Date, CategoryFor(kept.Category), AccountFor(kept.From), AccountFor(kept.To),
+                kept.Amount, kept.Reason, kept.Direction));
+        }
+
+        // A backing's marks were drawn from the entries' counter, after every entry recorded
+        // before them, so each is an id issued and no entry's.
+        foreach (var kept in snapshot.Categories.Where(c => c.Backing is not null))
+        {
+            var backing = kept.Backing!;
+            CheckMark(backing.AccumulatingSince);
+            CheckMark(backing.HereSince);
+            ledger.backings.Add(
+                byKey[kept.Key], new Backing(AccountFor(backing.Account), backing.AccumulatingSince, backing.HereSince));
+        }
+
         ledger.lastEntryId = snapshot.LastEntryId;
+        ledger.settledThrough = snapshot.SettledThrough;
         return ledger;
+
+        void CheckMark(EntryMark mark)
+        {
+            if (mark.Id < 1 || mark.Id > snapshot.LastEntryId || ids.Contains(mark.Id))
+                throw Invalid($"a backing is marked with id {mark.Id}, which is not one drawn for it");
+        }
 
         // A period in the last month of the calendar has no end the calendar can name, so a day
         // there starts no period — rather than failing the whole start with something other than
@@ -314,6 +374,7 @@ public sealed class Ledger
     /// </summary>
     public AddCategoryResult AddCategory(string? name)
     {
+        Settle();
         var stored = CategoryName.Normalise(name);
         if (stored is null)
             return AddCategoryResult.Refused(CategoryRefusal.NameMissing);
@@ -345,6 +406,7 @@ public sealed class Ledger
     /// </summary>
     public Category ArchiveCategory(string name)
     {
+        Settle();
         var category = Find(name)
             ?? throw new InvalidOperationException($"There is no category called \"{name}\" to archive.");
 
@@ -373,6 +435,7 @@ public sealed class Ledger
     /// </summary>
     public RenameCategoryResult RenameCategory(string name, string? newName)
     {
+        Settle();
         var category = Find(name)
             ?? throw new InvalidOperationException($"There is no category called \"{name}\" to rename.");
 
@@ -405,17 +468,25 @@ public sealed class Ledger
     /// no history: that is deliberately not <see cref="HasBudget"/>, which can tell it apart from
     /// never assigned, a difference §12 says does not exist. And an expense that was removed, or
     /// moved to another category, leaves no trace to count.</para>
+    ///
+    /// <para>Money moved on its behalf between two accounts is history too: those rows stay in both
+    /// accounts' histories and name it, so such a category cannot be deleted, even once its budgets
+    /// are back at zero (§12, <i>Backing: ruled after the build</i>). A movement from the pool account
+    /// to itself is in no history and moves no balance, so it does not count.</para>
     /// </summary>
     public bool CanDelete(string name) =>
         Find(name) is { } category
         && !expenses.Any(e => e.Category == category)
-        && !budgets.Any(b => b.Key.Category == category && b.Value.Cents > 0);
+        && !budgets.Any(b => b.Key.Category == category && b.Value.Cents > 0)
+        && !movements.Any(m => m.Category == category && m.From != m.To);
 
     /// <summary>
     /// Deletes a category with no history anywhere. It is gone: not archived, brought back by
     /// nothing, and its name is free, so adding the name afterwards creates a new category that
     /// goes last in the order added. Never asks first — nothing of value is lost (arc42 §12).
-    /// Budgets of zero it still had go with it, since they are not history.
+    /// Budgets of zero it still had go with it, since they are not history, and so does its
+    /// backing, and any money moved for it from the pool account to itself, which moved no balance:
+    /// nothing moves.
     ///
     /// <para><b>Throws</b> for a name that is not one of the user's categories, and for a category
     /// with history. The delete act is offered only on a category that <see cref="CanDelete"/>, so
@@ -423,6 +494,7 @@ public sealed class Ledger
     /// </summary>
     public Category DeleteCategory(string name)
     {
+        Settle();
         var category = Find(name)
             ?? throw new InvalidOperationException($"There is no category called \"{name}\" to delete.");
 
@@ -432,6 +504,8 @@ public sealed class Ledger
         categories.Remove(category.Name);
         categoriesInOrderAdded.Remove(category);
         archived.Remove(category);
+        backings.Remove(category);
+        movements.RemoveAll(m => m.Category == category);
         foreach (var key in budgets.Keys.Where(k => k.Category == category).ToList())
             budgets.Remove(key);
 
@@ -455,7 +529,10 @@ public sealed class Ledger
     /// (arc42 §12, *When any category is shown in a period: the full rule*): every category with history there, and every
     /// category <i>in use</i> in the current period and every later one, where it can be planned
     /// for. A past period shows only what has history in it, and an archived category is shown
-    /// only where it has history.
+    /// only where it has history — and, since backing, in the current period and every later one
+    /// while it is backed and its <i>Accumulated</i> there is not zero, so that money still there
+    /// for it is never hidden, and it can be unbacked from the period it is in (§12, ruled at the
+    /// build, 2026-09-27).
     ///
     /// <para>"Current" is read from the clock on every call, so a period that was current becomes
     /// past the moment the next one begins, with nothing rebuilt around it.</para>
@@ -465,7 +542,9 @@ public sealed class Ledger
         var plannable = period.FirstDay >= CurrentPeriod.FirstDay;
 
         return categoriesInOrderAdded
-            .Where(c => (plannable && !archived.Contains(c)) || HasHistoryIn(c.Name, period))
+            .Where(c => (plannable && !archived.Contains(c))
+                        || HasHistoryIn(c.Name, period)
+                        || (plannable && AccumulatedFor(c.Name, period) is { Cents: not 0 }))
             .ToList();
     }
 
@@ -509,12 +588,20 @@ public sealed class Ledger
     /// it away, zero plans nothing, and a refused assignment did nothing at all (§12, *Only a
     /// positive assignment brings it back*).</para>
     ///
+    /// <para>For a <b>backed</b> category, assigning in the current period also moves money today
+    /// (§12, <i>Assigning to a backed category moves money</i>): a positive amount from the pool
+    /// account to the backing account, a negative one back, but only what the clip let through and
+    /// at most what is there for the category (<see cref="ThereFor"/>). In a later period only the
+    /// figure changes; the money moves on that period's first day (<see cref="Settle"/>). Nothing
+    /// about balances is checked: a move may overdraw the pool account.</para>
+    ///
     /// <para><b>Throws</b> for a period that is not one of <see cref="Calendar"/>'s own, such as a
     /// hand-made date range. A user picks a period from the calendar and cannot reach this, so no
     /// behaviour is defined for it; reaching it is a mistake in whatever called this.</para>
     /// </summary>
     public AssignResult Assign(decimal amountInEuros, string? categoryName, BudgetPeriod period)
     {
+        Settle();
         CheckIsAPeriod(period);
 
         if (CategoryName.Normalise(categoryName) is null)
@@ -544,6 +631,25 @@ public sealed class Ledger
         var newBudget = shortfall == Money.Zero ? budget + amount : Money.Zero;
         if (newBudget != budget)
             budgets[(category, period.FirstDay)] = newBudget;
+
+        // For a backed category the money moves as well, today, but only in the current period:
+        // a later period's moves on its first day (Settle). A negative amount moves back what the
+        // clip let through, and never more than is there for the category.
+        if (period == CurrentPeriod && backings.TryGetValue(category, out var backing))
+        {
+            if (!amount.IsNegative)
+            {
+                Move(category, pool, backing.Account, amount, MovementReason.Assigned, MovementDirection.In);
+            }
+            else
+            {
+                var cameBack = budget - newBudget;
+                var there = ThereFor(category, backing);
+                var back = there.Cents < cameBack.Cents ? there : cameBack;
+                if (back.Cents > 0)
+                    Move(category, backing.Account, pool, back, MovementReason.Assigned, MovementDirection.Out);
+            }
+        }
 
         var broughtBack = !amount.IsNegative && archived.Remove(category);
         return AssignResult.Assigned(category, shortfall, broughtBack);
@@ -614,6 +720,7 @@ public sealed class Ledger
     /// </summary>
     public TakeOverPlanResult TakeOverPlan(BudgetPeriod period)
     {
+        Settle();
         CheckIsAPeriod(period);
 
         if (period.FirstDay < CurrentPeriod.FirstDay)
@@ -684,6 +791,7 @@ public sealed class Ledger
     public RecordExpenseResult RecordExpense(
         decimal amountInEuros, string? categoryName, DateOnly date, string? label = null, Account? account = null)
     {
+        Settle();
         var on = CheckIsMine(account ?? pool);
         var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
         if (refusal is { } reason)
@@ -727,6 +835,7 @@ public sealed class Ledger
         Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label,
         Account? account = null)
     {
+        Settle();
         var index = IndexOf(expense);
         var current = expenses[index];
         var on = CheckIsMine(account ?? current.Account);
@@ -764,7 +873,11 @@ public sealed class Ledger
     ///
     /// <para><b>Throws</b> for an expense that is not in the ledger.</para>
     /// </summary>
-    public void RemoveExpense(Expense expense) => expenses.RemoveAt(IndexOf(expense));
+    public void RemoveExpense(Expense expense)
+    {
+        Settle();
+        expenses.RemoveAt(IndexOf(expense));
+    }
 
     /// <summary>
     /// The one check an expense passes or fails, for recording and changing alike, in the fixed
@@ -836,6 +949,7 @@ public sealed class Ledger
     /// </summary>
     public RecordIncomeResult RecordIncome(decimal amountInEuros, string? label, DateOnly date, Account? account = null)
     {
+        Settle();
         var on = CheckIsMine(account ?? pool);
         if (CheckIncome(amountInEuros, label) is { } refusal)
             return RecordIncomeResult.Refused(refusal);
@@ -861,6 +975,7 @@ public sealed class Ledger
     public ChangeIncomeResult ChangeIncome(
         Income income, decimal amountInEuros, string? label, DateOnly date, Account? account = null)
     {
+        Settle();
         var index = IndexOf(income);
         var current = incomes[index];
         var on = CheckIsMine(account ?? current.Account);
@@ -891,7 +1006,11 @@ public sealed class Ledger
     /// <i>Over-assigned</i>, which is allowed and shown, never refused. <b>Throws</b> for an income
     /// that is not in the ledger.
     /// </summary>
-    public void RemoveIncome(Income income) => incomes.RemoveAt(IndexOf(income));
+    public void RemoveIncome(Income income)
+    {
+        Settle();
+        incomes.RemoveAt(IndexOf(income));
+    }
 
     /// <summary>
     /// The one check an income passes or fails, for recording and changing alike, in the fixed
@@ -1019,6 +1138,7 @@ public sealed class Ledger
     /// </summary>
     public AddAccountResult AddAccount(string? name, decimal? startingBalance)
     {
+        Settle();
         var stored = NameRule.Normalise(name);
         if (stored is null)
             return AddAccountResult.Refused(AccountRefusal.NameMissing);
@@ -1045,6 +1165,7 @@ public sealed class Ledger
     /// </summary>
     public RenameAccountResult RenameAccount(Account account, string? newName)
     {
+        Settle();
         CheckIsMine(account);
 
         var stored = NameRule.Normalise(newName);
@@ -1066,17 +1187,24 @@ public sealed class Ledger
     }
 
     /// <summary>
-    /// Whether an account can be deleted: it is <b>unused</b> — no income, expense or transfer is on
-    /// it now, whatever was once — and it is not the pool account (arc42 §12). Its own starting
-    /// balance and balance corrections do not count as use: deleting is for an account added by
-    /// mistake, and those are the mistake.
+    /// Whether an account can be deleted: it is <b>unused</b> — no income, expense, transfer or
+    /// movement is on it now, whatever was once, and it backs no category — and it is not the pool
+    /// account (arc42 §12). Its own starting balance and balance corrections do not count as use:
+    /// deleting is for an account added by mistake, and those are the mistake. A movement stays on an
+    /// account for good, as a transfer does, so an account money was moved through stays used after
+    /// the category is unbacked; one that backed a category and never had money moved is unused
+    /// again once it backs nothing. A movement from an account to itself — made while it was the
+    /// pool account and backed a category — is in no history and moved no balance, so it does not
+    /// count, as it does not for deleting a category (§12, <i>Backing: ruled after the build</i>).
     /// </summary>
     public bool CanDeleteAccount(Account account) =>
         account != pool
         && accountsInOrderAdded.Contains(account)
         && !expenses.Any(e => e.Account == account)
         && !incomes.Any(i => i.Account == account)
-        && !transfers.Any(t => t.From == account || t.To == account);
+        && !transfers.Any(t => t.From == account || t.To == account)
+        && !movements.Any(m => m.From != m.To && (m.From == account || m.To == account))
+        && !backings.Values.Any(b => b.Account == account);
 
     /// <summary>
     /// Deletes an unused account, with its starting balance and balance corrections. Never asks
@@ -1086,12 +1214,14 @@ public sealed class Ledger
     /// </summary>
     public Account DeleteAccount(Account account)
     {
+        Settle();
         if (!CanDeleteAccount(account))
             throw new InvalidOperationException($"\"{account.Name}\" cannot be deleted.");
 
         accounts.Remove(account.Name);
         accountsInOrderAdded.Remove(account);
         balanceCorrections.RemoveAll(c => c.Account == account);
+        movements.RemoveAll(m => m.From == account && m.To == account);
         return account;
     }
 
@@ -1103,6 +1233,7 @@ public sealed class Ledger
     /// </summary>
     public void MakePool(Account account)
     {
+        Settle();
         CheckIsMine(account);
         if (account == pool)
             throw new InvalidOperationException($"\"{account.Name}\" is already the pool account.");
@@ -1120,6 +1251,7 @@ public sealed class Ledger
     /// </summary>
     public RecordTransferResult RecordTransfer(decimal amountInEuros, Account from, Account to, DateOnly date)
     {
+        Settle();
         if (CheckTransfer(amountInEuros, from, to, date) is { } refusal)
             return RecordTransferResult.Refused(refusal);
 
@@ -1136,6 +1268,7 @@ public sealed class Ledger
     public ChangeTransferResult ChangeTransfer(
         Transfer transfer, decimal amountInEuros, Account from, Account to, DateOnly date)
     {
+        Settle();
         var index = IndexOf(transfer);
         var current = transfers[index];
 
@@ -1155,7 +1288,11 @@ public sealed class Ledger
     }
 
     /// <summary>Removes a transfer, once the user has confirmed. <b>Throws</b> for one not in the ledger.</summary>
-    public void RemoveTransfer(Transfer transfer) => transfers.RemoveAt(IndexOf(transfer));
+    public void RemoveTransfer(Transfer transfer)
+    {
+        Settle();
+        transfers.RemoveAt(IndexOf(transfer));
+    }
 
     private TransferRefusal? CheckTransfer(decimal amountInEuros, Account from, Account to, DateOnly date)
     {
@@ -1196,6 +1333,7 @@ public sealed class Ledger
     /// </summary>
     public CorrectBalanceResult CorrectBalance(Account account, decimal balanceInEuros)
     {
+        Settle();
         CheckIsMine(account);
         if (!Money.IsWholeCents(balanceInEuros))
             return CorrectBalanceResult.RefusedFinerThanCent();
@@ -1213,6 +1351,7 @@ public sealed class Ledger
     /// </summary>
     public void RemoveBalanceCorrection(BalanceCorrection correction)
     {
+        Settle();
         var index = balanceCorrections.FindIndex(c => c.Id == correction.Id);
         if (index < 0)
             throw new InvalidOperationException($"Balance correction {correction.Id} is not in the ledger.");
@@ -1277,8 +1416,9 @@ public sealed class Ledger
 
     /// <summary>
     /// Everything on an account, in every period: its starting balance and balance corrections, its
-    /// transfers either way, and the incomes and expenses on it. <b>Newest first</b>: by date, and on
-    /// one date newest recorded first, as the Overview's lists are.
+    /// transfers and movements either way, and the incomes and expenses on it. <b>Newest first</b>:
+    /// by date, and on one date newest recorded first, as the Overview's lists are. Money planned for
+    /// a later period is in no history until its day, because it is written only then.
     /// </summary>
     public IReadOnlyList<IEntry> HistoryOf(Account account) =>
         MovementsOn(account).Select(m => m.Entry)
@@ -1290,18 +1430,21 @@ public sealed class Ledger
     /// <summary>
     /// Whether a typed balance already has an entry in it: the entry is dated before the typed
     /// balance's day, or on that day and recorded before it (arc42 §12, <i>A typed balance is what
-    /// the bank said that day</i>). A date has no time of day, so on the day itself only the order of
-    /// recording — the ids — can tell. A changed entry keeps its id, and so its first recording.
+    /// the bank said that day</i>) — anything not after it, as <see cref="EntryMark"/> reads "after".
+    /// A changed entry keeps its id, and so its first recording.
     /// </summary>
     private static bool Holds(BalanceCorrection typed, IEntry entry) =>
-        entry.Date < typed.Date || (entry.Date == typed.Date && entry.Id < typed.Id);
+        entry.Id != typed.Id && !EntryMark.Of(typed).IsBefore(entry);
 
     private List<BalanceCorrection> TypedBalancesOf(Account account) =>
         balanceCorrections.Where(c => c.Account == account).OrderBy(c => c.Date).ThenBy(c => c.Id).ToList();
 
     /// <summary>
-    /// What each income, expense and transfer on an account does to its balance: an income adds, an
-    /// expense takes away, and a transfer takes away from where it came from and adds where it went.
+    /// What each income, expense, transfer and movement on an account does to its balance: an income
+    /// adds, an expense takes away, and a transfer or a movement takes away from where it came from
+    /// and adds where it went. A movement from an account to itself — the pool account backing a
+    /// category — does nothing to it, so it is not here, and so it is in no history either (§12,
+    /// <i>The pool account may back a category</i>).
     /// </summary>
     private IEnumerable<(IEntry Entry, Money Amount)> MovementsOn(Account account)
     {
@@ -1312,7 +1455,214 @@ public sealed class Ledger
             if (transfer.From == account) yield return (transfer, -transfer.Amount);
             if (transfer.To == account) yield return (transfer, transfer.Amount);
         }
+
+        foreach (var movement in movements.Where(m => m.From != m.To))
+        {
+            if (movement.From == account) yield return (movement, -movement.Amount);
+            if (movement.To == account) yield return (movement, movement.Amount);
+        }
     }
+
+    // ================================================================== backing
+
+    /// <summary>The account backing a category, or null when it is unbacked or not one of the user's.</summary>
+    public Account? BackingOf(string? categoryName) =>
+        Find(categoryName) is { } category && backings.TryGetValue(category, out var backing) ? backing.Account : null;
+
+    /// <summary>
+    /// Backs a category with an account, points its backing at another account, or — given null —
+    /// removes it (arc42 §12, <i>Backing can be set, changed or removed at any time</i>). Never
+    /// refused and never confirmed; the result says what moved, to be announced.
+    ///
+    /// <list type="bullet">
+    /// <item><b>Backing</b> an unbacked category moves nothing already in the account. It moves the
+    /// category's unspent <i>Remaining</i> for the <b>current</b> period, if there is any, from the
+    /// pool account to the backing account, and <i>Accumulated</i> starts at what moved — over again,
+    /// if it was backed before.</item>
+    /// <item><b>Re-pointing</b> takes what is there for the category along, from the old account to
+    /// the new one, and <i>Accumulated</i> carries on.</item>
+    /// <item><b>Unbacking</b> returns what is there for the category to the pool account. Money built
+    /// up in earlier periods goes back too, with no purpose: it joins no period's
+    /// <i>Unassigned</i>.</item>
+    /// </list>
+    ///
+    /// <para>"What is there for it" is <see cref="ThereFor"/>; when there is none, nothing moves.
+    /// Either move may overdraw the account the money leaves. Money planned for a later period has
+    /// not moved yet, so none of these touches it: it moves on its day to whatever backs the
+    /// category then. An archived category can be backed like any other and stays archived.</para>
+    ///
+    /// <para><b>Choosing what is already set changes nothing</b> and moves nothing, and the result
+    /// says so. A list on screen writes back what it shows, so this is the case it must be safe
+    /// in.</para>
+    ///
+    /// <para><b>Throws</b> for a name that is not one of the user's categories, and for an account
+    /// not in the ledger. Both are picked on screen, so neither is something the user can do.</para>
+    /// </summary>
+    public SetBackingResult SetBacking(string categoryName, Account? account)
+    {
+        var category = Find(categoryName)
+            ?? throw new InvalidOperationException($"There is no category called \"{categoryName}\" to back.");
+        if (account is not null) CheckIsMine(account);
+
+        // Before settling: choosing what is set changes nothing, and so settles nothing either.
+        if (BackingOf(category.Name) == account)
+            return new SetBackingResult(category, BackingOutcome.Unchanged, account, account, null);
+
+        Settle();
+        backings.TryGetValue(category, out var current);
+
+        Movement? moved = null;
+
+        if (current is null)
+        {
+            var remaining = RemainingFor(category.Name, CurrentPeriod);
+            var mark = NewMark();
+            backings[category] = new Backing(account!, mark, mark);
+            if (remaining.Cents > 0)
+                moved = Move(category, pool, account!, remaining, MovementReason.Backed, MovementDirection.In);
+            return new SetBackingResult(category, BackingOutcome.Backed, null, account, moved);
+        }
+
+        // Worked out under the backing being left, before anything is written.
+        var there = ThereFor(category, current);
+
+        if (account is null)
+        {
+            backings.Remove(category);
+            if (there.Cents > 0)
+                moved = Move(category, current.Account, pool, there, MovementReason.Unbacked, MovementDirection.Out);
+            return new SetBackingResult(category, BackingOutcome.Unbacked, current.Account, null, moved);
+        }
+
+        backings[category] = current with { Account = account, HereSince = NewMark() };
+        if (there.Cents > 0)
+            moved = Move(category, current.Account, account, there, MovementReason.Repointed, MovementDirection.Along);
+        return new SetBackingResult(category, BackingOutcome.Repointed, current.Account, account, moved);
+    }
+
+    /// <summary>
+    /// What is there for a backed category in its backing account (arc42 §12, <i>follow-up</i> to
+    /// <i>Backing can be set, changed or removed at any time</i>): what MoneyBud moved into that
+    /// account on its behalf since the account became its backing account, minus what it moved back
+    /// out, minus the category's expenses paid <b>from that account</b> after that moment. Null for
+    /// a category that is not backed.
+    ///
+    /// <para>It is what unbacking returns, what re-pointing takes along, and the most a negative
+    /// assignment moves back. It is <b>not</b> <i>Accumulated</i>, which counts the category's expenses
+    /// on every account: the two differ by what other accounts paid for it. It may be below zero,
+    /// when the account paid out more for the category than it received for it. Money planned for a
+    /// later period has not moved yet, so it is not in here.</para>
+    /// </summary>
+    public Money? ThereFor(string categoryName) =>
+        Find(categoryName) is { } category && backings.TryGetValue(category, out var backing)
+            ? ThereFor(category, backing)
+            : null;
+
+    // Counted by direction, not by the accounts' names: when the pool account backs the category,
+    // money assigned moves from the pool to the pool and is still there for it. Every movement after
+    // the mark came into this account or went out of it, since re-pointing moves the mark.
+    private Money ThereFor(Category category, Backing backing)
+    {
+        var moved = Money.Sum(movements
+            .Where(m => m.Category == category && backing.HereSince.IsBefore(m))
+            .Select(m => m.Direction == MovementDirection.Out ? -m.Amount : m.Amount));
+        var spent = Money.Sum(expenses
+            .Where(e => e.Category == category && e.Account == backing.Account && backing.HereSince.IsBefore(e))
+            .Select(e => e.Amount));
+        return moved - spent;
+    }
+
+    /// <summary>
+    /// A backed category's <i>Accumulated</i>, on screen <i>Opgebouwd</i>, as the period shown sees
+    /// it (arc42 §12, <i>Accumulated covers everything up to the period on screen</i>): what has moved
+    /// in on its behalf since it was last backed, minus what moved back out, minus every expense
+    /// against it since — on any account — all up to the period's last day. For a period whose money
+    /// has not moved yet, what is planned there and before it is added, since it will move on those
+    /// periods' first days. <b>Null</b> for a category that is not backed now, in every period: the
+    /// backing is today's, whichever period is shown.
+    ///
+    /// <para>"Since it was last backed" is <see cref="Backing.AccumulatingSince"/>, and an expense is
+    /// after it when it is dated later, or on that day and recorded later. So an expense from before
+    /// the backing never counts, even one recorded afterwards. Below zero is allowed and shown.</para>
+    /// </summary>
+    public Money? AccumulatedFor(string categoryName, BudgetPeriod period)
+    {
+        if (Find(categoryName) is not { } category || !backings.TryGetValue(category, out var backing))
+            return null;
+
+        var since = backing.AccumulatingSince;
+        var moved = Money.Sum(movements
+            .Where(m => m.Category == category && since.IsBefore(m) && m.Date <= period.LastDay)
+            .Select(m => m.Direction switch
+            {
+                MovementDirection.In => m.Amount,
+                MovementDirection.Out => -m.Amount,
+                _ => Money.Zero,
+            }));
+        var spent = Money.Sum(expenses
+            .Where(e => e.Category == category && since.IsBefore(e) && e.Date <= period.LastDay)
+            .Select(e => e.Amount));
+        var planned = Money.Sum(budgets
+            .Where(b => b.Key.Category == category && b.Key.PeriodStart > settledThrough
+                        && b.Key.PeriodStart <= period.FirstDay)
+            .Select(b => b.Value));
+
+        return moved - spent + planned;
+    }
+
+    /// <summary>
+    /// Moves the money planned for every period that has begun since the last time this ran (arc42
+    /// §12, <i>Planned money follows the backing on the day it moves</i>; ADR 0009). For each such
+    /// period in turn, each backed category with a <i>Budget</i> above zero there has that
+    /// <i>Budget</i> moved from the pool account to its backing account, dated the period's first
+    /// day. Returns whether anything was moved.
+    ///
+    /// <para>Every act that changes the ledger calls this first, and the screen calls it when it
+    /// starts and once a minute. That is what makes the date right: nothing can change while
+    /// MoneyBud is closed, so settling on 5 November for 1 November sees exactly the backing and the
+    /// pool account 1 November had. And it gives each movement the next id, lower than anything
+    /// typed after it, so a balance correction typed on 1 November already has it in.</para>
+    ///
+    /// <para>Runs once per day at most, and never backwards: a clock turned back finds nothing to
+    /// do.</para>
+    /// </summary>
+    public bool Settle()
+    {
+        var today = Today;
+        if (today <= settledThrough) return false;
+
+        var moved = false;
+        for (var period = Calendar.Next(Calendar.PeriodContaining(settledThrough));
+             period.FirstDay <= today;
+             period = Calendar.Next(period))
+        {
+            foreach (var category in categoriesInOrderAdded)
+            {
+                if (backings.TryGetValue(category, out var backing)
+                    && budgets.TryGetValue((category, period.FirstDay), out var budget)
+                    && budget.Cents > 0)
+                {
+                    Move(category, pool, backing.Account, budget, MovementReason.Assigned, MovementDirection.In,
+                         period.FirstDay);
+                    moved = true;
+                }
+            }
+        }
+
+        settledThrough = today;
+        return moved;
+    }
+
+    private Movement Move(
+        Category category, Account from, Account to, Money amount, MovementReason reason,
+        MovementDirection direction, DateOnly? date = null)
+    {
+        var movement = new Movement(++lastEntryId, date ?? Today, category, from, to, amount, reason, direction);
+        movements.Add(movement);
+        return movement;
+    }
+
+    private EntryMark NewMark() => new(Today, ++lastEntryId);
 
     private Account NewAccount(string name)
     {

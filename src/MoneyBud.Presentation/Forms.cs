@@ -26,41 +26,62 @@ namespace MoneyBud.Presentation;
 // back what it shows, and writing back nothing — which it does while its items are replaced — is
 // ignored. A headless run of the window found that anything cleverer, such as treating the pool
 // written back as "not chosen", turned into choices the user never made.
+//
+// Since backing, the expense form's account also FOLLOWS THE CATEGORY TYPED: the backing account of
+// a backed category, the pool account for anything else, until the user picks an account, which then
+// sticks for that entry (arc42 §12, *What the backing increment covers, and what waits*). That needs
+// one inference from the list after all, kept as small as it can be: a write of the account the list
+// already shows is the list writing back, and changes nothing; a write of any other account is a
+// pick. Picking the account already shown is indistinguishable from the list writing back, and leaves
+// the account following the category.
 
 public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
 {
     [ObservableProperty] public partial string? Amount { get; set; }
-    [ObservableProperty] public partial string? Category { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChosenAccount))]
+    public partial string? Category { get; set; }
+
     [ObservableProperty] public partial string? Label { get; set; }
     [ObservableProperty] public partial DateTime? Date { get; set; }
 
-    /// <summary>The account the entry is on. Null until one is chosen or loaded, which is the pool account.</summary>
+    /// <summary>
+    /// The account the user picked, or the one the entry being changed is on. Null until then, when
+    /// the entry is on the account the category typed follows.
+    /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ChosenAccount))]
     public partial Account? Account { get; set; }
 
-    /// <summary>What the account list shows and sets. Setting nothing changes nothing.</summary>
+    /// <summary>
+    /// What the account list shows and sets. Until an account is picked it follows the category
+    /// typed: the backing account of a backed category, and the pool account for an unbacked one or
+    /// for anything that is not a category's name. Setting nothing, or the account already shown,
+    /// changes nothing; setting another account picks it.
+    /// </summary>
     public Account ChosenAccount
     {
-        get => Account ?? app.Ledger.PoolAccount;
+        get => Account ?? app.Ledger.BackingOf(Category) ?? app.Ledger.PoolAccount;
         set
         {
-            if (value is not null) Account = value;
+            if (value is not null && value != ChosenAccount) Account = value;
         }
     }
 
     internal void RefreshAccount() => OnPropertyChanged(nameof(ChosenAccount));
 
     /// <summary>
-    /// Another account was made the pool. A new entry still on the old one moves on to the new one,
-    /// as a new entry starts out on the pool account; an entry being changed keeps its own.
+    /// Another account was made the pool. A new entry whose account was picked as the old pool moves
+    /// on to the new one, as a new entry starts out on the pool account; one following its category
+    /// follows on by itself; an entry being changed keeps its own.
     /// </summary>
     internal void PoolChanged(Account oldPool)
     {
-        if (!IsEditing && ChosenAccount == oldPool) Account = null;
+        if (!IsEditing && Account == oldPool) Account = null;
     }
 
-    /// <summary>An account deleted while chosen here: the form goes back to the pool account.</summary>
+    /// <summary>An account deleted while chosen here: the form goes back to following its category.</summary>
     internal void Forget(Account deleted)
     {
         if (Account == deleted) Account = null;

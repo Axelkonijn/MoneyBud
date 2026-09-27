@@ -36,6 +36,7 @@ public enum HistoryKind
     Transfer,
     Income,
     Expense,
+    Movement,
 }
 
 /// <summary>
@@ -45,7 +46,9 @@ public enum HistoryKind
 /// <para>Which acts a row offers is ruled: a <b>transfer</b> can be changed and removed there, a
 /// <b>balance correction</b> or <b>starting balance</b> removed and never changed, and an
 /// <b>income or expense</b> neither — those are changed and removed from the Overview's lists only
-/// (§12, <i>Accounts and net worth</i>).</para>
+/// (§12, <i>Accounts and net worth</i>). A <b>movement</b> neither: money moved for a category is
+/// changed by assigning again, not from the history (§12, <i>Moved money in the account's
+/// history</i>).</para>
 ///
 /// <para>Amounts are shown without a sign: what a row is says which way the money went. A balance
 /// correction shows the balance typed and the difference, worked out afresh, so that it always says
@@ -61,6 +64,7 @@ public sealed record HistoryLine(IEntry Entry, Account Account, Money? Differenc
         Transfer => HistoryKind.Transfer,
         Income => HistoryKind.Income,
         Expense => HistoryKind.Expense,
+        Movement => HistoryKind.Movement,
         _ => throw new InvalidOperationException($"{Entry.GetType().Name} is not in a history."),
     };
 
@@ -77,6 +81,7 @@ public sealed record HistoryLine(IEntry Entry, Account Account, Money? Differenc
         Expense e => e.Amount,
         Income i => i.Amount,
         Transfer t => t.Amount,
+        Movement m => m.Amount,
         _ => null,
     };
 

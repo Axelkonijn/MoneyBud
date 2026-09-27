@@ -54,7 +54,9 @@ public sealed partial class TekstTests
         ["Balance correction (the record)"] = [Tekst.BalanceCorrection],
         ["Correct a balance (the act)"] = [Tekst.CorrectBalance],
         ["Add account"] = [Tekst.AddAccount],
-        ["Overdrawn, and a negative net worth (the marker's badge)"] = [Tekst.Overdrawn],
+        ["Overdrawn, a negative net worth, and a negative Accumulated (the marker's badge)"] = [Tekst.Overdrawn],
+        ["Backing account (the list on a category row that sets it)"] = [Tekst.BackingAccount],
+        ["Accumulated"] = [Tekst.Accumulated],
     };
 
     [Fact]
@@ -126,6 +128,50 @@ public sealed partial class TekstTests
         var starting = ledger.HistoryOf(start).OfType<BalanceCorrection>().Single();
         Assert.Equal("Startsaldo — € 40,00", new HistoryLine(starting, start, ledger.DifferenceOf(starting)).Text);
     }
+
+    // Backing is announced naming what moved, and naming only the backing when nothing did: the
+    // shape is the ruling (arc42 §12), the sentences are copy.
+    [Fact]
+    public void A_backing_notice_names_the_money_moved_or_only_the_backing()
+    {
+        var ledger = new Ledger(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)), "Bank");
+        ledger.AddCategory("Sparen");
+        ledger.RecordIncome(1000m, "Salaris", new DateOnly(2026, 3, 15));
+        var deposit = ledger.AddAccount("Spaarrekening", 0m).Account!;
+
+        Assert.Equal("\"Sparen\" staat nu op \"Spaarrekening\".", Tekst.BackingSet(ledger.SetBacking("Sparen", deposit)));
+
+        ledger.Assign(200m, "Sparen", ledger.CurrentPeriod);
+        Assert.Equal(
+            "\"Sparen\" staat niet meer op \"Spaarrekening\": € 200,00 teruggeboekt naar \"Bank\".",
+            Tekst.BackingSet(ledger.SetBacking("Sparen", null)));
+        Assert.Equal(
+            "\"Sparen\" staat nu op \"Spaarrekening\": € 200,00 overgeboekt van \"Bank\".",
+            Tekst.BackingSet(ledger.SetBacking("Sparen", deposit)));
+
+        // From the pool account to itself nothing visibly moved, so no money is named.
+        ledger.SetBacking("Sparen", null);
+        Assert.Equal("\"Sparen\" staat nu op \"Bank\".", Tekst.BackingSet(ledger.SetBacking("Sparen", ledger.PoolAccount)));
+    }
+
+    [Fact]
+    public void A_movement_row_names_its_category_and_its_two_accounts()
+    {
+        var ledger = new Ledger(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)), "Bank");
+        ledger.AddCategory("Sparen");
+        var deposit = ledger.AddAccount("Spaarrekening", 0m).Account!;
+        ledger.SetBacking("Sparen", deposit);
+        ledger.Assign(200m, "Sparen", ledger.CurrentPeriod);
+
+        var line = new HistoryLine(ledger.HistoryOf(deposit).OfType<Movement>().Single(), deposit, null);
+
+        Assert.Equal("Toegewezen aan \"Sparen\" — van \"Bank\" naar \"Spaarrekening\"", line.Text);
+        Assert.Equal("€ 200,00", line.AmountText);
+    }
+
+    [Fact]
+    public void Accumulated_is_shown_as_Opgebouwd_with_its_figure() =>
+        Assert.Equal("Opgebouwd: € 600,00", Tekst.AccumulatedFigure(Money.FromCents(60000)));
 
     [Theory]
     [InlineData(7660, "+€ 76,60")]

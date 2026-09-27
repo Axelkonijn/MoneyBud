@@ -8,8 +8,10 @@
 # The rules, from arc42 §12:
 #   - EVERY INCOME AND EXPENSE IS ON AN ACCOUNT. On both forms the account is chosen from a LIST OF
 #     MY ACCOUNTS, not typed, and the list STARTS OUT ON THE POOL ACCOUNT. The list is in the
-#     strip's order: the pool account first, then the rest in the order added (show-accounts.feature). No category is backed yet,
-#     so every expense starts out on the pool account whatever its category.
+#     strip's order: the pool account first, then the rest in the order added (show-accounts.feature).
+#     An expense against a BACKED category starts out on its backing account instead, once the
+#     category is typed (spend-against-a-backed-category.feature). No category below is backed, so
+#     every expense here starts out on the pool account.
 #   - Choosing another account is FOR THAT ONE ENTRY. It changes nothing about the next.
 #   - An expense lowers its account's Balance and an income raises it, and each STILL COUNTS ON THE
 #     PURPOSE SIDE EXACTLY AS BEFORE, whichever account it is on: an expense against its category's
