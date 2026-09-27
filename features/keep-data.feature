@@ -11,8 +11,12 @@
 #     starting balance and balance corrections, the account every income and expense is on, the
 #     transfers, and which account is the pool account. Since the backing increment, which account
 #     backs each category, and the money moved on a category's behalf, including money assigned for
-#     a later period that has not moved yet. So is the order things were recorded in, which decides
-#     whether an entry on a balance correction's day is in it (correct-a-balance.feature), and
+#     a later period that has not moved yet. Since the sweep increment, the sweep destination, every
+#     sweep and every difference moved since, with the period each was for and the category it went
+#     into, which categories were backed when each period ended, and when MoneyBud was first
+#     started (sweep-at-a-period-end.feature, start-moneybud.feature). So is the order things were
+#     recorded in, which decides whether an entry on a balance correction's day is in it
+#     (correct-a-balance.feature), and
 #     whether an expense on the day of backing counts against Accumulated
 #     (spend-against-a-backed-category.feature). WHAT IS ON SCREEN IS NOT KEPT: the period shown, an
 #     entry half typed, an entry being changed, a question waiting for an answer, a rename in
@@ -68,8 +72,8 @@
 #   - Every other step is reused unchanged from the file that introduced it, with the meaning that
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
 #     steps overview.feature's, the correcting steps change-an-entry.feature's and
-#     remove-an-entry.feature's, the account steps show-accounts.feature's, and the backing steps
-#     back-a-category.feature's.
+#     remove-an-entry.feature's, the account steps show-accounts.feature's, the backing steps
+#     back-a-category.feature's, and the sweep steps sweep-at-a-period-end.feature's.
 #
 # The empty ledger every scenario starts from holds one account, "Bank", the pool account, with no
 # starting balance and nothing on it (show-accounts.feature). The names, labels and amounts are
@@ -425,6 +429,67 @@ Feature: Keep my data between runs
     And I record an expense of 30 euro for "Savings" labelled "Fiets" on the account "Bank"
     And I close MoneyBud and start it again
     Then Accumulated for "Savings" in the current budget period should be 170 euro
+
+  # ----------------------------------------------------------------------------------
+  # The sweep is kept
+  # ----------------------------------------------------------------------------------
+
+  # One of each thing the sweep increment added. The 2000 swept into Savings, with the period it was
+  # for, is still there after starting again, and so is the destination changed to Holiday since. A
+  # 40 euro receipt found afterwards shows as swept too much, and comes back from Savings, the
+  # category the money went into, not from Holiday. Were the category of the sweep not kept, it could
+  # not. What the button moved is kept in its turn, and the period asks nothing more.
+  Scenario: The sweep destination, what was swept for each period, and into which category, are all there after starting again
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have a category "Groceries"
+    And I have a category "Savings"
+    And I have a category "Holiday"
+    When I record an income of 2000 euro labelled "Salaris"
+    And I add an account "Deposit" with a starting balance of 0 euro
+    And I add an account "Broker" with a starting balance of 0 euro
+    And I set the backing account of "Savings" to "Deposit"
+    And I set the backing account of "Holiday" to "Broker"
+    And I set the sweep destination to "Savings"
+    And I close MoneyBud, and start it again on the first day of the next budget period
+    Then I should be told that the period leftover of the previous budget period, 2000 euro, was swept into "Savings"
+    When I set the sweep destination to "Holiday"
+    And I record an expense of 40 euro for "Groceries" labelled "Bon" dated on the last day of the previous budget period
+    And I close MoneyBud and start it again
+    Then the sweep destination shown in the current budget period should be "Holiday"
+    And the previous budget period should show 40 euro of its period leftover swept too much
+    When I bring the swept amount of the previous budget period up to date
+    Then I should be told that 40 euro swept too much for the previous budget period was taken back from "Savings"
+    When I close MoneyBud and start it again
+    Then the previous budget period should show that 1960 euro was swept into "Savings"
+    And I should not be able to bring the swept amount of the previous budget period up to date
+    And the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 0.00    |
+      | Deposit | 1960.00 |
+      | Broker  | 0.00    |
+
+  # Whether a category counts in a period's leftover is judged by its backing when the period ended
+  # (show-an-ended-period.feature). Hobby was unbacked then, so its 60 was swept. Backed since, it
+  # must still count as unbacked for that period after starting again. Were the backing at the
+  # period's end not kept, the period would show 60 swept too much.
+  Scenario: Which categories were backed when a period ended is there after starting again
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have a category "Hobby"
+    And I have a category "Savings"
+    When I record an income of 1000 euro labelled "Salaris"
+    And I add an account "Deposit" with a starting balance of 0 euro
+    And I set the backing account of "Savings" to "Deposit"
+    And I set the sweep destination to "Savings"
+    And I assign 100 euro to "Hobby" in the current budget period
+    And I record an expense of 40 euro for "Hobby" labelled "Verf"
+    And I close MoneyBud, and start it again on the first day of the next budget period
+    Then I should be told that the period leftover of the previous budget period, 960 euro, was swept into "Savings"
+    When I set the backing account of "Hobby" to "Deposit"
+    And I close MoneyBud and start it again
+    Then the previous budget period should show that 960 euro was swept into "Savings"
+    And I should not be able to bring the swept amount of the previous budget period up to date
 
   # ----------------------------------------------------------------------------------
   # A kept entry is the same entry

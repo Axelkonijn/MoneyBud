@@ -98,7 +98,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-27, after increment 10 (backing) was tried by Axel and merged into `main`. Next: the sweep, from stage 1. Update this when a stage completes._
+_Last updated 2026-09-27, after increment 11 (the sweep) passed the first gate and its plan was written, on branch `increment-11-sweep`. Next: the plan to Axel at the second gate. Update this when a stage completes._
 
 **Done: all five stages, ten times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, and
@@ -471,9 +471,22 @@ Order agreed with Axel on 2026-09-26:
 3. **Opening a period — done** (increment 8, above).
 4. **Accounts and net worth — done** (increment 9, above).
 5. **Backing and *Accumulated* — done** (increment 10, above).
-   **Start here in a new conversation: the sweep, from stage 1** — a conversation with Axel.
-6. **The sweep** — next. Its destination must be backed, which it now can be. The open question
-   about an income back-dated into a swept period (below) goes live with it.
+6. **The sweep** — in progress as increment 11, on branch `increment-11-sweep`.
+   **Start here in a new conversation:** put [the plan](docs/plans/increment-11-sweep.md) to Axel at
+   the second gate — its two decisions, **D1** (how a sweep is kept, a new ADR 0010) and **D2** (refuse
+   version-3 data), and its *Chosen in this plan* list. Once approved, build it to green (stage 5),
+   following the plan's order of work. **Stages 1–2 done** on 2026-09-27: nineteen
+   rulings, every one on the recommendation, all in §12 *The sweep and Restant* — read it first. In
+   one line: at a period's end MoneyBud moves *Unassigned* plus the unbacked categories' Resterend,
+   **netted and never below zero**, from the pool account to one chosen backed destination
+   (*Restant naar*), and says so once; with no destination nothing moves and it is shown; a later
+   change to a swept period shows the difference, and one button, *Restant bijwerken*, moves it
+   either way. Redirecting a past sweep is deferred until missed. **Stage 3 written**: four feature files
+   (`sweep-at-a-period-end`, `show-an-ended-period`, `bring-a-swept-period-up-to-date`,
+   `choose-a-sweep-destination`) plus additions to `start-moneybud` and `keep-data`, 51 scenarios,
+   66 cases; eleven more rulings taken while writing them, in §12. **Approved by Axel at the first
+   gate** on 2026-09-27, with every documentation's reading in their headers (§12, *Approved at the
+   scenario gate*, under *The sweep and Restant*). **Stage 4: the plan is written**, not yet approved.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
@@ -504,13 +517,10 @@ trimmed at the ends and left alone inside, a label that trims to nothing is "no 
 zero *Remaining* is not over budget, and amounts are whole cents and never rounded
 ([§8.2](docs/arc42/08-crosscutting-concepts.md)).
 
-**One open question, and it cannot be answered yet**: a budget period never closes, so an income
-can be back-dated into a period whose *Unassigned* was already swept. §12 covers the analogous
-case for a late *expense*, but the principle does not necessarily extend — a late expense means
-MoneyBud moved too much, a late income means there was more to move, and those disagree about
-which period's figures change. There is no sweep, so there is nothing to decide against; it goes
-live when the sweep is built. Recorded in [§12](docs/arc42/12-glossary.md). The other former open
-question, **how an overdrawn account is shown**, was answered in increment 9: the same marker, badge
+**No open questions since 2026-09-27.** The last one, an income back-dated into a period whose
+*Unassigned* was already swept, was answered with the sweep: like a late expense, the difference is
+**shown**, and the user moves it with *Restant bijwerken*; MoneyBud never adjusts a sweep by itself
+([§12](docs/arc42/12-glossary.md), *The sweep and Restant*). The other former open question, **how an overdrawn account is shown**, was answered in increment 9: the same marker, badge
 *Rood*.
 
 Everything else is settled. Three questions arose while the first increment was being built and

@@ -27,7 +27,9 @@
 #   - If MoneyBud stays open while a new period begins, the Overview stays on the period it
 #     showed. That period is now the previous one, so assigning in it is refused from then on.
 #     Nothing is announced. The only visible change is that the period on screen stops being
-#     labelled as the current period.
+#     labelled as the current period. ONE EXCEPTION since the sweep increment: a sweep that moved
+#     money at the period's end is announced, once (sweep-at-a-period-end.feature; ruled by the
+#     stakeholder on 2026-09-27). The scenarios here set no sweep destination, so nothing is swept.
 #
 # An expense or income given an explicit date, and an assignment that names its period, still go
 # where their date or their period says (record-expense.feature, record-income.feature,
@@ -265,7 +267,8 @@ Feature: Step between budget periods
   # ----------------------------------------------------------------------------------
   # Staying open into a new period
   #
-  # The screen does not jump when the clock passes a period boundary, and nothing is announced.
+  # The screen does not jump when the clock passes a period boundary, and nothing is announced
+  # (a sweep that moves money would be, but there is no sweep destination here).
   # The period it showed is still on screen, no longer labelled as the current one, and a past
   # period's plan cannot be changed. From "the next budget period begins" on, periods are named
   # relative to the new today.

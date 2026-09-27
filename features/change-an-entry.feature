@@ -86,7 +86,9 @@
 #   - How a row loads into its form, and what the form shows after Opslaan or Annuleren. That is
 #     form behaviour, left for the plan to propose (glossary: "On screen: picking an entry to
 #     correct"), like the field order and the emptying category box before it.
-#   - Corrections in a period that has already been swept. There is no sweep yet.
+#   - Corrections in a period that has already been swept. There was no sweep when this file was
+#     written. Since the sweep increment they are in bring-a-swept-period-up-to-date.feature: the
+#     change itself is judged exactly as here, and the swept period then shows the difference.
 #
 # Every scenario starts from an empty ledger and names the categories it needs. The names, labels
 # and amounts are synthetic test data.

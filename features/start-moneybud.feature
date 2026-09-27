@@ -13,7 +13,12 @@
 #     Dutch because it is content MoneyBud ships with. NO CATEGORY IS BACKED, Sparen included: with
 #     the pool account as the only account, backing Sparen is mine to do, once I have added an
 #     account for it (glossary: "A first start leaves Sparen unbacked", settled by the stakeholder on
-#     2026-09-27 for the backing increment). "No data yet" covers the very first start and
+#     2026-09-27 for the backing increment). So THERE IS NO SWEEP DESTINATION, and none can be chosen
+#     until I back a category: only a backed category can be one (glossary: "The sweep and Restant",
+#     derived, 2026-09-27). And ONLY PERIODS THAT END AFTER THE FIRST START ARE SWEPT BY THEMSELVES:
+#     last month's salary, entered back-dated on the first day, is never swept by itself, and the
+#     button sweeps it once there is a destination (ruling 7 of the sweep, settled by the stakeholder
+#     on 2026-09-27). "No data yet" covers the very first start and
 #     a start after I have deleted what MoneyBud kept. Deleting it myself is the only way to start
 #     over: MoneyBud has no act for it.
 #   - KEPT DATA. MoneyBud opens it as it was left, and does NOT add the default categories back, nor
@@ -78,7 +83,8 @@
 #     of", "I rename the account") are explained in show-accounts.feature and the accounts files
 #     it names. The backing steps ("should not be backed", "the choices offered for the backing
 #     account of", "I set the backing account of", "Accumulated for") are explained in
-#     back-a-category.feature.
+#     back-a-category.feature. The sweep steps ("the sweep destination", "period leftover", "bring
+#     the swept amount ... up to date") are explained in sweep-at-a-period-end.feature.
 #   - Every other step is reused unchanged from the file that introduced it.
 #
 # The names, labels and amounts are synthetic test data. The six default category names and
@@ -161,6 +167,50 @@ Feature: Start MoneyBud
     And I set the backing account of "Sparen" to "Spaarrekening"
     Then the backing account of "Sparen" should be "Spaarrekening"
     And Accumulated for "Sparen" in the current budget period should be 0.00 euro
+
+  # Derived for the sweep, 2026-09-27: only a backed category can be the sweep destination, and a
+  # first start backs none. Backing Sparen offers it, and never chooses it (ruled by the stakeholder
+  # at the scenario gate, 2026-09-27).
+  Scenario: A first start has no sweep destination, and nothing to choose until I back a category
+    Given I have never used MoneyBud
+    When I start MoneyBud
+    Then the sweep destination shown in the current budget period should be none
+    And the choices offered for the sweep destination should be exactly these, in this order:
+      | choice |
+      | none   |
+    When I add an account "Spaarrekening" with a starting balance of 0 euro
+    And I set the backing account of "Sparen" to "Spaarrekening"
+    Then the choices offered for the sweep destination should be exactly these, in this order:
+      | choice |
+      | none   |
+      | Sparen |
+    And the sweep destination shown in the current budget period should be none
+
+  # Ruling 7 of the sweep, in the example it was put with. MoneyBud is first started on the last day
+  # of a period, and last month's salary is entered then, back-dated. That month ended before the
+  # first start, so it is never swept by itself: not when the destination is chosen, and not when
+  # MoneyBud is next started, a period later, although the period that ended in between is. The
+  # button sweeps it. "Spaarrekening" is test data here.
+  Scenario: Last month's salary, entered on the first day, is never swept by itself, and the button sweeps it
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have just started using MoneyBud for the first time
+    When I record an income of 2400 euro labelled "Salaris vorige maand" dated on the first day of the previous budget period
+    And I record an income of 2500 euro labelled "Salaris"
+    And I add an account "Spaarrekening" with a starting balance of 0 euro
+    And I set the backing account of "Sparen" to "Spaarrekening"
+    And I set the sweep destination to "Sparen"
+    Then the previous budget period should show 2400 euro of its period leftover still to sweep
+    When I close MoneyBud, and start it again on the first day of the next budget period
+    Then I should be told that the period leftover of the previous budget period, 2500 euro, was swept into "Sparen"
+    And the budget period 2 before the current one should still show 2400 euro of its period leftover still to sweep
+    And the balance of "Spaarrekening" should be 2500 euro
+    When I bring the swept amount of the budget period 2 before the current one up to date
+    Then I should be told that 2400 euro more of the period leftover of the budget period 2 before the current one was swept into "Sparen"
+    And the accounts should be exactly these, in this order:
+      | account        | balance |
+      | Betaalrekening | 0.00    |
+      | Spaarrekening  | 4900.00 |
 
   # ----------------------------------------------------------------------------------
   # Kept data: opened as it was left, and the defaults are not added back
