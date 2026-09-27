@@ -61,6 +61,13 @@ Backing records that a particular purpose's money really lives somewhere — it 
 purpose to a place. Purpose and location still vary independently, and most categories are backed
 by nothing at all. See *Account-backed categories* below.
 
+**Raised on 2026-09-27, not settled.** The accounts rulings make a starting balance and a balance
+correction count in net worth and nowhere on the purpose side, not even in *Unassigned*. That is
+money seen by location only, which this section's "one set of data, two ways" does not allow for.
+In the accounts increment that is accepted, because nothing on the purpose side reads a balance yet.
+It is deferred to the backing increment's first stage (*A question for the backing increment*, under
+*Accounts and net worth*, below).
+
 ## The second distinction: plan and actual
 
 Categories carry **two layers** over the same set of names. Keeping the layers apart is what makes
@@ -140,6 +147,9 @@ is that *staat op*.
 **None of this is in the first increment**, which has no accounts and therefore no backed
 categories ([§11](11-risks-and-technical-debt.md)).
 
+**Nor in the accounts increment** (settled and built 2026-09-27). It builds accounts without
+backing, and backing is the increment after it (*Accounts and net worth*, below).
+
 ## The pool account
 
 Backing names where money *goes* when MoneyBud moves it. This names where it comes *from*.
@@ -173,6 +183,13 @@ account is a fact about one account, not a redefinition of *Unassigned*.
 
 **Not in the first increment**, which has no accounts at all
 ([§11](11-risks-and-technical-debt.md)).
+
+**Settled for the accounts increment on 2026-09-27, and built the same day** (*Accounts and net worth*,
+below). **Any account can be the pool, not only a current account**: MoneyBud has no account kinds,
+so "one current account" above describes the usual case, not a rule. There is always exactly one,
+and changing it changes the default for new entries only. On screen it is *Hoofdrekening*. In that
+increment the pool is the default for every income and expense. Its role as the **source** of
+MoneyBud's own movements waits for backing and the sweep.
 
 ## An expense defaults to the pool account
 
@@ -222,6 +239,13 @@ or never. It was taken with that price visible. [§11](11-risks-and-technical-de
 not built yet ([§11](11-risks-and-technical-debt.md)), which is why
 [`features/record-expense.feature`](../../features/record-expense.feature) records expenses without
 one.
+
+**Settled for the accounts increment on 2026-09-27, and built the same day.** The account is the last field
+on the expense form, a list pre-filled with the pool account. With no category backed yet, every
+expense is pre-filled with the pool. A row names its account only when it is not the pool account
+(*Every income and expense is on an account*, under *Accounts and net worth*, below). The weak spot
+above is not withdrawn: that row rule shows a cash expense recorded on the cash account, and does not
+show one wrongly left on the pool.
 
 ## An amount may be assigned negatively, and a *Budget* floors at zero
 
@@ -423,6 +447,11 @@ for two severities" above is **open again for the *Balance* side**: an overdraft
 marker, which keeps this paragraph's decision, or it does not, which reopens it. That is to be
 settled when accounts are built.
 
+**Answered on 2026-09-27, and built the same day.** An overdrawn account **gets the same marker**, with a badge
+of its own, still never blocked or warned about. So the decision of this section stands: one display
+for both severities, now a marked one (*An overdrawn account carries the marker*, under *Accounts
+and net worth*, below).
+
 **An expense does exactly the same.** Recording an expense larger than its account holds records
 and overdraws like any other: never blocked, never questioned, shown as overdrawn. This was first
 written here as a derivation from the assigning case and has since been confirmed by the
@@ -437,6 +466,10 @@ that the bank bounced anything — MoneyBud cannot tell the two apart, which is 
 over budget); the overdrawn marker is left to carry the meaning on its own.
 
 **Not in the first increment**, which has no accounts and therefore nothing to overdraw.
+
+**The accounts increment** (settled and built 2026-09-27) makes an account overdrawable by an
+expense, by a transfer out, and by a negative starting balance or balance correction. **Not by assigning**,
+the route this section is named after, because nothing is backed until the increment after.
 
 ## Backed categories accumulate
 
@@ -481,7 +514,8 @@ many-to-many — an account backing two categories holds the sum of both, plus a
 merely unassigned. The two are related, not equal. What happens when they disagree is a known risk
 ([§11](11-risks-and-technical-debt.md)).
 
-**Not in the first increment**, which has no accounts and therefore no backed categories.
+**Not in the first increment**, which has no accounts and therefore no backed categories. **Nor in
+the accounts increment** (settled 2026-09-27): it is the next one.
 
 ## A category name is compared case-insensitively and stored as typed, trimmed
 
@@ -1214,21 +1248,26 @@ though no sweep runs today either. It becomes backed when the location dimension
 Recorded so that a later reader does not take it for an oversight. It is the one default category
 whose eventual behaviour differs from the behaviour it has now.
 
+**Refined on 2026-09-27: not when accounts arrive, but when backing does.** The accounts increment
+builds accounts without backing, so *Sparen* stays unbacked through it, and becomes backed in the
+increment after (*What this increment covers, and what waits*, under *Accounts and net worth*,
+below). A first start has no savings account for it to be backed by. The user adds one.
+
 ## Terms
 
 | Term | Definition |
 |---|---|
-| **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. |
+| **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. **Settled for the accounts increment on 2026-09-27, and built the same day** (*Accounts and net worth*, above): an account is **a name and what is on it**. The kinds above are examples, not a type, and nothing behaves differently by kind (*derived*). It is added with a name and, if the user types one, a *Starting balance* (follow-up, 2026-09-27: left empty, the account has none), can be renamed, and can be deleted only while **unused**: no income, expense or transfer on it (*derived*). Deleting one is **never confirmed** and is announced afterwards, even with a starting balance (follow-up, 2026-09-27). Its name follows the category name rules and is unique among accounts, and it may share a name with a category (*derived*). **Adding a name another account has is refused**, not handed back as a category's would be, so a starting balance just typed is never dropped (follow-up, 2026-09-27). Accounts are listed **pool account first, then in the order added**, in the strip and in the forms (follow-up, 2026-09-27). Archiving an account is deferred until missed. A first start has one, *Betaalrekening*, as the *Pool account*, **with no starting balance**, so its balance is the sum of what is on it until first corrected. Backing waits for the increment after. On screen *Rekening*, renamed with *Hernoemen* and deleted with *Verwijderen* (approved 2026-09-27; into the display-terms table at the build). |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). A category with history is taken out of use by **archiving**, never by deleting: its history stays, and adding its name again, recording an expense against it or assigning a positive amount to it brings it back (*A category is taken out of use, not deleted*, above). A category with **no history in any period** can instead be **deleted** (*Deleting a category that has no history anywhere*, above). It can be **renamed**, under the same name rules, to any name no other category has (*Renaming a category*, above). Deleting and renaming were settled on 2026-09-26 and built in the corrections increment. MoneyBud ships with six **default categories** (above). |
 | **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. An archived category can be **renamed**, and stays archived (*Renaming a category*, above). On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). |
 | **Rename** | Giving a category a new name. The new name follows the rules for adding one: trimmed, stored otherwise as typed, and refused if it trims to nothing. A name **another** category has, archived ones included, is **refused**, and the user is told it is taken. The category's **own** name in a new spelling is allowed, which is the front door *The existing spelling is kept* kept adding from being. **Past periods show the new name.** An archived category can be renamed and **stays archived**. See *Renaming a category* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.RenameCategory`. |
 | **Delete** | Said of a **category** only: removing one that has **no history in any period**, meaning no expense and no budget of more than zero. It is gone, not archived, and adding its name again creates a new category. A separate act from archiving, with its own button, shown only on such a category. **Never confirmed**, and announced afterwards. A category with history cannot be deleted; it is archived. Decided by figures, never by `Ledger.HasBudget`. See *Deleting a category that has no history anywhere* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.CanDelete` and `Ledger.DeleteCategory`. |
-| **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. |
+| **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. Refined 2026-09-27: when **backing** exists, the increment after accounts (*Sparen ships unbacked, and that is temporary*, above). |
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
-| **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts. |
+| **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts, and not in the accounts increment either: it is the one after (settled 2026-09-27). |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. |
-| **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. |
+| **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day**: **any** account can be made the pool, since there are no account kinds, and there is **always exactly one**. It pre-fills the account field of every new income and expense. Making another account the pool changes that default for new entries only. The pool cannot be deleted while it is the pool, so there is always at least one account (*derived*). A first start's *Betaalrekening* is the pool. It is **listed first**, in the strip and in the forms' account list, the rest following in the order added (follow-up, 2026-09-27). On screen it is ***Hoofdrekening***, made so by *Maak hoofdrekening* (*The pool account can be any account*, above). Its role as source of MoneyBud's own movements waits for backing and the sweep. |
 | **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. |
 | **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Possible in the **current budget period and any later one**; assigning in a **past** period is **refused** (*Assigning happens in the current budget period and later ones*, above). **Assigning zero** is accepted and changes nothing, unlike a zero expense or income, which is refused (*Assigning zero is accepted and moves nothing*, above). Refused only for its **target** or its cents, never for being zero or negative. The refusals, in the order the first one broken is reported, are: a name that trims to nothing, a name that is not one of your categories, an amount finer than a cent, and a past period. That is the same order recording an expense uses. An otherwise acceptable zero or clippable negative is still refused if its target is wrong (*When an assignment is refused*, above). An **archived** category is not offered for assigning. Assigning a **positive** amount to its name anyway **brings it back**, and the user is told; a negative or zero assignment leaves it archived (see *Assigning to an archived category brings it back* above). Built in the assigning increment for **unbacked** categories, which is every category while there are no accounts: `Ledger.Assign`, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature) ([§8.1](08-crosscutting-concepts.md)). The backed half, the real transfer, is not built. Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back rather than applied — see below. Since 2026-09-26 that is settled in detail, and it is built: a current or later period whose every *Budget* is zero is offered the plan of the latest earlier period that has one, and can **take it over** (*Opening a period*, below). A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
@@ -1236,12 +1275,12 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Remembered figure** | A category's *Budget* in the plan being offered: what taking it over would assign to it. Shown in grey on the category's row, labelled *plan* ("plan: € 400,00"), *only while the plan is offered*, and gone once the period has a plan. It is not a comparison between months. A category archived now, or whose figure in that period is zero, is not part of the plan, and its row shows no label. While the plan is offered, the rows are **ordered by this figure**, largest first, ties in order added, so nothing jumps on taking it over. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as a `PlanFigure` in the `PlanOffer` and `CategoryRow.PlanFigure` on screen ([§8.4](08-crosscutting-concepts.md)). |
 | **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). The marker's badge reads *Te veel toegewezen*. Built in the UI increment. |
 | **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). |
-| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; built in the corrections increment. |
-| **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). |
-| **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an **optional** **Label** of its own, below. **May not be dated in the future**, unlike an income — money not yet spent is a plan, and the plan layer already has a word for it, the *Budget* (see *Income may be dated in the future; an expense may not*). The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. |
+| **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; built in the corrections increment. **Every transaction is on an account** from the accounts increment on (settled and built 2026-09-27). Until then none has one. A *Transfer* is **not** a transaction in this glossary's sense: the word stays for income and expenses, so that the two differences above stay the only two (the documentation's wording, *Transfers*, above). |
+| **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). **Settled for the accounts increment on 2026-09-27, and built the same day:** every income is **on an account**, chosen from a list as the form's last field and pre-filled with the *Pool account*. A future-dated income reaches its account's *Balance*, and net worth, **only on its date**, while it still counts in its period's *Unassigned* from the moment it is recorded (*derived*). Its row names its account only when that is not the pool account. |
+| **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an **optional** **Label** of its own, below. **May not be dated in the future**, unlike an income — money not yet spent is a plan, and the plan layer already has a word for it, the *Budget* (see *Income may be dated in the future; an expense may not*). The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. **Settled for the accounts increment on 2026-09-27, and built the same day:** every expense is **on an account**, chosen from a list as the form's last field and pre-filled with the *Pool account*, since no category is backed yet. Its row names its account only when that is not the pool account. |
 | **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
 | **Change** | Said of an **entry**: correcting an expense or an income after it was recorded. Allowed in **any** budget period, past ones included. A change is judged exactly as the changed entry would be if it were recorded now, so it is refused on the same rules, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings that category back, announced. Fixing an expense that is already on an archived category does **not** bring it back. A change **overwrites** the entry: MoneyBud keeps no record of what it was. A changed date that moves the entry to another period leaves the screen where it was and says where the entry went. See *An entry can be changed or removed* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.ChangeExpense` and `Ledger.ChangeIncome`. |
-| **Remove** | Said of an **entry**: taking an expense or an income away entirely. Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. |
+| **Remove** | Said of an **entry**: taking an expense or an income away entirely. From the accounts increment, only from the Overview's lists, never from an account's history (follow-up, 2026-09-27; built). Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. **From the accounts increment** (settled and built 2026-09-27), a *Transfer* and a *Balance correction* can be removed too, from an account's history, and removing either asks first by the same principle (*derived*). "The only act that does" then means the only **kind** of act: removing a record. Deleting an unused account does **not** ask, even with a starting balance: a follow-up ruling of 2026-09-27 (*Managing accounts*, above). |
 | **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
 | **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker's badge reads *Over budget*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). Built in the UI increment. |
@@ -1249,9 +1288,12 @@ whose eventual behaviour differs from the behaviour it has now.
 | **Leftover** | A category's *Remaining* when its budget period ends — money that was assigned but not spent. For an unbacked category it is *swept* rather than allowed to vanish; a backed category keeps its leftover, because that money is already in its account — see below. A leftover is computed at the end of a period; computing it does not close the period — see below. |
 | **Sweep** | What happens at the end of a budget period to money that has not landed anywhere: the *Unassigned* pool and the *Leftovers* of every unbacked category are moved together into one **sweep destination**, out of the *pool account* and into that destination's default backing account. Backed categories are not swept. Automatic, not prompted — see below. |
 | **Sweep destination** | The category a sweep moves money into. **Must itself be account-backed**, so that swept money really arrives somewhere. Set once as a default, applied automatically at every period end, shown in the period summary, and redirectable afterwards — see below. |
-| **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure, and a **point-in-time** one: it is **what you have today**. Income dated in the future is **not** counted, because it is not money yet — there is nothing in any account for it to be part of. This is where net worth and *Unassigned* part company on purpose: *Unassigned* is a **period** figure and includes an expected income from the moment it is recorded, so the two views disagree about that amount by design and not by error. See *The central distinction* above. |
-| **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). |
-| **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. |
+| **Net worth** | The sum of the balances of all accounts. The "how am I doing" figure, and a **point-in-time** one: it is **what you have today**. Income dated in the future is **not** counted, because it is not money yet — there is nothing in any account for it to be part of. This is where net worth and *Unassigned* part company on purpose: *Unassigned* is a **period** figure and includes an expected income from the moment it is recorded, so the two views disagree about that amount by design and not by error. See *The central distinction* above. **Settled for the accounts increment on 2026-09-27, and built the same day:** shown as ***Vermogen***, the stakeholder's own word, at the end of a strip of accounts across the top of the Overview, the same in every period. A *Starting balance* or *Balance correction* changes it and nothing on the purpose side. A *Transfer* leaves it unchanged **except where a balance correction has already counted one side**, which is true rather than a flaw, since each account follows its own balance corrections and net worth is their sum (follow-up, 2026-09-27; *Transfers*, *Accounts and net worth*, above). **Below zero it carries the one marker**, with the badge *Rood*, like an overdrawn account (follow-up, 2026-09-27). |
+| **Balance** | How much is in one account. Changed by the transactions recorded against it, by assignments to any category it backs — which really move money in — by every assignment and every sweep if it is the *pool account*, which move money out, and by the user editing it directly, which round 2 settles is allowed alongside anything MoneyBud calculates. Two mechanisms writing one number is a known risk ([§11](11-risks-and-technical-debt.md)). **Revised on 2026-09-27, and built the same day: a balance is worked out, never stored as a free number.** It is the account's latest *Balance correction* (its typed *Starting balance*, if there is no other), plus or minus every income, expense and transfer on it dated **after** that balance correction's day, or on that day and first recorded after it (*derived*). Entries dated before it are already in it. An account with **no** typed balance at all, such as a first start's *Betaalrekening* until it is first corrected, has as its balance the plain sum of everything on it, whatever the dates (follow-up, 2026-09-27). "Editing it directly" is now **typing the real balance**, which records a *Balance correction* rather than overwriting a number. A future-dated income reaches it only on its date (*derived*). See *A balance is worked out from the entries* and *A typed balance is what the bank said that day* (*Accounts and net worth*, above). Assignments and sweeps move no balance until backing and the sweep are built. On screen *Saldo* (approved 2026-09-27). |
+| **Starting balance** | The balance an account is added with, **typed by the user**: what the bank says **today**. It is the account's **first *Balance correction***, with everything that follows from that (*derived*): dated the day it is typed, may be negative or zero, net worth only, removable but not changeable. **A first start's *Betaalrekening* has none** (follow-up, 2026-09-27): only a balance the user actually types takes in earlier entries, so until he first corrects it, its balance is the plain sum of what is on it (*A first start has one account*, above). **Nor does an account added with the starting balance left empty**, which behaves the same way; **a typed 0 is a starting balance** and takes in earlier entries (follow-up, 2026-09-27). Its row in the account's history shows **no difference**, "Startsaldo — € 1.000,00", because there is nothing it corrected (follow-up, 2026-09-27). Settled 2026-09-27, and built the same day. On screen *Startsaldo* (approved 2026-09-27). |
+| **Balance correction** | A balance the user types for an account, recorded as **what that account really held on that day**: dated today (*derived*), and taking in every entry dated before it, so an expense remembered late does not knock it off. It changes the account's *Balance* and net worth, and **nothing on the purpose side**: it is not income, counts in no *Unassigned*, and changes no budget figure. May be **negative or zero** (*derived*). Can be **removed**, which asks first, but **not changed**: to change one, correct again (*derived*). Listed in the account's history **with the new balance and the difference** (follow-up, 2026-09-27), the only trace left of something forgotten. The difference is **recomputed, not fixed**: it is what is still unexplained, the typed balance minus what the previous balance correction and the entries it takes in would give now, so it shrinks to €0,00 as forgotten entries are recorded, while the balance itself does not move (follow-up, 2026-09-27). Distinct from a *Change* to an entry, which corrects a record rather than a balance. **Why two words.** This glossary already says "correction" for changing or removing an entry: *the corrections increment*, *Corrections and the sweep*, and the entries in *Answered* about them, all left as written. A one-word term would have collided with that older use in every sentence that reached both, so the term was renamed from *Correction* to *Balance correction* on 2026-09-27, before anything was specified or built with it. The Dutch keeps one word, *Correctie*, because on screen entries are changed through *Wijzigen* and the word never appears beside them. Settled 2026-09-27, and built the same day. On screen *Correctie*, and the act *Saldo corrigeren* (approved 2026-09-27). |
+| **Transfer** | Money moved by the user **from one account to another**, on a date: an ATM withdrawal from Betaalrekening to Contant. It moves both balances and changes **neither net worth nor any budget figure**, except that net worth **may** change where a *Balance correction* dated after the transfer has already counted one side; that is true, not a flaw (follow-up, 2026-09-27). Not an income or an expense, and not a *Transaction* in this glossary's sense. **May not be dated in the future**, like an expense. Needs two different accounts and an amount above zero, never finer than a cent (*derived*). Changed or removed from an account's history, like an entry, removing asking first (*derived*). That history is the only place a transfer is changed; an income or expense, by contrast, is changed only from the Overview's lists (follow-up, 2026-09-27). It carries **no label**, and a transfer breaking several rules reports the first of: two different accounts, more than 0, whole cents, not in the future (approved at the scenario gate, 2026-09-27). The same kind of movement MoneyBud will make itself once backing and the sweep exist, in the stakeholder's own framing. Settled 2026-09-27, and built the same day (*Transfers*, *Accounts and net worth*, above). On screen *Overboeking*, the act *Overboeken*, with *Van* and *Naar* (approved 2026-09-27). |
+| **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day:** shown with **the same marker** as *Over budget* and *Over-assigned*, with its own badge, ***Rood*** (ruled in a follow-up the same day). Never blocked or warned about. In that increment it is reached by an expense, a transfer out, or a negative starting balance or balance correction, and not by assigning, which moves no money until backing. |
 | **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). |
 | **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and built:** every slice, *Unassigned* included, is drawn at least **2% of the ring**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. The fill stays exact. Pointing at a slice shows its figures in the ring's hole, which otherwise shows *Unassigned*, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). |
 
@@ -2323,6 +2365,10 @@ the negative figure, still never blocked and never warned about, but now **with 
 was the stakeholder's revision (*One marker for over budget and over-assigned*, below). *Overdrawn*
 is not covered by it and is not settled.
 
+**And for the third on 2026-09-27**, settled and built the same day: *Overdrawn* gets the same marker, with a
+badge of its own (*An overdrawn account carries the marker*, under *Accounts and net worth*, below).
+All three are marked alike again.
+
 **Naming it is what makes the merge above safe.** The one real objection to folding *Left to
 assign* into *Unassigned* is that "unassigned" reads oddly below zero: money cannot be less than
 unassigned, so the merged figure appears to describe something impossible. *Over-assigned* answers
@@ -2790,6 +2836,10 @@ the amount first.
 **What it does not change:** which fields there are, what each one accepts, and their defaults
 (above). The assign form's period stepper was not part of the question.
 
+**Extended on 2026-09-27, and built the same day:** the expense and income forms gain *Rekening* as their last
+field, after *Datum* (*Every income and expense is on an account*, under *Accounts and net worth*,
+below). The order above is unchanged.
+
 This is window behaviour, so a unit test holds it, not scenarios. **Built** in the Desktop's
 markup, `MainWindow.axaml`, and held by `WindowMarkupTests`, which reads that markup as text, the
 way `TekstTests` reads this glossary. That was approved at the plan gate on 2026-09-26 as a small
@@ -3065,6 +3115,9 @@ overspent budget and an overdrawn account share one display despite their differ
 Whether an overdraft now gets this marker too, or whether that decision is reopened, is **not
 settled**. It is met when accounts are built.
 
+**Answered on 2026-09-27, and built the same day:** it gets this marker, with its own badge, *Rood* (ruled the same day)
+(*An overdrawn account carries the marker*, under *Accounts and net worth*, below).
+
 **What is fixed is what is drawn, what is marked, and in what order** (*The order of categories
 and slices*, below), plus the three-part arrangement of the screen (*The Overview's layout*, below).
 Since the first demo, three more things are fixed: the ring's place as the middle column's
@@ -3189,6 +3242,10 @@ window.
 This is presentation, so it stays out of the scenarios. It works together with the minimum slice
 width (*Every slice has a minimum width*, above): a larger ring and a minimum width both answer
 the same complaint.
+
+**Refined on 2026-09-27, and built the same day:** a strip of accounts and net worth runs across the top, above
+the three columns, the same in every period (*The accounts strip, and an account's history*, under
+*Accounts and net worth*, below). The three columns stay as they are.
 
 ### Approved at the scenario gate
 
@@ -3502,6 +3559,15 @@ breaking a rule the ledger keeps, is refused as unreadable, blank included. Mone
 kan je gegevens niet lezen. Er is niets aan veranderd."* in a small window, and closes when it is
 closed. The file is not written to ([§8.3](08-crosscutting-concepts.md)).
 
+> ***Reworded*, 2026-09-27.** Meeting it for real after the accounts build (data from before accounts),
+> the stakeholder found the message confusing: it said neither why nor what "niets" was. Asked what it
+> should say, he answered that if MoneyBud can tell the reasons apart it should explain, and if it
+> cannot, it should just say the save file is wrong. **It cannot**: every reason — damaged, blank, a
+> newer or older version, a folder out of reach — arrives as one "cannot read". So it is one sentence
+> naming the reasons there can be, still naming no place: *"MoneyBud kan je opgeslagen gegevens niet openen. Het bestand is beschadigd, niet bereikbaar of gemaakt door een andere versie van MoneyBud. MoneyBud heeft het niet gewijzigd."* The ruling that
+> the message points nowhere stands. Telling the reasons apart is possible, and was left for if it is
+> wanted.
+
 > **"Touches nothing" means the data file.** Making the folder if it is missing, and the lock file
 > beside the data, is MoneyBud's own bookkeeping, and acceptable.
 
@@ -3589,6 +3655,10 @@ the first version is a demo to react to, not an MVP ([§1.1](01-introduction-and
 **What it means for the build.** Until the switch, the way data is stored can change between
 versions without anything carrying the old data across. From the switch on, it cannot.
 
+**First exercised by the accounts increment** (ruled and built 2026-09-27): the version with
+accounts will not read data saved without them (*Saved data from before accounts*, under *Accounts
+and net worth*, below).
+
 **Extended the same day** (*Real use before accounts*, next): saved data need not survive into the
 version that adds accounts either. So the stored form may change freely **at least up to and
 including the accounts increment**, whatever the stakeholder is doing with MoneyBud by then.
@@ -3610,6 +3680,10 @@ was. He will try MoneyBud out, and what he enters is still throwaway enough to d
 He found the question beside the point, and it is recorded that way. The documentation had raised
 it because it had tied several deadlines to "the switch to real use"
 ([§11](11-risks-and-technical-debt.md)). His answer means none of them needs planning around yet.
+
+**Applied on 2026-09-27**: asked again for the accounts increment, he took the recommendation that
+saved data is not carried over (*Saved data from before accounts*, under *Accounts and net worth*,
+below).
 
 ### Where the data is, is written in the README
 
@@ -3650,6 +3724,780 @@ six defaults with no history leaves a budget with nothing in it, and MoneyBud sa
 change. That save is valid and loads as no categories. Only a **blank** save, with nothing at all
 in it, is unreadable (*When the data cannot be read*, above).
 
+**Refined on 2026-09-27, and built the same day.** A first start will also come with one account,
+*Betaalrekening*, with no starting balance, as the pool account (*A first start has one account*, under *Accounts
+and net worth*, below). The heading above is left as written.
+
+## Accounts and net worth
+
+The rulings for the accounts increment, settled with the stakeholder on 2026-09-27. Like *Opening a
+period* and *What MoneyBud keeps*, they were answers to multiple-choice questions, each put to him
+with a recommendation, and they went straight into this glossary rather than into a new interview
+round. **He took the recommended option every time.** **The reasoning given with each ruling is the
+documentation's.** It was offered with the recommended option as the argument for it, and he chose
+that option without adding reasons of his own. The one framing that is his is recorded as his
+(*Transfers*, below).
+
+**One ruling took a second asking.** The first question about transfers confused him, and he tied
+it to backing and the sweep. It was reworded around an ATM withdrawal, and he then took the
+recommendation.
+
+**Seven points were derived rather than asked.** They were stated to him alongside the rulings, not
+put as questions. **One more, the same-day tie-break for a balance correction, is the
+documentation's own** and was not put to him. Each is marked *derived*. They stand as the
+documentation's reading and are **open to contradiction at the scenario gate**, like the derivations
+of earlier increments. Where this section reads a ruling's wording further, it says so ("in the
+documentation's reading").
+
+**Seven more points were found while this section was first written up**, and listed as open. **Four
+went back to the stakeholder the same day, 2026-09-27**, each as a multiple-choice question with a
+recommendation, and **he took the recommendation every time**. Each sits in the subsection it
+belongs to, marked *follow-up*. **The other three were handled by the documentation without asking
+him**: one is deferred to the backing increment as a question for its first stage, one is recorded
+as usage rather than a rule, and one is a derivation. Each is marked where it sits. *What this
+section leaves open* (below) now says where each of the seven went.
+
+**Seven more came from the scenario writer the same day**, each put to the stakeholder with a
+recommendation, which he took every time. They are marked *follow-up* too. For those seven, where a
+rejected option's reason is not his, it is the documentation's, drawn from the reason for the option
+he chose.
+
+**One term was renamed the same day.** The balance one is ***Balance correction***, not
+*Correction*, so that it does not collide with this glossary's older use of "correction" for
+changing or removing an entry (*Balance correction*, *Terms*, above).
+
+**Settled, specified and built, all on 2026-09-27.** This section was first written when nothing
+existed but the rulings, and it said so: "no feature file, no plan and no code". Then:
+
+- **Specified.** The scenarios were approved at the scenario gate, with one more ruling and nine
+  choices of the scenario writer (*Approved at the scenario gate, 2026-09-27*, below).
+- **Planned.** The plan was approved at the plan gate, and brought
+  [ADR 0008](../decisions/0008-balance-is-worked-out.md): no balance is stored anywhere, a typed
+  balance is a dated entry, and all four entry kinds share one id counter, which is the recording
+  order ([§9](09-architecture-decisions.md), [§8.3](08-crosscutting-concepts.md)).
+- **Built** on branch `increment-9-accounts` and green. `spec-reviewer` found no faked scenario, one
+  vacuous scenario and some defects, all fixed.
+
+What the build chose where the rulings are silent is under *Accounts: chosen in the build, not put
+to the stakeholder* (below). Where the text below says "will", it was written before the build and
+is left as written.
+
+> **Every income and expense is on an account, and each account's *Balance* is worked out from what
+> is on it**, starting from the last balance the user typed for it, or from zero if he has typed
+> none. **Net worth**, *Vermogen*, is the sum of the balances, shown with every account in a strip
+> across the top of the Overview. Money is moved between accounts by a **transfer**. A balance that
+> has gone wrong is put right by typing the real one, which MoneyBud records as a **balance
+> correction**. **No category is backed yet**: assigning still moves no money.
+
+An example, with synthetic figures. A first start has one account, Betaalrekening, with no starting
+balance, and it is the pool account. The user corrects it to €1.000, the bank's figure today. He adds Contant with a
+starting balance of €40 and Spaarrekening with €5.000, and *Vermogen* reads €6.040. None of that
+€6.040 is in any period's *Niet toegewezen*. He records €25 at the market against Boodschappen,
+picking Contant in the account field. Contant reads €15, *Vermogen* €6.015, and Boodschappen's
+*Resterend* falls by €25, as it always did. He withdraws €50 at an ATM, a transfer from
+Betaalrekening to Contant. Betaalrekening reads €950 and Contant €65, and *Vermogen* and every budget
+figure stay as they were.
+
+### What this increment covers, and what waits
+
+> **Accounts and net worth only.** Accounts with balances, every income and expense on an account,
+> net worth on screen, and transfers between accounts. **No backing**: assigning to *Sparen* still
+> moves nothing, and there is no *Accumulated*.
+
+| Not in this increment | When |
+|---|---|
+| **Account-backed categories** and ***Accumulated*** | The next increment |
+| **The sweep** | The increment after that. Its destination must be backed |
+| **Archiving an account** | Deferred until missed (*Managing accounts*, below) |
+| **Account kinds** | None, *derived* (*Managing accounts*, below) |
+| **Recurring transactions** | A later increment, as before |
+
+**The sweep's money still vanishes at a period end** until the sweep is built, as accepted
+(*Real use before accounts*, above; [§11](11-risks-and-technical-debt.md)). Accounts give it somewhere
+real to go, but nothing sends it there yet.
+
+### A balance is worked out from the entries, never stored as a free number
+
+> **An account's *Balance* is worked out from what is on it. It is never kept as a number of its
+> own.** When it is wrong, the user types the real balance, and MoneyBud records a **balance
+> correction**.
+
+**Why.** A balance worked out from its entries can always be explained by them. Every figure on the
+purpose side is already worked out rather than stored (*Remaining*, *Unassigned*, whether a period
+has a plan), so the location side now works the same way. And a mistake is put right where it was
+made: an expense on the wrong account is one entry to re-point, not two balances to unpick
+([§11](11-risks-and-technical-debt.md) had noted this as a point in this option's favour).
+
+| Rejected | Why |
+|---|---|
+| **A stored balance, overwritten by hand** | After an overwrite, nothing explains the number |
+| **Entered and calculated balances side by side** | The busiest screen of the three, with two figures for every account |
+
+**This answers the question [§11](11-risks-and-technical-debt.md) asked to have decided before
+accounts are built**: whether a hand edit is an overwrite or an adjustment entry, and whether a
+balance is stored or derived from its transactions. It is an adjustment, and derived.
+
+**It keeps round 2's wish, in another form.** Asked whether a balance is typed in or calculated, the
+stakeholder answered *"Allebei. Je kunt het saldo zelf vrij bijwerken, en daarnaast kunnen we zoveel
+automatische berekeningen toevoegen als we tijd voor hebben"*
+([round 2](../stakeholder/2026-09-24-verdieping.md)). He can still set a balance to whatever he
+likes. What that does has changed: it records a balance correction beside the entries, rather than
+overwriting a number. The *Balance* row of *Terms* (above) is revised to match.
+
+### A typed balance is what the bank said that day
+
+> **A balance the user types is the real balance on the day it is typed, so every entry dated before
+> that day is already in it.** Entries dated after it move the balance as normal. **The same holds
+> for every balance correction**, and a starting balance the user types is the account's first
+> balance correction.
+
+The stakeholder's example. Today he adds Betaalrekening at €1.000, and then records last Tuesday's
+€50 of groceries. The balance stays **€1.000**. The €50 left the account before today, and the €1.000
+the bank shows already reflects it. The groceries still count against Boodschappen in Tuesday's
+period, as any expense does. (A first start's Betaalrekening already exists, *A first start has one
+account*, below. Correcting it to €1.000 does the same.)
+
+**Why.** A checked balance stays checked. Everything is entered by hand, so late receipts are the
+ordinary case (*Ending versus closing a budget period*, above), and each one would otherwise knock a
+balance he had just made right off again.
+
+| Rejected | Why |
+|---|---|
+| **A typed balance is only a starting figure, which every entry moves whatever its date** (€950 in the example) | Every late receipt would knock a checked balance off again |
+
+> ***Derived:* an entry dated on the balance correction's own day is in it if it was recorded before
+> the balance correction, and moves the balance if it was recorded after.**
+
+Add the account in the morning, record a €30 lunch after it, and the balance falls by €30. **Why**, in
+the documentation's reasoning: a date has no time of day, so "before the balance was typed" can only
+be told on the same day by the order things were recorded. Not asked.
+
+> ***Derived:* a changed entry keeps the moment it was first recorded.** So whether it was recorded
+> before or after a balance correction is decided by when it was **first** recorded, never by when
+> it was changed, even when the change moves its date onto or past the balance correction's day.
+
+Handled by the documentation on 2026-09-27, not put to the stakeholder. **Why:** a change overwrites
+an entry in place, and it keeps its id and its place in the lists (*A change overwrites the entry*,
+above). Its recording moment is part of that place. Were a change to count as a new recording, the
+same edit would move a balance or not depending on whether it was made before or after a balance
+correction, which nothing on screen would explain.
+
+> ***Derived:* a typed starting balance and a balance correction are dated today**, the day they are
+> typed.
+
+So the balance to type is today's, not the one on last week's statement: entries recorded since that
+statement's date would be taken as already in it.
+
+**What this costs, stated plainly.**
+
+- **Changing or re-pointing an entry dated before an account's latest balance correction does not
+  change that account's balance.** The balance correction has already taken it in. That weakens
+  [§11](11-risks-and-technical-debt.md)'s "one entry to re-point" for any entry the user has
+  corrected past. In the documentation's reading it is usually the right outcome: the corrected
+  balance is the bank's, and an old entry on the wrong account did not make it wrong. Re-pointing
+  still moves the balance of the account the entry goes to, when that one has no later balance
+  correction.
+- **An expense dated before a balance correction lowers neither the balance nor net worth.** The
+  balance correction already did. It counts on the purpose side as any expense does.
+- **A transfer across a balance correction can change net worth**, and that is ruled to be true
+  (*Transfers*, below).
+
+### A starting balance or a balance correction is net worth only
+
+> **A starting balance or a balance correction changes the account's *Balance*, and so net worth,
+> and nothing else.** It is not income, it counts in no period's *Unassigned*, and it changes no
+> budget figure. It is money the user already had.
+
+| Rejected | Why |
+|---|---|
+| **Count it as income** | Adding a savings account would suddenly give thousands to assign, and a downward balance correction would need a category, as an expense does |
+
+> ***Derived:* a starting balance or a balance correction may be negative**, for an account already
+> overdrawn, **or zero.** The cent rules apply ([§8.2](08-crosscutting-concepts.md)).
+
+**In this increment such money is seen by location only.** *The central distinction* (above)
+promises that net worth and the budget are one set of data seen two ways, and a starting balance or
+a balance correction is seen only one way. **Deferred to the backing increment**, where it first has
+consequences, as a question for that increment's first stage (*A question for the backing
+increment*, below). Handled by the documentation on 2026-09-27, not put to the stakeholder, and not
+a ruling.
+
+> ***Derived, as usage:* interest is recorded as an income if the user wants to budget it, and a
+> change in an investment's value as a balance correction.**
+
+Handled by the documentation on 2026-09-27, not put to the stakeholder. **This is not a system
+rule**, because MoneyBud decides nothing here: both acts exist, and which one the user takes is his.
+Round 2 says investments are, for now, *"alleen wat ik zelf invul"*
+([round 2](../stakeholder/2026-09-24-verdieping.md)). What follows from each, so the choice is
+informed: an income joins its period's *Unassigned* and can be assigned; a balance correction
+reaches net worth only.
+
+### A first start has one account
+
+> **A first start comes with one account, *Betaalrekening*, at €0,00, and it is the pool account.**
+> The user adds the rest.
+
+**Why.** It is the approach the default categories take: something that works at once, without
+guessing at what the user has. Every income and expense is on an account, so a start with none could
+record nothing until an account was added.
+
+| Rejected | Why |
+|---|---|
+| **Several default accounts** | Guesses about his accounts |
+| **None** | Nothing could be recorded until an account was added. It would be the first thing MoneyBud ever blocks |
+
+**It is content, so it is Dutch**, like the six default categories (*They are Dutch because they are
+content*, above). It refines *A first start is unchanged* (above): a first start is the six
+categories and this account.
+
+> ***Follow-up*, 2026-09-27: the first start's Betaalrekening has no starting balance.** Its balance
+> is the plain sum of what is on it, whatever the dates, until the user first corrects it. **Only a
+> balance the user actually types takes in earlier entries.**
+
+So "at €0,00" above is a sum of nothing, not a typed figure. Record last week's salary and groceries
+on the first day, and both move it. **Why:** *A typed balance is what the bank said that day* rests on
+the user having checked the figure, and nobody checked this one. **It refines the derivation that a
+starting balance is the account's first balance correction**: that holds for an account the user
+adds with a balance he types, and the first-start account simply has none.
+
+| Rejected | Why |
+|---|---|
+| **A starting balance of €0 on the first start's account** | Back-dated entries on the first day would then do nothing to its balance |
+
+### Every income and expense is on an account
+
+> **On the expense and income forms, the account is the last field, after *Datum*: a list to choose
+> from, pre-filled with the pool account.** It is not free text.
+
+The forms then ask: expense *Omschrijving*, *Categorie*, *Bedrag*, *Datum*, *Rekening*; income
+*Omschrijving*, *Bedrag*, *Datum*, *Rekening*. That extends *The fields ask what before how much*
+(above) without reordering it.
+
+**Why last.** The stakeholder's order, the what before the amount, stays. The account is the field
+left as it is most often.
+
+**Why a list.** The category box is free text so that an archived category can be brought back by
+typing its name, and so that an unknown name reaches its refusal (*Category entry is free text with
+suggestions*, above). Neither reason reaches accounts. No account is archived, and an unknown name
+could only be refused. **Typing an unknown name creates nothing in either field**: an expense naming
+a category you do not have is refused (*Recording an expense against an archived category brings it
+back*, above). So the difference is how the field is filled, not what it can create.
+
+| Rejected | Why |
+|---|---|
+| **Hidden until asked for** | It makes a cash expense even easier to get wrong: the default would be taken without being seen |
+| **The first field** | It goes against "the what before the amount" |
+
+**The pre-fill is the pool account for every expense in this increment**, because no category is
+backed. Once backing exists, a backed category's expense defaults to its default backing account
+instead (*An expense defaults to the pool account*, above).
+
+> **An income or expense row on the Overview names its account only when that is not the pool
+> account**, in small grey text, so a cash expense stands out.
+
+| Rejected | Why |
+|---|---|
+| **Always** | The pool account's name would repeat on nearly every row |
+| **Never** | The lists would not show where any money went |
+
+**What it does not do, stated plainly.** It shows a cash expense recorded *on* Contant. A cash
+expense wrongly left on the pool account looks like every other row, so it does not catch the weak
+spot of *An expense defaults to the pool account*. **Derived** from the ruling's wording: a row reads
+the pool account as it is when shown, so after another account is made the pool, rows on the old
+pool gain its name and rows on the new one lose theirs.
+
+### The accounts strip, and an account's history
+
+> **Accounts and net worth are a strip across the top of the Overview, above the three columns.**
+> Each account shows its *Balance*, and *Vermogen* comes at the end. The strip is where an account is
+> added, a balance corrected and a transfer made. **It is the same in every period**, because
+> balances are about **today**, not about the period on screen.
+
+**Why.** Net worth is a point-in-time figure (*The central distinction*, above). Above the columns
+that step with the period, nothing suggests the strip belongs to one.
+
+| Rejected | Why |
+|---|---|
+| **Under the income column** | It reads as if it belonged to the period on screen |
+| **A separate screen** | Offered without an argument of its own. In the documentation's reading, it would put one of MoneyBud's two questions off the screen it opens on ([§1.1](01-introduction-and-goals.md)) |
+
+This **refines** *The Overview's layout* (above): income, plan and expenses stay as they are, under
+the strip.
+
+> ***Follow-up*, 2026-09-27: accounts are ordered pool account first, then in the order they were
+> added**, in the strip and in the forms' account list alike.
+
+Raised by the scenario writer. **Why:** the default sits where you look for it, and nothing jumps
+when balances change. When another account is made the pool, it moves to the front and the one it
+replaced goes back to its place in the order added, in the documentation's reading. *Vermogen* stays
+at the end of the strip.
+
+| Rejected | Why |
+|---|---|
+| **Strictly the order added** | The pool account, the default for every entry, could sit anywhere |
+| **Alphabetical** | The default would sit wherever its name falls |
+
+> **Clicking an account in the strip opens its history, newest first**: its starting balance, its
+> balance corrections, its transfers, and the incomes and expenses on it. **Transfers are changed or
+> removed there, and a balance correction is removed there.** The Overview's income and expense lists
+> stay incomes and expenses only.
+
+| Rejected | Why |
+|---|---|
+| **A third list on the Overview, for the period's transfers and balance corrections** | They would be tied to the period on screen |
+
+**In the documentation's reading**, for the reason that list was rejected, the history covers every
+period, not the one on screen. Where it opens is for the plan. Whether an income or expense can also
+be changed from it is for the scenario stage.
+
+> ***Follow-up*, 2026-09-27: incomes and expenses are changed and removed only from the Overview's
+> lists, never from an account's history.** The history is where transfers are changed or removed and
+> balance corrections removed.
+
+Raised by the scenario writer, and it settles the point the paragraph above left to the scenario
+stage. **Why:** it is smaller, with one place per kind of record. An income or expense in the history
+is there to be seen, as part of what makes up the balance.
+
+| Rejected | Why |
+|---|---|
+| **Both routes** | Two places to change the same entry, with a form around each |
+
+> ***Follow-up*, 2026-09-27: a balance correction in the history shows the new balance and the
+> difference it made**, for example *"Correctie — saldo € 1.000,00 (− € 23,40)"*.
+
+**Why:** a balance correction is the only trace of something forgotten. Once it takes in the entries
+dated before it, a missing expense stops showing anywhere on the location side, and the difference is
+what is left of it. That recovers, in part, the "report the difference" option in the first row of
+[§11](11-risks-and-technical-debt.md). The wording of the example is copy; the difference is the
+ruling.
+
+| Rejected | Why |
+|---|---|
+| **The new balance only** | The one trace of what was forgotten would be lost |
+
+> ***Follow-up*, 2026-09-27: the difference is recomputed, not fixed.** It always means **what is
+> still unexplained**: the typed balance minus what the previous balance correction and the entries
+> this one takes in would give **now**.
+
+The stakeholder's example. MoneyBud had worked out €1.023,40, and he corrected Betaalrekening to
+€1.000, so the history shows (− € 23,40). He then finds the receipt and records the forgotten €23,40
+expense, dated before that day. The difference now shows **€ 0,00**. **The balance stays €1.000
+either way**, because the balance correction took the expense in (*A typed balance is what the bank
+said that day*, above). Only the explanation of it changed.
+
+**Why:** as forgotten entries are found, the difference shrinks, and at €0,00 you know you have found
+everything. That makes the difference a **working** answer to "report the difference", in the first
+row of [§11](11-risks-and-technical-debt.md), and not only a trace.
+
+**This overturns the documentation's own reading**, written up earlier the same day and not put to
+him until now: that the difference is fixed at the moment of typing, and that a later change to an
+entry the balance correction took in does not alter it. It was the rejected option.
+
+| Rejected | Why |
+|---|---|
+| **Fixed at the moment of typing** (the documentation's earlier reading) | A found receipt would leave the difference unchanged, so it could never show that everything has been found |
+
+> ***Follow-up*, 2026-09-27: a starting balance's history row shows no difference**, for example
+> *"Startsaldo — € 1.000,00"*.
+
+Raised by the scenario writer. **Why:** there is nothing it corrected. It is the first figure the
+account has, so there is no worked-out balance before it to differ from. The wording is copy.
+
+| Rejected | Why |
+|---|---|
+| **Show the whole amount as a difference** | It would read as € 1.000,00 unexplained, as if something had been forgotten |
+
+### Transfers
+
+> **A transfer, *Overboeking*, moves an amount from one account to another, on a date.** It moves
+> both balances and leaves net worth and every budget figure unchanged. It can be changed or removed
+> like an entry. **It may not be dated in the future**, like an expense.
+
+**The framing is the stakeholder's own**, given when the question was put the second time, around
+an ATM withdrawal: money leaves Betaalrekening, arrives in Contant, and nothing is spent. **Backing
+and the sweep will need money to move between accounts. MoneyBud will make those moves by itself,
+and a transfer is the same kind of movement, made by the user.** So a transfer is not a side feature.
+It is the movement the next two increments are built from.
+
+| Rejected | Why |
+|---|---|
+| **Correct both balances by hand** | A balance correction should mean "MoneyBud was wrong". Here nothing was wrong: money moved |
+| **No transfers until backing** | Offered without an argument of its own. In the documentation's reading, an ATM withdrawal could then only be entered as the two balance corrections above |
+
+> ***Follow-up*, 2026-09-27: a transfer across a balance correction may change net worth, and that
+> is true, not a flaw.** Each account follows its own balance corrections, and net worth is their
+> sum. So *"leaves net worth unchanged"* above holds **except where a balance correction has already
+> counted one side**.
+
+The example. After correcting Betaalrekening, the user records an ATM withdrawal of €50 dated the
+day before. Betaalrekening's balance correction already has it taken off. Contant has no balance
+correction since, so it rises by €50, and net worth with it. **Why that is right:** the cash really is
+in the wallet, and the checked bank balance already had it taken off. Before the transfer was
+recorded, net worth was €50 short, because the balance correction had dropped money that had gone
+into the wallet. The transfer puts it back.
+
+| Rejected | Why |
+|---|---|
+| **Force a transfer to move both balances or neither** | One of the two would then disagree with a balance the user checked |
+
+**Why not in the future.** A transfer reports money that has moved. An income may be dated in the
+future only because nothing else in the model plans income (*Income may be dated in the future; an
+expense may not*, above), and that reason does not reach a transfer.
+
+| Rejected | Why |
+|---|---|
+| **Future-dated, like an income** | The reason income may be does not reach transfers |
+
+***Derived:***
+
+- A transfer needs **two different accounts** and an amount **above zero**, under the same cent rules
+  ([§8.2](08-crosscutting-concepts.md)). Its direction is carried by *from* and *to*, as an income's
+  and an expense's is by what they are. With only one account, no transfer can be made.
+- It is **not an income or an expense**. It has no category, needs no label, and counts in no
+  period's *Unassigned*. **Whether it has a label at all is for the scenario stage.** Settled
+  there: it has none (*Approved at the scenario gate, 2026-09-27*, below).
+- In the documentation's wording, *Transaction* (*Terms*, above) stays the word for income and
+  expenses, so that its two stated differences stay the only two. A transfer is a movement of its
+  own.
+- "Changed or removed like an entry" is read to mean: **removing one asks first**, by the principle
+  "confirm only where a record is lost" (*Removing an entry asks first*, above), and **a change is
+  judged as if the transfer were recorded now** (*A changed entry is judged as if it were recorded
+  now*, above).
+
+### An overdrawn account carries the marker
+
+> **An account whose *Balance* is below zero is shown with the same marker as *Over budget* and
+> *Over-assigned*, with a badge of its own.** Never blocked, never warned about.
+
+**This answers the question left open on 2026-09-25** (*Assigning may overdraw the pool account* and
+*One marker for over budget and over-assigned*, above): whether an overdraft gets the marker, now
+that the other two have it. It does, which keeps the decision that one display covers both
+severities. Each badge names its own state, and this one's was first proposed as ***Rood***, from
+*rood staan*, before it had been put to the stakeholder (*Proposed display terms*, below). It has
+since been ruled (follow-up, below).
+
+| Rejected | Why |
+|---|---|
+| **A plain negative figure** | It would be the only negative state without a marker |
+| **A stronger look** | It cries wolf when a balance is only out of date, as *Assigning may overdraw the pool account* argued |
+
+> ***Follow-up*, 2026-09-27: the badge reads *Rood*.** Ruled, no longer only proposed.
+
+**Rejected:** *Rood staan* and *Negatief saldo*. No reason for either was recorded with the answer.
+In the documentation's reading, *Rood* is short like the other two badges and is the everyday word
+for an account in the red, while *Negatief saldo* would only repeat what the figure beside it shows.
+
+**Reachable in this increment** by an expense or a transfer out of an account that has not got the
+money, and by a negative starting balance or balance correction. **Not by assigning**, which moves
+no money until backing exists.
+
+> ***Follow-up*, 2026-09-27: a negative net worth, *Vermogen* below zero, carries the same marker,
+> with the badge *Rood*.**
+
+Raised by the scenario writer. **Why:** every negative figure carries the one marker. Net worth is a
+sum of balances, so it can only go below zero when at least one account is overdrawn, and it is the
+same kind of fact about the world as an overdraft. That is why it shares its badge, in the
+documentation's reading.
+
+| Rejected | Why |
+|---|---|
+| **A plain negative figure** | It would be the only negative figure without the marker |
+
+### Managing accounts
+
+> **An account is added with a name and a starting balance. It can be renamed. It can be deleted
+> only while unused**, which is for an account added by mistake. **Archiving an account with
+> history, a real account that has been closed, is deferred until missed**, not rejected.
+
+| Rejected, for now | Why |
+|---|---|
+| **The full category treatment, archiving included** | Offered without an argument of its own. In the documentation's reading, archiving needs rules of its own (where an archived account is shown, how it comes back), and nobody has closed an account yet |
+| **Adding and renaming only** | An account added by mistake could never go |
+
+> ***Derived:* account names follow the category name rules.**
+
+Trimmed at the ends, compared without case and with a run of inner whitespace counting as one space,
+stored as typed, and refused if they trim to nothing. Unique among accounts: a rename to another
+account's name is refused, and an account's own name in a new spelling is allowed, as for a category
+(*Renaming a category*, above). **An account and a category may share a name**, Sparen the category
+and Sparen the account, because they are different dimensions.
+
+> ***Follow-up*, 2026-09-27: adding an account whose name another account already has is refused**,
+> with *"Er is al een rekening met die naam"*.
+
+Raised by the scenario writer. **This is where accounts part from categories on purpose.** Adding a
+category's name again hands back the category you already have (*Adding a name you already have gives
+back the category you already have*, above). **Why not for accounts:** an account is added with a
+starting balance, and handing back the existing one would quietly drop the balance just typed. The
+wording is copy.
+
+| Rejected | Why |
+|---|---|
+| **Hand back the existing account, as for a category** | The starting balance just typed would be dropped without a word |
+
+> ***Follow-up*, 2026-09-27: a starting balance left empty means no starting balance.** The account
+> then behaves like the first start's Betaalrekening: its balance is the sum of what is on it, whatever
+> the dates, until it is first corrected. **A typed 0 is a starting balance**, and takes in earlier
+> entries like any other.
+
+Raised by the scenario writer. **Why:** it is the rule the first-start account already has, so there
+is nothing new to learn. It refines ruling 10, *an account is added with a name and a starting
+balance*: the starting balance may be left out. And it refines the derivation that a starting
+balance is the account's first balance correction once more: that holds whenever one is typed, 0
+included.
+
+| Rejected | Why |
+|---|---|
+| **Refuse an empty starting balance** | The rule the first-start account has would be unavailable for any other account |
+
+> ***Derived:* "unused" means no income, expense or transfer on it.** Its own starting balance and
+> balance corrections do not count.
+
+> ***Follow-up*, 2026-09-27: deleting an unused account is never confirmed, and it is announced
+> afterwards**, like deleting an unused category, **even when it has a starting balance other than
+> zero.**
+
+**Why:** the act exists for mistakes, and the only thing lost is a number just typed. In the
+documentation's reading, that squares with "confirm only where a record is lost" (*Removing an entry
+asks first*, above) read as being about records of what happened, which a starting balance on an
+account added by mistake is not. Deleting it takes
+its starting balance and any balance corrections with it, and net worth changes accordingly.
+
+| Rejected | Why |
+|---|---|
+| **Ask first** | A question for undoing a mistake, where only a number just typed is lost |
+
+> ***Derived:* there are no account kinds.** Current account, savings account, cash: an account is a
+> name and what is on it.
+
+That is the smaller reading, and nothing in this increment behaves differently by kind. The *Account*
+row of *Terms* names kinds as examples, not as a type.
+
+### The pool account can be any account
+
+> **Any account can be made the pool account, and there is always exactly one.** Making another
+> account the pool changes the default for **new** entries only; existing entries keep their account.
+> **The pool account cannot be deleted while it is the pool.**
+
+**Why.** The pool is meant to be where income lands (*The pool account*, above), and that need not be
+the account MoneyBud starts with.
+
+| Rejected | Why |
+|---|---|
+| **Fixed to Betaalrekening** | The account the salary lands in may be another one |
+
+**Any account, not "one current account".** *The pool account* (above) says one *current* account is
+designated. With no account kinds, any account qualifies. That wording is left as written, with a
+note.
+
+**What follows, derived.** The pool cannot be deleted and there is always one, so **there is always
+at least one account**, and the account list on the forms is never empty.
+
+> **On screen, the pool account is *Hoofdrekening*, and making an account the pool is *Maak
+> hoofdrekening*.**
+
+Rejected: *Standaardrekening* and *Potrekening*.
+
+### Future-dated income and balances
+
+> ***Derived:* an income dated in the future counts in its period's *Unassigned* from the moment it
+> is recorded, as before, but reaches its account's *Balance*, and so net worth, only on its date.**
+
+It is *The central distinction*'s "net worth is what you have today" applied to one account.
+
+### Saved data from before accounts
+
+> **Data saved by a version without accounts is not carried over.** The version with accounts cannot
+> read it. MoneyBud says so and closes, and the user deletes the file, which the README says where to
+> find.
+
+It applies *Demo data may not survive a new version* and *Real use before accounts* (above). This is
+the **first time either is exercised.** Nothing new is ruled.
+
+### Proposed display terms
+
+Proposed on 2026-09-27, and **all approved by the stakeholder the same day** (follow-up, raised by
+the scenario writer). **They stay in this table, not in *Dutch display terms* (below), until the
+build**, and move there with the build that gives `Tekst` their constants. **Moved on 2026-09-27,
+with the accounts build**: every row below is now also a row of *Dutch display terms*, where
+`TekstTests` holds `Tekst` to it. The balance correction's row is split there into the record
+(*Correctie*) and the act (*Saldo corrigeren*), one row each, because the test reads a cell's
+" / " as parts that share a last word, and these two do not. This table is kept as the record of
+what was proposed and approved. That is the precedent of
+*Plan overnemen* and of the corrections increment's four rows. The reason is mechanical:
+`TekstTests` reads that table and holds `Tekst` to every row in it, so a row added before its
+constant fails the test suite.
+
+| English (this project) | Proposed Dutch | Status |
+|---|---|---|
+| Account / Accounts | Rekening / Rekeningen | **Approved** 2026-09-27 |
+| Balance | Saldo | **Approved** 2026-09-27 |
+| Net worth | Vermogen | **Ruled**: the stakeholder's own word, from round 1 of [the follow-up interview](../stakeholder/2026-09-24-verdieping.md) |
+| Pool account | Hoofdrekening | **Ruled** |
+| Make (an account) the pool account | Maak hoofdrekening | **Ruled** |
+| Transfer (the record / the act) | Overboeking / Overboeken | **Approved** 2026-09-27 |
+| A transfer's two accounts | Van / Naar | **Approved** 2026-09-27 |
+| Starting balance | Startsaldo | **Approved** 2026-09-27 |
+| Balance correction (the record) / Correct a balance (the act) | Correctie / Saldo corrigeren | **Approved** 2026-09-27. One Dutch word for a two-word English term: on screen *Correctie* only ever appears beside a balance, so it cannot be mistaken for changing an entry |
+| Add account | Rekening toevoegen | **Approved** 2026-09-27 |
+| Rename (an account) / Delete (an account) | Hernoemen / Verwijderen | **Approved** 2026-09-27, **reused** from the category rows. Deleting an account is *Verwijderen* like deleting a category and removing an entry; each acts on a different thing, so it is not ambiguous on screen |
+| Overdrawn, and a negative net worth (the marker's badge) | Rood | **Ruled** in a follow-up, 2026-09-27, over *Rood staan* and *Negatief saldo* (*An overdrawn account carries the marker*) |
+
+**The reused words need no new constants.** *Hernoemen* and *Verwijderen* are already rows of
+*Dutch display terms*, and `Tekst` already has them.
+
+### Approved at the scenario gate, 2026-09-27
+
+**The stakeholder approved the accounts scenarios at the scenario gate on 2026-09-27.** There are six
+new feature files:
+[`add-an-account.feature`](../../features/add-an-account.feature),
+[`record-on-an-account.feature`](../../features/record-on-an-account.feature),
+[`correct-a-balance.feature`](../../features/correct-a-balance.feature),
+[`transfer-between-accounts.feature`](../../features/transfer-between-accounts.feature),
+[`manage-accounts.feature`](../../features/manage-accounts.feature) and
+[`show-accounts.feature`](../../features/show-accounts.feature). Together they hold 94 scenarios and
+174 cases, one row of which was added after the gate (next). Scenarios were also added to
+[`start-moneybud.feature`](../../features/start-moneybud.feature) and
+[`keep-data.feature`](../../features/keep-data.feature). When this was written there was no plan
+yet. **All of them are bound and green since the build**, the same day.
+
+> ***Gate*, 2026-09-27: a starting balance typed as only spaces is the same as one left empty**, so
+> the account has no starting balance.
+
+**Why:** it is the rule for a label. A label that trims to nothing is no label (*A label is trimmed,
+and that is what makes "blank" mean anything*, above), and a starting balance that trims to nothing
+is no starting balance (*Managing accounts*, above). **Added after the gate** as one row in
+`add-an-account.feature`.
+
+| Rejected | Why |
+|---|---|
+| **Refuse it as not an amount** | Spaces would mean something different from nothing, where everywhere else in MoneyBud they mean the same |
+
+**Chosen by the scenario writer, approved with the scenarios, and never put to the stakeholder one
+by one.** They were written into the approved files, and he approved the files with them in front of
+him, so they now stand as decisions. None was a separate question. The reasoning in the right-hand
+column is the documentation's.
+
+| Approved with the scenarios | What it rests on |
+|---|---|
+| **A transfer has no label.** When a transfer breaks several rules, the first broken is reported, in this order: two different accounts, more than 0, whole cents, not in the future | A transfer says what it is through its two accounts, as an expense does through its category. This settles what *Transfers* (above) left to the scenario stage. The order puts what the transfer is between before how much it moves and when, as recording an expense puts the category checks first (*When an assignment is refused*, above) |
+| **Adding an account checks the name before the starting balance** | The same order: *what* before *how much* (*The fields ask what before how much*, above) |
+| **The scenarios assert the notices for adding, renaming and deleting an account, making one the pool account ("is now the pool account"), and removing a balance correction or a starting balance.** They do **not** assert a notice for recording a transfer or a balance correction | Every act on an account says what it did, as the category acts do (*Archiving is announced, never confirmed*, above). For a new record, the scenarios check where it lands, in the strip and the history, rather than what is said. **Corrected after the build (2026-09-27): a documentation error, not a ruling changed.** This row first read that recording a transfer or a balance correction "is not" announced, "like recording an entry". Both halves were wrong. Recording an entry **is** announced (`Tekst.ExpenseRecorded`), and the build announces a recorded transfer and balance correction the same way. What the scenario writer chose was only which notices the scenarios assert. `spec-reviewer` found the mismatch |
+| **"Unused" means unused now.** An account whose only entry was removed, or moved to another account, can be deleted | A removed or changed entry leaves no trace, so "ever" can only mean "now": the same as for a category (*Approved at the scenario gate, 2026-09-26*, above) |
+| **A renamed account keeps its place in the order. An account deleted and added again goes last** | Renaming gives one account a new label; a deleted account added again is a new account. The same as for categories (*Approved at the scenario gate, 2026-09-26*, above) |
+| **Correcting to the figure MoneyBud already shows is recorded**, as a balance correction with a difference of € 0,00, not treated as nothing | It is a checked balance, and checking is exactly what a balance correction records: from then on, entries dated before it are in it. Treating it as nothing would lose that |
+| **The same-day tie-break's consequences, shown in scenarios and approved knowingly.** An entry dated on a balance correction's day but recorded the next day moves the balance. Changing an entry's date to before the balance correction's day takes it into the balance correction. Moving an entry dated before a balance correction to another account leaves the corrected balance unchanged | They follow from the tie-break and from a changed entry keeping the moment it was first recorded (*A typed balance is what the bank said that day*, above). The scenarios show them so that none comes as a surprise |
+| **History rows show amounts unsigned. Rows with the same date are newest-recorded first. The history covers every period** | What a row is, a transfer in or out, an income, an expense, says which way the money went. The order is that of a period's lists (*A period's entries are listed newest first*, above). Covering every period confirms the documentation's reading in *The accounts strip, and an account's history* (above) |
+| **The empty ledger every scenario starts from holds one synthetic pool account, "Bank", with no starting balance** | So that no scenario depends on the first start's *Betaalrekening*, the same way scenarios avoid the default categories (*They are Dutch because they are content*, above). Every income and expense needs an account, and the pool always exists, so an empty ledger with no account at all would not be one MoneyBud can have. Only the first-start scenarios see *Betaalrekening* |
+
+### Accounts: chosen in the build, not put to the stakeholder
+
+The rulings and the approved scenarios settle what is on the screen and what each act does. Some
+visible details they leave open were settled while building. **These are the build's readings, not
+rulings**, and any of them can be put to the stakeholder if he reacts to it. None contradicts a
+ruling. Most of the reasons are the documentation's, and the last group was found by a headless run
+of the real window.
+
+**The history panel.**
+
+- It opens **under the strip, full width**. It closes with ***Sluiten***, a control word like
+  *Opslaan* and not a term in the display table. Clicking the open account again closes it too.
+- It holds the account's acts:
+  - *Hernoemen*;
+  - *Verwijderen*, shown only while the account is unused and not the pool account;
+  - *Maak hoofdrekening*, not shown on the pool account;
+  - the *Saldo* box with *Saldo corrigeren*.
+
+  Showing an act only where it can go through is how the category rows already treat *Verwijderen*.
+
+**The two small forms.** *Rekening toevoegen* and *Overboeken* each open a small form under the
+strip. A transfer loaded from a history row shows the *Wijzigen* badge with *Opslaan*, *Annuleren* and
+*Verwijderen*, as the entry forms do (*On screen: picking an entry to correct*, above).
+
+**The account lists.**
+
+- On the expense and income forms they are **lists**, last, as ruled. In Avalonia that is a
+  `ComboBox`, not free text.
+- The transfer form asks **Van → Naar → Bedrag → Datum**: the "what", which is between which
+  accounts, before the amount (*The fields ask what before how much*, above).
+- `WindowMarkupTests` holds both orders.
+
+**Naar's default.** *Naar* starts out on the first account that is not *Van*. With only one account
+that is *Van* itself, so trying to transfer is refused as "two different accounts". **Why:** the
+refusal the scenarios specify is then reachable, rather than hidden behind a form that cannot be
+filled in.
+
+**What a form holds**, settled after a headless run of the real window showed the first design
+going wrong:
+
+| Reading | Why it was built this way |
+|---|---|
+| **A form's account is always a plain account once set, and a list writing back "nothing" is ignored** | The first design treated the pool account, written back by the list, as "not chosen". On a form it pinned *Naar* on the only account there was. `spec-reviewer` then showed it discarding a *Naar* chosen before *Van*. A list that lets go of its selection while it is rebuilt writes back "nothing", and that must not become a choice the user never made |
+| **Defaults move only at defined moments** | On *Maak hoofdrekening*, a new entry still on the old pool account moves to the new one, and so does a new transfer's *Van*. When an account is added, a new transfer's *Naar* moves off *Van*. An entry or transfer **being changed keeps its own accounts** |
+| **The lists get a new collection only when the accounts, their order or their names change**, and the forms are told after the redraw | A list handed a new collection on every refresh would drop its selection once a minute. Told before the redraw, a form could name an account the list does not hold yet |
+
+**Screen tweaks.**
+
+- **The ring's minimum height dropped from 260 to 180**, and the ring clips. With the history and the
+  transfer form both open, it would otherwise run into the assign row. This is drawing, and it
+  changes nothing the ring shows (*The Overview's layout*, above).
+- **The history list scrolls from 150 px.**
+
+**The notice wording for the new acts is copy**: adding, renaming, deleting, making the pool
+account, recording and changing a transfer, correcting a balance, and removing a transfer or a typed
+balance. The display terms are in the table, and the sentences are `Tekst`'s.
+
+### What this section leaves open
+
+**Nothing for this increment.** When this section was first written up, on 2026-09-27, seven points
+stood here, found while the rulings were being recorded. All seven were dealt with the same day. The
+list is kept as a record of where each went; the analysis each carried is now in the subsection it
+went to.
+
+| Point raised | Where it went |
+|---|---|
+| 1. Is a first start's €0,00 a starting balance, absorbing back-dated entries? | **Ruled by the stakeholder**: no, the first start's Betaalrekening has no starting balance (*A first start has one account*, follow-up) |
+| 2. A transfer across a balance correction changes net worth, against "leaves net worth unchanged" | **Ruled by the stakeholder**: that is true, not a flaw (*Transfers*, follow-up) |
+| 3. Money the user already had has no purpose, and is in no *Unassigned* | **Deferred by the documentation** to the backing increment's first stage, not ruled (*A question for the backing increment*, next). In this increment such money is seen by location only |
+| 4. Does deleting an unused account with a starting balance ask first? | **Ruled by the stakeholder**: never confirmed, announced afterwards (*Managing accounts*, follow-up) |
+| 5. Is interest, or an investment's change in value, an income or a balance correction? | **Recorded by the documentation as usage, derived**: MoneyBud decides nothing, and either act can be taken (*A starting balance or a balance correction is net worth only*) |
+| 6. Does an account's history show how far each balance correction moved the balance? | **Ruled by the stakeholder**: yes, the new balance and the difference (*The accounts strip, and an account's history*, follow-up) |
+| 7. Is a changed entry recorded before or after a balance correction? | **Derived by the documentation**: by when it was first recorded, never by when it was changed (*A typed balance is what the bank said that day*) |
+
+### A question for the backing increment
+
+**Not a ruling.** Recorded by the documentation on 2026-09-27 for the first stage of the backing
+increment, where it first has consequences. It is not filed under *Open questions* (below), because
+it has a place and a time to be asked, like the overdraft question before it.
+
+> **What purpose, if any, does money the user already had carry?** A starting balance and a balance
+> correction are seen by location only: they change net worth and nothing on the purpose side.
+
+**Why it is a question at all.** *The central distinction* (above) says net worth and the budget are
+one set of data seen two ways, and *Backed categories accumulate* (above) says that "a sum that
+appears on the location side and nowhere on the purpose side breaks that promise". A starting
+balance is such a sum, and so is a balance correction. *Unassigned* is two things under one name,
+deliberately: the absence of a purpose, and the period figure (*Terms*). The €5.000 in a savings
+account added today is the first and not the second, so for money the user already had, the two
+senses come apart.
+
+**Why it can wait.** In the accounts increment nothing on the purpose side reads a balance. Assigning
+moves no money, no category is backed, and there is no *Accumulated*. So the gap is visible only as
+net worth being larger than anything the budget accounts for, which is true and harmless.
+
+**Why it cannot wait past backing.** Backing makes a category's money live in an account, and
+*Accumulated* counts only what was assigned to it, minus what was spent. A savings account added with
+€5.000 and backing *Sparen* would hold €5.000 while *Sparen* showed €0 accumulated, which is the
+disagreement *Backed categories accumulate* exists to prevent. The answers the documentation can see,
+for that stage to weigh and not decided here:
+
+| Possible answer | What it says | What it costs |
+|---|---|---|
+| **Leave it by location only** | Money the user already had is outside the budget, and *Accumulated* is only what MoneyBud saw assigned | *Accumulated* and a backing account's balance disagree from the first day, by the starting balance |
+| **Give a starting balance a purpose when it is typed** | Adding an account asks what its money is for, a backed category among the answers | A second decision when adding an account, and a new act between the two dimensions |
+| **Let *Accumulated* start from a figure of its own** | A backed category is given an opening *Accumulated*, like an account's starting balance | A second opening figure to keep in step with the first |
+
+
 ## Dutch source terms
 
 The stakeholder material is in Dutch. This table fixes the mapping, so that reading the interviews
@@ -3670,6 +4518,8 @@ rather than terms this project reasons in (*The default categories* above).
 | Plek | Location — expressed as an Account |
 | Doel | Purpose — expressed as a Category |
 | Rekening | Account |
+| Saldo | Balance. In round 2 he can *"het saldo zelf vrij bijwerken"*, which since 2026-09-27 records a **Balance correction** rather than overwriting a number (*A balance is worked out from the entries*, above) |
+| Betaalrekening, spaarrekening, aandelenrekening, contant | Examples of accounts, from round 2. Not account kinds: MoneyBud has none (*Managing accounts*, above) |
 | Vermogen | Net worth |
 | Inkomsten / Uitgaven | Income / Expenses |
 | Waar het van is | What an income **is from** — carried by the income's **Label**, which is why that label is required. Not a category: it says what this money is, not what it is for |
@@ -3724,6 +4574,18 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Delete (a category) | Verwijderen |
 | Take over (a plan) | Plan overnemen |
 | Remembered figure | plan |
+| Account / Accounts | Rekening / Rekeningen |
+| Balance | Saldo |
+| Net worth | Vermogen |
+| Pool account | Hoofdrekening |
+| Make (an account) the pool account | Maak hoofdrekening |
+| Transfer (the record) / Transfer (the act) | Overboeking / Overboeken |
+| A transfer's two accounts | Van / Naar |
+| Starting balance | Startsaldo |
+| Balance correction (the record) | Correctie |
+| Correct a balance (the act) | Saldo corrigeren |
+| Add account | Rekening toevoegen |
+| Overdrawn, and a negative net worth (the marker's badge) | Rood |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -3732,7 +4594,16 @@ toegewezen*.
 
 **A term not in this table has no display term yet.** *Account*, *Net worth*, *Leftover*, *Sweep*
 and the other terms of the location dimension have nothing to display in this increment. Their
-Dutch is fixed when they are built, not guessed ahead of it.
+Dutch is fixed when they are built, not guessed ahead of it. **Since the accounts increment**
+(2026-09-27), *Account*, *Balance*, *Net worth*, *Pool account* and the rest of that increment's
+terms are in the table. *Leftover*, *Sweep* and backing are still waiting.
+
+**The accounts increment's twelve rows came with its build** (2026-09-27). They were proposed and
+approved in *Proposed display terms*, under *Accounts and net worth* (above), and held there until
+`Tekst` had their constants, by the precedent below. The balance correction's record and act are
+two rows here, as that section explains. *Hernoemen* and *Verwijderen* are reused for renaming and
+deleting an account, and had rows already. *Sluiten*, which closes an account's history, is a
+control word like *Opslaan* and *Annuleren*, and is not in the table.
 
 **This table is read by a test.** `TekstTests` parses it from this file and holds the constants in
 `Tekst` to it ([§8.4](08-crosscutting-concepts.md)). Changing a Dutch cell, or adding or removing a
@@ -3837,6 +4708,8 @@ appear and where the *Unassigned* figure and the assign form went. All of it is 
 One question is **opened** by them rather than answered: whether an overdrawn account gets the
 marker *Over budget* and *Over-assigned* now have. It cannot be answered before accounts exist, and
 it is recorded where it arises (*Assigning may overdraw the pool account*, above), not filed here.
+**Answered on 2026-09-27**, with the accounts rulings: it gets the marker, with a badge of its own
+(*An overdrawn account carries the marker*, above).
 
 Twelve more were answered on 2026-09-26 for the **corrections increment**: changing and removing an
 entry, renaming a category, and deleting one with no history (*An entry can be changed or removed*,
@@ -3877,6 +4750,29 @@ were ruled at the scenario gate, on the scenario writer's assumptions: taking ov
 any *Budget* above zero makes a plan however small, and while the plan is offered the rows are
 ordered by their plan figure. `take-over-a-plan.feature` was approved with them. All of it is built,
 and none of it touches the question below.
+
+Sixteen more were answered on 2026-09-27 for the **accounts increment** (*Accounts and net worth*,
+above), one of them, transfers, on a second asking: the increment's scope, how a balance is kept,
+what a typed balance includes, whether a starting balance is income, what a first start has, where
+the account goes on the forms, where accounts and net worth are shown, transfers, whether an
+overdraft gets the marker, what can be done to an account, which account can be the pool, whether a
+transfer may be future-dated, what happens to saved data, what an account's history holds, when a
+row names its account, and the Dutch for the pool account. Seven derivations were stated with them.
+**All of it was built the same day** (*Accounts and net worth*, above). Writing them up raised seven more points. **Four were answered by the
+stakeholder the same day**, each on the recommendation: a first start's Betaalrekening has no
+starting balance, a transfer across a balance correction may change net worth and that is true,
+deleting an unused account is never confirmed, and a balance correction shows the difference it
+made. **Three were handled by the documentation**: a changed entry keeps its first recording moment
+(derived), interest and investment value are the user's choice of act (usage, derived), and the
+purpose of money the user already had is **deferred** to the backing increment's first stage (*A
+question for the backing increment*, above). That last one is recorded where it arises rather than
+filed here, because it has a stage to be asked at. None of them touches the question below, which
+still waits for the sweep. Two more follow-ups the same day made the balance correction's difference
+recomputed rather than fixed, and the overdrawn badge *Rood*. **Seven more were raised by the
+scenario writer** and ruled the same day, each on the recommendation: a duplicate account name is
+refused on adding, an empty starting balance means none, incomes and expenses are changed only from
+the Overview, accounts are listed pool first then in the order added, a negative net worth is
+marked, a starting balance's history row shows no difference, and the proposed Dutch is approved.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -4091,6 +4987,36 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Does taking a plan over ask for confirmation? | *Taking the plan over assigns it in full* — **no**. Only removing an entry asks, because it destroys a record; taking over loses nothing, and the notice names the period. Chosen over asking first through the message-bar question, which would be a second asking act over something correctable, and one extra click every month. Ruled at the scenario gate, 2026-09-26; built |
 | Does a tiny *Budget* make a period a plan? | *What counts as having a plan* — **yes, any *Budget* above zero, however small**, accepted with its cost: €0,01 assigned in October by mistake means November is offered October's one-cent plan rather than September's. The button shows the source period and total, and taking October back to zero restores September's. Chosen over a threshold on how much of the plan must be covered, a number nobody picked. Ruled at the scenario gate, 2026-09-26; built |
 | In what order are the rows while a plan is offered? | *The figure on each row goes with the offer* — **by their plan figure**, largest first, ties in order added, a row without one counting as zero. That is their order after taking over, so nothing jumps. It extends *The order of categories and slices* while the offer stands. The ring is unaffected: with every *Budget* zero it is all *Niet toegewezen* or the empty ring. Chosen over order added, under which the rows would jump on taking over. Ruled at the scenario gate, 2026-09-26; built |
+| What does the accounts increment cover? | *What this increment covers, and what waits* — **accounts and net worth only**: accounts with balances, every income and expense on an account, net worth on screen, and transfers. No backing and no *Accumulated*, which are the next increment, and no sweep, the one after; its money still vanishes at a period end, as accepted. Settled 2026-09-27; built |
+| Is a balance stored or worked out, and what is a hand edit? | *A balance is worked out from the entries, never stored as a free number* — **worked out**; typing the real balance records a **balance correction**. The question [§11](11-risks-and-technical-debt.md) asked to have decided before accounts. Chosen over a stored balance overwritten by hand, which nothing then explains, and over entered and calculated balances side by side, the busiest screen. Settled 2026-09-27; built |
+| Does a typed balance include entries dated before it? | *A typed balance is what the bank said that day* — **yes**: it is what the bank said that day, so a late receipt does not knock it off. Entries dated after it move it. The same for every balance correction. Chosen over a starting figure every entry moves. Same-day entries are in it if recorded before it, *derived*, and a changed entry counts from when it was first recorded, *derived*. Settled 2026-09-27; built |
+| Is a starting balance or a balance correction income? | *A starting balance or a balance correction is net worth only* — **no**: it changes the balance and net worth and nothing on the purpose side. Chosen over counting it as income, which would give thousands to assign on adding a savings account. What purpose such money carries is deferred to the backing increment (*A question for the backing increment*). Settled 2026-09-27; built |
+| What accounts does a first start have? | *A first start has one account* — **one, *Betaalrekening*, at €0,00, as the pool account**. Chosen over several default accounts, which guess, and over none, which would block the first entry. Settled 2026-09-27; built. The €0,00 was made exact in the next row |
+| Does a first start's Betaalrekening have a starting balance? | *A first start has one account*, follow-up — **no**. Its balance is the plain sum of what is on it, whatever the dates, until the user first corrects it; only a balance he actually types takes in earlier entries. Refines "a starting balance is the account's first balance correction" to accounts added with a typed balance. Chosen over a €0 starting balance, under which back-dated entries on the first day would do nothing. Follow-up, 2026-09-27; built |
+| May a transfer change net worth? | *Transfers*, follow-up — **yes, where a balance correction has already counted one side**, and that is true, not a flaw: each account follows its own balance corrections, and net worth is their sum. Chosen over forcing a transfer to move both balances or neither, which would make one disagree with a balance the user checked. Follow-up, 2026-09-27; built |
+| Does deleting an unused account ask first? | *Managing accounts*, follow-up — **no, never**, and it is announced afterwards, like deleting an unused category, even with a starting balance other than zero: the act is for mistakes, and only a number just typed is lost. Chosen over asking first. Follow-up, 2026-09-27; built |
+| What does a balance correction show in the history? | *The accounts strip, and an account's history*, follow-up — **the new balance and the difference it made**, "Correctie — saldo € 1.000,00 (− € 23,40)": the only trace of something forgotten. Chosen over the new balance only. Follow-up, 2026-09-27; built |
+| Is a balance correction's difference fixed when typed, or recomputed? | *The accounts strip, and an account's history*, follow-up — **recomputed**: it always means what is still unexplained, the typed balance minus what the previous balance correction and the entries it takes in would give now. Record the forgotten €23,40 and (− € 23,40) becomes € 0,00, while the balance stays €1.000. At €0,00 everything has been found. Chosen over fixing it at the moment of typing, the documentation's own earlier reading, which this **overturns**. Follow-up, 2026-09-27; built |
+| What does the overdrawn badge say? | *An overdrawn account carries the marker*, follow-up — ***Rood***. Chosen over *Rood staan* and *Negatief saldo*. Follow-up, 2026-09-27; built |
+| What happens when an account is added under a name another account has? | *Managing accounts*, follow-up — **it is refused**, "Er is al een rekening met die naam". Unlike a category, whose existing one is handed back, because that would quietly drop the starting balance just typed. Chosen over handing back the existing account. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| What does a starting balance left empty mean? | *Managing accounts*, follow-up — **no starting balance**: the account behaves like the first start's Betaalrekening, its balance the sum of its entries until first corrected. A typed 0 is a starting balance and takes in earlier entries. The same rule as the first-start account, so nothing new to learn. Chosen over refusing an empty starting balance. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| Can an income or expense be changed from an account's history? | *The accounts strip, and an account's history*, follow-up — **no**: incomes and expenses are changed and removed only from the Overview's lists. The history is where transfers are changed or removed and balance corrections removed. Smaller, one place per kind. Chosen over both routes. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| In what order are accounts listed? | *The accounts strip, and an account's history*, follow-up — **pool account first, then in the order added**, in the strip and in the forms' account list. The default sits where you look for it, and nothing jumps when balances change. Chosen over strictly the order added and over alphabetical. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| Is a negative net worth marked? | *An overdrawn account carries the marker*, follow-up — **yes, with the same marker and the badge *Rood***: every negative figure carries the one marker. Chosen over a plain figure. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| Does a starting balance's history row show a difference? | *The accounts strip, and an account's history*, follow-up — **no**, "Startsaldo — € 1.000,00": there is nothing it corrected. Chosen over showing the whole amount as a difference. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| Are the proposed Dutch terms for accounts approved? | *Proposed display terms* — **yes, all**: Rekening/Rekeningen, Saldo, Overboeking/Overboeken, Van/Naar, Startsaldo, Correctie/Saldo corrigeren, Rekening toevoegen, and *Hernoemen*/*Verwijderen* reused for accounts, beside the already ruled Vermogen, Hoofdrekening, Maak hoofdrekening and Rood. They stay in that table, marked approved, and move into *Dutch display terms* with the build that gives `Tekst` their constants, because `TekstTests` reads that table: the *Plan overnemen* precedent. Raised by the scenario writer; follow-up, 2026-09-27; built |
+| Is a starting balance of only spaces a starting balance? | *Approved at the scenario gate, 2026-09-27* — **no, it is the same as one left empty**: no starting balance, just as a label that trims to nothing is no label. Chosen over refusing it as not an amount. Ruled at the scenario gate, 2026-09-27, and added as one row to `add-an-account.feature` after the gate; built |
+| Where does the account go on the entry forms? | *Every income and expense is on an account* — **the last field, after *Datum***, a list pre-filled with the pool account, not free text. Chosen over hiding it until asked, which makes a cash expense easier to get wrong, and over the first field. Settled 2026-09-27; built |
+| Where are accounts and net worth shown? | *The accounts strip, and an account's history* — **a strip across the top of the Overview**, each balance and then *Vermogen*, the same in every period because balances are about today. Chosen over the income column, which reads as the period's, and over a separate screen. Settled 2026-09-27; built |
+| Can money be moved between accounts? | *Transfers* — **yes, by a transfer**: from, to, amount, date. Both balances move; net worth and budgets do not. Changed or removed like an entry. In the stakeholder's framing, the same movement backing and the sweep will make by themselves. Chosen over correcting both balances and over no transfers until backing. Settled 2026-09-27, on a second asking; built |
+| How is an overdrawn account shown? | *An overdrawn account carries the marker* — **with the same marker** as *Over budget* and *Over-assigned*, and a badge of its own, *Rood* (a follow-up row above). Answers the question the marker revision of 2026-09-25 left open. Chosen over a plain negative figure and over a stronger look. Settled 2026-09-27; built |
+| What can be done to an account? | *Managing accounts* — **add** (name and starting balance), **rename**, and **delete only while unused**. Archiving is deferred until missed, not rejected. Chosen for now over the full category treatment and over adding and renaming only. Settled 2026-09-27; built |
+| Which account is the pool? | *The pool account can be any account* — **any**, always exactly one; changing it changes the default for new entries only, and the pool cannot be deleted. Chosen over fixing it to Betaalrekening. Settled 2026-09-27; built |
+| May a transfer be dated in the future? | *Transfers* — **no**, like an expense: it reports money that has moved. Chosen over allowing it like an income. Settled 2026-09-27; built |
+| Is data saved before accounts carried over? | *Saved data from before accounts* — **no**: the new version says it cannot read it and closes, and the user deletes the file. The first time *Demo data may not survive a new version* is exercised. Settled 2026-09-27; built |
+| Where are transfers and balance corrections seen? | *The accounts strip, and an account's history* — **in the account's history**, opened by clicking it in the strip, newest first, where transfers are changed or removed and balance corrections removed. Chosen over a third list on the Overview, which would tie them to the period on screen. Settled 2026-09-27; built |
+| Does an income or expense row name its account? | *Every income and expense is on an account* — **only when it is not the pool account**, small and grey. Chosen over always and never. Settled 2026-09-27; built |
+| What is the pool account called on screen, and net worth? | *The pool account can be any account* — ***Hoofdrekening***, made so by *Maak hoofdrekening*. Chosen over *Standaardrekening* and *Potrekening*. Net worth is *Vermogen*, his own word from round 1. The rest of the Dutch is proposed (*Proposed display terms*). Settled 2026-09-27; built |
 
 **Eight** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
@@ -4108,6 +5034,13 @@ the wrong period can be undone only row by row, one negative assignment per cate
 2026-09-26, and built). Each is
 written up where the decision is, and the first is carried in
 [§11](11-risks-and-technical-debt.md). They are accepted costs, not open questions.
+
+**The second of those eight was settled on 2026-09-27**: an overdrawn account gets the marker, so it
+is shown exactly like an overspent budget again, marked, with its own badge. **The accounts rulings
+add one cost of their own**, taken with it visible: a balance correction takes in every entry dated
+before it, so changing or re-pointing such an entry no longer changes that account's balance (*A
+typed balance is what the bank said that day*, above; [§11](11-risks-and-technical-debt.md)). The
+difference the balance correction shows in the account's history is what is left to see of it.
 
 **Nothing here blocks the first increment.** It has no accounts at all
 ([§11](11-risks-and-technical-debt.md)), so it reaches none of the account-related answers above,
@@ -4212,3 +5145,19 @@ accounts or the sweep. A plan offered is a plan, and taking it over is assigning
 existed: `Ledger.TakeOverPlan` calls `Ledger.Assign` once per figure. What the plan and the build
 chose beyond the rulings is in *Taking a plan over: chosen in the build, not put to the stakeholder*
 (above).
+
+**Nothing here blocked the accounts increment, and it is built** (2026-09-27). This paragraph first
+read "settled, not built", with no plan yet. Its sixteen rulings and seven derivations are in
+*Accounts and net worth* (above), with four follow-up rulings and three points the documentation
+handled, all of the same day. **Its six feature files, and additions to two existing ones, were
+approved at the scenario gate on 2026-09-27**, 94 scenarios and 174 cases, with one gate ruling and
+nine scenario-writer choices (*Approved at the scenario gate, 2026-09-27*, above). The plan was
+approved at the plan gate the same day and brought [ADR 0008](../decisions/0008-balance-is-worked-out.md).
+The increment was built to it and is green. `spec-reviewer` found no faked scenario, one vacuous
+scenario and some defects, all fixed. **Nothing blocked it**: the seven points its first write-up left open were all dealt with on 2026-09-27,
+and the one deferred, what purpose money the user already had carries, has no consequence until
+backing (*A question for the backing increment*, above). It is the first increment to reach the location
+dimension, and so the first to reach the account-related answers in the table above. It reaches
+only some of them: the pool account as a default for entries, the expense default, and overdrawing.
+Backing, *Accumulated*, the pool account as a source, and the sweep stay out. So does the question
+above, which still waits for the sweep.

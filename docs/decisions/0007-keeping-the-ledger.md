@@ -7,6 +7,11 @@ beside the three that record set out. Nothing 0006 decided is reversed: the doma
 layer and the desktop keep the roles and boundaries it gave them. 0006 carries a dated note that
 points here.
 
+> **Note, 2026-09-27.** The file format is **version 2** since the accounts increment,
+> [ADR 0008](0008-balance-is-worked-out.md). It adds accounts, the pool account, an account on every
+> expense and income, transfers and balance corrections, and still no balance. Version 1, the format
+> shown below, is refused. Everything else this record decided stands. The body is unchanged.
+
 ## Context
 
 From its first increment until 2026-09-26, MoneyBud kept nothing. [§8.3](../arc42/08-crosscutting-concepts.md)

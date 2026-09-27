@@ -384,4 +384,210 @@ public sealed class FormTests
             ["Boodschappen", "Huur", "Sparen", "Verzekeringen", "Abonnementen"],
             app.Overview.Rows.Where(r => r.CanDelete).Select(r => r.Name));
     }
+
+    // ------------------------------------------------------------------ accounts (arc42 §12, Accounts and net worth)
+
+    [Fact]
+    public void A_first_start_has_Betaalrekening_as_the_pool_with_nothing_typed()
+    {
+        var line = Assert.Single(app.Accounts);
+        Assert.Equal(("Betaalrekening", true, Money.Zero), (line.Name, line.IsPool, line.Balance));
+        Assert.Empty(app.Ledger.HistoryOf(line.Account));
+    }
+
+    [Fact]
+    public void A_new_entry_starts_out_on_whichever_account_is_the_pool_now()
+    {
+        var cash = app.Ledger.AddAccount("Contant", null).Account!;
+        Assert.Equal("Betaalrekening", app.ExpenseForm.ChosenAccount.Name);
+
+        var told = new List<string?>();
+        app.IncomeForm.PropertyChanged += (_, e) => told.Add(e.PropertyName);
+        app.MakePool(cash);
+
+        Assert.Same(cash, app.ExpenseForm.ChosenAccount);
+        Assert.Same(cash, app.IncomeForm.ChosenAccount);
+        Assert.Contains(nameof(IncomeForm.ChosenAccount), told);
+    }
+
+    [Fact]
+    public void An_entry_is_recorded_on_the_account_chosen_and_the_form_goes_back_to_the_pool()
+    {
+        var cash = app.Ledger.AddAccount("Contant", null).Account!;
+        var form = app.ExpenseForm;
+        (form.Amount, form.Category, form.ChosenAccount) = ("5", "Boodschappen", cash);
+
+        form.SubmitCommand.Execute(null);
+
+        var line = Assert.Single(app.Overview.Expenses);
+        Assert.Same(cash, line.Entry.Account);
+        Assert.Equal("Contant", line.AccountName);
+        Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
+    }
+
+    [Fact]
+    public void Loading_an_entry_loads_its_account()
+    {
+        var cash = app.Ledger.AddAccount("Contant", null).Account!;
+        app.RecordIncome("20", "Verkocht", account: cash);
+
+        app.EditIncome(Assert.Single(app.Overview.Incomes));
+
+        Assert.Same(cash, app.IncomeForm.ChosenAccount);
+    }
+
+    [Fact]
+    public void A_form_holding_a_deleted_account_goes_back_to_the_pool()
+    {
+        var cash = app.Ledger.AddAccount("Contant", null).Account!;
+        app.ExpenseForm.ChosenAccount = cash;
+        app.TransferForm.ChosenTo = cash;
+        app.OpenHistory(cash);
+
+        app.DeleteAccount(cash);
+
+        Assert.Same(app.Ledger.PoolAccount, app.ExpenseForm.ChosenAccount);
+        Assert.NotSame(cash, app.TransferForm.ChosenTo);
+        Assert.False(app.IsHistoryOpen);
+    }
+
+    [Fact]
+    public void A_transfer_starts_out_from_the_pool_to_the_first_other_account()
+    {
+        var form = app.TransferForm;
+        Assert.Same(form.ChosenFrom, form.ChosenTo);
+
+        app.Ledger.AddAccount("Contant", null);
+        app.Ledger.AddAccount("Spaarrekening", null);
+
+        Assert.Equal(("Betaalrekening", "Contant"), (form.ChosenFrom.Name, form.ChosenTo.Name));
+    }
+
+    // A list writes back what it shows, and nothing while its items are replaced. Found in a
+    // headless run of the window: Naar stayed on the only account there was, and a form stayed on
+    // the old pool account.
+    [Fact]
+    public void A_list_writing_back_what_it_shows_does_not_hold_a_form_on_an_old_default()
+    {
+        var transfer = app.TransferForm;
+        var expense = app.ExpenseForm;
+        transfer.ChosenFrom = transfer.ChosenFrom;
+        transfer.ChosenTo = transfer.ChosenTo;
+        expense.ChosenAccount = expense.ChosenAccount;
+        expense.ChosenAccount = null!;
+
+        var cash = app.AddAccount("Contant", "")!.Account!;
+        Assert.Same(cash, transfer.ChosenTo);
+
+        app.MakePool(cash);
+        Assert.Same(cash, expense.ChosenAccount);
+        Assert.Same(cash, transfer.ChosenFrom);
+        Assert.Equal("Betaalrekening", transfer.ChosenTo.Name);
+    }
+
+    // Found by the spec review: Naar that happened to be the default moved when Van was chosen after it.
+    [Fact]
+    public void Naar_chosen_before_Van_stays_what_was_chosen()
+    {
+        var cash = app.AddAccount("Contant", "")!.Account!;
+        var savings = app.AddAccount("Spaarrekening", "")!.Account!;
+        var form = app.TransferForm;
+
+        form.ChosenTo = cash;
+        form.ChosenFrom = savings;
+
+        Assert.Equal((savings, cash), (form.ChosenFrom, form.ChosenTo));
+    }
+
+    // Found by the spec review: an entry moved from another account onto the pool account, and saved.
+    [Fact]
+    public void An_entry_can_be_moved_onto_the_pool_account()
+    {
+        var cash = app.AddAccount("Contant", "")!.Account!;
+        app.RecordExpense("5", "Boodschappen", label: "Markt", account: cash);
+        app.EditExpense(Assert.Single(app.Overview.Expenses));
+
+        app.ExpenseForm.ChosenAccount = app.Ledger.PoolAccount;
+        var result = app.ExpenseForm.Save();
+
+        Assert.Equal(ChangeOutcome.Changed, result!.Outcome);
+        Assert.Same(app.Ledger.PoolAccount, Assert.Single(app.Overview.Expenses).Entry.Account);
+    }
+
+    // Found by the spec review: nothing held that the income form, too, goes back to the pool.
+    [Fact]
+    public void After_an_income_on_another_account_the_form_starts_out_on_the_pool_again()
+    {
+        var cash = app.AddAccount("Contant", "")!.Account!;
+        var form = app.IncomeForm;
+        (form.Amount, form.Label, form.ChosenAccount) = ("20", "Verkocht", cash);
+
+        form.SubmitCommand.Execute(null);
+
+        Assert.Same(cash, Assert.Single(app.Overview.Incomes).Entry.Account);
+        Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
+    }
+
+    // Also found in the headless run: a transfer being changed had its Van written back as the pool
+    // account, and followed the pool when it changed, turning the transfer round.
+    [Fact]
+    public void An_entry_being_changed_keeps_its_own_accounts_whatever_the_pool()
+    {
+        var bank = app.Ledger.PoolAccount;
+        var cash = app.Ledger.AddAccount("Contant", null).Account!;
+        app.RecordIncome("100", "Salaris");
+        var transfer = app.Ledger.RecordTransfer(20m, bank, cash, new DateOnly(2026, 3, 15)).Transfer!;
+        app.EditIncome(Assert.Single(app.Overview.Incomes));
+        app.TransferForm.Load(transfer);
+
+        app.IncomeForm.ChosenAccount = bank;
+        app.TransferForm.ChosenFrom = bank;
+        app.TransferForm.ChosenTo = cash;
+        app.MakePool(cash);
+
+        Assert.Same(bank, app.IncomeForm.ChosenAccount);
+        Assert.Equal((bank, cash), (app.TransferForm.ChosenFrom, app.TransferForm.ChosenTo));
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void A_starting_balance_left_empty_is_none(string? typed)
+    {
+        var form = app.AccountForm;
+        form.OpenCommand.Execute(null);
+        (form.Name, form.StartingBalance) = ("Contant", typed);
+
+        form.SubmitCommand.Execute(null);
+
+        var cash = app.Ledger.AccountNamed("Contant")!;
+        Assert.Empty(app.Ledger.HistoryOf(cash));
+        Assert.False(form.IsOpen);
+    }
+
+    [Fact]
+    public void A_refused_account_keeps_the_form_open_on_what_was_typed()
+    {
+        var form = app.AccountForm;
+        form.OpenCommand.Execute(null);
+        (form.Name, form.StartingBalance) = ("betaalrekening", "10");
+
+        form.SubmitCommand.Execute(null);
+
+        Assert.True(form.IsOpen);
+        Assert.Equal(("betaalrekening", "10"), (form.Name, form.StartingBalance));
+        Assert.True(app.Notice!.IsRefusal);
+    }
+
+    [Fact]
+    public void Clicking_the_open_account_again_closes_its_history()
+    {
+        var bank = app.Ledger.PoolAccount;
+        app.OpenHistory(bank);
+        Assert.True(Assert.Single(app.Accounts).IsOpen);
+
+        app.OpenHistory(bank);
+        Assert.False(app.IsHistoryOpen);
+    }
 }

@@ -141,7 +141,9 @@ Feature: Add a category
   # They start with no history — nothing budgeted, nothing spent. That is what makes the
   # interview's own case ("voor als het niet voor jou geldt") cost nothing: a default that does
   # not apply to you has nothing behind it when you archive it. Sparen starts unbacked, like the
-  # rest; it becomes account-backed when accounts exist, which is not this increment.
+  # rest. It becomes account-backed when BACKING arrives, the increment after accounts. Accounts
+  # themselves exist since the accounts increment, and assigning to Sparen still moves no money
+  # (show-accounts.feature). The account a first start comes with is in start-moneybud.feature.
   # ----------------------------------------------------------------------------------
 
   Scenario: A new MoneyBud starts with the six default categories

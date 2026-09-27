@@ -51,9 +51,18 @@ public sealed class RecordIncomeSteps(SpecContext context)
     public void WhenIRecordAnIncomeLabelled(string amount, string label) =>
         Record(amount, label, date: null);
 
-    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+)")]
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
     public void WhenIRecordAnIncomeLabelledAndDated(string amount, string label, string date) =>
         Record(amount, label, date);
+
+    // On an account chosen from the form's list (record-on-an-account.feature).
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" on the account ""([^""]*)""")]
+    public void WhenIRecordAnIncomeLabelledOnTheAccount(string amount, string label, string account) =>
+        Record(amount, label, date: null, account);
+
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""")]
+    public void WhenIRecordAnIncomeLabelledAndDatedOnTheAccount(string amount, string label, string date, string account) =>
+        Record(amount, label, date, account);
 
     // Leaving the date as it starts out: today, whatever period is on screen.
     [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" without giving a date")]
@@ -113,9 +122,23 @@ public sealed class RecordIncomeSteps(SpecContext context)
     // ----------------------------------------------------------------- Shared
 
     // Through the screen, as RecordExpenseSteps does, and for the same reasons.
-    private void Record(string amount, string? label, string? date) =>
-        context.Record(context.App.RecordIncome(amount, label, date is null ? null : Ledger.Date(date))
-            ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+    private void Record(string amount, string? label, string? date, string? account = null)
+    {
+        var day = date is null ? null : (DateOnly?)Ledger.Date(date);
+        if (account is null)
+        {
+            context.Record(context.App.RecordIncome(amount, label, day)
+                ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+            return;
+        }
+
+        // Another account is chosen in the form's list, as for an expense.
+        var form = context.App.IncomeForm;
+        (form.Amount, form.Label) = (amount, label);
+        form.Date = day?.ToDateTime(TimeOnly.MinValue);
+        form.ChosenAccount = Ledger.Account(account);
+        context.Record(form.Record() ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
+    }
 
     // Answers for a change too, as RecordExpenseSteps' does.
     private void AssertRefused(IncomeRefusal expected)

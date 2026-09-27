@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:p="using:MoneyBud.Presentation"
         xmlns:d="using:MoneyBud.Desktop"
+        xmlns:dom="using:MoneyBud.Domain"
         x:Class="MoneyBud.Desktop.MainWindow"
         x:DataType="p:MoneyBudApp"
         Title="MoneyBud"
@@ -9,7 +10,8 @@
         Background="#F6F7F9">
 
   <!-- Income on the left, the plan in the middle, expenses on the right: the stakeholder's own
-       picture of the screen (arc42 §12). Every word shown comes from Tekst. -->
+       picture of the screen (arc42 §12), under a strip of accounts. Every word shown comes from
+       Tekst. -->
 
   <Window.Styles>
     <Style Selector="TextBlock.heading">
@@ -38,8 +40,28 @@
       <Setter Property="Foreground" Value="White" />
       <Setter Property="FontSize" Value="11" />
     </Style>
-    <Style Selector="TextBox, AutoCompleteBox, CalendarDatePicker">
+    <Style Selector="TextBox, AutoCompleteBox, CalendarDatePicker, ComboBox">
       <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <!-- An account in the strip: clicking it opens its history. -->
+    <Style Selector="Button.account">
+      <Setter Property="Background" Value="#F6F7F9" />
+      <Setter Property="Padding" Value="10,6" />
+      <Setter Property="CornerRadius" Value="6" />
+    </Style>
+    <Style Selector="Button.account.open">
+      <Setter Property="Background" Value="#E8F4F1" />
+    </Style>
+    <!-- The Hoofdrekening's badge. -->
+    <Style Selector="Border.pool">
+      <Setter Property="Background" Value="#E8F4F1" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="5,1" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.pool > TextBlock">
+      <Setter Property="Foreground" Value="#1F6F63" />
+      <Setter Property="FontSize" Value="11" />
     </Style>
     <!-- A row in a transaction list: clicking it loads the entry into its form (arc42 §12). -->
     <Style Selector="Button.entry">
@@ -84,6 +106,157 @@
               Content="{x:Static p:Tekst.NextPeriod}" />
     </Grid>
 
+    <!-- ======================= Accounts =======================
+         The strip across the top: every account's Saldo today, the Hoofdrekening first, then
+         Vermogen. The same in every period, because a balance is about today (arc42 §12, Accounts
+         and net worth). Clicking an account opens its history underneath; the forms for adding an
+         account and for a transfer open in the same place. -->
+    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,14">
+      <Border Classes="card" Padding="10">
+        <Grid ColumnDefinitions="*,16,Auto">
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding Accounts}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="8" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="p:AccountLine">
+                  <Button Classes="account" Classes.open="{Binding IsOpen}" CommandParameter="{Binding Account}"
+                          Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).OpenHistoryCommand}">
+                    <StackPanel Spacing="2">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                        <Border Classes="pool" IsVisible="{Binding IsPool}">
+                          <TextBlock Text="{Binding PoolText}" />
+                        </Border>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding BalanceText}" VerticalAlignment="Center" />
+                        <Border Classes="marker" IsVisible="{Binding IsOverdrawn}">
+                          <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
+                        </Border>
+                      </StackPanel>
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+            <StackPanel Spacing="2" VerticalAlignment="Center">
+              <TextBlock Text="{x:Static p:Tekst.NetWorth}" Classes="caption" />
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding NetWorthText}" FontSize="17" FontWeight="SemiBold" />
+                <Border Classes="marker" IsVisible="{Binding IsNetWorthNegative}">
+                  <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
+                </Border>
+              </StackPanel>
+            </StackPanel>
+            <Button Content="{x:Static p:Tekst.AddAccount}" Command="{Binding AccountForm.OpenCommand}" />
+            <Button Content="{x:Static p:Tekst.TransferAct}" Command="{Binding TransferForm.OpenCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Adding an account: a name, and the balance the bank shows today, which may be left empty. -->
+      <Border Classes="card" Padding="10" IsVisible="{Binding AccountForm.IsOpen}">
+        <Grid DataContext="{Binding AccountForm}" x:DataType="p:AccountForm" ColumnDefinitions="*,8,*,8,Auto,8,Auto">
+          <TextBox Grid.Column="0" Text="{Binding Name}" PlaceholderText="{x:Static p:Tekst.Account}" Margin="0" />
+          <TextBox Grid.Column="2" Text="{Binding StartingBalance}" PlaceholderText="{x:Static p:Tekst.StartingBalance}" Margin="0" />
+          <Button Grid.Column="4" Content="{x:Static p:Tekst.AddAccount}" Command="{Binding SubmitCommand}" Classes="accent" />
+          <Button Grid.Column="6" Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" />
+        </Grid>
+      </Border>
+
+      <!-- A transfer: Van, Naar, Bedrag, Datum. Loaded from a history row, it is changed or removed. -->
+      <Border Classes="card" Padding="10" IsVisible="{Binding TransferForm.IsOpen}">
+        <Grid DataContext="{Binding TransferForm}" x:DataType="p:TransferForm"
+              ColumnDefinitions="Auto,*,8,*,8,*,8,*,8,Auto,8,Auto,8,Auto">
+          <Border Grid.Column="0" Classes="editing" IsVisible="{Binding IsEditing}" Margin="0,0,8,0" VerticalAlignment="Center">
+            <TextBlock Text="{x:Static p:Tekst.Change}" FontSize="12" />
+          </Border>
+          <ComboBox Grid.Column="1" Margin="0" HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.From}"
+                    ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).AccountChoices}"
+                    SelectedItem="{Binding ChosenFrom}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="dom:Account">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox Grid.Column="3" Margin="0" HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.To}"
+                    ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).AccountChoices}"
+                    SelectedItem="{Binding ChosenTo}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="dom:Account">
+                <TextBlock Text="{Binding Name}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBox Grid.Column="5" Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" Margin="0" />
+          <CalendarDatePicker Grid.Column="7" SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
+                              HorizontalAlignment="Stretch" Margin="0" />
+          <Button Grid.Column="9" Content="{Binding SubmitText}" Command="{Binding SubmitCommand}" Classes="accent" />
+          <Button Grid.Column="11" Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" />
+          <Button Grid.Column="13" Content="{x:Static p:Tekst.Remove}" Command="{Binding RemoveCommand}"
+                  IsVisible="{Binding IsEditing}" />
+        </Grid>
+      </Border>
+
+      <!-- The open account's history, every period, newest first. Its own acts are here: renaming,
+           deleting it while unused, making it the Hoofdrekening, and correcting its balance. On a
+           row, a transfer can be changed and removed, a balance correction removed; an income or
+           expense is only listed, and is changed from the Overview. -->
+      <Border Classes="card" Padding="10" IsVisible="{Binding IsHistoryOpen}">
+        <DockPanel>
+          <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,8">
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !RenamingAccount}">
+              <TextBlock Text="{Binding HistoryAccount.Name, FallbackValue=''}" FontSize="15" FontWeight="SemiBold"
+                         VerticalAlignment="Center" />
+              <Button Classes="link" Content="{x:Static p:Tekst.Rename}" Command="{Binding StartAccountRenameCommand}" />
+              <Button Classes="link" Content="{x:Static p:Tekst.Delete}" Command="{Binding DeleteOpenAccountCommand}"
+                      IsVisible="{Binding CanDeleteHistoryAccount}" />
+              <Button Classes="link" Content="{x:Static p:Tekst.MakePool}" Command="{Binding MakeOpenAccountPoolCommand}"
+                      IsVisible="{Binding CanMakeHistoryAccountPool}" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding RenamingAccount}">
+              <TextBox Text="{Binding NewAccountName}" MinWidth="200" Margin="0" />
+              <Button Classes="link" Content="{x:Static p:Tekst.Save}" Command="{Binding SaveAccountRenameCommand}" />
+              <Button Classes="link" Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelAccountRenameCommand}" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+              <TextBox Text="{Binding BalanceInput}" PlaceholderText="{x:Static p:Tekst.Balance}" MinWidth="140" Margin="0" />
+              <Button Content="{x:Static p:Tekst.CorrectBalance}" Command="{Binding CorrectOpenBalanceCommand}" />
+              <Button Content="{x:Static p:Tekst.Close}" Command="{Binding CloseHistoryCommand}" />
+            </StackPanel>
+          </Grid>
+          <ScrollViewer MaxHeight="150">
+            <ItemsControl ItemsSource="{Binding History}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="p:HistoryLine">
+                  <Grid ColumnDefinitions="160,*,110,Auto" Margin="0,2">
+                    <TextBlock Grid.Column="0" Text="{Binding DateText}" Classes="caption" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Text}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding AmountText}" TextAlignment="Right" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="8,0,0,0">
+                      <Button Classes="link" Content="{x:Static p:Tekst.Change}" IsVisible="{Binding CanChange}"
+                              Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).EditTransferCommand}"
+                              CommandParameter="{Binding}" />
+                      <Button Classes="link" Content="{x:Static p:Tekst.Remove}" IsVisible="{Binding CanRemove}"
+                              Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).RemoveFromHistoryCommand}"
+                              CommandParameter="{Binding}" />
+                    </StackPanel>
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </StackPanel>
+
     <!-- What MoneyBud said about the last thing done, and the one question it asks: whether to
          remove an entry, answered here in the message bar. -->
     <StackPanel DockPanel.Dock="Bottom" Margin="0,14,0,0" Spacing="6">
@@ -125,6 +298,15 @@
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
+            <ComboBox HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.Account}"
+                      ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).AccountChoices}"
+                      SelectedItem="{Binding ChosenAccount}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="dom:Account">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
             <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
             <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
@@ -148,6 +330,8 @@
                         <StackPanel>
                           <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                           <TextBlock Text="{Binding DateText}" Classes="caption" />
+                          <TextBlock Text="{Binding AccountName}" Classes="caption"
+                                     IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                         <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
                       </Grid>
@@ -170,7 +354,7 @@
           <!-- The ring is the column's centrepiece (arc42 §12, first demo). Its centre shows
                Niet toegewezen, or the row of the category slice pointed at; which of the two is
                MoneyBudApp's to say. The centre ignores the pointer, so the ring sees it there. -->
-          <Panel Grid.Row="1" MinHeight="260" Margin="0,0,0,12">
+          <Panel Grid.Row="1" MinHeight="180" Margin="0,0,0,12" ClipToBounds="True">
             <d:RingControl Ring="{Binding Overview.Ring}" Pointed="{Binding PointedSlice}"
                            App="{Binding}" />
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="200" Spacing="4"
@@ -318,6 +502,15 @@
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
+            <ComboBox HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.Account}"
+                      ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).AccountChoices}"
+                      SelectedItem="{Binding ChosenAccount}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="dom:Account">
+                  <TextBlock Text="{Binding Name}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
             <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
             <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
@@ -342,6 +535,8 @@
                           <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
                           <TextBlock Text="{Binding Label}" IsVisible="{Binding Label, Converter={x:Static ObjectConverters.IsNotNull}}" />
                           <TextBlock Text="{Binding DateText}" Classes="caption" />
+                          <TextBlock Text="{Binding AccountName}" Classes="caption"
+                                     IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
                         </StackPanel>
                         <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
                       </Grid>

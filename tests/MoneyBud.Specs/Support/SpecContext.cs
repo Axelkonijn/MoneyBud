@@ -38,7 +38,7 @@ public sealed class SpecContext : IDisposable
     private SpecStore? store;
     private bool closed;
 
-    public SpecContext() => Ledger = new Ledger(clock);
+    public SpecContext() => Ledger = new Ledger(clock, "Bank");
 
     public Ledger Ledger { get; private set; }
 
@@ -311,6 +311,24 @@ public sealed class SpecContext : IDisposable
     public void Record(TakeOverPlanResult result) => LastAttempt = result;
 
     public void RecordDeleted(Category category) => LastAttempt = new Deleted(category);
+
+    public void Record(AddAccountResult result) => LastAttempt = result;
+
+    public void Record(RenameAccountResult result) => LastAttempt = result;
+
+    public void Record(RecordTransferResult result) => LastAttempt = result;
+
+    public void Record(ChangeTransferResult result) => LastAttempt = result;
+
+    public void Record(CorrectBalanceResult result) => LastAttempt = result;
+
+    public void RecordDeleted(Account account) => LastAttempt = new AccountDeleted(account);
+
+    public void RecordPoolMade(Account account) => LastAttempt = new PoolMade(account);
+
+    public sealed record AccountDeleted(Account Account);
+
+    public sealed record PoolMade(Account Account);
 
     /// <summary>
     /// An entry was removed, after the user confirmed. <paramref name="What"/> is "expense" or

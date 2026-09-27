@@ -37,7 +37,7 @@ public sealed class StorageTests : IDisposable
     /// </summary>
     private Ledger Everything()
     {
-        var ledger = new Ledger(clock);
+        var ledger = new Ledger(clock, "Bank");
         ledger.AddCategory("Groceries");
         ledger.AddCategory("Hobby");
         ledger.AddCategory("Magazines");
@@ -110,7 +110,7 @@ public sealed class StorageTests : IDisposable
     [Fact]
     public void An_empty_budget_is_written_and_read_back_as_no_categories()
     {
-        var text = LedgerJson.Write(new Ledger(clock).ToSnapshot());
+        var text = LedgerJson.Write(new Ledger(clock, "Bank").ToSnapshot());
 
         var restored = Ledger.FromSnapshot(LedgerJson.Read(text)!, clock);
 
@@ -125,9 +125,15 @@ public sealed class StorageTests : IDisposable
         { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 1, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 1", "\"version\": 2") },
-        { "version 0", Valid().Replace("\"version\": 1", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 1,", "") },
+        { "a newer version", Valid().Replace("\"version\": 2", "\"version\": 3") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 2", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 2", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 2,", "") },
+        { "no accounts", Valid().Replace("\"accounts\"", "\"rekeningen\"") },
+        { "no pool account", Valid().Replace("\"poolAccount\"", "\"hoofdrekening\"") },
+        { "entries naming no account", Valid().Replace("\"account\":", "\"rekening\":") },
+        { "no transfers", Valid().Replace("\"transfers\"", "\"overboekingen\"") },
+        { "no balance corrections", Valid().Replace("\"balanceCorrections\"", "\"correcties\"") },
         { "no categories", Valid().Replace("\"categories\"", "\"kategorien\"") },
         { "categories not a list", Valid().Replace("\"budgets\": [", "\"budgets\": {").Replace("\n  ],\n  \"expenses\"", "\n  },\n  \"expenses\"") },
         { "a fraction of a cent", Valid().Replace("\"cents\": 3215", "\"cents\": 3215.5") },
@@ -138,7 +144,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_1_document_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_2_document_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -147,7 +153,7 @@ public sealed class StorageTests : IDisposable
 
     private static string Valid()
     {
-        var ledger = new Ledger(new FixedClock(new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero)));
+        var ledger = new Ledger(new FixedClock(new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero)), "Bank");
         ledger.AddCategory("Groceries");
         ledger.RecordIncome(1832.45m, "Salaris", Today);
         ledger.Assign(400m, "Groceries", ledger.CurrentPeriod);
@@ -164,14 +170,20 @@ public sealed class StorageTests : IDisposable
         get
         {
             CategorySnapshot groceries = new(1, "Groceries", false);
+            AccountSnapshot bank = new(1, "Bank");
+            AccountSnapshot cash = new(2, "Cash");
             var march = new DateOnly(2026, 3, 1);
-            ExpenseSnapshot expense = new(1, Money.FromCents(100), Today, 1, "Kiosk");
+            ExpenseSnapshot expense = new(1, Money.FromCents(100), Today, 1, "Kiosk", 1);
+            IncomeSnapshot income = new(2, Money.FromCents(100), Today, "Salaris", 1);
 
             LedgerSnapshot With(
                 IReadOnlyList<CategorySnapshot>? categories = null, IReadOnlyList<BudgetSnapshot>? budgets = null,
                 IReadOnlyList<ExpenseSnapshot>? expenses = null, IReadOnlyList<IncomeSnapshot>? incomes = null,
-                int last = 2) =>
-                new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last);
+                int last = 2, IReadOnlyList<AccountSnapshot>? accounts = null, int pool = 1,
+                IReadOnlyList<TransferSnapshot>? transfers = null,
+                IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null) =>
+                new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
+                    accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? []);
 
             return new()
             {
@@ -188,8 +200,24 @@ public sealed class StorageTests : IDisposable
                 { "an expense below zero", With(expenses: [expense with { Amount = Money.FromCents(-100) }]) },
                 { "an expense label with space at its end", With(expenses: [expense with { Label = "Kiosk " }]) },
                 { "an expense label of only space", With(expenses: [expense with { Label = "  " }]) },
-                { "an income without a label", With(incomes: [new(1, Money.FromCents(100), Today, "")]) },
-                { "an id used twice", With(expenses: [expense], incomes: [new(1, Money.FromCents(100), Today, "Salaris")]) },
+                { "an income without a label", With(incomes: [income with { Label = "" }]) },
+                { "an id used twice", With(expenses: [expense], incomes: [income with { Id = 1 }]) },
+                { "an id used by a transfer and an expense", With(expenses: [expense], transfers: [new(1, Money.FromCents(100), Today, 1, 2)]) },
+                { "an id used by a balance correction and an income", With(incomes: [income], corrections: [new(2, Today, 1, Money.Zero, false)]) },
+                { "an account name with space at its end", With(accounts: [new(1, "Bank ")]) },
+                { "an empty account name", With(accounts: [new(1, "")]) },
+                { "two account names the rule counts as one", With(accounts: [bank, new(2, "BANK")]) },
+                { "an account key used twice", With(accounts: [bank, new(1, "Cash")]) },
+                { "no pool account", With(accounts: []) },
+                { "a pool account that is no account", With(pool: 9) },
+                { "an expense on no account", With(expenses: [expense with { Account = 9 }]) },
+                { "an income on no account", With(incomes: [income with { Account = 9 }]) },
+                { "a transfer from an account to itself", With(transfers: [new(1, Money.FromCents(100), Today, 1, 1)]) },
+                { "a transfer to no account", With(transfers: [new(1, Money.FromCents(100), Today, 1, 9)]) },
+                { "a transfer of zero", With(transfers: [new(1, Money.Zero, Today, 1, 2)]) },
+                { "a balance correction on no account", With(corrections: [new(1, Today, 9, Money.Zero, false)]) },
+                { "two starting balances for one account", With(corrections: [new(1, Today, 1, Money.Zero, true), new(2, Today, 1, Money.Zero, true)]) },
+                { "a balance correction id never issued", With(corrections: [new(3, Today, 1, Money.Zero, false)]) },
                 { "an id never issued", With(expenses: [expense with { Id = 3 }]) },
                 { "an id of zero", With(expenses: [expense with { Id = 0 }]) },
                 { "a last id below zero", With(last: -1) },
@@ -211,7 +239,8 @@ public sealed class StorageTests : IDisposable
     public void A_budget_in_the_calendars_last_month_cannot_be_read()
     {
         var snapshot = new LedgerSnapshot(
-            [new(1, "Groceries", false)], [new(1, new DateOnly(9999, 12, 1), Money.FromCents(100))], [], [], 0);
+            [new(1, "Groceries", false)], [new(1, new DateOnly(9999, 12, 1), Money.FromCents(100))], [], [], 0,
+            [new(1, "Bank")], 1, [], []);
 
         Assert.Throws<InvalidDataException>(() => Ledger.FromSnapshot(snapshot, clock));
     }
@@ -222,7 +251,8 @@ public sealed class StorageTests : IDisposable
     public void An_expense_dated_after_today_is_still_valid_kept_data()
     {
         var snapshot = new LedgerSnapshot(
-            [new(1, "Groceries", false)], [], [new(1, Money.FromCents(100), Today.AddDays(5), 1, null)], [], 1);
+            [new(1, "Groceries", false)], [], [new(1, Money.FromCents(100), Today.AddDays(5), 1, null, 1)], [], 1,
+            [new(1, "Bank")], 1, [], []);
 
         Assert.Single(Ledger.FromSnapshot(snapshot, clock).ExpensesIn(new BudgetPeriod(Today, Today.AddDays(30))));
     }
@@ -246,7 +276,7 @@ public sealed class StorageTests : IDisposable
         using var store = new FileLedgerStore(folder);
 
         Assert.Throws<InvalidOperationException>(() => store.Load());
-        Assert.Throws<InvalidOperationException>(() => store.TrySave(new Ledger(clock).ToSnapshot()));
+        Assert.Throws<InvalidOperationException>(() => store.TrySave(new Ledger(clock, "Bank").ToSnapshot()));
     }
 
     [Fact]
@@ -267,7 +297,7 @@ public sealed class StorageTests : IDisposable
     public void The_file_is_written_as_utf8_without_a_byte_order_mark()
     {
         using var store = Claimed();
-        var ledger = new Ledger(clock);
+        var ledger = new Ledger(clock, "Bank");
         ledger.AddCategory("Één keer");
         store.TrySave(ledger.ToSnapshot());
 
@@ -286,7 +316,7 @@ public sealed class StorageTests : IDisposable
         var before = File.ReadAllBytes(DataFile);
         Directory.CreateDirectory(TemporaryFile);
 
-        Assert.False(store.TrySave(new Ledger(clock).ToSnapshot()));
+        Assert.False(store.TrySave(new Ledger(clock, "Bank").ToSnapshot()));
 
         Assert.Equal(before, File.ReadAllBytes(DataFile));
     }
@@ -305,7 +335,7 @@ public sealed class StorageTests : IDisposable
         var loaded = Assert.IsType<LoadResult.Loaded>(store.Load());
         Assert.Equal(kept, LedgerJson.Write(loaded.Snapshot));
 
-        Assert.True(store.TrySave(new Ledger(clock).ToSnapshot()));
+        Assert.True(store.TrySave(new Ledger(clock, "Bank").ToSnapshot()));
         Assert.False(File.Exists(TemporaryFile));
         Assert.Empty(Assert.IsType<LoadResult.Loaded>(store.Load()).Snapshot.Categories);
     }
@@ -397,7 +427,7 @@ public sealed class StorageTests : IDisposable
     public void Only_an_act_that_went_through_saves()
     {
         var store = new CountingStore();
-        var ledger = new Ledger(clock);
+        var ledger = new Ledger(clock, "Bank");
         ledger.AddCategory("Groceries");
         var expense = ledger.RecordExpense(12.50m, "Groceries", Today, "Kiosk").Expense!;
         var app = new MoneyBudApp(ledger, store);
@@ -422,7 +452,7 @@ public sealed class StorageTests : IDisposable
     public void Closing_tries_to_save_only_what_is_not_yet_saved_and_lets_go()
     {
         var store = new CountingStore();
-        var ledger = new Ledger(clock);
+        var ledger = new Ledger(clock, "Bank");
         var app = new MoneyBudApp(ledger, store);
         app.AddCategory("Groceries");
 

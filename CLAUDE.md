@@ -89,7 +89,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 935 passing: 554 scenario cases, 381 developer unit tests
+dotnet test  MoneyBud.slnx     # 1183 passing: 734 scenario cases, 449 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -97,11 +97,11 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-27, after increment 8 (opening a period) was built, reviewed, documented and approved by Axel. Update this when a stage completes._
+_Last updated 2026-09-27, after increment 9 (accounts and net worth) was built, reviewed, documented, tried and approved by Axel, and merged into `main`. Update this when a stage completes._
 
-**Done: all five stages, seven times — for `record-expense`, `record-income`, categories,
-assigning, the desktop UI, correcting things and keeping data.** All seven are built and green;
-all seven tried by Axel and merged into `main`.
+**Done: all five stages, nine times — for `record-expense`, `record-income`, categories,
+assigning, the desktop UI, correcting things, keeping data, opening a period, and accounts.** All
+nine are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -141,8 +141,12 @@ entries carry a ledger-issued `Id`, `Category` is a class with identity, and the
 `Ledger.PlanOfferedIn` → `PlanOffer` (with `PlanFigure`) and `Ledger.TakeOverPlan` → `TakeOverPlanResult`.
 In `MoneyBud.Presentation`: `MoneyBudApp` (the screen, including the one `Question` and the save
 line), `MoneyBudStart`, `PeriodOverview` and `Ring`, the entry forms (with their *Wijzigen* state),
-`AmountInput` and `Tekst`. In `MoneyBud.Storage`: `LedgerJson` and `FileLedgerStore`. No accounts
-— deliberate, with its reasoning recorded.
+`AmountInput` and `Tekst`. In `MoneyBud.Storage`: `LedgerJson` and `FileLedgerStore`. Since
+increment 9: `Account`, `NameRule` (the name rule, shared; `CategoryName` forwards to it), `IEntry`,
+`Transfer`, `BalanceCorrection` and the results in `AccountResults.cs`; `Ledger.BalanceOf`,
+`DifferenceOf`, `NetWorth`, `HistoryOf`, `Accounts`/`PoolAccount`; `AccountLine`, `HistoryLine`,
+`AccountForm` and `TransferForm` in Presentation; file format version 2 (ADR 0008). No backed
+categories yet — the next increment.
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -337,8 +341,8 @@ found no faked scenario and five low defects, all fixed. In outline:
 already there, assigning 0 and a negative clipped against a zero budget are said but not saved; a
 new no-op act must pass `changed: false`, or a failing disk shows a false "not saved".
 
-**Increment 8 — opening a period — is built and green on branch `increment-8-opening-a-period`
-(2026-09-27), approved by Axel the same day and committed on the branch.** Stages 1–4 on 2026-09-26:
+**Increment 8 — opening a period — is done and green**, built on branch
+`increment-8-opening-a-period` (2026-09-27), approved by Axel the same day and merged into `main`. Stages 1–4 on 2026-09-26:
 seventeen rulings in §12 *Opening a period*; `features/take-over-a-plan.feature` (19 scenarios,
 23 cases) **approved at the first gate**; the plan below **approved at the second**. Built as planned;
 `spec-reviewer` found no faked scenario and three low items, all fixed (a refused take-over's notice
@@ -369,6 +373,53 @@ for a category not archived now); a button names the source period and total, ea
 - **After green — done except the last:** `spec-reviewer`; stale header comments; §5, §8.1, §12;
   README; this file; headless check; Axel's approval.
 
+**Increment 9 — accounts and net worth — is done and green**, built on branch
+`increment-9-accounts` (2026-09-27), tried by Axel the same day ("I love how it is currently
+working") and merged into `main`. All five stages ran on 2026-09-27. Stage 1 was
+multiple-choice questions, each with a recommendation, and Axel took every recommendation (transfers
+only once reworded around an ATM withdrawal): sixteen rulings, then eleven follow-ups raised by
+`arc42-keeper` and `scenario-writer`, all in §12 *Accounts and net worth*. Six feature files —
+`add-an-account`, `record-on-an-account`, `correct-a-balance`, `transfer-between-accounts`,
+`manage-accounts`, `show-accounts`, 94 scenarios, 174 cases, plus additions to `start-moneybud` and
+`keep-data` — **approved at the first gate** (one row added after it, for a ruling taken at the gate);
+the plan **approved at the second**, with ADR 0008. In outline:
+
+- **Scope: accounts and net worth only.** No backing: assigning to Sparen still moves nothing.
+- **A balance is worked out, never stored.** A starting balance or a balance correction is what the
+  bank said that day: it *holds* every entry dated before its day, and on its day those recorded
+  before it (the id is the recording order; a change keeps its id). The first start's
+  *Betaalrekening* — and an account added with its starting balance left empty — has no typed
+  balance, so its balance is the plain sum of what is on it. A correction's difference is
+  **recomputed**: it shows what is still unexplained. Net worth only: never income, never a budget
+  figure. A future-dated income reaches the balance on its date.
+- **Every income and expense is on an account**, the pool account (*Hoofdrekening*) unless another
+  is chosen in a list, last on the form. Any account can be made the pool; pool first, then order
+  added. Transfers (*Overboeking*) move two balances, no future date. Accounts: add, rename, delete
+  only while unused (never confirmed). Overdrawn and negative net worth carry the one marker, badge
+  *Rood*. Old saved data (version 1) cannot be read — Axel's ruling.
+- **Screen:** a strip across the top (accounts, *Vermogen*, *Rekening toevoegen*, *Overboeken*);
+  clicking an account opens its history underneath, where transfers are changed or removed, typed
+  balances removed, and the account renamed, deleted, made the pool or corrected.
+
+`spec-reviewer` found no step reading the ledger where it should read the screen, but one vacuous
+scenario (*Choosing an account is for that one entry* never touched the form's list) and one real
+defect (a transfer's Naar chosen before Van was discarded), plus low items; all fixed, the vacuous
+one proven by a mutation now failing it. **A headless run of the real window found what no test
+could:** an Avalonia list writes back what it shows, and nothing while its items are replaced, so
+cleverness about "not chosen" pinned defaults as choices. Now a form holds plain accounts, ignores a
+null write, and defaults move only at defined moments (see §12, *Chosen in the build*).
+
+**Changed after Axel tried it** (2026-09-27), both copy, not rulings: the unreadable-data message
+now names the possible causes (MoneyBud cannot tell them apart; still no place named, §12), and
+every message quotes names with plain double quotes, not the Dutch „…” pair, which Axel disliked
+(`Tekst.Quoted`). Keep plain quotes in new messages.
+
+**Watch out for:** a form's account list is a two-way binding that **writes back** — on first show,
+and whenever its items change. Anything a form infers from what a list writes will go wrong in the
+window with every test green. Keep the rule: plain values, null ignored, defaults moved by the acts
+that change them (`MakePool`, `AddAccount`), and the forms told **after** the redraw. Check a change
+here with a headless run of the window.
+
 **Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code.
 Put questions to Axel as multiple choice with a recommendation (`AskUserQuestion`); that worked well
 for persistence and for opening a period.
@@ -378,8 +429,11 @@ Order agreed with Axel on 2026-09-26:
 1. **Correcting things — done** (increment 6, above).
 2. **Persistence — done** (increment 7, above).
 3. **Opening a period — done** (increment 8, above).
-4. **Accounts, net worth and the sweep — start here, at stage 1** — later increments. The sweep
-   depends on accounts.
+4. **Accounts and net worth — done** (increment 9, above).
+5. **Backing and *Accumulated* — start here, at stage 1.** Its first
+   question is already written down: §12 *A question for the backing increment* (what purpose money
+   the user already had carries).
+6. **The sweep** — after backing, which it depends on.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
@@ -410,14 +464,14 @@ trimmed at the ends and left alone inside, a label that trims to nothing is "no 
 zero *Remaining* is not over budget, and amounts are whole cents and never rounded
 ([§8.2](docs/arc42/08-crosscutting-concepts.md)).
 
-**Two open questions, and neither can be answered yet.** The first: a budget period never closes, so an income
+**One open question, and it cannot be answered yet**: a budget period never closes, so an income
 can be back-dated into a period whose *Unassigned* was already swept. §12 covers the analogous
 case for a late *expense*, but the principle does not necessarily extend — a late expense means
 MoneyBud moved too much, a late income means there was more to move, and those disagree about
-which period's figures change. There is no sweep and no accounts, so there is nothing to decide
-against; it goes live when the sweep is built. The second: **how an overdrawn account is shown**,
-now that over budget and over-assigned carry a marker — reopened by the UI increment's marker
-revision, and met when accounts are built. Both recorded in [§12](docs/arc42/12-glossary.md).
+which period's figures change. There is no sweep, so there is nothing to decide against; it goes
+live when the sweep is built. Recorded in [§12](docs/arc42/12-glossary.md). The other former open
+question, **how an overdrawn account is shown**, was answered in increment 9: the same marker, badge
+*Rood*.
 
 Everything else is settled. Three questions arose while the first increment was being built and
 all three were answered by Axel the same day:

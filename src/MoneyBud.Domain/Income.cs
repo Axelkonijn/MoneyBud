@@ -16,7 +16,11 @@ namespace MoneyBud.Domain;
 /// trimmed; <see cref="Ledger.RecordIncome"/> is what refuses one that trims away to nothing.</para>
 ///
 /// <para>Income has <b>no category</b>. It lands <i>Unassigned</i> and is given a purpose by
-/// assigning. It has no account either — the location dimension is not built (arc42 §11), the
-/// same gap an expense has.</para>
+/// assigning.</para>
+///
+/// <para><see cref="Account"/> is where the money arrived: the <i>pool account</i> unless the user
+/// chose another. An income dated in the future counts in its period's <i>Unassigned</i> at once,
+/// but reaches the account's balance only on its date, since net worth is what you have today
+/// (arc42 §12, *The central distinction*).</para>
 /// </summary>
-public sealed record Income(int Id, Money Amount, DateOnly Date, string Label);
+public sealed record Income(int Id, Money Amount, DateOnly Date, string Label, Account Account) : IEntry;

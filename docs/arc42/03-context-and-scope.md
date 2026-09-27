@@ -17,7 +17,7 @@ The boundary is currently very small, and that is a real finding rather than a m
 
 | External party | Sends to MoneyBud | Receives from MoneyBud |
 |---|---|---|
-| The user | Income and expenses; category budgets; account balances | Remaining budget per category; where money went over a period; net worth |
+| The user | Income and expenses; category budgets; account balances; transfers between accounts | Remaining budget per category; where money went over a period; net worth |
 
 That single row is the entire context. The user is simultaneously the source of all data and the
 consumer of all output, which is unusual and has a consequence worth stating: MoneyBud cannot

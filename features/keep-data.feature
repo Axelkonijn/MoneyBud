@@ -7,7 +7,11 @@
 #   - EVERYTHING IS KEPT, as one continuous history, for as long as I have it. There is no fresh
 #     start per year, and nothing is dropped for being old.
 #   - "Everything" is THE LEDGER: categories, archived or not, renamed ones with their history,
-#     budgets, expenses and incomes. WHAT IS ON SCREEN IS NOT KEPT: the period shown, an entry half
+#     budgets, expenses and incomes, and since the accounts increment ACCOUNTS too: each with its
+#     starting balance and balance corrections, the account every income and expense is on, the
+#     transfers, and which account is the pool account. So is the order things were recorded in,
+#     which decides whether an entry on a balance correction's day is in it
+#     (correct-a-balance.feature). WHAT IS ON SCREEN IS NOT KEPT: the period shown, an entry half
 #     typed, an entry being changed, a question waiting for an answer, a rename in progress. So
 #     MoneyBud ALWAYS OPENS ON THE CURRENT BUDGET PERIOD.
 #   - Kept AUTOMATICALLY AFTER EVERY CHANGE. There is no save button and no act of saving.
@@ -24,7 +28,9 @@
 # Not specified here: carrying data from one version of MoneyBud to the next. Until the switch to
 # real use, and at least up to and including the accounts increment, a new version may be unable to
 # read what an older one kept (glossary: "Demo data may not survive a new version"). So no scenario
-# here involves more than one version.
+# here involves more than one version. The version with accounts does NOT read data kept by a
+# version without them: it says so and closes, which is a row of start-moneybud.feature's outline
+# for data MoneyBud cannot read (glossary: "Saved data from before accounts").
 #
 # Reading the steps:
 #   - "I close MoneyBud and start it again" is closing it and starting it again on the same day,
@@ -58,10 +64,12 @@
 #     saving (starting over)" means no button or other act for it exists anywhere on the screen.
 #   - Every other step is reused unchanged from the file that introduced it, with the meaning that
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
-#     steps overview.feature's, and the correcting steps change-an-entry.feature's and
-#     remove-an-entry.feature's.
+#     steps overview.feature's, the correcting steps change-an-entry.feature's and
+#     remove-an-entry.feature's, and the account steps show-accounts.feature's.
 #
-# The names, labels and amounts are synthetic test data.
+# The empty ledger every scenario starts from holds one account, "Bank", the pool account, with no
+# starting balance and nothing on it (show-accounts.feature). The names, labels and amounts are
+# synthetic test data.
 
 @keeping
 Feature: Keep my data between runs
@@ -289,6 +297,75 @@ Feature: Keep my data between runs
       | Groceries |
       | Hobby     |
       | Gifts     |
+
+  # ----------------------------------------------------------------------------------
+  # Accounts are kept
+  # ----------------------------------------------------------------------------------
+
+  # One of each thing the accounts increment added. Bank: the salary, less the transfer, is
+  # 1782.45, corrected to 1780. Cash: 40, less Markt, plus the transfer. Savings: as added.
+  Scenario: Accounts, their starting balances, transfers and balance corrections are all there after starting again
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have a category "Groceries"
+    When I record an income of 1832.45 euro labelled "Salaris" dated yesterday
+    And I add an account "Cash" with a starting balance of 40 euro
+    And I add an account "Savings" with a starting balance of 5000 euro
+    And I record an expense of 25 euro for "Groceries" labelled "Markt" on the account "Cash"
+    And I record a transfer of 50 euro from "Bank" to "Cash"
+    And I correct the balance of "Bank" to 1780 euro
+    And I close MoneyBud and start it again
+    Then the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 1780.00 |
+      | Cash    | 65.00   |
+      | Savings | 5000.00 |
+    And net worth should be 6845 euro
+    And the pool account should be "Bank"
+    And the history of "Bank" should be exactly these, newest first:
+      | date      | entry              | label   | from | to   | amount  | balance | difference |
+      | today     | balance correction |         |      |      |         | 1780.00 | -2.45      |
+      | today     | transfer           |         | Bank | Cash | 50.00   |         |            |
+      | yesterday | income             | Salaris |      |      | 1832.45 |         |            |
+    And the history of "Cash" should be exactly these, newest first:
+      | date  | entry            | category  | label | from | to   | amount | balance |
+      | today | transfer         |           |       | Bank | Cash | 50.00  |         |
+      | today | expense          | Groceries | Markt |      |      | 25.00  |         |
+      | today | starting balance |           |       |      |      |        | 40.00   |
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date  | category  | label | amount | account |
+      | today | Groceries | Markt | 25.00  | Cash    |
+
+  # Which entries a balance correction has in it depends, on its own day, on the order things were
+  # recorded in. Were that order lost, Diner could land before the balance correction, and Bank would
+  # read 990 after starting again instead of 960.
+  Scenario: Whether an entry was recorded before or after a balance correction on the same day is kept
+    Given I have a category "Groceries"
+    And I have recorded an income of 1000 euro labelled "Salaris" dated today
+    And I have recorded an expense of 12.50 euro for "Groceries" labelled "Lunch" dated today
+    When I correct the balance of "Bank" to 990 euro
+    And I record an expense of 30 euro for "Groceries" labelled "Diner" dated today
+    And I close MoneyBud and start it again
+    Then the balance of "Bank" should be 960 euro
+    And the balance correction of "Bank" to 990 euro should show a difference of 2.50 euro
+
+  # Savings is the pool account, so it comes first. ING was the first account added, and keeps
+  # that place under its new name.
+  Scenario: A renamed account, the pool account and a deleted account are all as I left them after starting again
+    Given I have an account "Cash" with a starting balance of 40 euro
+    And I have an account "Savings" with a starting balance of 5000 euro
+    When I rename the account "Bank" to "ING"
+    And I make "Savings" the pool account
+    And I delete the account "Cash"
+    And I close MoneyBud and start it again
+    Then the accounts should be exactly these, in this order:
+      | account | balance |
+      | Savings | 5000.00 |
+      | ING     | 0.00    |
+    And the pool account should be "Savings"
+    And a new expense should start out on the account "Savings"
+    When I add an account "Cash" with a starting balance of 10 euro
+    Then I should be told that the account "Cash" was added
 
   # ----------------------------------------------------------------------------------
   # A kept entry is the same entry

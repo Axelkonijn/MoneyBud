@@ -2,12 +2,16 @@
 # an amount finer than a cent is refused rather than rounded, so no rounding rule applies
 # anywhere in this capability. The rule and its reasoning live in arc42 §8.2.
 #
-# Scope of this capability, per the first increment: an expense has an amount, a date,
-# a label and a category. It has no account — the location dimension is not in the first
-# increment (accepted risk, arc42 §11). Adding or archiving a category and setting its budget
-# belong to other capabilities and appear here only as setup — with one exception: recording
-# an expense against an archived category brings that category back, and that is specified
-# here, because recording is what does it.
+# Scope of this capability: an expense has an amount, a date, a label and a category, and since
+# the accounts increment it is also on an account, the pool account unless another is chosen.
+# Which account it is on, and what that does to the account's balance, is specified in
+# record-on-an-account.feature. Every scenario here records on the account a new expense starts
+# out on, which none of them needs to name, and nothing here depends on it: an expense counts
+# against its category the same way whichever account it is on.
+#
+# Adding or archiving a category and setting its budget belong to other capabilities and appear
+# here only as setup — with one exception: recording an expense against an archived category
+# brings that category back, and that is specified here, because recording is what does it.
 #
 # Step phrasing: every step that concerns a budget period names it the same way — "in the
 # current budget period", "in the previous budget period", "in the next budget period" —

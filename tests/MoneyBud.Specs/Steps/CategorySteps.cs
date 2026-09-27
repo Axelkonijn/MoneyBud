@@ -129,9 +129,17 @@ public sealed class CategorySteps(SpecContext context)
     }
 
     // Went through: renamed, or given exactly its own name. Either way the box has closed.
+    // For an account too (manage-accounts.feature), whose rename box is in its history.
     [Then(@"^the rename should go through$")]
     public void ThenTheRenameShouldGoThrough()
     {
+        if (context.LastAttempt is RenameAccountResult account)
+        {
+            Assert.False(account.WasRefused, $"Expected the rename to go through, but it was refused: {account.Refusal}.");
+            Assert.False(context.App.RenamingAccount);
+            return;
+        }
+
         var result = LastRename();
         Assert.False(result.WasRefused, $"Expected the rename to go through, but it was refused: {result.Refusal}.");
         Assert.Null(context.App.Renaming);
@@ -141,6 +149,13 @@ public sealed class CategorySteps(SpecContext context)
     [Then(@"^the rename should be refused$")]
     public void ThenTheRenameShouldBeRefused()
     {
+        if (context.LastAttempt is RenameAccountResult account)
+        {
+            Assert.True(account.WasRefused, "Expected the rename to be refused, but it went through.");
+            Assert.True(context.App.RenamingAccount);
+            return;
+        }
+
         Assert.True(LastRename().WasRefused, "Expected the rename to be refused, but it went through.");
         Assert.NotNull(context.App.Renaming);
     }

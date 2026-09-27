@@ -5,8 +5,13 @@
 #
 # Scope of this capability, per the income increment: an income has an amount, a date and a
 # label. It has **no category** — it lands *Unassigned* and is given a purpose later, by
-# assigning, which is specified in assign-to-category.feature, not here. It has no account either — the
-# location dimension is not built (accepted gap, arc42 §11), the same gap an expense has.
+# assigning, which is specified in assign-to-category.feature, not here. Since the accounts
+# increment it is on an account, the pool account unless another is chosen, as an expense is.
+# Which account it is on, what that does to the account's balance, and that a future-dated income
+# reaches the balance only on its date, are specified in record-on-an-account.feature and
+# show-accounts.feature. Every scenario here records on the account a new income starts out on,
+# which none of them needs to name, and nothing here depends on it: an income joins Unassigned the
+# same way whichever account it is on.
 #
 # Unassigned is a figure on the purpose dimension, not a category and not a place (glossary:
 # Unassigned). For one budget period it is that period's income minus everything assigned to

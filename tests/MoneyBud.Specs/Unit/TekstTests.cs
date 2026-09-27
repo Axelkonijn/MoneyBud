@@ -43,6 +43,18 @@ public sealed partial class TekstTests
         ["Delete (a category)"] = [Tekst.Delete],
         ["Take over (a plan)"] = [Tekst.TakeOverPlan],
         ["Remembered figure"] = [Tekst.Plan],
+        ["Account / Accounts"] = [Tekst.Account, Tekst.Accounts],
+        ["Balance"] = [Tekst.Balance],
+        ["Net worth"] = [Tekst.NetWorth],
+        ["Pool account"] = [Tekst.PoolAccount],
+        ["Make (an account) the pool account"] = [Tekst.MakePool],
+        ["Transfer (the record) / Transfer (the act)"] = [Tekst.Transfer, Tekst.TransferAct],
+        ["A transfer's two accounts"] = [Tekst.From, Tekst.To],
+        ["Starting balance"] = [Tekst.StartingBalance],
+        ["Balance correction (the record)"] = [Tekst.BalanceCorrection],
+        ["Correct a balance (the act)"] = [Tekst.CorrectBalance],
+        ["Add account"] = [Tekst.AddAccount],
+        ["Overdrawn, and a negative net worth (the marker's badge)"] = [Tekst.Overdrawn],
     };
 
     [Fact]
@@ -87,6 +99,40 @@ public sealed partial class TekstTests
     [Fact]
     public void Every_rename_refusal_has_Dutch_wording() =>
         AssertWorded(Enum.GetValues<RenameRefusal>().Select(r => Tekst.Refusal(r, "Hobby")));
+
+    [Fact]
+    public void Every_account_refusal_has_Dutch_wording() =>
+        AssertWorded(Enum.GetValues<AccountRefusal>().Select(Tekst.Refusal)
+            .Concat(Enum.GetValues<RenameRefusal>().Select(Tekst.AccountRenameRefusal)));
+
+    [Fact]
+    public void Every_transfer_refusal_has_Dutch_wording() =>
+        AssertWorded(Enum.GetValues<TransferRefusal>().Select(Tekst.Refusal));
+
+    // The ruling is that a balance correction's row shows the balance typed and the difference; a
+    // starting balance's shows no difference (arc42 §12). The words around them are copy.
+    [Fact]
+    public void A_balance_correction_row_shows_the_balance_and_the_signed_difference()
+    {
+        var ledger = new Ledger(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)), "Bank");
+        var bank = ledger.PoolAccount;
+        ledger.RecordIncome(1023.40m, "Salaris", new DateOnly(2026, 3, 14));
+        var correction = ledger.CorrectBalance(bank, 1000m).Correction!;
+        var start = ledger.AddAccount("Cash", 40m).Account!;
+
+        var corrected = new HistoryLine(correction, bank, ledger.DifferenceOf(correction));
+        Assert.Equal("Correctie — saldo € 1.000,00 (−€ 23,40)", corrected.Text);
+
+        var starting = ledger.HistoryOf(start).OfType<BalanceCorrection>().Single();
+        Assert.Equal("Startsaldo — € 40,00", new HistoryLine(starting, start, ledger.DifferenceOf(starting)).Text);
+    }
+
+    [Theory]
+    [InlineData(7660, "+€ 76,60")]
+    [InlineData(0, "+€ 0,00")]
+    [InlineData(-2340, "−€ 23,40")]
+    public void A_difference_always_shows_its_sign(long cents, string shown) =>
+        Assert.Equal(shown, Tekst.Signed(Money.FromCents(cents)));
 
     [Theory]
     [InlineData(183245, "€ 1.832,45")]
