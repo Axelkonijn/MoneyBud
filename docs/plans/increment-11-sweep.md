@@ -1,6 +1,18 @@
 # Increment 11 — the sweep (*Restant*): implementation plan
 
-**Status:** written 2026-09-27, **waiting for Axel at the second gate**. Nothing is built.
+**Status:** written 2026-09-27, **approved by Axel at the second gate on 2026-09-28**: D1 as proposed,
+D2 as recommended (version 3 refused), and all eight readings under *Chosen in this plan* accepted.
+**Built on 2026-09-28.** `spec-reviewer` then found that readings 1 and 3 fell short of §12's own
+wording, and Axel ruled on both the same day, each on the recommendation. The build follows the
+rulings, not the readings as first written:
+
+- **Reading 3, revised: per move.** Money swept too much undoes the **latest move** for the period
+  first, then the one before, whichever category each went to, as the §12 follow-up words it — not
+  the latest *category* first. What comes back from one category is still written as one movement.
+- **Reading 1, revised: against what really moved.** The difference is `max(0, Restant) − swept`,
+  net. Above zero it is still to sweep. Below zero it is swept too much only beyond what was already
+  let go. So an amount let go stays let go, and a later rise in the Restant fills it before anything
+  is still to sweep, as ruling 4 words it ("measured against what actually moved").
 
 **What it builds against:** the approved scenarios — `sweep-at-a-period-end`, `show-an-ended-period`,
 `bring-a-swept-period-up-to-date`, `choose-a-sweep-destination` (47 scenarios, 62 cases), plus two

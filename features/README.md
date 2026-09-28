@@ -61,9 +61,22 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Thirty-one feature files exist. **All thirty-one are approved and bound, and every scenario in them
-passes**: 822 scenario cases, beside 509 developer unit tests, 1331 in all (2026-09-27). The latest,
-the backing increment's five, were built with that increment.
+Thirty-five feature files exist. **All thirty-five are approved and bound, and every scenario in them
+passes**: 888 scenario cases, beside 583 developer unit tests, 1471 in all (2026-09-28). The latest,
+the sweep increment's four, were built with that increment.
+
+The sweep increment's four files — `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`,
+`bring-a-swept-period-up-to-date.feature` and `choose-a-sweep-destination.feature` — were
+**approved at the scenario gate on 2026-09-27**, with scenarios added to `start-moneybud.feature` and
+`keep-data.feature`: 51 scenarios, 66 cases in all. They are bound since that increment was built, on
+2026-09-28, in `SweepSteps.cs`. `sweep-at-a-period-end.feature` explains the steps the four share.
+Three earlier steps were widened for them, none changing what an earlier scenario asserts: a backing
+choice or a correction whose row is not on the ended period left on screen after a period boundary
+steps forward to the current period first, as the user would; "I should not be warned or asked to
+confirm" also holds when no act came before it, only time passing; and the notices of backing and of
+deleting a category are checked to *contain* their sentence, since clearing the sweep destination
+adds one of its own after it. "I close MoneyBud, and start it again on …" now opens MoneyBud over the
+Givens first when no step has yet.
 
 The backing increment's five files — `back-a-category.feature`, `assign-to-a-backed-category.feature`,
 `spend-against-a-backed-category.feature`, `show-accumulated.feature` and `show-moved-money.feature`
@@ -120,5 +133,6 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | The screen | `overview.feature`, `step-between-periods.feature`, `show-categories-in-a-period.feature`, `list-transactions-in-a-period.feature`, `suggest-categories.feature`, `point-at-a-slice.feature` |
 | Accounts | `add-an-account.feature`, `record-on-an-account.feature`, `correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature`, `show-accounts.feature` — approved and bound 2026-09-27 |
 | Backing | `back-a-category.feature`, `assign-to-a-backed-category.feature`, `spend-against-a-backed-category.feature`, `show-accumulated.feature`, `show-moved-money.feature` — approved and bound 2026-09-27 |
+| The sweep | `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`, `bring-a-swept-period-up-to-date.feature`, `choose-a-sweep-destination.feature` — approved 2026-09-27, bound 2026-09-28 |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

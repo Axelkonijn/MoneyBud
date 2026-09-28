@@ -60,7 +60,7 @@ public sealed class KeepingSteps(SpecContext context)
             "is blank, with nothing at all in it" => [],
             "was written by a newer version of MoneyBud" => Encoding.UTF8.GetBytes(WrittenByANewerVersion()),
             "was written by a version without accounts" => Encoding.UTF8.GetBytes(WrittenBeforeAccounts),
-            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0, [new(1, "Bank")], 1, [], [], [], SpecContext.Today))),
+            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0, [new(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], []))),
         });
 
         // Readable data, out of reach: a folder stands where MoneyBud claims its data, so the
@@ -283,14 +283,14 @@ public sealed class KeepingSteps(SpecContext context)
     // starts over: the forms' Submit records or saves an entry, Remove asks to remove one, and
     // TakeOver takes a plan over, which only assigns. The accounts increment's acts add, rename,
     // delete, correct and move between accounts, and open and close a history; none keeps data or
-    // clears it.
+    // clears it. The sweep's one act, BringUpToDate, moves an ended period's leftover.
     [Then(@"^MoneyBud should offer no act for (saving|starting over)$")]
     public void ThenMoneyBudShouldOfferNoActFor(string _)
     {
         string[] screen =
         [
-            "ArchiveCommand", "CancelAccountRenameCommand", "CancelRenameCommand", "CloseHistoryCommand",
-            "ConfirmCommand", "CorrectOpenBalanceCommand", "DeclineCommand", "DeleteCommand",
+            "ArchiveCommand", "BringUpToDateCommand", "CancelAccountRenameCommand", "CancelRenameCommand",
+            "CloseHistoryCommand", "ConfirmCommand", "CorrectOpenBalanceCommand", "DeclineCommand", "DeleteCommand",
             "DeleteOpenAccountCommand", "EditExpenseCommand", "EditIncomeCommand", "EditTransferCommand",
             "MakeOpenAccountPoolCommand", "OpenHistoryCommand", "RemoveFromHistoryCommand", "RenameCommand",
             "SaveAccountRenameCommand", "StartAccountRenameCommand", "StartRenameCommand",
@@ -350,7 +350,7 @@ public sealed class KeepingSteps(SpecContext context)
     private static string WrittenByANewerVersion()
     {
         var snapshot = new LedgerSnapshot(
-            [new CategorySnapshot(1, "Groceries", false)], [], [], [], 0, [new AccountSnapshot(1, "Bank")], 1, [], [], [], SpecContext.Today);
+            [new CategorySnapshot(1, "Groceries", false)], [], [], [], 0, [new AccountSnapshot(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], []);
         var text = LedgerJson.Write(snapshot);
         Assert.Contains($"\"version\": {LedgerJson.Version}", text);
         return text.Replace($"\"version\": {LedgerJson.Version}", $"\"version\": {LedgerJson.Version + 1}");

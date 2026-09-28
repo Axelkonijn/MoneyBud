@@ -97,6 +97,11 @@ assigning to a backed category really moving money, and its *Accumulated* (*Opge
 row. So a savings goal now has progress on screen, the figure the "moving out" goal above is measured
 against. The money MoneyBud moves is written as entries, never as balances
 ([ADR 0009](../decisions/0009-movements-are-entries.md)). The end-of-period sweep is next.
+**The sweep is built**, in the eleventh increment (settled 2026-09-27, specified and built by
+2026-09-28; [§12](12-glossary.md), *The sweep and Restant*): at a period's end, what is left of it
+moves into one chosen backed category, and a period that changes later shows the difference, which
+one button moves. So money left over at a period end no longer vanishes, and the capability "direct what
+is left over at the end of a period somewhere useful rather than losing it" is built ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)).
 
 ## 1.2 Quality Goals
 

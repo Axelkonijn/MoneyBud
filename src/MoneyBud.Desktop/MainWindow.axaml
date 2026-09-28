@@ -402,6 +402,32 @@
                it, while a plan is offered, the button that takes the plan over into the period on
                screen (arc42 §12, Opening a period). -->
           <StackPanel Grid.Row="2" Margin="0,0,0,12" Spacing="8">
+          <!-- The sweep, directly under the ring and so under Niet toegewezen (arc42 §12, The sweep
+               and Restant). In the current period and later ones, the Restant naar list; in an
+               ended period, its line in the list's place, the marker with Tekort beside a
+               shortfall, and Restant bijwerken when the line offers it. Not in the ring's centre,
+               which lets the pointer through to the ring. -->
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8"
+                      IsVisible="{Binding Overview.ShowsSweepDestination}">
+            <TextBlock Text="{x:Static p:Tekst.SweepDestination}" Classes="caption" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding Overview.SweepChoices}" SelectedItem="{Binding Overview.ChosenSweepDestination}"
+                      MinWidth="120" MinHeight="0" Height="26" Padding="6,0" Margin="0" VerticalAlignment="Center">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="p:SweepChoice">
+                  <TextBlock Text="{Binding Text}" />
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8"
+                      IsVisible="{Binding Overview.HasSweepLine}">
+            <TextBlock Text="{Binding Overview.SweepLineText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+            <Border Classes="marker" IsVisible="{Binding Overview.IsSweepLineShort}" VerticalAlignment="Center">
+              <TextBlock Text="{x:Static p:Tekst.PeriodShortfall}" />
+            </Border>
+            <Button Content="{x:Static p:Tekst.BringUpToDate}" Command="{Binding BringUpToDateCommand}"
+                    IsVisible="{Binding Overview.CanBringSweepUpToDate}" />
+          </StackPanel>
           <Grid DataContext="{Binding AssignForm}" x:DataType="p:AssignForm"
                 ColumnDefinitions="*,8,*,12,Auto,Auto,Auto,8,Auto">
             <AutoCompleteBox Grid.Column="0" Text="{Binding Category}" Margin="0"

@@ -15,6 +15,7 @@ that says so.
 | [0004](0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; decision 1 superseded by 0006 |
 | [0005](0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted |
 | [0006](0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; amended by 0007 |
-| [0007](0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. Format version 2 since 0008, version 3 since 0009 |
+| [0007](0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. Format version 2 since 0008, version 3 since 0009, version 4 since 0010 |
 | [0008](0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2 |
-| [0009](0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3 |
+| [0009](0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Its saving gap narrowed for sweeps by 0010 |
+| [0010](0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4 |

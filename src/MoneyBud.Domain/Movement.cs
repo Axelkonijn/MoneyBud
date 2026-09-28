@@ -19,10 +19,15 @@ namespace MoneyBud.Domain;
 /// <para><see cref="Direction"/> is what it does to <i>Accumulated</i>, and <see cref="Reason"/>
 /// what caused it, for the history's wording. Neither can be told from the accounts: a movement
 /// from the pool account to itself is in or out only by what it was for.</para>
+///
+/// <para><see cref="SweptFor"/> is the first day of the period a sweep was for (arc42 §12, <i>The
+/// sweep and Restant</i>; ADR 0010), set exactly when <see cref="Reason"/> is
+/// <see cref="MovementReason.Swept"/>. A sweep is dated the day it moved, which is a day of a later
+/// period, so the period it was for has to be kept beside it.</para>
 /// </summary>
 public sealed record Movement(
     int Id, DateOnly Date, Category Category, Account From, Account To, Money Amount,
-    MovementReason Reason, MovementDirection Direction) : IEntry;
+    MovementReason Reason, MovementDirection Direction, DateOnly? SweptFor = null) : IEntry;
 
 /// <summary>What made MoneyBud move money for a category.</summary>
 public enum MovementReason
@@ -38,6 +43,12 @@ public enum MovementReason
 
     /// <summary>Pointing the backing at another account: what was there for it goes along.</summary>
     Repointed,
+
+    /// <summary>
+    /// A period's leftover, <i>Restant</i>: in to the sweep destination at the period's end or by the
+    /// button, and out of a category it was swept into too much, by the button.
+    /// </summary>
+    Swept,
 }
 
 /// <summary>Which way a movement goes, as <i>Accumulated</i> counts it.</summary>

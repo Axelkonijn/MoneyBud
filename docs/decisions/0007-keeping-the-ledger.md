@@ -16,6 +16,12 @@ points here.
 > increment, [ADR 0009](0009-movements-are-entries.md). It adds a backing on each category, the
 > movements MoneyBud made for categories, and `settledThrough`. Version 2 is refused as well as
 > version 1. The stakeholder did not mind starting over, and one format read is one way in fewer.
+>
+> **Note, 2026-09-28.** The file format is **version 4** since the sweep increment,
+> [ADR 0010](0010-sweeps-and-period-ends.md). It adds the period a sweep was for on each movement, the
+> sweep destination, which categories were backed when each period ended, and what a period's line
+> let go. Version 3 is refused as well, approved by the stakeholder at the plan gate: it has no record
+> of past period ends, and reading it would mean guessing them.
 
 ## Context
 

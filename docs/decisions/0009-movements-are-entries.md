@@ -9,6 +9,16 @@ counter, now five of them. It takes [ADR 0007](0007-keeping-the-ledger.md)'s fil
 **version 3**, as 0007's consequences foresaw for any change of format. 0007 carries a dated note
 that points here.
 
+> **Note, 2026-09-28.** The sweep arrived as this record expected, using settling at a period's end
+> ([ADR 0010](0010-sweeps-and-period-ends.md)). A sweep is a `Movement` with a fifth reason,
+> `Swept`, and names the period it was for. Settling now also records which categories were backed
+> when each period ended, and sweeps that period, before it moves the new period's planned money.
+> **One consequence below is narrowed**: the accepted gap in saving no longer holds for a sweep that
+> moved money, which is saved straight away because it is announced. Planned-money moves keep the
+> gap. Any sweep also counts as use of its category and its account, a sweep from an account to
+> itself included, where other such movements do not. The file format is version 4, and version 3
+> is refused. Everything else this record decided stands. The body is unchanged.
+
 ## Context
 
 The backing increment's rulings ([§12](../arc42/12-glossary.md), *Backing and Accumulated*) make

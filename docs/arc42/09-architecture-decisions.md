@@ -16,9 +16,10 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009**, by dated notes | 2026-09-26 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010**, by dated notes | 2026-09-26 |
 | [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
-| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3 | 2026-09-27 |
+| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated note, 2026-09-28: **its saving gap narrowed for sweeps by 0010** | 2026-09-27 |
+| [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4 | 2026-09-28 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -160,3 +161,25 @@ dated note, and so does 0007 for version 3. **Version 2 is refused, not read**, 
 recommendation (D2). The stakeholder left it to the build ("I dont mind starting over"), and one
 format read is one way in fewer. That is recorded in 0009's consequences and in §12, not as a record
 of its own, because it applies an existing ruling rather than making a new decision.
+
+**The sweep increment added one: ADR 0010**, approved at its plan gate on 2026-09-28 (decision D1 of
+the plan) and built the same day. ADR 0009 had already said the sweep would be a movement written by
+settling. What it could not say was how to keep what the rulings (§12, *The sweep and Restant*) ask to
+be known later: which categories were backed when a period ended, what was swept for which period, what
+a line let go for good, and the destination. The answer is that **a sweep is a `Movement` with reason
+`Swept` that names the period it was for**, that **settling writes a period-end record**, the set of
+categories backed at that moment, before it sweeps, that a let-go amount is kept per period, and that
+the destination is one setting. A period with no record ended before the first start, so the first
+start needed no field of its own. The rejected alternatives were a full backing history, storing each
+period's *Restant*, and recording the let-go as a movement from an account to itself. It passes this
+section's test for the same reasons 0009 did: it touches the file format, and a period-end record
+written even when nothing moves would draw a "why on earth" without its reasoning.
+
+**It carries out ADR 0009 and narrows one of its consequences, rather than superseding it.** 0009's
+decision stands: movements are entries written on their day. What changed is the gap 0009 accepted in
+saving, which no longer holds for a sweep that moved money, because a sweep is announced and settling
+it again after a restart would announce it twice (scenario-stage ruling 1). That is a consequence
+narrowed by a later ruling, not a decision reversed, so 0009 carries a dated note, as does 0007 for
+version 4. **Version 3 is refused, not read** (decision D2, approved at the plan gate as recommended):
+it has no record of past period ends, and reading it would mean guessing them. As for version 2, that
+is in the record's consequences rather than a record of its own.

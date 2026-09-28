@@ -12,7 +12,7 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 3,
+///   "version": 4,
 ///   "lastEntryId": 7,
 ///   "settledThrough": "2026-03-15",
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
@@ -27,7 +27,12 @@ namespace MoneyBud.Storage;
 ///   "transfers":  [ { "id": 3, "cents": 5000, "date": "2026-03-15", "from": 1, "to": 2 } ],
 ///   "balanceCorrections": [ { "id": 4, "date": "2026-03-15", "account": 1, "cents": 175000, "starting": false } ],
 ///   "movements":  [ { "id": 6, "date": "2026-03-15", "category": 2, "from": 1, "to": 2, "cents": 20000,
-///                     "reason": "backed", "direction": "in" } ]
+///                     "reason": "backed", "direction": "in", "sweptFor": null },
+///                   { "id": 8, "date": "2026-04-01", "category": 2, "from": 1, "to": 2, "cents": 13000,
+///                     "reason": "swept", "direction": "in", "sweptFor": "2026-03-01" } ],
+///   "sweepDestination": 2,
+///   "periodEnds": [ { "periodStart": "2026-03-01", "backed": [ 2 ] } ],
+///   "letGo":      [ ]
 /// }
 /// </code>
 ///
@@ -44,19 +49,27 @@ namespace MoneyBud.Storage;
 /// each with its reason and direction as words; and <c>settledThrough</c>, the day planned money has
 /// been moved up to.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-3 document is not read at all.
+/// <para><b>Since version 4</b>, the sweep (ADR 0010): a movement's <c>sweptFor</c>, the first day of
+/// the period a sweep was for, null on every other movement; <c>sweepDestination</c>, a category key
+/// or null; <c>periodEnds</c>, the categories backed when each period ended; and <c>letGo</c>, what a
+/// period's line stopped asking for, in cents.</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-4 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
 /// read either: the stakeholder ruled that data saved before accounts is started afresh rather than
 /// carried over (§12, <i>Accounts and net worth</i>; <i>Demo data may not survive a new version</i>).
 /// Nor is <b>version 2</b>, the form with accounts and without backing: the stakeholder did not mind
-/// starting over, and reading it was not worth a second way in (plan for increment 10, D2).
-/// Properties this version does not know are ignored.</para>
+/// starting over, and reading it was not worth a second way in (plan for increment 10, D2). Nor is
+/// <b>version 3</b>, the form with backing and without the sweep: it has no record of what was backed
+/// when each period ended, and reading it would mean guessing that, the one thing the sweep's rulings
+/// say must not be guessed (plan for increment 11, D2). Properties this version does not know are
+/// ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 3;
+    public const int Version = 4;
     private const string Format = "MoneyBud";
 
     public static string Write(LedgerSnapshot snapshot)
@@ -185,6 +198,33 @@ public static class LedgerJson
                 json.WriteNumber("cents", m.Amount.Cents);
                 json.WriteString("reason", Word(m.Reason));
                 json.WriteString("direction", Word(m.Direction));
+                if (m.SweptFor is { } sweptFor) json.WriteString("sweptFor", Date(sweptFor));
+                else json.WriteNull("sweptFor");
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
+            if (snapshot.SweepDestination is { } destination) json.WriteNumber("sweepDestination", destination);
+            else json.WriteNull("sweepDestination");
+
+            json.WriteStartArray("periodEnds");
+            foreach (var p in snapshot.PeriodEnds)
+            {
+                json.WriteStartObject();
+                json.WriteString("periodStart", Date(p.PeriodStart));
+                json.WriteStartArray("backed");
+                foreach (var key in p.Backed) json.WriteNumberValue(key);
+                json.WriteEndArray();
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
+            json.WriteStartArray("letGo");
+            foreach (var l in snapshot.LetGo)
+            {
+                json.WriteStartObject();
+                json.WriteString("periodStart", Date(l.PeriodStart));
+                json.WriteNumber("cents", l.Amount.Cents);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -227,8 +267,13 @@ public static class LedgerJson
                     Int(c, "id"), DateOf(c, "date"), Int(c, "account"), Cents(c), Bool(c, "starting"))),
                 Array(root, "movements", m => new MovementSnapshot(
                     Int(m, "id"), DateOf(m, "date"), Int(m, "category"), Int(m, "from"), Int(m, "to"), Cents(m),
-                    WordAs<MovementReason>(m, "reason"), WordAs<MovementDirection>(m, "direction"))),
-                DateOf(root, "settledThrough"));
+                    WordAs<MovementReason>(m, "reason"), WordAs<MovementDirection>(m, "direction"),
+                    DateOrNull(m, "sweptFor"))),
+                DateOf(root, "settledThrough"),
+                IntOrNull(root, "sweepDestination"),
+                Array(root, "periodEnds", p => new PeriodEndSnapshot(
+                    DateOf(p, "periodStart"), Array(p, "backed", k => k.GetInt32()))),
+                Array(root, "letGo", l => new LetGoSnapshot(DateOf(l, "periodStart"), Cents(l))));
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)
@@ -285,6 +330,9 @@ public static class LedgerJson
     // be read". So a fraction of a cent can never be read in and rounded.
     private static int Int(JsonElement parent, string name) => parent.GetProperty(name).GetInt32();
 
+    private static int? IntOrNull(JsonElement parent, string name) =>
+        parent.GetProperty(name) is { ValueKind: JsonValueKind.Null } ? null : Int(parent, name);
+
     private static Money Cents(JsonElement parent) => Money.FromCents(parent.GetProperty("cents").GetInt64());
 
     private static bool Bool(JsonElement parent, string name) => parent.GetProperty(name).GetBoolean();
@@ -296,4 +344,7 @@ public static class LedgerJson
 
     private static DateOnly DateOf(JsonElement parent, string name) =>
         DateOnly.ParseExact(Text(parent, name), "yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    private static DateOnly? DateOrNull(JsonElement parent, string name) =>
+        parent.GetProperty(name) is { ValueKind: JsonValueKind.Null } ? null : DateOf(parent, name);
 }

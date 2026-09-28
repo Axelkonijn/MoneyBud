@@ -90,7 +90,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1331 passing: 822 scenario cases, 509 developer unit tests
+dotnet test  MoneyBud.slnx     # 1471 passing: 888 scenario cases, 583 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -98,11 +98,11 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-27, after increment 11 (the sweep) passed the first gate and its plan was written, on branch `increment-11-sweep`. Next: the plan to Axel at the second gate. Update this when a stage completes._
+_Last updated 2026-09-28, after increment 11 (the sweep) was tried by Axel ("looks good") and merged into `main`, and stage 1 of increment 12 (recurring entries) began. Update this when a stage completes._
 
-**Done: all five stages, ten times — for `record-expense`, `record-income`, categories,
-assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, and
-backing.** All ten are built and green, tried by Axel and merged into `main`.
+**Done: all five stages, eleven times — for `record-expense`, `record-income`, categories,
+assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
+and the sweep.** All eleven are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -149,7 +149,12 @@ increment 9: `Account`, `NameRule` (the name rule, shared; `CategoryName` forwar
 `AccountForm` and `TransferForm` in Presentation; file format version 2 (ADR 0008). Since increment
 10: `Movement` (with `MovementReason`, `MovementDirection`), `EntryMark`, `Backing`, `SetBackingResult`;
 `Ledger.SetBacking`, `BackingOf`, `ThereFor`, `AccumulatedFor`, `Settle`; `BackingChoice` and the
-row's `Accumulated`/`ChosenBacking` in Presentation; file format version 3 (ADR 0009).
+row's `Accumulated`/`ChosenBacking` in Presentation; file format version 3 (ADR 0009). Since increment
+11: `MovementReason.Swept` and `Movement.SweptFor`, `Sweep.cs` (`SetSweepDestinationResult`,
+`SweepLine`, `SweptPart`, `BringUpToDateResult`, `SweepMade`); `Ledger.SetSweepDestination`,
+`PeriodLeftover`, `SweepLineFor`, `BringUpToDate`, `TakeSweepsMade`, and `Settle` recording each
+period's end and sweeping it; `SweepChoice` and the Overview's sweep list and line in Presentation;
+file format version 4 (ADR 0010).
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -460,7 +465,13 @@ money planned for any period that has begun. The screen settles on opening and o
 mutator on `Ledger` must call it too. `SetBacking` to the backing already set must stay a complete
 no-op (no settle, no notice, no save): each row's *Staat op* list writes back on every redraw.
 
-**Next, in order** — the pipeline restarts at stage 1 for each; nothing skips ahead to code.
+**Watch out for:** since the sweep, settling may **sweep** an ended period, inside any act. So every
+path in `MoneyBudApp` that calls the ledger must end in `Tell`, `Refuse` or `SayNothing` (or be
+`Tick` or the constructor), which take `Ledger.TakeSweepsMade()`, say them first and save. A new act
+must too, or a sweep goes unannounced and unsaved. `SetSweepDestination` to the destination already
+set must stay a complete no-op, like `SetBacking`: the *Restant naar* list writes back on every redraw.
+
+**The order of increments** — the pipeline restarts at stage 1 for each; nothing skips ahead to code.
 Put questions to Axel as multiple choice with a recommendation (`AskUserQuestion`); that worked well
 for persistence and for opening a period.
 
@@ -471,22 +482,43 @@ Order agreed with Axel on 2026-09-26:
 3. **Opening a period — done** (increment 8, above).
 4. **Accounts and net worth — done** (increment 9, above).
 5. **Backing and *Accumulated* — done** (increment 10, above).
-6. **The sweep** — in progress as increment 11, on branch `increment-11-sweep`.
-   **Start here in a new conversation:** put [the plan](docs/plans/increment-11-sweep.md) to Axel at
-   the second gate — its two decisions, **D1** (how a sweep is kept, a new ADR 0010) and **D2** (refuse
-   version-3 data), and its *Chosen in this plan* list. Once approved, build it to green (stage 5),
-   following the plan's order of work. **Stages 1–2 done** on 2026-09-27: nineteen
-   rulings, every one on the recommendation, all in §12 *The sweep and Restant* — read it first. In
-   one line: at a period's end MoneyBud moves *Unassigned* plus the unbacked categories' Resterend,
-   **netted and never below zero**, from the pool account to one chosen backed destination
-   (*Restant naar*), and says so once; with no destination nothing moves and it is shown; a later
-   change to a swept period shows the difference, and one button, *Restant bijwerken*, moves it
-   either way. Redirecting a past sweep is deferred until missed. **Stage 3 written**: four feature files
-   (`sweep-at-a-period-end`, `show-an-ended-period`, `bring-a-swept-period-up-to-date`,
-   `choose-a-sweep-destination`) plus additions to `start-moneybud` and `keep-data`, 51 scenarios,
-   66 cases; eleven more rulings taken while writing them, in §12. **Approved by Axel at the first
-   gate** on 2026-09-27, with every documentation's reading in their headers (§12, *Approved at the
-   scenario gate*, under *The sweep and Restant*). **Stage 4: the plan is written**, not yet approved.
+6. **The sweep — done** (increment 11, below).
+
+**Increment 11 — the sweep — is done**, built on branch `increment-11-sweep` on 2026-09-28, tried by
+Axel ("looks good") and merged into `main`. Stages 1–3 on 2026-09-27 (every ruling in §12 *The sweep
+and Restant* — read it first; four feature files plus additions to `start-moneybud` and `keep-data`,
+51 scenarios, 66 cases, approved at the first gate); the plan approved at the second gate on
+2026-09-28 (ADR 0010; version-3 data refused). In one line: at a period's end MoneyBud moves
+*Unassigned* plus the unbacked categories' Resterend, **netted and never below zero**, from the pool
+account to one chosen backed destination (*Restant naar*), and says so once; with no destination
+nothing moves; a later change to a swept period shows the difference, and *Restant bijwerken* moves
+it. `spec-reviewer` found no faked step; **Axel ruled at the build** that take-back is **per move**,
+latest first, and that the difference is **measured against what really moved** (an amount let go
+absorbs a later rise first); a crash in the minute after a boundary was fixed. **Open for Axel, not
+urgent:** `keep-data`'s scenario about the backing at a period's end cannot tell kept records from
+lost ones (a unit test holds it); he may want it rewritten (§12, *A note for the stakeholder*).
+
+**Next, in order** — agreed with Axel on 2026-09-28, "the three still important to me":
+
+1. **Recurring entries** on income and expenses — increment 12, **stage 1 in progress**. His shape:
+   "just an extra drop-down where you can choose default one time, or weekly or monthly". Ruled so far
+   (2026-09-28, each on the recommendation, not yet in §12): the choices are **Eenmalig** (default),
+   **wekelijks**, **maandelijks** — yearly left until missed; each occurrence is **recorded on its own
+   date** as an ordinary entry, the first time MoneyBud runs on or after it, missed ones all on the next
+   start, **told once**; the same rule for income and expenses, so a future expense is still never
+   recorded; **the latest occurrence sets the next** (amount, label, category, account, frequency),
+   changing it changes what follows, setting it to *Eenmalig* stops it, earlier occurrences are never
+   touched.
+2. **A configurable period start day.** His salary comes on the 27th. Deferred since increment 5
+   because budgets are stored by their period's first day (§12, *The period start day stays at the
+   1st*); the clamping rule for short months stands.
+3. **A mobile front-end** — "the biggest and last for now", and what makes him actually use it. Wanted
+   with **no double work** between desktop and mobile: that is what the toolkit-free
+   `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. The big stage-1
+   question will be **where the data lives** with two devices.
+
+Not chosen for now: switching to real use (a migration promise for the data file), the month in
+review, importing bank transactions, and the items deferred until missed.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
