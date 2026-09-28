@@ -51,7 +51,14 @@ namespace MoneyBud.Domain;
 /// period's first day, written by <see cref="Settle"/>, which every act that changes the ledger
 /// calls first. A backed category shows <i>Accumulated</i> (<see cref="AccumulatedFor"/>).</para>
 ///
-/// <para>Not built yet: the end-of-period sweep (arc42 §12).</para>
+/// <para><b>The sweep</b> (arc42 §12, <i>The sweep and Restant</i>; ADR 0010): when a period ends,
+/// settling moves its leftover, <i>Unassigned</i> plus every unbacked category's <i>Remaining</i>,
+/// from the pool account to the one backed category chosen as the destination
+/// (<see cref="SetSweepDestination"/>), as a <see cref="Movement"/> that says which period it was
+/// for. It records which categories were backed at that moment, so the leftover can be worked out
+/// again, the same way, after every late entry (<see cref="PeriodLeftover"/>). An ended period is
+/// never adjusted by itself: its line shows the difference (<see cref="SweepLineFor"/>), and
+/// <see cref="BringUpToDate"/> moves it.</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -80,6 +87,16 @@ public sealed class Ledger
 
     // The day money planned for later periods has been moved up to (Settle).
     private DateOnly settledThrough;
+
+    // The sweep (ADR 0010). The categories backed when each period ended, by the period's first
+    // day: written by Settle as it passes the end, so a period with none ended before the first
+    // start. What each period's line stopped asking for, for good. And the one destination.
+    private readonly Dictionary<DateOnly, HashSet<Category>> periodEnds = [];
+    private readonly Dictionary<DateOnly, Money> letGo = [];
+    private Category? sweepDestination;
+
+    // The sweeps settling made since the screen last asked, to be announced once.
+    private readonly List<SweepMade> sweepsMade = [];
 
     /// <summary>
     /// An empty ledger — no categories, nothing recorded — with one account, the pool account, named
@@ -163,8 +180,14 @@ public sealed class Ledger
                 c.Id, c.Date, accountKeys[c.Account], c.Balance, c.IsStartingBalance)).ToList(),
             movements.Select(m => new MovementSnapshot(
                 m.Id, m.Date, keys[m.Category], accountKeys[m.From], accountKeys[m.To], m.Amount,
-                m.Reason, m.Direction)).ToList(),
-            settledThrough);
+                m.Reason, m.Direction, m.SweptFor)).ToList(),
+            settledThrough,
+            sweepDestination is { } destination ? keys[destination] : null,
+            periodEnds.OrderBy(p => p.Key)
+                .Select(p => new PeriodEndSnapshot(
+                    p.Key, categoriesInOrderAdded.Where(p.Value.Contains).Select(c => keys[c]).ToList()))
+                .ToList(),
+            letGo.OrderBy(l => l.Key).Select(l => new LetGoSnapshot(l.Key, l.Value)).ToList());
     }
 
     /// <summary>
@@ -179,8 +202,12 @@ public sealed class Ledger
     /// entry, since they share one counter — an account name the rule does not store or two the
     /// rule counts as one, a pool account or an entry pointing at no account, a transfer between one
     /// account and itself, an account with two starting balances, a movement going a way its reason
-    /// does not, or a backing marked with an id that is an entry's or was never issued. Data like
-    /// that cannot be read (arc42 §12, <i>When the data cannot be read</i>).</para>
+    /// does not, or a backing marked with an id that is an entry's or was never issued. And, since
+    /// the sweep: a sweep that names no period or another movement that names one, a sweep
+    /// destination that is not backed or is archived, a period end for a day that starts no period,
+    /// twice, or for a period not yet ended, and an amount let go that is not above zero or is for a
+    /// period nothing was swept for. Data like that cannot be read (arc42 §12, <i>When the data
+    /// cannot be read</i>).</para>
     ///
     /// <para>Dates are not checked against today. An expense cannot be <i>recorded</i> in the
     /// future, but one recorded today is still valid kept data if the clock is later turned
@@ -284,13 +311,18 @@ public sealed class Ledger
                 (MovementReason.Backed, MovementDirection.In) => true,
                 (MovementReason.Unbacked, MovementDirection.Out) => true,
                 (MovementReason.Repointed, MovementDirection.Along) => kept.From != kept.To,
+                (MovementReason.Swept, MovementDirection.In or MovementDirection.Out) => true,
                 _ => false,
             };
             if (!fits)
                 throw Invalid($"movement {kept.Id} goes {kept.Direction} for a reason that does not go that way");
+            if ((kept.Reason == MovementReason.Swept) != kept.SweptFor.HasValue)
+                throw Invalid($"movement {kept.Id} is a sweep with no period, or names a period and is not a sweep");
+            if (kept.SweptFor is { } sweptFor && !StartsAPeriod(sweptFor))
+                throw Invalid($"movement {kept.Id} is a sweep for {sweptFor}, which starts no period");
             ledger.movements.Add(new Movement(
                 kept.Id, kept.Date, CategoryFor(kept.Category), AccountFor(kept.From), AccountFor(kept.To),
-                kept.Amount, kept.Reason, kept.Direction));
+                kept.Amount, kept.Reason, kept.Direction, kept.SweptFor));
         }
 
         // A backing's marks were drawn from the entries' counter, after every entry recorded
@@ -302,6 +334,34 @@ public sealed class Ledger
             CheckMark(backing.HereSince);
             ledger.backings.Add(
                 byKey[kept.Key], new Backing(AccountFor(backing.Account), backing.AccumulatingSince, backing.HereSince));
+        }
+
+        if (snapshot.SweepDestination is { } destinationKey)
+        {
+            var destination = CategoryFor(destinationKey);
+            if (!ledger.backings.ContainsKey(destination) || ledger.archived.Contains(destination))
+                throw Invalid($"the sweep destination \"{destination.Name}\" is not backed, or is archived");
+            ledger.sweepDestination = destination;
+        }
+
+        foreach (var kept in snapshot.PeriodEnds)
+        {
+            if (!StartsAPeriod(kept.PeriodStart))
+                throw Invalid($"a period end is recorded for {kept.PeriodStart}, which starts no period");
+            if (ledger.Calendar.PeriodContaining(kept.PeriodStart).LastDay >= snapshot.SettledThrough)
+                throw Invalid($"a period end is recorded for the period starting {kept.PeriodStart}, which has not ended");
+            if (!ledger.periodEnds.TryAdd(kept.PeriodStart, kept.Backed.Select(CategoryFor).ToHashSet()))
+                throw Invalid($"the period starting {kept.PeriodStart} ended twice");
+        }
+
+        foreach (var kept in snapshot.LetGo)
+        {
+            if (kept.Amount.Cents <= 0)
+                throw Invalid($"an amount let go for {kept.PeriodStart} is not more than zero");
+            if (!ledger.movements.Any(m => m.SweptFor == kept.PeriodStart))
+                throw Invalid($"an amount is let go for {kept.PeriodStart}, which nothing was swept for");
+            if (!ledger.letGo.TryAdd(kept.PeriodStart, kept.Amount))
+                throw Invalid($"two amounts are let go for {kept.PeriodStart}");
         }
 
         ledger.lastEntryId = snapshot.LastEntryId;
@@ -413,6 +473,10 @@ public sealed class Ledger
         if (!archived.Add(category))
             throw new InvalidOperationException($"\"{category.Name}\" is already archived.");
 
+        // An archived category is out of new entry, and a sweep into it every month would be the
+        // most regular new entry there is (§12, ruling 6). Bringing it back does not set it again.
+        if (sweepDestination == category) sweepDestination = null;
+
         return category;
     }
 
@@ -472,13 +536,15 @@ public sealed class Ledger
     /// <para>Money moved on its behalf between two accounts is history too: those rows stay in both
     /// accounts' histories and name it, so such a category cannot be deleted, even once its budgets
     /// are back at zero (§12, <i>Backing: ruled after the build</i>). A movement from the pool account
-    /// to itself is in no history and moves no balance, so it does not count.</para>
+    /// to itself is in no history and moves no balance, so it does not count — <b>except a
+    /// sweep</b>, which an ended period's line names whichever accounts it went between (§12, ruled
+    /// at the scenario stage, 7).</para>
     /// </summary>
     public bool CanDelete(string name) =>
         Find(name) is { } category
         && !expenses.Any(e => e.Category == category)
         && !budgets.Any(b => b.Key.Category == category && b.Value.Cents > 0)
-        && !movements.Any(m => m.Category == category && m.From != m.To);
+        && !movements.Any(m => m.Category == category && (m.From != m.To || m.Reason == MovementReason.Swept));
 
     /// <summary>
     /// Deletes a category with no history anywhere. It is gone: not archived, brought back by
@@ -486,7 +552,9 @@ public sealed class Ledger
     /// goes last in the order added. Never asks first — nothing of value is lost (arc42 §12).
     /// Budgets of zero it still had go with it, since they are not history, and so does its
     /// backing, and any money moved for it from the pool account to itself, which moved no balance:
-    /// nothing moves.
+    /// nothing moves. It leaves the record of what was backed when each period ended, and when it
+    /// is the sweep destination there is none afterwards: the setting is not history (§12, <i>The
+    /// destination is one list</i>).
     ///
     /// <para><b>Throws</b> for a name that is not one of the user's categories, and for a category
     /// with history. The delete act is offered only on a category that <see cref="CanDelete"/>, so
@@ -506,6 +574,8 @@ public sealed class Ledger
         archived.Remove(category);
         backings.Remove(category);
         movements.RemoveAll(m => m.Category == category);
+        foreach (var backed in periodEnds.Values) backed.Remove(category);
+        if (sweepDestination == category) sweepDestination = null;
         foreach (var key in budgets.Keys.Where(k => k.Category == category).ToList())
             budgets.Remove(key);
 
@@ -1196,6 +1266,7 @@ public sealed class Ledger
     /// again once it backs nothing. A movement from an account to itself — made while it was the
     /// pool account and backed a category — is in no history and moved no balance, so it does not
     /// count, as it does not for deleting a category (§12, <i>Backing: ruled after the build</i>).
+    /// A sweep to itself does count, as it does for a category: an ended period's line stands on it.
     /// </summary>
     public bool CanDeleteAccount(Account account) =>
         account != pool
@@ -1203,7 +1274,8 @@ public sealed class Ledger
         && !expenses.Any(e => e.Account == account)
         && !incomes.Any(i => i.Account == account)
         && !transfers.Any(t => t.From == account || t.To == account)
-        && !movements.Any(m => m.From != m.To && (m.From == account || m.To == account))
+        && !movements.Any(m => (m.From != m.To || m.Reason == MovementReason.Swept)
+                               && (m.From == account || m.To == account))
         && !backings.Values.Any(b => b.Account == account);
 
     /// <summary>
@@ -1483,7 +1555,8 @@ public sealed class Ledger
     /// the new one, and <i>Accumulated</i> carries on.</item>
     /// <item><b>Unbacking</b> returns what is there for the category to the pool account. Money built
     /// up in earlier periods goes back too, with no purpose: it joins no period's
-    /// <i>Unassigned</i>.</item>
+    /// <i>Unassigned</i>. So does money swept into it, and it is no longer the sweep
+    /// destination.</item>
     /// </list>
     ///
     /// <para>"What is there for it" is <see cref="ThereFor"/>; when there is none, nothing moves.
@@ -1529,6 +1602,8 @@ public sealed class Ledger
         if (account is null)
         {
             backings.Remove(category);
+            // Only a backed category can be the destination (§12, ruling 6). Re-pointing keeps it.
+            if (sweepDestination == category) sweepDestination = null;
             if (there.Cents > 0)
                 moved = Move(category, current.Account, pool, there, MovementReason.Unbacked, MovementDirection.Out);
             return new SetBackingResult(category, BackingOutcome.Unbacked, current.Account, null, moved);
@@ -1611,11 +1686,21 @@ public sealed class Ledger
     }
 
     /// <summary>
-    /// Moves the money planned for every period that has begun since the last time this ran (arc42
-    /// §12, <i>Planned money follows the backing on the day it moves</i>; ADR 0009). For each such
-    /// period in turn, each backed category with a <i>Budget</i> above zero there has that
-    /// <i>Budget</i> moved from the pool account to its backing account, dated the period's first
-    /// day. Returns whether anything was moved.
+    /// Ends every period that has ended, and moves the money planned for every period that has begun,
+    /// since the last time this ran (arc42 §12, <i>Planned money follows the backing on the day it
+    /// moves</i>, <i>When the sweep runs</i>; ADR 0009, ADR 0010). At each period boundary passed, in
+    /// order:
+    /// <list type="number">
+    /// <item>The period that ended is recorded with the categories backed at that moment, which is
+    /// what its leftover is worked out under from then on (<see cref="PeriodLeftover"/>).</item>
+    /// <item>With a destination set and a leftover above zero, the leftover is <b>swept</b>: moved
+    /// from the pool account to the destination's backing account, dated the new period's first day,
+    /// and kept to be announced (<see cref="TakeSweepsMade"/>). At zero or below, or with no
+    /// destination, nothing moves.</item>
+    /// <item>Each backed category with a <i>Budget</i> above zero in the new period has it moved from
+    /// the pool account to its backing account, dated that first day.</item>
+    /// </list>
+    /// The old period ends before the new one's money moves. Returns whether anything was moved.
     ///
     /// <para>Every act that changes the ledger calls this first, and the screen calls it when it
     /// starts and once a minute. That is what makes the date right: nothing can change while
@@ -1624,7 +1709,8 @@ public sealed class Ledger
     /// typed after it, so a balance correction typed on 1 November already has it in.</para>
     ///
     /// <para>Runs once per day at most, and never backwards: a clock turned back finds nothing to
-    /// do.</para>
+    /// do. A period that ended before the ledger was first made is passed by no settling, so it has
+    /// no record and is never swept by itself (§12, ruling 7).</para>
     /// </summary>
     public bool Settle()
     {
@@ -1636,6 +1722,17 @@ public sealed class Ledger
              period.FirstDay <= today;
              period = Calendar.Next(period))
         {
+            var ended = Calendar.Previous(period);
+            periodEnds[ended.FirstDay] = backings.Keys.ToHashSet();
+
+            if (sweepDestination is { } destination && DifferenceFor(ended) is { Cents: > 0 } leftover)
+            {
+                var sweep = Move(destination, pool, backings[destination].Account, leftover,
+                                 MovementReason.Swept, MovementDirection.In, period.FirstDay, ended);
+                sweepsMade.Add(new SweepMade(ended, sweep));
+                moved = true;
+            }
+
             foreach (var category in categoriesInOrderAdded)
             {
                 if (backings.TryGetValue(category, out var backing)
@@ -1653,11 +1750,261 @@ public sealed class Ledger
         return moved;
     }
 
+    // ================================================================== the sweep
+
+    /// <summary>The category a period's leftover goes to when the period ends, or null for none.</summary>
+    public Category? SweepDestination => sweepDestination;
+
+    /// <summary>
+    /// What can be chosen as the sweep destination: every backed category that is not archived, in
+    /// the order added (arc42 §12, <i>The destination is one list</i>). The screen shows them
+    /// alphabetically, after "—" for none; that is how they are shown, so it is the screen's to do.
+    /// </summary>
+    public IReadOnlyList<Category> SweepDestinationChoices =>
+        categoriesInOrderAdded.Where(c => backings.ContainsKey(c) && !archived.Contains(c)).ToList();
+
+    /// <summary>
+    /// Chooses where a period's leftover goes when the period ends, or — given null — that it goes
+    /// nowhere (arc42 §12, <i>The destination is one list</i>). One setting for every period that
+    /// ends from now on; a period that already ended is not swept by it (ruling 2). Never refused and
+    /// never confirmed; the result says what changed, to be announced.
+    ///
+    /// <para><b>Choosing what is already set changes nothing</b>, and does not even settle: the list
+    /// on screen writes back what it shows on every redraw, so this is the case it must be safe
+    /// in, as <see cref="SetBacking"/> is.</para>
+    ///
+    /// <para><b>Throws</b> for a name that is not one of the user's categories, or names one that is
+    /// not backed or is archived. The list offers only <see cref="SweepDestinationChoices"/>, so
+    /// none of these is something the user can do.</para>
+    /// </summary>
+    public SetSweepDestinationResult SetSweepDestination(string? categoryName)
+    {
+        var category = categoryName is null
+            ? null
+            : Find(categoryName)
+              ?? throw new InvalidOperationException($"There is no category called \"{categoryName}\" to sweep into.");
+
+        if (category == sweepDestination)
+            return new SetSweepDestinationResult(SweepDestinationOutcome.Unchanged, category, category);
+
+        if (category is not null && (!backings.ContainsKey(category) || archived.Contains(category)))
+            throw new InvalidOperationException($"\"{category.Name}\" is not backed, or is archived, so nothing can be swept into it.");
+
+        Settle();
+        var before = sweepDestination;
+        sweepDestination = category;
+        return new SetSweepDestinationResult(
+            category is null ? SweepDestinationOutcome.Removed : SweepDestinationOutcome.Chosen, before, category);
+    }
+
+    /// <summary>
+    /// A period's leftover, on screen <i>Restant</i> (arc42 §12, <i>What a period sweeps</i>): its
+    /// <i>Unassigned</i> plus the <i>Remaining</i> of every category that was <b>not backed when the
+    /// period ended</b>, negatives included, archived categories included. Backed categories are not
+    /// part of it: their money has landed.
+    ///
+    /// <para>"Backed when the period ended" is what settling recorded as it passed the end, so it is
+    /// the same answer months later, whatever was backed or unbacked since. A period that ended before
+    /// the ledger was first made had nothing backed. A period that has not ended — the current one,
+    /// a later one, or one whose end settling has not yet passed — is judged by today's backing,
+    /// which is what its end will have unless something changes first.</para>
+    /// </summary>
+    public Money PeriodLeftover(BudgetPeriod period)
+    {
+        CheckIsAPeriod(period);
+        var backedAtEnd = BackedAtEndOf(period);
+        return UnassignedIn(period)
+               + Money.Sum(categoriesInOrderAdded
+                   .Where(c => !backedAtEnd.Contains(c))
+                   .Select(c => RemainingFor(c.Name, period)));
+    }
+
+    private IReadOnlySet<Category> BackedAtEndOf(BudgetPeriod period) =>
+        periodEnds.TryGetValue(period.FirstDay, out var recorded) ? recorded
+        : period.LastDay >= settledThrough ? backings.Keys.ToHashSet()
+        : new HashSet<Category>();
+
+    /// <summary>
+    /// What an ended period's line says, or null when it says nothing: in the current period and
+    /// later ones, which show where their leftover will go and never how much (§12, ruling 10), and
+    /// in an ended period with nothing to say. One line at a time, the first that applies:
+    /// <list type="number">
+    /// <item><b>Still to sweep</b>, when the difference is above zero. <i>Restant bijwerken</i> is
+    /// offered only with a destination set (§12, ruled at the scenario stage, 3).</item>
+    /// <item><b>Swept too much</b>, when it is below zero and some move into a category can still be
+    /// undone, with the button.</item>
+    /// <item><b>Swept</b>, when anything went: what really went to each category.</item>
+    /// <item><b>A shortfall</b>, when the leftover is below zero: the negative figure.</item>
+    /// </list>
+    ///
+    /// <para><b>The difference</b> is measured against what really moved for the period, net (§12,
+    /// ruled at the scenario stage, 4; ruled at the build, 2026-09-28). What the period should sweep
+    /// now, its leftover floored at zero, above what moved is still to sweep. Below what moved, it is
+    /// swept too much only beyond what the line already let go: an amount let go stays let go, and a
+    /// later rise in the leftover fills it before anything is still to sweep. A move into a category
+    /// can be undone only while the category is still backed as it was when the money went in:
+    /// backed now, and not unbacked and backed again since, since unbacking already returned the
+    /// money. When none can, the line stops asking by itself and names what went; the backing mark
+    /// never moves back, so that is for good, like what <see cref="BringUpToDate"/> lets go.</para>
+    ///
+    /// <para><b>Throws</b> for a period that is not one of <see cref="Calendar"/>'s own.</para>
+    /// </summary>
+    public SweepLine? SweepLineFor(BudgetPeriod period)
+    {
+        CheckIsAPeriod(period);
+        if (period.FirstDay >= CurrentPeriod.FirstDay) return null;
+
+        var leftover = PeriodLeftover(period);
+        var difference = DifferenceFor(period);
+        var parts = PartsFor(period);
+
+        if (difference.Cents > 0)
+            return new SweepLine(SweepLineKind.StillToSweep, parts, difference, sweepDestination is not null);
+
+        if (difference.IsNegative && UndoableSweepsFor(period).Count > 0)
+            return new SweepLine(SweepLineKind.SweptTooMuch, parts, -difference, CanBringUpToDate: true);
+
+        if (parts.Count > 0)
+            return new SweepLine(SweepLineKind.Swept, parts, Money.Sum(parts.Select(p => p.Amount)), CanBringUpToDate: false);
+
+        if (leftover.IsNegative)
+            return new SweepLine(SweepLineKind.Shortfall, [], leftover, CanBringUpToDate: false);
+
+        return null;
+    }
+
+    /// <summary>
+    /// <i>Restant bijwerken</i> on an ended period: moves exactly the difference its line shows,
+    /// dated today, never confirmed (arc42 §12, <i>A swept period that changes</i>). It changes no
+    /// <i>Budget</i> in any period, and the sweep it corrects stays as it was, beside it.
+    /// <list type="bullet">
+    /// <item><b>Still to sweep</b> goes to <b>today's</b> destination, from the pool account to its
+    /// backing account.</item>
+    /// <item><b>Swept too much</b> comes back to the pool account from the categories it went into,
+    /// the <b>latest move for the period undone first</b>, then the one before (§12, follow-up; per
+    /// move, ruled at the build, 2026-09-28). Each move gives back at most what is left of it, and a
+    /// category at most what is there for it (<see cref="ThereFor"/>), from its <b>current</b>
+    /// backing account. What comes back from one category is one movement. What none can give is
+    /// <b>let go</b>: the line stops asking for it, for good.</item>
+    /// </list>
+    ///
+    /// <para><b>Throws</b> when the line offers no button: it is not on screen then.</para>
+    /// </summary>
+    public BringUpToDateResult BringUpToDate(BudgetPeriod period)
+    {
+        Settle();
+        var line = SweepLineFor(period);
+        if (line is not { CanBringUpToDate: true })
+            throw new InvalidOperationException($"{period} has nothing to bring up to date.");
+
+        if (line.Kind == SweepLineKind.StillToSweep)
+        {
+            var destination = sweepDestination!;
+            var sweep = Move(destination, pool, backings[destination].Account, line.Amount,
+                             MovementReason.Swept, MovementDirection.In, sweptFor: period);
+            return new BringUpToDateResult(period, [sweep], Money.Zero);
+        }
+
+        // Worked out move by move, latest first, then written as one movement per category, in the
+        // order each category was first reached.
+        var owed = line.Amount;
+        var given = new Dictionary<Category, Money>();
+        var order = new List<Category>();
+        foreach (var (sweep, left) in UndoableSweepsFor(period))
+        {
+            var category = sweep.Category;
+            var there = ThereFor(category, backings[category]) - given.GetValueOrDefault(category);
+            var give = Smallest(owed, left, there);
+            if (give.Cents <= 0) continue;
+
+            if (!given.ContainsKey(category)) order.Add(category);
+            given[category] = given.GetValueOrDefault(category) + give;
+            owed -= give;
+            if (owed == Money.Zero) break;
+        }
+
+        var moves = order
+            .Select(c => Move(c, backings[c].Account, pool, given[c], MovementReason.Swept, MovementDirection.Out, sweptFor: period))
+            .ToList();
+
+        if (owed.Cents > 0)
+            letGo[period.FirstDay] = LetGoFor(period) + owed;
+
+        return new BringUpToDateResult(period, moves, owed);
+
+        static Money Smallest(params Money[] amounts) => amounts.MinBy(a => a.Cents);
+    }
+
+    /// <summary>
+    /// The sweeps settling made since this was last asked, oldest first, and forgets them: each is
+    /// announced once (§12, <i>When the sweep runs</i>, follow-up).
+    /// </summary>
+    public IReadOnlyList<SweepMade> TakeSweepsMade()
+    {
+        var made = sweepsMade.ToList();
+        sweepsMade.Clear();
+        return made;
+    }
+
+    private IEnumerable<Movement> SweepsFor(BudgetPeriod period) =>
+        movements.Where(m => m.Reason == MovementReason.Swept && m.SweptFor == period.FirstDay);
+
+    private static Money Signed(Movement sweep) => sweep.Direction == MovementDirection.Out ? -sweep.Amount : sweep.Amount;
+
+    private Money LetGoFor(BudgetPeriod period) => letGo.GetValueOrDefault(period.FirstDay);
+
+    // Above zero, still to sweep; below zero, swept too much. Measured against what really moved,
+    // and an amount let go is never asked for again: a rise in the leftover fills it first.
+    private Money DifferenceFor(BudgetPeriod period)
+    {
+        var leftover = PeriodLeftover(period);
+        var owed = leftover.IsNegative ? Money.Zero : leftover;
+        var difference = owed - Money.Sum(SweepsFor(period).Select(Signed));
+        if (!difference.IsNegative) return difference;
+
+        var beyondLetGo = difference + LetGoFor(period);
+        return beyondLetGo.IsNegative ? beyondLetGo : Money.Zero;
+    }
+
+    // What really went to each category for the period, in the order each first received money,
+    // leaving off a category whose share was all taken back.
+    private List<SweptPart> PartsFor(BudgetPeriod period) =>
+        SweepsFor(period)
+            .GroupBy(m => m.Category)
+            .Select(g => new SweptPart(g.Key, Money.Sum(g.Select(Signed))))
+            .Where(p => p.Amount.Cents > 0)
+            .ToList();
+
+    // The moves into categories for the period that can still be undone, latest first, each with
+    // what is left of it. Only a category backed now counts, and only its moves since it was last
+    // backed: unbacking already returned what came before. What was taken back from a category
+    // already is counted against its latest moves first, as it was undone.
+    private List<(Movement Sweep, Money Left)> UndoableSweepsFor(BudgetPeriod period)
+    {
+        var undoable = new List<(Movement, Money)>();
+        foreach (var byCategory in SweepsFor(period).GroupBy(m => m.Category))
+        {
+            if (!backings.TryGetValue(byCategory.Key, out var backing)) continue;
+
+            var since = byCategory.Where(m => backing.AccumulatingSince.IsBefore(m)).ToList();
+            var takenBack = Money.Sum(since.Where(m => m.Direction == MovementDirection.Out).Select(m => m.Amount));
+            foreach (var sweep in since.Where(m => m.Direction == MovementDirection.In).OrderByDescending(m => m.Id))
+            {
+                var undone = takenBack.Cents < sweep.Amount.Cents ? takenBack : sweep.Amount;
+                takenBack -= undone;
+                if (sweep.Amount != undone) undoable.Add((sweep, sweep.Amount - undone));
+            }
+        }
+
+        return undoable.OrderByDescending(u => u.Item1.Id).ToList();
+    }
+
     private Movement Move(
         Category category, Account from, Account to, Money amount, MovementReason reason,
-        MovementDirection direction, DateOnly? date = null)
+        MovementDirection direction, DateOnly? date = null, BudgetPeriod? sweptFor = null)
     {
-        var movement = new Movement(++lastEntryId, date ?? Today, category, from, to, amount, reason, direction);
+        var movement = new Movement(
+            ++lastEntryId, date ?? Today, category, from, to, amount, reason, direction, sweptFor?.FirstDay);
         movements.Add(movement);
         return movement;
     }

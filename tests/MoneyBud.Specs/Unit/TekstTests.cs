@@ -57,6 +57,12 @@ public sealed partial class TekstTests
         ["Overdrawn, a negative net worth, and a negative Accumulated (the marker's badge)"] = [Tekst.Overdrawn],
         ["Backing account (the list on a category row that sets it)"] = [Tekst.BackingAccount],
         ["Accumulated"] = [Tekst.Accumulated],
+        ["Period leftover"] = [Tekst.PeriodLeftover],
+        ["Sweep destination (the list that sets it)"] = [Tekst.SweepDestination],
+        ["Bring the swept amount up to date (the button)"] = [Tekst.BringUpToDate],
+        ["Still to sweep (an ended period's line)"] = [Tekst.StillToSweep],
+        ["Swept too much (an ended period's line)"] = [Tekst.SweptTooMuch],
+        ["A shortfall (the marker's badge)"] = [Tekst.PeriodShortfall],
     };
 
     [Fact]

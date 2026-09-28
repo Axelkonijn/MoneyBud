@@ -25,6 +25,17 @@ public sealed record BackingChoice(Account? Account)
     public override string ToString() => Text;
 }
 
+/// <summary>
+/// One choice in the <i>Restant naar</i> list: a backed category, or <see cref="Tekst.NoSweepDestination"/>
+/// for none (arc42 §12, <i>The destination is one list</i>).
+/// </summary>
+public sealed record SweepChoice(Category? Category)
+{
+    public string Text => Category?.Name ?? Tekst.NoSweepDestination;
+
+    public override string ToString() => Text;
+}
+
 /// <summary>A category's row on the Overview: its <i>Budget</i>, what was spent, and <i>Remaining</i>.</summary>
 public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money Remaining, bool IsArchived)
 {
@@ -166,15 +177,65 @@ public sealed record PeriodOverview(
 
     public string UnassignedText => Tekst.Euro(Unassigned);
 
+    // ------------------------------------------------------------------ the sweep (§12, *The sweep and Restant*)
+
+    /// <summary>
+    /// Whether the <i>Restant naar</i> list is shown: in the current period and later ones. An ended
+    /// period shows its line in its place (§12, ruling 9).
+    /// </summary>
+    public bool ShowsSweepDestination { get; init; }
+
+    /// <summary>The <i>Restant naar</i> list: "—" first, then the backed categories alphabetically.</summary>
+    public IReadOnlyList<SweepChoice> SweepChoices { get; init; } = [];
+
+    /// <summary>The sweep destination, or null for none. The same in every period: one setting.</summary>
+    public Category? SweepDestination { get; init; }
+
+    /// <summary>
+    /// What the <i>Restant naar</i> list shows and sets. Choosing hands the category's name, or null
+    /// for none, to the screen. A list writes back what it shows, and nothing while its items are
+    /// replaced: nothing is ignored here, and what it shows is ignored by
+    /// <see cref="MoneyBudApp.SetSweepDestination"/>, which changes nothing for the destination
+    /// already set, as <see cref="CategoryRow.ChosenBacking"/> is.
+    /// </summary>
+    public SweepChoice? ChosenSweepDestination
+    {
+        get => SweepChoices.FirstOrDefault(c => c.Category == SweepDestination);
+        set
+        {
+            if (value is not null) ChooseSweepDestination?.Invoke(value.Category?.Name);
+        }
+    }
+
+    internal Action<string?>? ChooseSweepDestination { get; init; }
+
+    /// <summary>An ended period's line, or null when it has none: always null in the current period and later ones.</summary>
+    public SweepLine? SweepLine { get; init; }
+
+    public bool HasSweepLine => SweepLine is not null;
+
+    public string? SweepLineText => SweepLine is { } line ? Tekst.SweepLineText(line) : null;
+
+    /// <summary>A shortfall carries the one marker, badge <i>Tekort</i> (§12, <i>What an ended period shows</i>).</summary>
+    public Marker SweepLineMarker => SweepLine is { Kind: SweepLineKind.Shortfall } ? Marker.Over : Marker.None;
+
+    public bool IsSweepLineShort => SweepLineMarker == Marker.Over;
+
+    /// <summary>Whether <i>Restant bijwerken</i> is offered on the line.</summary>
+    public bool CanBringSweepUpToDate => SweepLine is { CanBringUpToDate: true };
+
     /// <summary>What an empty ring says instead of being blank. Null when there is a ring to draw.</summary>
     public string? RingHint => Ring.IsEmpty ? Tekst.EmptyRing : null;
 
     /// <param name="renaming">The name of the category being renamed, if any, whose row shows a text box.</param>
     /// <param name="backingChoices">The <i>Staat op</i> list every row offers; made afresh when not given.</param>
     /// <param name="chooseBacking">What choosing in a row's <i>Staat op</i> list does; nothing when not given.</param>
+    /// <param name="sweepChoices">The <i>Restant naar</i> list; made afresh when not given.</param>
+    /// <param name="chooseSweepDestination">What choosing in the <i>Restant naar</i> list does; nothing when not given.</param>
     public static PeriodOverview Of(
         Ledger ledger, BudgetPeriod period, string? renaming = null,
-        IReadOnlyList<BackingChoice>? backingChoices = null, Action<string, Account?>? chooseBacking = null)
+        IReadOnlyList<BackingChoice>? backingChoices = null, Action<string, Account?>? chooseBacking = null,
+        IReadOnlyList<SweepChoice>? sweepChoices = null, Action<string?>? chooseSweepDestination = null)
     {
         var choices = backingChoices ?? BackingChoicesOf(ledger);
 
@@ -225,7 +286,14 @@ public sealed record PeriodOverview(
                 .Select(e => new ExpenseLine(e) { AccountName = NameUnlessPool(e.Account) }).ToList(),
             NewestFirst(incomes, i => i.Date)
                 .Select(i => new IncomeLine(i) { AccountName = NameUnlessPool(i.Account) }).ToList(),
-            offer);
+            offer)
+        {
+            ShowsSweepDestination = period.FirstDay >= ledger.CurrentPeriod.FirstDay,
+            SweepChoices = sweepChoices ?? SweepChoicesOf(ledger),
+            SweepDestination = ledger.SweepDestination,
+            ChooseSweepDestination = chooseSweepDestination,
+            SweepLine = ledger.SweepLineFor(period),
+        };
 
         string? NameUnlessPool(Account account) => account == ledger.PoolAccount ? null : account.Name;
     }
@@ -236,6 +304,15 @@ public sealed record PeriodOverview(
     /// </summary>
     public static IReadOnlyList<BackingChoice> BackingChoicesOf(Ledger ledger) =>
         [new BackingChoice(null), .. ledger.Accounts.Select(a => new BackingChoice(a))];
+
+    /// <summary>
+    /// The <i>Restant naar</i> list: "—" for none first, then every backed category that is not
+    /// archived, alphabetically as the category suggestions are, case not counting (§12, ruled at the
+    /// scenario stage, 8). Not in row order, which changes with every assignment.
+    /// </summary>
+    public static IReadOnlyList<SweepChoice> SweepChoicesOf(Ledger ledger) =>
+        [new SweepChoice(null),
+         .. ledger.SweepDestinationChoices.OrderBy(c => c.Name, MoneyBudApp.Alphabetical).Select(c => new SweepChoice(c))];
 
     /// <summary>
     /// Newest date first, and on the same date newest recorded first (§12). The ledger lists in

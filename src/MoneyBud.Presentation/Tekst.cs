@@ -67,6 +67,12 @@ public static class Tekst
     public const string Overdrawn = "Rood";
     public const string BackingAccount = "Staat op";
     public const string Accumulated = "Opgebouwd";
+    public const string PeriodLeftover = "Restant";
+    public const string SweepDestination = "Restant naar";
+    public const string BringUpToDate = "Restant bijwerken";
+    public const string StillToSweep = "nog niet weggezet";
+    public const string SweptTooMuch = "te veel weggezet";
+    public const string PeriodShortfall = "Tekort";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -82,6 +88,10 @@ public static class Tekst
     // The Staat op list's choice for no backing: a symbol, not a term (§12, *Proposed display terms
     // for backing*).
     public const string NoBacking = "—";
+
+    // The Restant naar list's choice for no destination: the same symbol, as ruled (§12, *The
+    // destination is one list*, follow-up).
+    public const string NoSweepDestination = NoBacking;
 
     // Words the table does not fix, used as headings and hints.
     public const string Expenses = "Uitgaven";
@@ -431,9 +441,85 @@ public static class Tekst
             (MovementReason.Backed, _) => $"{name} staat op {Quoted(movement.To.Name)}",
             (MovementReason.Unbacked, _) => $"{name} staat niet meer op {Quoted(movement.From.Name)}",
             (MovementReason.Repointed, _) => $"{name} staat nu op {Quoted(movement.To.Name)}",
+            (MovementReason.Swept, MovementDirection.Out) => $"{PeriodLeftover} van {PeriodName(SweptPeriod(movement))} teruggehaald van {name}",
+            (MovementReason.Swept, _) => $"{PeriodLeftover} van {PeriodName(SweptPeriod(movement))} naar {name}",
         };
 
         return $"{what} — {From.ToLowerInvariant()} {Quoted(movement.From.Name)} {To.ToLowerInvariant()} {Quoted(movement.To.Name)}";
+    }
+
+    // ------------------------------------------------------------------ the sweep (§12, *The sweep and Restant*)
+
+    // A sweep keeps the first day of the period it was for. The start day is fixed at the 1st for
+    // now (§12, *The period start day stays at the 1st*), so the default calendar names the period.
+    private static BudgetPeriod SweptPeriod(Domain.Movement sweep) =>
+        new BudgetPeriodCalendar().PeriodContaining(sweep.SweptFor!.Value);
+
+    /// <summary>
+    /// The automatic sweep's notice, one sentence per period swept, oldest first: "Restant van
+    /// september 2026: € 130,00 naar "Sparen"." The sentence is copy; that it is said once is the
+    /// ruling (§12, <i>When the sweep runs</i>, follow-up).
+    /// </summary>
+    public static string Swept(IEnumerable<SweepMade> sweeps) =>
+        string.Join(" ", sweeps.Select(s =>
+            $"{PeriodLeftover} van {PeriodName(s.Period)}: {Euro(s.Movement.Amount)} naar {Quoted(s.Movement.Category.Name)}."));
+
+    /// <summary>"Restant gaat voortaan naar "Sparen".", or "... nergens heen." for none (§12, ruled at the scenario stage, 6).</summary>
+    public static string SweepDestinationSet(SetSweepDestinationResult result) => result.Outcome switch
+    {
+        SweepDestinationOutcome.Chosen => $"{PeriodLeftover} gaat voortaan naar {Quoted(result.After!.Name)}.",
+        SweepDestinationOutcome.Removed => $"{PeriodLeftover} gaat voortaan nergens heen.",
+        SweepDestinationOutcome.Unchanged => throw new InvalidOperationException("Nothing changed, so nothing is said."),
+    };
+
+    /// <summary>Said with whatever cleared the destination: unbacking, archiving or deleting it (§12, ruling 6).</summary>
+    public static string NoLongerSweepDestination(string category) =>
+        $"{PeriodLeftover} gaat niet meer naar {Quoted(category)}.";
+
+    /// <summary>
+    /// What <i>Restant bijwerken</i> moved, one sentence per move: "€ 100,00 extra restant van
+    /// september 2026 naar "Sparen"." or "€ 40,00 te veel weggezet van september 2026 teruggehaald
+    /// van "Sparen"." What it let go is not said again (§12, <i>A swept period that changes</i>).
+    /// </summary>
+    public static string BroughtUpToDate(BringUpToDateResult result)
+    {
+        var period = PeriodName(result.Period);
+        if (result.Moves.Count == 0)
+            return $"{PeriodLeftover} van {period} bijgewerkt: er stond niets meer om terug te halen.";
+
+        return string.Join(" ", result.Moves.Select(m => m.Direction == MovementDirection.Out
+            ? $"{Euro(m.Amount)} {SweptTooMuch} van {period} teruggehaald van {Quoted(m.Category.Name)}."
+            : $"{Euro(m.Amount)} extra {PeriodLeftover.ToLowerInvariant()} van {period} naar {Quoted(m.Category.Name)}."));
+    }
+
+    /// <summary>
+    /// An ended period's line, near <i>Niet toegewezen</i>: "Restant € 130,00 naar Sparen", with
+    /// "€ 40,00 nog niet weggezet" or "€ 40,00 te veel weggezet" after it when that is the line, and
+    /// for a shortfall "Restant: −€ 30,00", beside the marker and <i>Tekort</i>. The phrases are the
+    /// ruled terms; the rest is copy. Names are not quoted: this is a line, not a message.
+    /// </summary>
+    public static string SweepLineText(SweepLine line)
+    {
+        var went = line.Parts.Count == 0
+            ? null
+            : $"{PeriodLeftover} " + string.Join(" en ", line.Parts.Select(p => $"{Euro(p.Amount)} naar {p.Category.Name}"));
+
+        var more = line.Kind switch
+        {
+            SweepLineKind.StillToSweep => $"{Euro(line.Amount)} {StillToSweep}",
+            SweepLineKind.SweptTooMuch => $"{Euro(line.Amount)} {SweptTooMuch}",
+            SweepLineKind.Shortfall => $"{PeriodLeftover}: {Euro(line.Amount)}",
+            SweepLineKind.Swept => null,
+        };
+
+        return (went, more) switch
+        {
+            (null, null) => throw new InvalidOperationException("A line says something."),
+            (null, _) when line.Kind == SweepLineKind.Shortfall => more,
+            (null, _) => $"{PeriodLeftover}: {more}",
+            (_, null) => went,
+            _ => $"{went} · {more}",
+        };
     }
 
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>

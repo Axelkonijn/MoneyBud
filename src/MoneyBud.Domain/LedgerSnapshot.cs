@@ -20,6 +20,10 @@ namespace MoneyBud.Domain;
 /// in the order recorded. That order is what the Overview breaks ties by and lists newest first by,
 /// so it is part of what is kept. The entries' ids are kept too, because the order they were issued
 /// in decides what a balance correction has in it.</para>
+///
+/// <para><b>Since the sweep</b> (ADR 0010): <see cref="SweepDestination"/>, the key of the category
+/// a period's leftover goes to, or null; <see cref="PeriodEnds"/>, which categories were backed when
+/// each period ended; and <see cref="LetGo"/>, what a period's line stopped asking for.</para>
 /// </summary>
 public sealed record LedgerSnapshot(
     IReadOnlyList<CategorySnapshot> Categories,
@@ -32,7 +36,10 @@ public sealed record LedgerSnapshot(
     IReadOnlyList<TransferSnapshot> Transfers,
     IReadOnlyList<BalanceCorrectionSnapshot> BalanceCorrections,
     IReadOnlyList<MovementSnapshot> Movements,
-    DateOnly SettledThrough);
+    DateOnly SettledThrough,
+    int? SweepDestination,
+    IReadOnlyList<PeriodEndSnapshot> PeriodEnds,
+    IReadOnlyList<LetGoSnapshot> LetGo);
 
 public sealed record AccountSnapshot(int Key, string Name);
 
@@ -57,4 +64,13 @@ public sealed record BalanceCorrectionSnapshot(int Id, DateOnly Date, int Accoun
 
 public sealed record MovementSnapshot(
     int Id, DateOnly Date, int Category, int From, int To, Money Amount,
-    MovementReason Reason, MovementDirection Direction);
+    MovementReason Reason, MovementDirection Direction, DateOnly? SweptFor = null);
+
+/// <summary>
+/// A period that ended while MoneyBud was in use: its first day, and the keys of the categories
+/// backed at that moment. A period with none ended before MoneyBud was first started.
+/// </summary>
+public sealed record PeriodEndSnapshot(DateOnly PeriodStart, IReadOnlyList<int> Backed);
+
+/// <summary>What a period's line stopped asking for, for good: swept too much, and nowhere to come back from.</summary>
+public sealed record LetGoSnapshot(DateOnly PeriodStart, Money Amount);

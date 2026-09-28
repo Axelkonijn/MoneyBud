@@ -7,8 +7,8 @@ know regardless of which part of the system they're touching.
 ---
 
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
-built, since 2026-09-26. Opening a period, accounts and backing are built, and appear in §8.1, §8.3
-and §8.4._
+built, since 2026-09-26. Opening a period, accounts, backing and the sweep are built, and appear in
+§8.1, §8.3 and §8.4._
 
 ## 8.1 Domain Model
 
@@ -99,7 +99,8 @@ to them:
   account of that day, and moves `settledThrough` to today. Every act that changes the ledger calls
   it first. So "nothing acts when a period opens" (the carry-over row, below) is no longer true
   without exception, and this is the exception. It is kept to one member with one piece of state,
-  and the sweep is meant to use the same step. The runtime is in [§6](06-runtime-view.md).
+  and the sweep is meant to use the same step. The runtime is in [§6](06-runtime-view.md). **Since the
+  sweep increment it does** (next subsection).
 - **Two figures, two questions, and neither stored.** `ThereFor` is location-side: what is in the
   backing account for the category since that account became its backing, counting only expenses
   paid from that account. `AccumulatedFor` is purpose-side: what has moved in since the category was
@@ -134,6 +135,52 @@ to them:
   ruled after the build*, ruling 2).
 - **`HasBudget` is not a fourth reader.** Settling and `AccumulatedFor` read the budgets' figures,
   `> 0`, and do not call it (*The two layers meet in exactly one method*, below).
+
+### The sweep: a movement for a period, and what settling now records
+
+Since the sweep increment (2026-09-28; [§12](12-glossary.md), *The sweep and Restant*;
+[ADR 0010](../decisions/0010-sweeps-and-period-ends.md)). The rulings are in §12. What the code adds
+to them:
+
+- **A sweep is a `Movement`, not a new kind of entry.** `MovementReason.Swept`, with `SweptFor`, the
+  first day of the period it was for, set exactly when the reason is `Swept`. It goes `In` to the
+  destination or `Out` back from a category, never `Along`. So balances, histories, *Opgebouwd* and
+  `ThereFor` count sweeps with no rule of their own, and a sweep from the pool account to itself
+  changes no balance and has no history row, as other movements do.
+- **Settling does one more thing, and still one thing only at a boundary.** At each period end it
+  passes, `Settle` writes a **period-end record**, the set of categories backed at that moment,
+  then sweeps that period if a destination is set and its difference is above zero, then moves the new
+  period's planned money. The record is written **even when nothing moves**, because the *Restant* is
+  worked out again, under that set, after every late entry. The sweeps made are kept in a list that
+  `TakeSweepsMade` empties, so the ledger decides what moved and the screen decides what to say.
+- **The *Period leftover* is worked out, never stored.** `PeriodLeftover` is `UnassignedIn` plus the
+  `RemainingFor` of every category not backed at the period's end, archived ones included. "Backed at
+  the end" is the period-end record; with none, a period that ended before the ledger was made had
+  nothing backed, and a period whose end settling has not passed is judged by today's backing (§12,
+  *Sweep: chosen in the build*). So the first start is not stored: it is the absence of a record.
+- **The difference, the line and what can come back are worked out too.** `DifferenceFor` is
+  `max(0, Restant) − swept`, net, and below zero only beyond what was let go (§12, *Sweep: ruled at the
+  build*, ruling 2). `SweepLineFor` picks **one** line in a fixed order, still to sweep, swept too
+  much, swept, shortfall, and returns null for the current period and later ones, which show no
+  preview. `UndoableSweepsFor` lists the moves into categories that can still be undone, latest first
+  by id, each with what is left of it, counting only a category still backed as it was when the money
+  went in (its `AccumulatingSince` mark before the move). **The only stored state is the let-go amount
+  per period**, because the cap it records, what is there for the category, grows again afterwards.
+- **"Shows, never blocks" is held by the result types again.** `SetSweepDestinationResult` has no
+  refusal: `Chosen`, `Removed` or `Unchanged`, and it carries the destination before and after, so the
+  screen can say what changed. `Unchanged` is recognised **before settling**, as `SetBacking`'s is,
+  because the list writes back what it shows. `BringUpToDateResult` lists the moves made and what was
+  let go. A category that is unknown, unbacked or archived as a destination throws, and so does
+  `BringUpToDate` where the line offers no button: none of these is on screen.
+- **The destination is cleared by the acts that take its backing away.** `SetBacking(…, null)`,
+  `ArchiveCategory` and `DeleteCategory` set it to none; re-pointing keeps it. The screen compares the
+  destination before and after the act to say so, and the domain's result types stay as they were.
+- **Used, and deletable, read the sweeps too.** `CanDelete` and `CanDeleteAccount` count **any** sweep,
+  one from an account to itself included, where other movements from an account to itself still do
+  not count (scenario-stage ruling 7 for categories; the build, for accounts). `DeleteCategory` also
+  takes the category out of every period-end record.
+- **`HasBudget` is still not a reader.** The *Restant* reads `UnassignedIn` and `RemainingFor`, which
+  read the figures.
 
 ### The two layers meet in exactly one method
 
@@ -572,13 +619,17 @@ arrived with it (*Both dimensions are built*, above). **Backing** left when the 
 was built (2026-09-27): *Account-backed category*, *Backing account*, *Accumulated*, the backed half
 of assigning, and the *pool account* as the source of MoneyBud's own movements for a category
 (*Where the dimensions meet*, above). Its row said the question of how a movement for a later period
-is held was for the plan, and ADR 0009 answered it. Read the absence of a §12 term from this table
-as "built", not as "nobody wrote a row for it".
+is held was for the plan, and ADR 0009 answered it. **The sweep and *Leftover*** left when the sweep
+increment was built (2026-09-28): *Sweep*, *Sweep destination*, the *pool account* as the sweep's
+source, *Leftover* and the *Period leftover* (*The sweep: a movement for a period*, above). The sweep's
+row had named three things the plan must store. ADR 0010 stores two of them, the backing at a period's
+end and which period a sweep was for, and shows the third, the day of the first start, to be
+unneeded. The *Leftover* row said a leftover needs a period end to be computed at: the period-end
+record is that. Read the absence of a §12 term from this table as "built", not as "nobody wrote a row
+for it".
 
 | §12 concept | Why there is no code |
 |---|---|
-| *Sweep*, *Sweep destination*, and the *pool account* as the sweep's **source** | The next increment. §12 requires a sweep destination to be account-backed, which it now can be. The *pool account* is built as the default for every new entry and as the source of every movement for a backed category. Its role as the source of the sweep waits for the sweep. Settling is the step the sweep is meant to use at a period's end ([ADR 0009](../decisions/0009-movements-are-entries.md)) |
-| *Leftover* | Needs a period end to be computed at, and a sweep to be computed for. The only thing that acts on a period boundary is settling, which moves planned money for backed categories and computes no leftover |
 | *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
 | A period **closing** | Not missing — deliberately impossible. `BudgetPeriod` is a pair of dates with no state at all, so there is nothing that could ever refuse an expense on grounds of age (§12, *Ending versus closing*) |
@@ -787,7 +838,16 @@ put it, and that is deliberate. The stored form **may change freely between vers
 switch to real use**, at least up to and including the accounts increment
 ([§12](12-glossary.md), *Demo data may not survive a new version*, *Real use before accounts*). The
 backing increment changed it again, to version 3, with the stakeholder's leave. A movement's amount
-is stored as cents like every other entry's.
+is stored as cents like every other entry's. The sweep increment changed it to version 4, approved at
+its plan gate; an amount let go is stored as cents too.
+
+**The sweep moves a worked-out amount without reopening whole cents.** The *Restant* is *Unassigned*
+plus a set of *Remaining* figures, and the difference a swept period shows is that minus what moved:
+sums and differences of typed whole cents. Taking back swept too much picks the smallest of three
+such amounts per move. Nothing is divided. Taking an over-sweep back "in proportion to what each
+received" was rejected by a follow-up, and the documentation's reading of that rejection names the
+fractions of a cent it would have left to settle ([§12](12-glossary.md), *A swept period that
+changes*).
 
 ### Still open
 
@@ -830,6 +890,21 @@ and no entry's, and ids are unique across all five kinds. **A start may now save
 when a period has begun since `settledThrough`, its planned money is moved and kept before the user
 does anything ([§6](06-runtime-view.md), *Settling*).
 
+**The sweep increment took the file to version 4** (2026-09-28,
+[ADR 0010](../decisions/0010-sweeps-and-period-ends.md)). It adds `sweptFor` on each movement (a date,
+or null on every movement that is not a sweep) and the word `"swept"` for `reason`; `sweepDestination`
+(a category key, or null); `periodEnds` (`periodStart` and `backed`, the keys of the categories backed
+when that period ended); and `letGo` (`periodStart` and cents). Still no *Restant*, no difference and
+no line: all three are worked out. **Version 3 is refused as unreadable, as versions 1 and 2 are**,
+approved by the stakeholder at the plan gate on the recommendation: version 3 has no record of past
+period ends, and reading it would mean guessing the backing at each, the one thing the rulings say
+must not be guessed. `Ledger.FromSnapshot` checks the new rules too: a sweep names a day that starts a
+period and no other movement names one; the destination is backed and not archived; a period-end
+record is for a day that starts a period, once, for a period ended by `settledThrough`, and names
+categories that exist; a let-go amount is above zero, once per period, and for a period something was
+swept for. **A start that sweeps saves straight away**, like any sweep ([§6](06-runtime-view.md), *The
+sweep at settling*).
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -869,7 +944,7 @@ the code at the close of the increment:
 | Ruling | What it means for the build, and how it is built |
 |---|---|
 | **Everything is kept**, as one continuous history, indefinitely. No fresh start per year | Nothing is pruned or archived by age. Periods never close, so there is no boundary to cut at. **Built:** `Ledger.ToSnapshot` takes every category, budget, expense and income, and nothing anywhere removes kept data by age |
-| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
+| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), then the sweep destination, period-end records and amounts let go (ADR 0010), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
 | **Saved automatically after every change.** No save button. **A save that works says nothing** | Every act that changes the ledger ends with the data written. There is no save act and no "save now" state to offer, and no notice for a save that succeeds. **Built:** `MoneyBudApp.Tell` calls `Keep` after every act that went through **and changed the ledger** (`Tell(changed:)`). Adding a name already there, assigning zero and a negative assignment clipped in full against a *Budget* of zero are said but not saved. A refusal, an unchanged save and a declined question never reach `Tell`. A save that works sets nothing the screen shows, unless it ends a failure (below). The scenario "offer no act for saving" lists every command of the screen and the forms in full, and checks every `Command` binding in the window's markup against them |
 | **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
 | **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
@@ -881,7 +956,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009) |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -1035,7 +1110,10 @@ domain reads the clock itself. Any act refreshes at once, so the refusal also co
 Nothing is announced either way, which is what §12 asks. **Since the opening-a-period increment the
 same holds for the offer**: the take-over button and the grey plan figures can stay on a period that
 has just become past, pressing the button then is refused as a past-period assignment, and the redraw
-after the refusal takes them away (*Opening a period on screen*, below).
+after the refusal takes them away (*Opening a period on screen*, below). **Since the sweep increment
+the same minute reaches *Restant bijwerken***: the button can still stand on a period that settling
+is about to sweep. Pressing it settles first and, if the line then offers no button, says the sweep
+and moves nothing more (*The sweep on screen*, below).
 
 **A second consequence, since the corrections increment, known and not fixed.** The minute's refresh
 rebuilds the category rows, and with them a rename box that is open. **The box loses keyboard
@@ -1070,8 +1148,9 @@ which acts drop a waiting question, the archive button's new place, the question
 the rename box losing focus on the minute's refresh. They sit in §12, *Chosen in the build, not put
 to the stakeholder*, beside the rulings each one fills in. **Opening a period's are there too**, under
 *Taking a plan over: chosen in the build, not put to the stakeholder*, for the same reason. So are the
-accounts increment's (*Accounts: chosen in the build*) and the backing increment's (*Backing: chosen
-in the build, not put to the stakeholder*).
+accounts increment's (*Accounts: chosen in the build*), the backing increment's (*Backing: chosen
+in the build, not put to the stakeholder*) and the sweep increment's (*Sweep: chosen in the build, not
+put to the stakeholder*).
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -1260,6 +1339,52 @@ marker. Movement rows in the history bind like transfer rows, with no *Wijzigen*
 write-back**: the lists writing back on first show and when the accounts changed moved no money and
 announced nothing ([§11](11-risks-and-technical-debt.md), the Desktop row).
 
+### The sweep on screen
+
+The rulings are in [§12](12-glossary.md), *The sweep and Restant*. The build's own readings are in
+*Sweep: chosen in the build, not put to the stakeholder*, there. How the presentation layer holds
+them:
+
+- **The Overview carries either the list or the line, never both.** In the current period and later
+  ones `ShowsSweepDestination` is true, and `SweepChoices` and `ChosenSweepDestination` are the *Restant
+  naar* list. In an ended period `SweepLine` is `Ledger.SweepLineFor` that period, `SweepLineText` its
+  words, `SweepLineMarker` the one marker for a shortfall, badge *Tekort*, and `CanBringSweepUpToDate`
+  whether the button shows. Rebuilt on every read, so a line that changes after a late entry changes
+  at the next redraw, and nothing clears it.
+- **The list is "—" and then the backed categories alphabetically**, compared as the category
+  suggestions are (`MoneyBudApp.Alphabetical`), from `Ledger.SweepDestinationChoices`, which gives them
+  in the order added. `MoneyBudApp.SweepChoices` is one collection, made anew only when what it offers
+  or a name in it changes, for the reason the account lists are (*Accounts: chosen in the build*).
+- **`ChosenSweepDestination` is the two-way binding, and writing it is the act.** Its setter hands the
+  category's name, or null for "—", to `MoneyBudApp.SetSweepDestination`, and ignores a null written
+  while the list is rebuilt. The destination already set does nothing at all, so the list writing back
+  what it shows moves nothing, says nothing and saves nothing.
+- **Sweeps are said and kept wherever settling ran.** `Tell`, `Refuse` and `SayNothing` take the
+  ledger's sweeps made, put their sentences first and keep the ledger, whatever the act did. The
+  constructor and `Tick` do the same, and a sweep on the tick drops a waiting question. The runtime
+  is in [§6](06-runtime-view.md), *The sweep at settling*.
+- **Clearing the destination is said by the act that cleared it.** Unbacking, archiving and deleting
+  a category compare `Ledger.SweepDestination` before and after the act, and add *"Restant gaat niet
+  meer naar …"* when it was cleared. The domain's result types did not change for it.
+- **`BringSweepUpToDate` acts on `ShownPeriod`**, never asks, and says every move, a sentence per
+  category. It settles first, for the minute after a boundary (*Nothing is cached*, above).
+- **The words are six rows of §12's display-terms table**: `Tekst.PeriodLeftover` (*Restant*),
+  `SweepDestination` (*Restant naar*), `BringUpToDate` (*Restant bijwerken*), `StillToSweep` (*nog niet
+  weggezet*), `SweptTooMuch` (*te veel weggezet*) and `PeriodShortfall` (*Tekort*), held by
+  `TekstTests`. "—" is `Tekst.NoSweepDestination`, the same symbol as `NoBacking`. The notices, the
+  line's sentence and the history row are copy.
+- **A sweep's period is named with the default calendar.** `Tekst` turns a sweep's `SweptFor` into a
+  period with a new `BudgetPeriodCalendar`, which is right while the start day is fixed at the 1st and
+  would be wrong under another ([§11](11-risks-and-technical-debt.md), the start-day row).
+
+**The Desktop only binds.** A line directly under the ring holds either the *Restant naar* caption and
+`ComboBox`, visible on `ShowsSweepDestination`, or the line's text, the marker with *Tekort* on
+`IsSweepLineShort` and the *Restant bijwerken* button on `CanBringSweepUpToDate`, bound to
+`BringUpToDateCommand`. No markup test covers it. **A headless run of the real window checked it**:
+the list writing back on first show and when the backed categories change said and saved nothing, the
+line and the button showed in an ended period, and a tick across a boundary showed the sweep's notice
+([§11](11-risks-and-technical-debt.md), the Desktop row).
+
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
 `RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
@@ -1372,6 +1497,27 @@ licence to leave a decision in the window because a text test could reach it. A 
   shown in the current period and later ones until it is unbacked, the last scenario of
   `show-accumulated.feature`, added after the gate with the ruling.
 
+**How the sweep scenarios reach the screen** (`SweepSteps`, with additions to `SharedSteps`,
+`BackingSteps`, `CategorySteps`, `CorrectionSteps` and `KeepingSteps`):
+
+- **Choosing a destination is a choice in the *Restant naar* list**, by what the list shows, handed to
+  `MoneyBudApp.SetSweepDestination`. The list is only on the current period and later ones, so the step
+  steps forward first when an ended period is on screen. **Pressing *Restant bijwerken*** shows its
+  period, checks that the button is offered, and calls `MoneyBudApp.BringSweepUpToDate`.
+- **Every figure is read from the screen**: the ended period's line, from `OverviewFor` that period
+  without stepping to it; the list's choices in order; and the notice. The notices are checked to
+  **contain** the sentence `Tekst` makes, not to equal it, because one notice can carry the sweeps of
+  several periods, or a sweep in front of what an act says. The backing, archiving and deleting steps
+  check their notices the same way, since clearing the destination adds a sentence to them.
+- **A scenario's ledger is made in the current period**, so the previous period has no period-end
+  record and counts as ended before the first start. That is the scenarios' first-start convention
+  (§12, *For the plan*), and it holds by construction. A scenario that needs an automatic sweep lets a
+  period begin while MoneyBud is open, through `Tick`, or starts MoneyBud again later.
+- **"I should not be warned or asked to confirm"** accepts the sweep's two results, and the case of no
+  act before it, when a period boundary alone swept. The backing and archive steps find the **current**
+  period's row when an ended period with no row for the category is on screen, and the correction
+  steps step back to the current period the same way.
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -1433,6 +1579,36 @@ The backing increment added `BackingTests`, which covers:
 sticking once picked, including the write-back of the account already shown, and the *Staat op*
 list's choices and its shared collection. `TekstTests` holds *Staat op* and *Opgebouwd* to §12's
 table.
+
+The sweep increment added `SweepTests`, for the domain, which covers:
+
+- the *Period leftover*: netting, a backed category's *Remaining* left out, backing judged as it was
+  at the period's end in both directions, a period not yet ended judged by today's backing, an
+  archived unbacked category counting, and nothing backed before the first start;
+- settling: each ended period swept at its own end, in order, and told once; nothing without a
+  destination, nothing at zero or below; a sweep into a category the pool account backs moving no
+  balance and counting in *Accumulated*; the ended period swept before the new period's planned money;
+- the line in each state, and none for the current period and later ones;
+- the button: still to sweep going to today's destination, dated today; swept too much coming back
+  latest move first whichever category it went to, a move partly undone giving back only what is left
+  of it, the earlier move asked before anything is let go, what none can give let go for good, nothing
+  back from a category no longer backed or backed again since, re-pointing keeping what can come back;
+  and the throw where the line offers no button;
+- the destination: the choices, the no-op before settling, a change that settles first, the throws,
+  clearing on unbacking, archiving and deleting and keeping on re-pointing;
+- what counts as used: any sweep for a category, and a sweep from an account to itself for the
+  account; and deleting a category taking it out of the period-end records.
+
+`SweepScreenTests` covers the presentation layer: the list's order and its shared collection, the
+write-back doing nothing at all, the line's wording in each state and with two categories, the
+shortfall's marker, several periods in one notice oldest first, a sweep said before what an act says,
+and said and kept after a refused act and an act that changed nothing, a sweep on the tick dropping a
+waiting question, a tick that sweeps nothing saying nothing, and **the button pressed in the minute
+after a boundary moving nothing more**. `StorageTests` now reads version 4, refuses versions 1 to 3,
+keeps sweeps, the destination, period-end records and amounts let go exactly, and refuses a sweep with
+no period. One of its tests stands in for a scenario that cannot tell kept period-end records from
+lost ones (§12, *A note for the stakeholder*), and a mutation check confirmed it fails when they are
+lost. `TekstTests` holds the six new rows.
 
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
@@ -1509,3 +1685,13 @@ deleting a category, or an account, that has only movements from an account to i
 account case applying ruling 2's reason to accounts. Before them the count was 1328 (821 and 507). A headless run of the real
 window checked that the *Staat op* lists writing back what they show, on first show and when the
 accounts change, move no money and announce nothing.
+
+**At the close of the sweep increment** (2026-09-28): **1471 tests passing** with zero warnings. That
+is 888 scenario cases, 66 more than the 822 above, from the four sweep feature files and the scenarios
+added to `start-moneybud.feature` and `keep-data.feature`, and 583 developer unit tests, 74 more than
+the 509 above. `spec-reviewer` found two plan readings short of §12's wording, ruled the same day
+(§12, *Sweep: ruled at the build*), a crash when *Restant bijwerken* was pressed in the minute after a
+boundary, now handled, and one kept-data scenario that could not tell what it was about, now held by a
+unit test. A headless run of the real window checked that the *Restant naar* list writing back what it
+shows says and saves nothing, that an ended period shows its line and the button, and that a tick
+across a boundary shows the sweep's notice.

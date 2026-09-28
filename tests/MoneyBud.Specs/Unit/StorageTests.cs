@@ -126,6 +126,71 @@ public sealed class StorageTests : IDisposable
         Assert.False(restored.Settle());
     }
 
+    /// <summary>
+    /// Since the sweep: a destination, a period that ended with one category backed and was swept,
+    /// a period that ended before the ledger was made, a late expense that made a sweep too large,
+    /// and a take-back capped by what was there, so that part of it was let go.
+    /// </summary>
+    [Fact]
+    public void Everything_the_sweep_keeps_comes_back_from_the_format_exactly()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        ledger.AddAccount("Deposit", 0m);
+        ledger.AddCategory("Groceries");
+        ledger.AddCategory("Savings");
+        ledger.SetBacking("Savings", ledger.AccountNamed("Deposit"));
+        ledger.SetSweepDestination("Savings");
+        ledger.RecordIncome(1000m, "Salaris", Today);
+        var march = ledger.CurrentPeriod;
+
+        clock.Now = clock.Now.AddMonths(1);
+        ledger.Settle();
+        ledger.RecordExpense(990m, "Savings", ledger.Today, "Fiets", ledger.AccountNamed("Deposit"));
+        ledger.RecordExpense(40m, "Groceries", march.LastDay, "Bon");
+        var brought = ledger.BringUpToDate(march);
+        Assert.Equal(Money.FromCents(3000), brought.LetGo);
+
+        var text = LedgerJson.Write(ledger.ToSnapshot());
+        Assert.Contains("\"sweptFor\": \"2026-03-01\"", text);
+        Assert.Contains("\"reason\": \"swept\"", text);
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(text)!, clock);
+
+        Assert.Equal(text, LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Equal("Savings", restored.SweepDestination?.Name);
+        var line = restored.SweepLineFor(march)!;
+        Assert.Equal(SweepLineKind.Swept, line.Kind);
+        Assert.Equal(Money.FromCents(99000), Assert.Single(line.Parts).Amount);
+        Assert.Equal(Money.FromCents(96000), restored.PeriodLeftover(march));
+    }
+
+    // Holiday was backed when March ended, with 100 of its Budget unspent, so it was not swept. Were
+    // the period-end record not kept, March would count Holiday as unbacked after starting again,
+    // show its 100 as still to sweep, and sweep it a second time.
+    [Fact]
+    public void Which_categories_were_backed_when_a_period_ended_comes_back_from_the_format()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        ledger.AddCategory("Savings");
+        ledger.AddCategory("Holiday");
+        ledger.SetBacking("Savings", deposit);
+        ledger.SetBacking("Holiday", deposit);
+        ledger.SetSweepDestination("Savings");
+        ledger.RecordIncome(1000m, "Salaris", Today);
+        ledger.Assign(100m, "Holiday", ledger.CurrentPeriod);
+        var march = ledger.CurrentPeriod;
+        clock.Now = clock.Now.AddMonths(1);
+        ledger.Settle();
+
+        var text = LedgerJson.Write(ledger.ToSnapshot());
+        Assert.Contains("\"periodEnds\"", text);
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(text)!, clock);
+
+        var line = restored.SweepLineFor(march)!;
+        Assert.Equal((SweepLineKind.Swept, Money.FromCents(90000), false), (line.Kind, line.Amount, line.CanBringUpToDate));
+        Assert.Equal(Money.FromCents(90000), restored.PeriodLeftover(march));
+    }
+
     [Fact]
     public void An_entry_recorded_after_loading_gets_an_id_never_issued_before()
     {
@@ -165,19 +230,24 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 3, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 4, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 3", "\"version\": 4") },
-        { "version 2, from before backing", Valid().Replace("\"version\": 3", "\"version\": 2") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 3", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 3", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 3,", "") },
+        { "a newer version", Valid().Replace("\"version\": 4", "\"version\": 5") },
+        { "version 3, from before the sweep", Valid().Replace("\"version\": 4", "\"version\": 3") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 4", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 4", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 4", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 4,", "") },
+        { "no sweep destination", Valid().Replace("\"sweepDestination\"", "\"restantNaar\"") },
+        { "no period ends", Valid().Replace("\"periodEnds\"", "\"periodeEindes\"") },
+        { "nothing let go", Valid().Replace("\"letGo\"", "\"losgelaten\"") },
+        { "a movement without the period it was swept for", Valid().Replace("\"sweptFor\"", "\"geveegdVoor\"") },
         { "no movements", Valid().Replace("\"movements\"", "\"bewegingen\"") },
         { "no day settled through", Valid().Replace("\"settledThrough\"", "\"verrekendTot\"") },
         { "a category without its backing", Valid().Replace("\"backing\": null", "\"steun\": null") },
         { "a backing without its marks", Valid().Replace("\"hereSince\"", "\"hierSinds\"") },
-        { "a movement for a reason this version does not know", Valid().Replace("\"reason\": \"backed\"", "\"reason\": \"swept\"") },
+        { "a movement for a reason this version does not know", Valid().Replace("\"reason\": \"backed\"", "\"reason\": \"geveegd\"") },
         { "a movement in a direction written as a number", Valid().Replace("\"direction\": \"in\"", "\"direction\": 0") },
         { "no accounts", Valid().Replace("\"accounts\"", "\"rekeningen\"") },
         { "no pool account", Valid().Replace("\"poolAccount\"", "\"hoofdrekening\"") },
@@ -194,7 +264,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_3_document_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_4_document_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -239,12 +309,16 @@ public sealed class StorageTests : IDisposable
                 int last = 2, IReadOnlyList<AccountSnapshot>? accounts = null, int pool = 1,
                 IReadOnlyList<TransferSnapshot>? transfers = null,
                 IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null,
-                IReadOnlyList<MovementSnapshot>? movements = null) =>
+                IReadOnlyList<MovementSnapshot>? movements = null, int? destination = null,
+                IReadOnlyList<PeriodEndSnapshot>? periodEnds = null, IReadOnlyList<LetGoSnapshot>? letGo = null) =>
                 new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
-                    accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today);
+                    accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today,
+                    destination, periodEnds ?? [], letGo ?? []);
 
             MovementSnapshot movement = new(1, Today, 1, 1, 2, Money.FromCents(100), MovementReason.Assigned, MovementDirection.In);
             BackingSnapshot backing = new(2, new EntryMark(Today, 1), new EntryMark(Today, 1));
+            var february = new DateOnly(2026, 2, 1);
+            MovementSnapshot sweep = movement with { Reason = MovementReason.Swept, SweptFor = february };
 
             return new()
             {
@@ -293,6 +367,19 @@ public sealed class StorageTests : IDisposable
                 { "a backing by no account", With(categories: [groceries with { Backing = backing with { Account = 9 } }], last: 3) },
                 { "a backing marked with an entry's id", With(categories: [groceries with { Backing = backing }], expenses: [expense]) },
                 { "a backing marked with an id never issued", With(categories: [groceries with { Backing = backing with { HereSince = new EntryMark(Today, 5) } }]) },
+                { "a sweep for no period", With(movements: [sweep with { SweptFor = null }]) },
+                { "an assignment for a period", With(movements: [movement with { SweptFor = february }]) },
+                { "a sweep moved along", With(movements: [sweep with { Direction = MovementDirection.Along }]) },
+                { "a sweep for a day that starts no period", With(movements: [sweep with { SweptFor = february.AddDays(3) }]) },
+                { "a sweep destination that is no category", With(destination: 9) },
+                { "a sweep destination that is not backed", With(destination: 1) },
+                { "an archived sweep destination", With(categories: [groceries with { IsArchived = true, Backing = backing with { AccumulatingSince = new EntryMark(Today, 3), HereSince = new EntryMark(Today, 3) } }], last: 3, destination: 1) },
+                { "a period end for a day that starts no period", With(periodEnds: [new(february.AddDays(3), [])]) },
+                { "a period end for a period not yet ended", With(periodEnds: [new(new DateOnly(2026, 3, 1), [])]) },
+                { "a period that ended twice", With(periodEnds: [new(february, []), new(february, [])]) },
+                { "a period end naming no category", With(periodEnds: [new(february, [9])]) },
+                { "an amount let go of zero", With(movements: [sweep], letGo: [new(february, Money.Zero)]) },
+                { "an amount let go for a period nothing was swept for", With(letGo: [new(february, Money.FromCents(100))]) },
             };
         }
     }
@@ -312,7 +399,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [new(1, new DateOnly(9999, 12, 1), Money.FromCents(100))], [], [], 0,
-            [new(1, "Bank")], 1, [], [], [], Today);
+            [new(1, "Bank")], 1, [], [], [], Today, null, [], []);
 
         Assert.Throws<InvalidDataException>(() => Ledger.FromSnapshot(snapshot, clock));
     }
@@ -324,7 +411,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [], [new(1, Money.FromCents(100), Today.AddDays(5), 1, null, 1)], [], 1,
-            [new(1, "Bank")], 1, [], [], [], Today);
+            [new(1, "Bank")], 1, [], [], [], Today, null, [], []);
 
         Assert.Single(Ledger.FromSnapshot(snapshot, clock).ExpensesIn(new BudgetPeriod(Today, Today.AddDays(30))));
     }

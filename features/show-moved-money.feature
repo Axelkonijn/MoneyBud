@@ -9,7 +9,9 @@
 #   - MOVED MONEY SHOWS IN BOTH ACCOUNTS' HISTORIES, ONE ROW PER MOVEMENT, EACH ON ITS OWN DAY: each
 #     assignment to a backed category, the move made on backing, and, since the revision of unbacking,
 #     the moves made on unbacking and on re-pointing. Rejected: one row per period, because whether a
-#     balance correction holds a movement depends on its day.
+#     balance correction holds a movement depends on its day. Since the sweep increment, each sweep
+#     and each difference moved by "Restant bijwerken" is a movement row too
+#     (sweep-at-a-period-end.feature, bring-a-swept-period-up-to-date.feature).
 #   - THE ROWS ARE READ-ONLY. Moved money is changed by assigning again, not from the history.
 #   - Derived, not asked: a movement row cannot be removed from the history, and A NEGATIVE ASSIGNMENT
 #     ADDS A ROW GOING THE OTHER WAY rather than changing the earlier one.

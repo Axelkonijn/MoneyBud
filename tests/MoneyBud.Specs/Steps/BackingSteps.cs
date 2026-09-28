@@ -182,8 +182,15 @@ public sealed class BackingSteps(SpecContext context)
     // Chooses in the row's Staat op list by what the list shows, as the user does, from the row on
     // screen. The row hands the choice to MoneyBudApp.SetBacking and nothing else (a unit test holds
     // that), so the act is made there, where its result can be kept for the Thens.
+    //
+    // An ended period on screen may have no row for the category, when it has no history there, as
+    // after a period boundary (the sweep files). Then the user steps forward to the current period,
+    // where every category in use has a row, and so does this.
     private void Choose(string category, string choice)
     {
+        if (App.Overview.Rows.All(r => r.Name != category))
+            while (App.ShownPeriod.FirstDay < Ledger.CurrentPeriod.FirstDay) App.StepForward();
+
         var row = App.Overview.Rows.SingleOrDefault(r => r.Name == category)
             ?? throw new InvalidOperationException($"\"{category}\" has no row on screen.");
         var chosen = row.BackingChoices.SingleOrDefault(c => c.Text == choice)
@@ -210,12 +217,14 @@ public sealed class BackingSteps(SpecContext context)
         Assert.Contains(Tekst.Euro(result.Moved.Amount), text);
     }
 
+    // Contains rather than equals: unbacking the sweep destination also says that it no longer is
+    // one (choose-a-sweep-destination.feature).
     private string AssertTold(SetBackingResult result)
     {
         var notice = App.Notice ?? throw new InvalidOperationException("Nothing was said.");
         Assert.False(notice.IsRefusal);
-        Assert.Equal(Tekst.BackingSet(result), notice.Text);
-        return notice.Text;
+        Assert.Contains(Tekst.BackingSet(result), notice.Text);
+        return Tekst.BackingSet(result);
     }
 
     private CategoryRow RowOf(string category, string which = "current") =>

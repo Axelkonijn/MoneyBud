@@ -190,7 +190,9 @@ public sealed class CategorySteps(SpecContext context)
 
         var notice = context.App.Notice ?? throw new InvalidOperationException("Nothing was said.");
         Assert.False(notice.IsRefusal);
-        Assert.Equal(Tekst.CategoryDeleted(deleted.Category), notice.Text);
+        // Starts with: deleting the sweep destination also says that it no longer is one
+        // (choose-a-sweep-destination.feature).
+        Assert.StartsWith(Tekst.CategoryDeleted(deleted.Category), notice.Text);
     }
 
     // Offered means a row of the category carries the delete button. The rows looked at are

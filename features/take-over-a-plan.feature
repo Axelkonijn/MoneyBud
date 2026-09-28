@@ -425,7 +425,8 @@ Feature: Take over a plan
   # Staying open across a period boundary
   #
   # The screen stays on the period it showed, which becomes the previous period at the boundary.
-  # Nothing is announced at a boundary, and the offer's going is no exception.
+  # Nothing is announced at a boundary, and the offer's going is no exception. (The one exception, a
+  # sweep that moved money, is in sweep-at-a-period-end.feature. There is no sweep destination here.)
   # ----------------------------------------------------------------------------------
 
   Scenario: When a new period begins while MoneyBud is open, the offer and its figures go without a word

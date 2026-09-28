@@ -156,9 +156,14 @@ public sealed class SpecContext : IDisposable
         return MoneyBudStart.Start(new FileLedgerStore(Folder), clock);
     }
 
-    /// <summary>Closes MoneyBud, moves the clock if asked, and starts it again. It must open.</summary>
+    /// <summary>
+    /// Closes MoneyBud, moves the clock if asked, and starts it again. It must open. A MoneyBud not
+    /// yet on screen is opened over the Givens first, so that what they set up is kept, as data
+    /// MoneyBud already had (the sweep files start again straight after their Givens).
+    /// </summary>
     public void Restart(DateOnly? on = null)
     {
+        if (app is null && !closed) _ = App;
         Close();
         if (on is { } day) SetToday(day);
         Assert.IsType<StartResult.Opened>(Start());
@@ -327,6 +332,10 @@ public sealed class SpecContext : IDisposable
     public void RecordPoolMade(Account account) => LastAttempt = new PoolMade(account);
 
     public void Record(SetBackingResult result) => LastAttempt = result;
+
+    public void Record(SetSweepDestinationResult result) => LastAttempt = result;
+
+    public void Record(BringUpToDateResult result) => LastAttempt = result;
 
     public sealed record AccountDeleted(Account Account);
 

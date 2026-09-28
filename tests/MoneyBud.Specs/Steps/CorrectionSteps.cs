@@ -333,8 +333,20 @@ public sealed partial class CorrectionSteps(SpecContext context)
         }
     }
 
-    /// <summary>The row an entry phrase names, in the period on screen.</summary>
+    /// <summary>
+    /// The row an entry phrase names, in the period on screen. An entry recorded today is not on an
+    /// ended period left on screen after a period boundary (the sweep files), so when the period on
+    /// screen has no such row, the user steps forward to the current period, and so does this.
+    /// </summary>
     private object Pick(string entry)
+    {
+        if (!RowsNamed(entry).Any())
+            while (App.ShownPeriod.FirstDay < Ledger.CurrentPeriod.FirstDay) App.StepForward();
+
+        return Assert.Single(RowsNamed(entry));
+    }
+
+    private IEnumerable<object> RowsNamed(string entry)
     {
         var overview = App.Overview;
 
@@ -342,8 +354,8 @@ public sealed partial class CorrectionSteps(SpecContext context)
         {
             var label = labelled.Groups[2].Value;
             return labelled.Groups[1].Value == "expense"
-                ? Assert.Single(overview.Expenses, e => e.Label == label)
-                : Assert.Single(overview.Incomes, i => i.Label == label);
+                ? overview.Expenses.Where(e => e.Label == label)
+                : overview.Incomes.Where(i => i.Label == label);
         }
 
         var unlabelled = Unlabelled().Match(entry);
@@ -352,7 +364,7 @@ public sealed partial class CorrectionSteps(SpecContext context)
 
         var amount = SpecParsing.MoneyAmount(unlabelled.Groups[1].Value);
         var category = unlabelled.Groups[2].Value;
-        return Assert.Single(overview.Expenses, e => e.Label is null && e.Amount == amount && e.Category == category);
+        return overview.Expenses.Where(e => e.Label is null && e.Amount == amount && e.Category == category);
     }
 
     private void RecordExpense(string amount, string category, string? label, DateOnly date, Account? account = null)

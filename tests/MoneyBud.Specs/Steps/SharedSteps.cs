@@ -94,6 +94,19 @@ public sealed class SharedSteps(SpecContext context)
                 // Never refused and never confirmed: it went through, or changed nothing.
                 Assert.NotNull(backing.Category);
                 break;
+            case SetSweepDestinationResult destination:
+                // Never refused and never confirmed, as backing.
+                Assert.NotEqual(SweepDestinationOutcome.Unchanged, destination.Outcome);
+                break;
+            case BringUpToDateResult brought:
+                // Never refused and never confirmed: what it moved, or let go.
+                Assert.True(brought.Moves.Count > 0 || brought.LetGo.Cents > 0);
+                break;
+            case null:
+                // Nothing was done: only time passed, as when a period ends while MoneyBud is open
+                // and its leftover is swept (sweep-at-a-period-end.feature). No question is waiting,
+                // and there is no act to have warned about.
+                break;
             default:
                 throw NothingAttempted();
         }

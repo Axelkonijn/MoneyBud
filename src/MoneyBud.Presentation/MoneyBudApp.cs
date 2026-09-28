@@ -67,6 +67,12 @@ public sealed record Question(string Text);
 /// act. The one gap — an act that is then refused, straight after a period began — leaves the moved
 /// money unsaved until the next change; nothing is lost, since the next start settles the kept data
 /// the same way.</para>
+///
+/// <para><b>Sweeps</b> (§12, <i>The sweep and Restant</i>) are the exception to that gap: settling
+/// may sweep an ended period's leftover wherever it runs — on opening, on a <see cref="Tick"/>, or
+/// inside any act, refused ones and ones that change nothing included. So after each of those the
+/// screen takes the sweeps made, says them first, one sentence per period, and keeps the ledger
+/// straight away, so that each sweep is announced exactly once.</para>
 /// </summary>
 public sealed partial class MoneyBudApp : ObservableObject
 {
@@ -87,6 +93,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         TransferForm = new TransferForm(this);
 
         if (Ledger.Settle()) Keep();
+        if (Ledger.TakeSweepsMade() is { Count: > 0 } swept)
+            Notice = new Notice(Tekst.Swept(swept), IsRefusal: false);
     }
 
     public Ledger Ledger { get; }
@@ -111,7 +119,8 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>The Overview any period would show if it were on screen.</summary>
     public PeriodOverview OverviewFor(BudgetPeriod period) =>
-        PeriodOverview.Of(Ledger, period, Renaming, BackingChoices, (name, account) => SetBacking(name, account));
+        PeriodOverview.Of(Ledger, period, Renaming, BackingChoices, (name, account) => SetBacking(name, account),
+                          SweepChoices, name => SetSweepDestination(name));
 
     /// <summary>
     /// The categories suggested when recording an expense or assigning: those offered for new
@@ -139,7 +148,7 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     // The invariant culture rather than ordinal, so that "Één keer" sorts among the E's instead
     // of after Z; still fixed, so the machine's language cannot change the order.
-    private static readonly StringComparer Alphabetical =
+    internal static readonly StringComparer Alphabetical =
         StringComparer.Create(System.Globalization.CultureInfo.InvariantCulture, ignoreCase: true);
 
     // ------------------------------------------------------------------ pointing at the ring
@@ -258,13 +267,25 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// Once a minute, from the Desktop's timer: looks again, so the current-period label moves when
-    /// a period ends; moves the money planned for a period that has just begun, and keeps it; and
-    /// tries again to save when a save has failed — so that once saving works again, the changes are
-    /// kept with nothing done (§12).
+    /// a period ends; moves the money planned for a period that has just begun, and keeps it; sweeps
+    /// the period that ended, and says so; and tries again to save when a save has failed — so that
+    /// once saving works again, the changes are kept with nothing done (§12).
+    ///
+    /// <para>A sweep's notice replaces a question still waiting, since a question and a notice are
+    /// never shown together: money moved, and being told of it wins (plan for increment 11, 7).
+    /// Anything else the tick does says nothing.</para>
     /// </summary>
     public void Tick()
     {
-        if (Ledger.Settle() | IsUnsaved) Keep();
+        var moved = Ledger.Settle();
+        if (Ledger.TakeSweepsMade() is { Count: > 0 } swept)
+        {
+            DropQuestion();
+            Notice = new Notice(Tekst.Swept(swept), IsRefusal: false);
+            savedAgain = false;
+        }
+
+        if (moved | IsUnsaved) Keep();
         Refresh();
     }
 
@@ -402,8 +423,9 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     public Category ArchiveCategory(string name)
     {
+        var destination = Ledger.SweepDestination;
         var category = Ledger.ArchiveCategory(name);
-        Tell(Tekst.CategoryArchived(category), landedIn: null);
+        Tell(AndIfNoLongerDestination(Tekst.CategoryArchived(category), destination), landedIn: null);
         return category;
     }
 
@@ -631,8 +653,9 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     public Category DeleteCategory(string name)
     {
+        var destination = Ledger.SweepDestination;
         var category = Ledger.DeleteCategory(name);
-        Tell(Tekst.CategoryDeleted(category), landedIn: null);
+        Tell(AndIfNoLongerDestination(Tekst.CategoryDeleted(category), destination), landedIn: null);
         return category;
     }
 
@@ -917,12 +940,86 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     public SetBackingResult SetBacking(string categoryName, Account? account)
     {
+        var destination = Ledger.SweepDestination;
         var result = Ledger.SetBacking(categoryName, account);
         if (result.Outcome != BackingOutcome.Unchanged)
-            Tell(Tekst.BackingSet(result), landedIn: null);
+            Tell(AndIfNoLongerDestination(Tekst.BackingSet(result), destination), landedIn: null);
 
         return result;
     }
+
+    // ------------------------------------------------------------------ the sweep
+
+    private IReadOnlyList<SweepChoice> sweepChoices = [];
+
+    /// <summary>
+    /// The <i>Restant naar</i> list. The same list for as long as the categories it offers and their
+    /// names stay the same, and a new one when any changes, for the reason
+    /// <see cref="AccountChoices"/> gives: a list handed a new collection on every refresh would let
+    /// go of its choice and take it up again once a minute.
+    /// </summary>
+    public IReadOnlyList<SweepChoice> SweepChoices
+    {
+        get
+        {
+            var wanted = PeriodOverview.SweepChoicesOf(Ledger);
+            if (!wanted.Select(c => (c.Category, c.Text)).SequenceEqual(sweepChoices.Select(c => (c.Category, c.Text))))
+                sweepChoices = wanted;
+
+            return sweepChoices;
+        }
+    }
+
+    /// <summary>
+    /// A choice in the <i>Restant naar</i> list: a backed category's name, or null for none (arc42
+    /// §12, <i>The destination is one list</i>). Never asks first; says afterwards where the leftover
+    /// goes from now on. Kept, like every act that goes through.
+    ///
+    /// <para><b>Choosing what is already set does nothing at all</b>: nothing is said, what was said
+    /// stays, nothing is kept and nothing is redrawn — the list writes back what it shows on every
+    /// redraw, as the <i>Staat op</i> lists do (<see cref="SetBacking"/>).</para>
+    /// </summary>
+    public SetSweepDestinationResult SetSweepDestination(string? categoryName)
+    {
+        var result = Ledger.SetSweepDestination(categoryName);
+        if (result.Outcome != SweepDestinationOutcome.Unchanged)
+            Tell(Tekst.SweepDestinationSet(result), landedIn: null);
+
+        return result;
+    }
+
+    /// <summary>
+    /// <i>Restant bijwerken</i> on the period on screen: moves exactly the difference its line shows,
+    /// never asks, and says afterwards what moved (§12, <i>A swept period that changes</i>). Offered
+    /// only where the line offers it.
+    ///
+    /// <para>For up to a minute after a period boundary the button can be on screen over a line that
+    /// settling is about to change: the period that just ended is not swept until the next tick or
+    /// act. So this settles first, and when the line then offers no button, nothing is moved: the
+    /// sweep settling made is said, and the redraw takes the button away. Null then.</para>
+    /// </summary>
+    public BringUpToDateResult? BringSweepUpToDate()
+    {
+        Ledger.Settle();
+        if (Ledger.SweepLineFor(ShownPeriod) is not { CanBringUpToDate: true })
+        {
+            SayNothing();
+            return null;
+        }
+
+        var result = Ledger.BringUpToDate(ShownPeriod);
+        Tell(Tekst.BroughtUpToDate(result), landedIn: null);
+        return result;
+    }
+
+    [RelayCommand]
+    private void BringUpToDate() => BringSweepUpToDate();
+
+    // Unbacking, archiving or deleting the destination clears it, and the act says so (§12, ruling 6).
+    private string AndIfNoLongerDestination(string text, Category? destinationBefore) =>
+        destinationBefore is not null && Ledger.SweepDestination != destinationBefore
+            ? $"{text} {Tekst.NoLongerSweepDestination(destinationBefore.Name)}"
+            : text;
 
     // ------------------------------------------------------------------ an account's history
 
@@ -1057,38 +1154,48 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// An act that went through: said, and then the ledger is kept — unless the act changed
-    /// nothing, such as adding a name already there, when there is nothing to keep.
+    /// nothing, such as adding a name already there, when there is nothing to keep. Any sweep the
+    /// act's settling made is said first, and kept whatever the act was.
     /// </summary>
     private void Tell(string text, BudgetPeriod? landedIn, bool changed = true)
     {
+        var swept = Ledger.TakeSweepsMade();
         DropQuestion();
         Notice = landedIn is { } period && period != ShownPeriod
-            ? new Notice($"{text} {Tekst.WentInto(period)}", IsRefusal: false, WentInto: period)
-            : new Notice(text, IsRefusal: false);
+            ? new Notice(SweptFirst(swept, $"{text} {Tekst.WentInto(period)}"), IsRefusal: false, WentInto: period)
+            : new Notice(SweptFirst(swept, text), IsRefusal: false);
         savedAgain = false;
-        if (changed) Keep();
+        if (changed || swept.Count > 0) Keep();
         Refresh();
     }
 
     private void Refuse(string text)
     {
+        var swept = Ledger.TakeSweepsMade();
         DropQuestion();
-        Notice = new Notice(text, IsRefusal: true);
+        Notice = new Notice(SweptFirst(swept, text), IsRefusal: true);
         savedAgain = false;
+        if (swept.Count > 0) Keep();
         Refresh();
     }
 
     /// <summary>
     /// An act with no outcome to tell: nothing is said, and what was said before is gone. Nothing
-    /// changed, so there is nothing to keep.
+    /// changed, so there is nothing to keep — unless the act's settling swept a period, which is
+    /// said, and kept.
     /// </summary>
     private void SayNothing()
     {
+        var swept = Ledger.TakeSweepsMade();
         DropQuestion();
-        Notice = null;
+        Notice = swept.Count > 0 ? new Notice(Tekst.Swept(swept), IsRefusal: false) : null;
         savedAgain = false;
+        if (swept.Count > 0) Keep();
         Refresh();
     }
+
+    private static string SweptFirst(IReadOnlyList<SweepMade> swept, string text) =>
+        swept.Count > 0 ? $"{Tekst.Swept(swept)} {text}" : text;
 
     private void NotAnAmount(string? typed) =>
         Refuse(AmountInput.Read(typed, out _) == AmountReading.Ambiguous
