@@ -630,7 +630,7 @@ for it".
 
 | §12 concept | Why there is no code |
 |---|---|
-| *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
+| *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)). **Settled on 2026-09-28, not specified or built** (§12, *Recurring entries*). Its occurrences are ordinary incomes and expenses, so what is new in code is what records them. That leaves two things for the plan: a recurring entry must be kept **beside** its entries, because it outlives the removal of its latest occurrence and keeps the day a monthly one started on; and **settling becomes a third writer**, of incomes and expenses, working through the days in order so that a period's occurrences come before its sweep, as ruled in a follow-up (§12, *For the plan*, under *Recurring entries*) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
 | A period **closing** | Not missing — deliberately impossible. `BudgetPeriod` is a pair of dates with no state at all, so there is nothing that could ever refuse an expense on grounds of age (§12, *Ending versus closing*) |
 

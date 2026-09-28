@@ -98,7 +98,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-28, after increment 11 (the sweep) was tried by Axel ("looks good") and merged into `main`, and stage 1 of increment 12 (recurring entries) began. Update this when a stage completes._
+_Last updated 2026-09-28, after increment 12 (recurring entries) passed the first gate, on branch `increment-12-recurring`. Next: stage 4, the plan. Update this when a stage completes._
 
 **Done: all five stages, eleven times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -508,7 +508,34 @@ lost ones (a unit test holds it); he may want it rewritten (§12, *A note for th
    start, **told once**; the same rule for income and expenses, so a future expense is still never
    recorded; **the latest occurrence sets the next** (amount, label, category, account, frequency),
    changing it changes what follows, setting it to *Eenmalig* stops it, earlier occurrences are never
-   touched.
+   touched; **removing an occurrence removes only that one** and the repeat carries on; a monthly one
+   that started on the 31st falls on a short month's **last day and returns to the 31st** (it keeps
+   the day it started on); the **latest occurrence's row carries a grey "maandelijks"/"wekelijks"**,
+   earlier ones are plain; occurrences recorded by themselves are **told in one notice, once**, and
+   saved straight away, as the sweep is; an occurrence on an **archived category is recorded and
+   brings it back**, as recording by hand does. **Stage 2** wrote them into §12 *Recurring entries*,
+   and six follow-ups were ruled the same day: removing the latest makes the **newest remaining
+   occurrence the latest**, and removing the only one ends the repeat; an **earlier occurrence shows
+   *Eenmalig*, locked**; **changing the latest occurrence's date moves the day for all later ones**
+   (against the recommendation, with the one-off-Saturday consequence put to him); a repeat set up in
+   the past records what is already due **at once**; closed across a period end, MoneyBud settles
+   **day by day**, so occurrences come before their period's sweep; the drop-down is **last on the
+   form, captioned *Herhalen***. **Stage 3 written** (2026-09-28): `repeat-an-entry.feature` (its header
+   explains the shared steps), `change-a-repeat.feature` and a "Repeats are kept" section in
+   `keep-data.feature` — 51 scenarios, 61 cases — the **first files to use calendar dates** (a monthly
+   repeat keeps a day of the month). Three more rulings at the scenario stage, all on the
+   recommendation: removing a stopped repeat's last occurrence **leaves it stopped** (the one before
+   shows *Eenmalig*, changeable); the drop-down order is **Eenmalig, wekelijks, maandelijks**; the grey
+   label is **only in the Overview's lists**, not in an account's history (a unit test, not a
+   scenario). Binding note: a "today is <date>" Given must also make that day the first start.
+   **Approved by Axel at the first gate on 2026-09-28**, with every documentation's reading in their
+   headers (§12, *Approved at the scenario gate*, under *Recurring entries*). **Start here in a new
+   conversation: stage 4, the plan** — write it to `docs/plans/increment-12-recurring.md`, as
+   increment 11's was (decisions for Axel with a recommendation, rejected options, *Chosen in this
+   plan*, order of work). §12 *Recurring entries*, *For the plan* lists what it must settle: how a
+   repeat is kept (likely **ADR 0011** and file format **version 5**, and whether version 4 is read or
+   refused), settling **day by day** with occurrences before a period's sweep, saving straight away,
+   the day "last set to". Then Axel at the second gate.
 2. **A configurable period start day.** His salary comes on the 27th. Deferred since increment 5
    because budgets are stored by their period's first day (§12, *The period start day stays at the
    1st*); the clamping rule for short months stands.

@@ -61,7 +61,13 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Thirty-five feature files exist. **All thirty-five are approved and bound, and every scenario in them
+The recurring-entries increment's files — `repeat-an-entry.feature` and `change-a-repeat.feature`,
+with a "Repeats are kept" section added to `keep-data.feature`, 51 scenarios and 61 cases — were
+**approved at the scenario gate on 2026-09-28**. They are **not bound yet**: their steps come with the
+build. They are the first files to name days by calendar date, since a monthly repeat keeps a day of
+the month; `repeat-an-entry.feature` explains the steps the three share.
+
+Before them, thirty-five feature files existed. **All thirty-five are approved and bound, and every scenario in them
 passes**: 888 scenario cases, beside 583 developer unit tests, 1471 in all (2026-09-28). The latest,
 the sweep increment's four, were built with that increment.
 

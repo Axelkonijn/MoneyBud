@@ -102,6 +102,13 @@ against. The money MoneyBud moves is written as entries, never as balances
 moves into one chosen backed category, and a period that changes later shows the difference, which
 one button moves. So money left over at a period end no longer vanishes, and the capability "direct what
 is left over at the end of a period somewhere useful rather than losing it" is built ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)).
+**Recurring entries are next**, the twelfth increment, chosen by the stakeholder on 2026-09-28 as the
+first of three: then a configurable period start day, because his salary comes on the 27th, then a
+mobile front-end. Its rulings are settled, not yet specified or built ([§12](12-glossary.md),
+*Recurring entries*): an income or expense can repeat weekly or monthly, set by one drop-down that
+defaults to *Eenmalig*, so one-off entry stays the default and stays first-class, as the table above
+says. Each occurrence is an ordinary entry that MoneyBud records on its own date, and the latest one
+sets the next, so a changed price is adjusted without starting a new series, as round 1 asked.
 
 ## 1.2 Quality Goals
 
