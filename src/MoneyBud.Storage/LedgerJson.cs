@@ -12,7 +12,7 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 4,
+///   "version": 5,
 ///   "lastEntryId": 7,
 ///   "settledThrough": "2026-03-15",
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
@@ -32,7 +32,8 @@ namespace MoneyBud.Storage;
 ///                     "reason": "swept", "direction": "in", "sweptFor": "2026-03-01" } ],
 ///   "sweepDestination": 2,
 ///   "periodEnds": [ { "periodStart": "2026-03-01", "backed": [ 2 ] } ],
-///   "letGo":      [ ]
+///   "letGo":      [ ],
+///   "repeats":    [ { "occurrences": [ 1, 9 ], "frequency": "monthly", "day": 15, "next": "2026-05-15" } ]
 /// }
 /// </code>
 ///
@@ -54,7 +55,12 @@ namespace MoneyBud.Storage;
 /// or null; <c>periodEnds</c>, the categories backed when each period ended; and <c>letGo</c>, what a
 /// period's line stopped asking for, in cents.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-4 document is not read at all.
+/// <para><b>Since version 5</b>, recurring entries (ADR 0011): <c>repeats</c>, each with the ids of
+/// its <c>occurrences</c> in the order recorded, its <c>frequency</c> as a word, <c>day</c>, the day of
+/// the month a monthly one was last set to, and <c>next</c>, the date of the next occurrence. A stopped
+/// repeat has all three null, and a weekly one has no day.</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-5 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
@@ -64,12 +70,17 @@ namespace MoneyBud.Storage;
 /// starting over, and reading it was not worth a second way in (plan for increment 10, D2). Nor is
 /// <b>version 3</b>, the form with backing and without the sweep: it has no record of what was backed
 /// when each period ended, and reading it would mean guessing that, the one thing the sweep's rulings
-/// say must not be guessed (plan for increment 11, D2). Properties this version does not know are
-/// ignored.</para>
+/// say must not be guessed (plan for increment 11, D2). <b>Version 4</b>, the form with the sweep and
+/// without recurring entries, <b>is read</b>, as data with no repeats: nothing could repeat when it was
+/// written, so reading it guesses nothing (plan for increment 12, D2). One with a <c>repeats</c> list is
+/// not what version 4 wrote, and is not read. Properties this version does not know are ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 4;
+    public const int Version = 5;
+
+    // The one older version still read: the sweep's, which differs only by having no repeats.
+    private const int VersionWithoutRepeats = 4;
     private const string Format = "MoneyBud";
 
     public static string Write(LedgerSnapshot snapshot)
@@ -229,6 +240,23 @@ public static class LedgerJson
             }
             json.WriteEndArray();
 
+            json.WriteStartArray("repeats");
+            foreach (var r in snapshot.Repeats)
+            {
+                json.WriteStartObject();
+                json.WriteStartArray("occurrences");
+                foreach (var id in r.Occurrences) json.WriteNumberValue(id);
+                json.WriteEndArray();
+                if (r.Frequency is { } frequency) json.WriteString("frequency", Word(frequency));
+                else json.WriteNull("frequency");
+                if (r.Day is { } day) json.WriteNumber("day", day);
+                else json.WriteNull("day");
+                if (r.Next is { } next) json.WriteString("next", Date(next));
+                else json.WriteNull("next");
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
             json.WriteEndObject();
         }
 
@@ -245,9 +273,12 @@ public static class LedgerJson
             using var document = JsonDocument.Parse(text);
             var root = document.RootElement;
 
-            if (root.ValueKind != JsonValueKind.Object
-                || Text(root, "format") != Format
-                || Int(root, "version") != Version)
+            if (root.ValueKind != JsonValueKind.Object || Text(root, "format") != Format)
+                return null;
+
+            var version = Int(root, "version");
+            var hasRepeats = root.TryGetProperty("repeats", out _);
+            if (!(version == Version || (version == VersionWithoutRepeats && !hasRepeats)))
                 return null;
 
             return new LedgerSnapshot(
@@ -273,7 +304,12 @@ public static class LedgerJson
                 IntOrNull(root, "sweepDestination"),
                 Array(root, "periodEnds", p => new PeriodEndSnapshot(
                     DateOf(p, "periodStart"), Array(p, "backed", k => k.GetInt32()))),
-                Array(root, "letGo", l => new LetGoSnapshot(DateOf(l, "periodStart"), Cents(l))));
+                Array(root, "letGo", l => new LetGoSnapshot(DateOf(l, "periodStart"), Cents(l))),
+                version == VersionWithoutRepeats
+                    ? []
+                    : Array(root, "repeats", r => new RepeatSnapshot(
+                        Array(r, "occurrences", o => o.GetInt32()),
+                        WordOrNull<Frequency>(r, "frequency"), IntOrNull(r, "day"), DateOrNull(r, "next"))));
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)
@@ -317,6 +353,9 @@ public static class LedgerJson
             if (Word(value) == word) return value;
         throw new FormatException($"\"{word}\" is not a {typeof(T).Name}.");
     }
+
+    private static T? WordOrNull<T>(JsonElement parent, string name) where T : struct, Enum =>
+        parent.GetProperty(name) is { ValueKind: JsonValueKind.Null } ? null : WordAs<T>(parent, name);
 
     private static List<T> Array<T>(JsonElement parent, string name, Func<JsonElement, T> read)
     {

@@ -22,9 +22,10 @@ namespace MoneyBud.Specs.Steps;
 [Binding]
 public sealed partial class CorrectionSteps(SpecContext context)
 {
-    // How the feature files name an entry: by what its row shows (change-an-entry.feature's header).
+    // How the feature files name an entry: by what its row shows (change-an-entry.feature's header),
+    // with its date added where occurrences share a label (repeat-an-entry.feature's header).
     private const string Entry =
-        @"(the (?:expense|income) labelled ""[^""]*""|the expense of \S+ euro for ""[^""]*"" without a label)";
+        @"(the (?:expense|income) labelled ""[^""]*""(?: dated \d{1,2} [A-Z][a-z]+ \d{4})?|the expense of \S+ euro for ""[^""]*"" without a label)";
 
     private Ledger Ledger => context.Ledger;
     private MoneyBudApp App => context.App;
@@ -34,32 +35,40 @@ public sealed partial class CorrectionSteps(SpecContext context)
     // Recording's grammar, as something that happened earlier. Setup goes through the ledger's
     // own door, so a setup entry that would be refused fails the scenario here; and it never
     // brings a category back, which would mean the Givens are in the wrong order.
-    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)$")]
-    public void GivenIHaveRecordedAnExpense(string amount, string category, string label, string date) =>
-        RecordExpense(amount, category, label, Ledger.Date(date));
+    //
+    // Ending in ", repeating monthly" or "weekly", it was set to repeat (repeat-an-entry.feature),
+    // and no Given sets up a repeat with an occurrence already due, so that fails here too.
+    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account |, repeating ).)+)" + SpecParsing.RepeatingEnding + "$")]
+    public void GivenIHaveRecordedAnExpense(string amount, string category, string label, string date, string repeating) =>
+        RecordExpense(amount, category, label, Ledger.Date(date), repeat: SpecParsing.Repeating(repeating));
 
     // On an account other than the one a new entry starts out on (features/show-accounts.feature).
-    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""$")]
-    public void GivenIHaveRecordedAnExpenseOnTheAccount(string amount, string category, string label, string date, string account) =>
-        RecordExpense(amount, category, label, Ledger.Date(date), Ledger.Account(account));
+    [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""" + SpecParsing.RepeatingEnding + "$")]
+    public void GivenIHaveRecordedAnExpenseOnTheAccount(
+        string amount, string category, string label, string date, string account, string repeating) =>
+        RecordExpense(amount, category, label, Ledger.Date(date), Ledger.Account(account), SpecParsing.Repeating(repeating));
 
     [Given(@"^I have recorded an expense of (\S+) euro for ""([^""]*)"" without a label$")]
     public void GivenIHaveRecordedAnExpenseWithoutALabel(string amount, string category) =>
         RecordExpense(amount, category, label: null, Ledger.Today);
 
-    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)$")]
-    public void GivenIHaveRecordedAnIncome(string amount, string label, string date) =>
-        RecordIncome(amount, label, date, account: null);
+    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account |, repeating ).)+)" + SpecParsing.RepeatingEnding + "$")]
+    public void GivenIHaveRecordedAnIncome(string amount, string label, string date, string repeating) =>
+        RecordIncome(amount, label, date, account: null, SpecParsing.Repeating(repeating));
 
-    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""$")]
-    public void GivenIHaveRecordedAnIncomeOnTheAccount(string amount, string label, string date, string account) =>
-        RecordIncome(amount, label, date, Ledger.Account(account));
+    [Given(@"^I have recorded an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""" + SpecParsing.RepeatingEnding + "$")]
+    public void GivenIHaveRecordedAnIncomeOnTheAccount(string amount, string label, string date, string account, string repeating) =>
+        RecordIncome(amount, label, date, Ledger.Account(account), SpecParsing.Repeating(repeating));
 
-    private void RecordIncome(string amount, string label, string date, Account? account)
+    private void RecordIncome(string amount, string label, string date, Account? account, Frequency? repeat)
     {
-        var result = Ledger.RecordIncome(SpecParsing.Amount(amount), label, Ledger.Date(date), account);
+        var result = Ledger.RecordIncome(SpecParsing.Amount(amount), label, Ledger.Date(date), account, repeat);
         Assert.True(result.WasRecorded, $"Setting up the income \"{label}\" was refused: {result.Refusal}.");
+        AssertNothingWasDue();
     }
+
+    private void AssertNothingWasDue() =>
+        Assert.True(Ledger.TakeOccurrencesMade().Count == 0, "A Given set up a repeat with an occurrence already due.");
 
     // ------------------------------------------------------------------- When: changing
 
@@ -134,6 +143,15 @@ public sealed partial class CorrectionSteps(SpecContext context)
     [When(@"^I save " + Entry + @" without changing anything$")]
     public void WhenISaveWithoutChangingAnything(string entry) =>
         Change(entry, _ => { }, _ => { });
+
+    // Choosing it in the Herhalen list of the entry opened for changing, and saving
+    // (repeat-an-entry.feature's header).
+    [When(@"^I change the frequency of " + Entry + @" to (one-off|weekly|monthly)$")]
+    public void WhenIChangeTheFrequency(string entry, string frequency)
+    {
+        var choice = new FrequencyChoice(SpecParsing.Frequency(frequency));
+        Change(entry, expense => expense.ChosenFrequency = choice, income => income.ChosenFrequency = choice);
+    }
 
     // ------------------------------------------------------------------- When: removing
 
@@ -225,6 +243,48 @@ public sealed partial class CorrectionSteps(SpecContext context)
         var notice = App.Notice ?? throw new InvalidOperationException("Nothing was said.");
         Assert.False(notice.IsRefusal);
         Assert.StartsWith(announcement, notice.Text);
+    }
+
+    // What the Herhalen list shows once the row is clicked, and whether it can be changed: "locked"
+    // is tried, by choosing another frequency, and must still show the same one. The form is then
+    // left with Annuleren, as the user would.
+    [Then(@"^" + Entry + @" should open with the frequency (one-off|weekly|monthly), (changeable|locked)$")]
+    public void ThenItShouldOpenWithTheFrequency(string entry, string frequency, string state)
+    {
+        var expected = SpecParsing.Frequency(frequency);
+        var other = new FrequencyChoice(expected is null ? Frequency.Monthly : null);
+
+        switch (Pick(entry))
+        {
+            case ExpenseLine expense:
+            {
+                App.EditExpense(expense);
+                var form = App.ExpenseForm;
+                Assert.Equal(new FrequencyChoice(expected), form.ChosenFrequency);
+                Assert.Equal(state == "changeable", form.CanChangeFrequency);
+                if (state == "locked")
+                {
+                    form.ChosenFrequency = other;
+                    Assert.Equal(new FrequencyChoice(expected), form.ChosenFrequency);
+                }
+                form.Cancel();
+                break;
+            }
+            case IncomeLine income:
+            {
+                App.EditIncome(income);
+                var form = App.IncomeForm;
+                Assert.Equal(new FrequencyChoice(expected), form.ChosenFrequency);
+                Assert.Equal(state == "changeable", form.CanChangeFrequency);
+                if (state == "locked")
+                {
+                    form.ChosenFrequency = other;
+                    Assert.Equal(new FrequencyChoice(expected), form.ChosenFrequency);
+                }
+                form.Cancel();
+                break;
+            }
+        }
     }
 
     [Then(@"^I should have been asked to confirm first$")]
@@ -353,9 +413,10 @@ public sealed partial class CorrectionSteps(SpecContext context)
         if (Labelled().Match(entry) is { Success: true } labelled)
         {
             var label = labelled.Groups[2].Value;
+            DateOnly? date = labelled.Groups[3].Success ? SpecParsing.CalendarDate(labelled.Groups[3].Value) : null;
             return labelled.Groups[1].Value == "expense"
-                ? overview.Expenses.Where(e => e.Label == label)
-                : overview.Incomes.Where(i => i.Label == label);
+                ? overview.Expenses.Where(e => e.Label == label && (date is null || e.Date == date))
+                : overview.Incomes.Where(i => i.Label == label && (date is null || i.Date == date));
         }
 
         var unlabelled = Unlabelled().Match(entry);
@@ -367,16 +428,18 @@ public sealed partial class CorrectionSteps(SpecContext context)
         return overview.Expenses.Where(e => e.Label is null && e.Amount == amount && e.Category == category);
     }
 
-    private void RecordExpense(string amount, string category, string? label, DateOnly date, Account? account = null)
+    private void RecordExpense(
+        string amount, string category, string? label, DateOnly date, Account? account = null, Frequency? repeat = null)
     {
-        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label, account);
+        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label, account, repeat);
         Assert.True(result.WasRecorded, $"Setting up an expense for {category} was refused: {result.Refusal}.");
         Assert.False(result.CategoryBroughtBack, $"Setting up an expense brought {category} back.");
+        AssertNothingWasDue();
     }
 
     private static InvalidOperationException NothingChanged() => new("No entry has been changed yet.");
 
-    [GeneratedRegex(@"^the (expense|income) labelled ""([^""]*)""$")]
+    [GeneratedRegex(@"^the (expense|income) labelled ""([^""]*)""(?: dated (.+))?$")]
     private static partial Regex Labelled();
 
     [GeneratedRegex(@"^the expense of (\S+) euro for ""([^""]*)"" without a label$")]

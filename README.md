@@ -39,9 +39,10 @@ it up. To start over, close MoneyBud and delete the file; the next start begins 
 default categories and one account, Betaalrekening. If MoneyBud says it cannot read your data, it
 has changed nothing: the file is still there as it was.
 
-**Data saved before the sweep existed cannot be read** by the version with the sweep, and nor can
-data saved before backing or before accounts existed. MoneyBud says it cannot read your data and
-closes. Delete the file to start fresh.
+**Data saved by the version with the sweep is read** by the version with recurring entries, as data
+in which nothing repeats. **Data saved before the sweep existed cannot be read**, and nor can data
+saved before backing or before accounts existed. MoneyBud says it cannot read your data and closes.
+Delete the file to start fresh.
 
 The file lives in your user profile, never in this repository, whichever folder MoneyBud is run
 from.

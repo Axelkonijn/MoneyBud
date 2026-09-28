@@ -59,6 +59,13 @@ namespace MoneyBud.Domain;
 /// again, the same way, after every late entry (<see cref="PeriodLeftover"/>). An ended period is
 /// never adjusted by itself: its line shows the difference (<see cref="SweepLineFor"/>), and
 /// <see cref="BringUpToDate"/> moves it.</para>
+///
+/// <para><b>Recurring entries</b> (arc42 §12, <i>Recurring entries</i>; ADR 0011): an income or an
+/// expense can be set to repeat, weekly or monthly. Each occurrence is an ordinary entry, recorded by
+/// settling on its own date, the first time MoneyBud runs on or after it, and kept to be announced
+/// (<see cref="TakeOccurrencesMade"/>). The latest occurrence — the one recorded most recently — sets
+/// the next; changing it changes what follows, and one-off stops it (<see cref="FrequencyOf"/>,
+/// <see cref="SetsTheRepeat"/>).</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -97,6 +104,11 @@ public sealed class Ledger
 
     // The sweeps settling made since the screen last asked, to be announced once.
     private readonly List<SweepMade> sweepsMade = [];
+
+    // Recurring entries (ADR 0011), in the order set up, and the occurrences recorded since the
+    // screen last asked, to be announced once.
+    private readonly List<RecurringEntry> repeats = [];
+    private readonly List<OccurrenceMade> occurrencesMade = [];
 
     /// <summary>
     /// An empty ledger — no categories, nothing recorded — with one account, the pool account, named
@@ -187,7 +199,8 @@ public sealed class Ledger
                 .Select(p => new PeriodEndSnapshot(
                     p.Key, categoriesInOrderAdded.Where(p.Value.Contains).Select(c => keys[c]).ToList()))
                 .ToList(),
-            letGo.OrderBy(l => l.Key).Select(l => new LetGoSnapshot(l.Key, l.Value)).ToList());
+            letGo.OrderBy(l => l.Key).Select(l => new LetGoSnapshot(l.Key, l.Value)).ToList(),
+            repeats.Select(r => new RepeatSnapshot(r.Occurrences.ToList(), r.Frequency, r.Day, r.Next)).ToList());
     }
 
     /// <summary>
@@ -206,7 +219,10 @@ public sealed class Ledger
     /// the sweep: a sweep that names no period or another movement that names one, a sweep
     /// destination that is not backed or is archived, a period end for a day that starts no period,
     /// twice, or for a period not yet ended, and an amount let go that is not above zero or is for a
-    /// period nothing was swept for. Data like that cannot be read (arc42 §12, <i>When the data
+    /// period nothing was swept for. And, since recurring entries: a repeat with no occurrences, with
+    /// one that is not an expense or an income or mixes the two, an entry in two repeats, a running
+    /// repeat with no next date or a stopped one with one, and a day of the month on anything but a
+    /// monthly repeat, or none on one. Data like that cannot be read (arc42 §12, <i>When the data
     /// cannot be read</i>).</para>
     ///
     /// <para>Dates are not checked against today. An expense cannot be <i>recorded</i> in the
@@ -362,6 +378,30 @@ public sealed class Ledger
                 throw Invalid($"an amount is let go for {kept.PeriodStart}, which nothing was swept for");
             if (!ledger.letGo.TryAdd(kept.PeriodStart, kept.Amount))
                 throw Invalid($"two amounts are let go for {kept.PeriodStart}");
+        }
+
+        var expenseIds = ledger.expenses.Select(e => e.Id).ToHashSet();
+        var incomeIds = ledger.incomes.Select(i => i.Id).ToHashSet();
+        var repeated = new HashSet<int>();
+        foreach (var kept in snapshot.Repeats)
+        {
+            if (kept.Occurrences.Count == 0)
+                throw Invalid("a repeat has no occurrences");
+            if (!kept.Occurrences.All(expenseIds.Contains) && !kept.Occurrences.All(incomeIds.Contains))
+                throw Invalid("a repeat's occurrences are not all expenses or all incomes");
+            foreach (var id in kept.Occurrences)
+            {
+                if (!repeated.Add(id))
+                    throw Invalid($"entry {id} is an occurrence of two repeats, or twice of one");
+            }
+            if (kept.Frequency is { } frequency && !Enum.IsDefined(frequency))
+                throw Invalid("a repeat has a frequency MoneyBud does not know");
+            if ((kept.Frequency is null) != (kept.Next is null))
+                throw Invalid("a repeat is running with no next date, or stopped with one");
+            var dayFits = kept.Frequency == Frequency.Monthly ? kept.Day is >= 1 and <= 31 : kept.Day is null;
+            if (!dayFits)
+                throw Invalid("a monthly repeat has no day of the month, or another repeat has one");
+            ledger.repeats.Add(RecurringEntry.Kept(kept.Occurrences, kept.Frequency, kept.Day, kept.Next));
         }
 
         ledger.lastEntryId = snapshot.LastEntryId;
@@ -857,9 +897,15 @@ public sealed class Ledger
     /// <para>The expense is on <paramref name="account"/>, or on the <b>pool account</b> when none
     /// is given (arc42 §12, *An expense defaults to the pool account*). An account is picked from a
     /// list, never typed, so it is never refused: one that is not in the ledger <b>throws</b>.</para>
+    ///
+    /// <para>Given a <paramref name="repeat"/>, the expense is the first occurrence of a recurring
+    /// entry, which repeats from its date (arc42 §12, <i>Recurring entries</i>). Occurrences already
+    /// due — the expense was dated back — are recorded at once (follow-up 4), to be announced
+    /// (<see cref="TakeOccurrencesMade"/>). A refused expense sets nothing up.</para>
     /// </summary>
     public RecordExpenseResult RecordExpense(
-        decimal amountInEuros, string? categoryName, DateOnly date, string? label = null, Account? account = null)
+        decimal amountInEuros, string? categoryName, DateOnly date, string? label = null, Account? account = null,
+        Frequency? repeat = null)
     {
         Settle();
         var on = CheckIsMine(account ?? pool);
@@ -872,6 +918,7 @@ public sealed class Ledger
         var expense = new Expense(
             ++lastEntryId, Money.FromEuros(amountInEuros), date, category!, NormaliseLabel(label), on);
         expenses.Add(expense);
+        StartRepeating(expense, repeat);
         return RecordExpenseResult.Recorded(expense, broughtBack);
     }
 
@@ -900,22 +947,45 @@ public sealed class Ledger
     ///
     /// <para><b>Throws</b> for an expense that is not in the ledger, such as one already removed.
     /// A change is made from the expense's row, so that is not something the user can do.</para>
+    ///
+    /// <para>This keeps the repeat's frequency as it is; a changed date on the latest occurrence still
+    /// moves its day (§12, follow-up 3). The overload that takes a frequency can change that too.</para>
     /// </summary>
     public ChangeExpenseResult ChangeExpense(
         Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label,
-        Account? account = null)
+        Account? account = null) =>
+        ChangeExpense(expense, amountInEuros, categoryName, date, label, account, FrequencyOf(expense));
+
+    /// <summary>
+    /// Changes an expense as the overload without a frequency does, and its repeat to
+    /// <paramref name="repeat"/>, null being one-off (arc42 §12, <i>The latest occurrence sets the
+    /// next</i>). Only an expense that <see cref="SetsTheRepeat"/> can change it; for an earlier
+    /// occurrence the frequency is <b>ignored</b>, since its drop-down is locked, and the change is to
+    /// that expense alone (plan for increment 12, 3 and 4).
+    ///
+    /// <para>On one that sets the repeat: a one-off given a frequency starts repeating from its date;
+    /// on the latest occurrence, a new frequency, or a new date, sets the day and the next date from
+    /// that date, and one-off stops the repeat; a stopped repeat's last occurrence given a frequency
+    /// starts it again. A changed frequency alone is a change. Whatever is due by then is recorded at
+    /// once (follow-ups 3 and 4).</para>
+    /// </summary>
+    public ChangeExpenseResult ChangeExpense(
+        Expense expense, decimal amountInEuros, string? categoryName, DateOnly date, string? label,
+        Account? account, Frequency? repeat)
     {
         Settle();
         var index = IndexOf(expense);
         var current = expenses[index];
         var on = CheckIsMine(account ?? current.Account);
+        var repeatChanged = SetsTheRepeat(current) && repeat != FrequencyOf(current);
 
         if (Money.IsWholeCents(amountInEuros)
             && Money.FromEuros(amountInEuros) == current.Amount
             && Find(categoryName) == current.Category
             && date == current.Date
             && NormaliseLabel(label) == current.Label
-            && on == current.Account)
+            && on == current.Account
+            && !repeatChanged)
             return ChangeExpenseResult.Unchanged(current);
 
         var (refusal, category) = CheckExpense(amountInEuros, categoryName, date);
@@ -933,6 +1003,7 @@ public sealed class Ledger
             Account = on,
         };
         expenses[index] = changed;
+        Repeat(current, changed, repeat);
         return ChangeExpenseResult.Changed(changed, broughtBack);
     }
 
@@ -941,12 +1012,17 @@ public sealed class Ledger
     /// do (arc42 §12, *Removing an entry asks first*); by the time this is called, the user has
     /// confirmed. Removing is not new entry, so it never brings a category back.
     ///
+    /// <para>An occurrence removed is that one alone: the repeat carries on, and its next date does
+    /// not move. The one recorded before it becomes the latest; removing the only one ends the repeat
+    /// (arc42 §12, ruling 4, follow-up 1).</para>
+    ///
     /// <para><b>Throws</b> for an expense that is not in the ledger.</para>
     /// </summary>
     public void RemoveExpense(Expense expense)
     {
         Settle();
         expenses.RemoveAt(IndexOf(expense));
+        NoLongerRepeats(expense);
     }
 
     /// <summary>
@@ -1016,8 +1092,13 @@ public sealed class Ledger
     /// <para>The income is on <paramref name="account"/>, or on the pool account when none is given,
     /// as for an expense. A future-dated income reaches that account's balance only on its
     /// date.</para>
+    ///
+    /// <para>Given a <paramref name="repeat"/>, the income repeats from its date, as an expense does
+    /// (<see cref="RecordExpense"/>). One dated ahead is its own first occurrence, and the next comes
+    /// one step after its date.</para>
     /// </summary>
-    public RecordIncomeResult RecordIncome(decimal amountInEuros, string? label, DateOnly date, Account? account = null)
+    public RecordIncomeResult RecordIncome(
+        decimal amountInEuros, string? label, DateOnly date, Account? account = null, Frequency? repeat = null)
     {
         Settle();
         var on = CheckIsMine(account ?? pool);
@@ -1026,6 +1107,7 @@ public sealed class Ledger
 
         var income = new Income(++lastEntryId, Money.FromEuros(amountInEuros), date, NormaliseLabel(label)!, on);
         incomes.Add(income);
+        StartRepeating(income, repeat);
         return RecordIncomeResult.Recorded(income);
     }
 
@@ -1041,20 +1123,33 @@ public sealed class Ledger
     /// period for good, since nothing can be assigned there to balance it (arc42 §12).</para>
     ///
     /// <para><b>Throws</b> for an income that is not in the ledger.</para>
+    ///
+    /// <para>This keeps the repeat's frequency as it is; a changed date on the latest occurrence still
+    /// moves its day (§12, follow-up 3). The overload that takes a frequency can change that too.</para>
     /// </summary>
     public ChangeIncomeResult ChangeIncome(
-        Income income, decimal amountInEuros, string? label, DateOnly date, Account? account = null)
+        Income income, decimal amountInEuros, string? label, DateOnly date, Account? account = null) =>
+        ChangeIncome(income, amountInEuros, label, date, account, FrequencyOf(income));
+
+    /// <summary>
+    /// Changes an income and its repeat, as the frequency overload of <see cref="ChangeExpense"/>
+    /// does for an expense.
+    /// </summary>
+    public ChangeIncomeResult ChangeIncome(
+        Income income, decimal amountInEuros, string? label, DateOnly date, Account? account, Frequency? repeat)
     {
         Settle();
         var index = IndexOf(income);
         var current = incomes[index];
         var on = CheckIsMine(account ?? current.Account);
+        var repeatChanged = SetsTheRepeat(current) && repeat != FrequencyOf(current);
 
         if (Money.IsWholeCents(amountInEuros)
             && Money.FromEuros(amountInEuros) == current.Amount
             && NormaliseLabel(label) == current.Label
             && date == current.Date
-            && on == current.Account)
+            && on == current.Account
+            && !repeatChanged)
             return ChangeIncomeResult.Unchanged(current);
 
         if (CheckIncome(amountInEuros, label) is { } refusal)
@@ -1068,18 +1163,21 @@ public sealed class Ledger
             Account = on,
         };
         incomes[index] = changed;
+        Repeat(current, changed, repeat);
         return ChangeIncomeResult.Changed(changed);
     }
 
     /// <summary>
     /// Removes an income, once the user has confirmed. It may leave its period
-    /// <i>Over-assigned</i>, which is allowed and shown, never refused. <b>Throws</b> for an income
-    /// that is not in the ledger.
+    /// <i>Over-assigned</i>, which is allowed and shown, never refused. An occurrence removed is that
+    /// one alone, as for an expense (<see cref="RemoveExpense"/>). <b>Throws</b> for an income that is
+    /// not in the ledger.
     /// </summary>
     public void RemoveIncome(Income income)
     {
         Settle();
         incomes.RemoveAt(IndexOf(income));
+        NoLongerRepeats(income);
     }
 
     /// <summary>
@@ -1700,54 +1798,176 @@ public sealed class Ledger
     /// <item>Each backed category with a <i>Budget</i> above zero in the new period has it moved from
     /// the pool account to its backing account, dated that first day.</item>
     /// </list>
-    /// The old period ends before the new one's money moves. Returns whether anything was moved.
+    /// The old period ends before the new one's money moves.
+    ///
+    /// <para><b>Since recurring entries it works through the days in order</b> (§12, follow-up 5;
+    /// ADR 0011), from event to event: whichever comes first, a recurring entry's next occurrence that
+    /// is due, or the next period boundary. An occurrence dated in a period is so recorded <b>before
+    /// that period is swept</b>, as if MoneyBud had been open. On a boundary day the boundary comes
+    /// first and that day's occurrences after it; several due on one day are recorded in the order
+    /// their repeats were set up. An occurrence dated on or before the day already settled, as when a
+    /// repeat is set up in the past, is recorded at once. Each is kept to be announced
+    /// (<see cref="TakeOccurrencesMade"/>). Returns whether anything was moved or recorded.</para>
     ///
     /// <para>Every act that changes the ledger calls this first, and the screen calls it when it
     /// starts and once a minute. That is what makes the date right: nothing can change while
     /// MoneyBud is closed, so settling on 5 November for 1 November sees exactly the backing and the
-    /// pool account 1 November had. And it gives each movement the next id, lower than anything
-    /// typed after it, so a balance correction typed on 1 November already has it in.</para>
+    /// pool account 1 November had. And it gives each movement and occurrence the next id, lower than
+    /// anything typed after it, so a balance correction typed on 1 November already has it in.</para>
     ///
-    /// <para>Runs once per day at most, and never backwards: a clock turned back finds nothing to
-    /// do. A period that ended before the ledger was first made is passed by no settling, so it has
+    /// <para>Never goes backwards: a clock turned back passes no boundary and finds no occurrence
+    /// due. A period that ended before the ledger was first made is passed by no settling, so it has
     /// no record and is never swept by itself (§12, ruling 7).</para>
     /// </summary>
     public bool Settle()
     {
         var today = Today;
-        if (today <= settledThrough) return false;
-
-        var moved = false;
-        for (var period = Calendar.Next(Calendar.PeriodContaining(settledThrough));
-             period.FirstDay <= today;
-             period = Calendar.Next(period))
+        var changed = false;
+        while (true)
         {
-            var ended = Calendar.Previous(period);
-            periodEnds[ended.FirstDay] = backings.Keys.ToHashSet();
+            var boundary = Calendar.Next(Calendar.PeriodContaining(settledThrough));
+            var due = repeats.Where(r => r.Next <= today).MinBy(r => r.Next!.Value);
 
-            if (sweepDestination is { } destination && DifferenceFor(ended) is { Cents: > 0 } leftover)
+            if (due is not null && due.Next!.Value < boundary.FirstDay)
             {
-                var sweep = Move(destination, pool, backings[destination].Account, leftover,
-                                 MovementReason.Swept, MovementDirection.In, period.FirstDay, ended);
-                sweepsMade.Add(new SweepMade(ended, sweep));
-                moved = true;
+                RecordOccurrence(due);
+                changed = true;
             }
-
-            foreach (var category in categoriesInOrderAdded)
+            else if (boundary.FirstDay <= today)
             {
-                if (backings.TryGetValue(category, out var backing)
-                    && budgets.TryGetValue((category, period.FirstDay), out var budget)
-                    && budget.Cents > 0)
-                {
-                    Move(category, pool, backing.Account, budget, MovementReason.Assigned, MovementDirection.In,
-                         period.FirstDay);
-                    moved = true;
-                }
+                changed |= PassInto(boundary);
+                settledThrough = boundary.FirstDay;
+            }
+            else
+            {
+                break;
             }
         }
 
-        settledThrough = today;
+        if (today > settledThrough) settledThrough = today;
+        return changed;
+    }
+
+    // A period boundary: the period that ended, its sweep, and the new period's planned money.
+    private bool PassInto(BudgetPeriod period)
+    {
+        var moved = false;
+        var ended = Calendar.Previous(period);
+        periodEnds[ended.FirstDay] = backings.Keys.ToHashSet();
+
+        if (sweepDestination is { } destination && DifferenceFor(ended) is { Cents: > 0 } leftover)
+        {
+            var sweep = Move(destination, pool, backings[destination].Account, leftover,
+                             MovementReason.Swept, MovementDirection.In, period.FirstDay, ended);
+            sweepsMade.Add(new SweepMade(ended, sweep));
+            moved = true;
+        }
+
+        foreach (var category in categoriesInOrderAdded)
+        {
+            if (backings.TryGetValue(category, out var backing)
+                && budgets.TryGetValue((category, period.FirstDay), out var budget)
+                && budget.Cents > 0)
+            {
+                Move(category, pool, backing.Account, budget, MovementReason.Assigned, MovementDirection.In,
+                     period.FirstDay);
+                moved = true;
+            }
+        }
+
         return moved;
+    }
+
+    // ================================================================== recurring entries
+
+    /// <summary>
+    /// What the entry's <i>Herhalen</i> drop-down shows, and what its row's grey label says (arc42 §12,
+    /// <i>Recurring entries</i>, ruling 6, follow-up 2): the frequency of the repeat whose latest
+    /// occurrence it is, while that repeat runs. Null — one-off — for every other entry: a one-off, an
+    /// earlier occurrence, and a stopped repeat's last one.
+    /// </summary>
+    public Frequency? FrequencyOf(IEntry entry) =>
+        RepeatOf(entry) is { IsRunning: true } repeat && repeat.Latest == entry.Id ? repeat.Frequency : null;
+
+    /// <summary>
+    /// Whether the entry's drop-down can be changed: a one-off, the latest occurrence of a running
+    /// repeat, or the last one of a stopped repeat, which is how it is started again (§12, follow-up
+    /// 2; ruled at the scenario stage, 1). An earlier occurrence cannot: it would start a second
+    /// repeat beside the running one.
+    /// </summary>
+    public bool SetsTheRepeat(IEntry entry) => RepeatOf(entry) is not { } repeat || repeat.Latest == entry.Id;
+
+    /// <summary>
+    /// The occurrences recorded by themselves since this was last asked, oldest first, and forgets
+    /// them: each is announced once (§12, ruling 7), as <see cref="TakeSweepsMade"/>.
+    /// </summary>
+    public IReadOnlyList<OccurrenceMade> TakeOccurrencesMade()
+    {
+        var made = occurrencesMade.ToList();
+        occurrencesMade.Clear();
+        return made;
+    }
+
+    private RecurringEntry? RepeatOf(IEntry entry) => repeats.Find(r => r.Has(entry.Id));
+
+    // A new entry set to repeat: what is already due is recorded at once (follow-up 4).
+    private void StartRepeating(IEntry entry, Frequency? repeat)
+    {
+        if (repeat is not { } frequency) return;
+
+        repeats.Add(RecurringEntry.StartingFrom(entry, frequency));
+        Settle();
+    }
+
+    // A change that went through, to an entry that may set its repeat. For an earlier occurrence the
+    // frequency is ignored: its drop-down is locked, and the change is to it alone.
+    private void Repeat(IEntry before, IEntry after, Frequency? repeat)
+    {
+        if (!SetsTheRepeat(after)) return;
+
+        if (RepeatOf(after) is not { } running)
+        {
+            StartRepeating(after, repeat);
+            return;
+        }
+
+        if (repeat != FrequencyOf(after) || (repeat is not null && after.Date != before.Date))
+            running.SetFrom(after.Date, repeat);
+        Settle();
+    }
+
+    // A removed entry leaves its repeat; a repeat with nothing left ends.
+    private void NoLongerRepeats(IEntry entry)
+    {
+        if (RepeatOf(entry) is { } repeat && !repeat.Removed(entry.Id))
+            repeats.Remove(repeat);
+    }
+
+    // The next occurrence: a copy of the latest, on the repeat's next date, never checked and never
+    // refused. One on an archived category brings it back (ruling 8).
+    private void RecordOccurrence(RecurringEntry repeat)
+    {
+        var date = repeat.Next!.Value;
+        Category? broughtBack = null;
+        IEntry occurrence;
+        if (expenses.Find(e => e.Id == repeat.Latest) is { } expense)
+        {
+            if (archived.Remove(expense.Category)) broughtBack = expense.Category;
+            var copy = expense with { Id = ++lastEntryId, Date = date };
+            expenses.Add(copy);
+            occurrence = copy;
+        }
+        else
+        {
+            var income = incomes.Find(i => i.Id == repeat.Latest)
+                ?? throw new InvalidOperationException($"A repeat's latest occurrence, {repeat.Latest}, is not in the ledger.");
+            var copy = income with { Id = ++lastEntryId, Date = date };
+            incomes.Add(copy);
+            occurrence = copy;
+        }
+
+        repeat.Recorded(occurrence);
+        occurrencesMade.Add(new OccurrenceMade(occurrence, broughtBack));
     }
 
     // ================================================================== the sweep

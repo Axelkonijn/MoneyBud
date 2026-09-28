@@ -1,4 +1,5 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
 using Reqnroll;
 
@@ -47,22 +48,24 @@ public sealed class RecordIncomeSteps(SpecContext context)
     // The same grammar as recording an expense, in the variants the feature file uses, and for
     // the same reasons — see the note above the When steps in RecordExpenseSteps.
 
-    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)""")]
-    public void WhenIRecordAnIncomeLabelled(string amount, string label) =>
-        Record(amount, label, date: null);
+    // Ending in ", repeating monthly" or "weekly" where a recurring file uses them, as for an expense.
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)""" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnIncomeLabelled(string amount, string label, string repeating) =>
+        Record(amount, label, date: null, repeat: SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
-    public void WhenIRecordAnIncomeLabelledAndDated(string amount, string label, string date) =>
-        Record(amount, label, date);
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account |, repeating ).)+)" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnIncomeLabelledAndDated(string amount, string label, string date, string repeating) =>
+        Record(amount, label, date, repeat: SpecParsing.Repeating(repeating));
 
     // On an account chosen from the form's list (record-on-an-account.feature).
-    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" on the account ""([^""]*)""")]
-    public void WhenIRecordAnIncomeLabelledOnTheAccount(string amount, string label, string account) =>
-        Record(amount, label, date: null, account);
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" on the account ""([^""]*)""" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnIncomeLabelledOnTheAccount(string amount, string label, string account, string repeating) =>
+        Record(amount, label, date: null, account, SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""")]
-    public void WhenIRecordAnIncomeLabelledAndDatedOnTheAccount(string amount, string label, string date, string account) =>
-        Record(amount, label, date, account);
+    [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnIncomeLabelledAndDatedOnTheAccount(
+        string amount, string label, string date, string account, string repeating) =>
+        Record(amount, label, date, account, SpecParsing.Repeating(repeating));
 
     // Leaving the date as it starts out: today, whatever period is on screen.
     [When(@"I (?:record|try to record) an income of (\S+) euro labelled ""([^""]*)"" without giving a date")]
@@ -122,10 +125,13 @@ public sealed class RecordIncomeSteps(SpecContext context)
     // ----------------------------------------------------------------- Shared
 
     // Through the screen, as RecordExpenseSteps does, and for the same reasons.
-    private void Record(string amount, string? label, string? date, string? account = null)
+    //
+    // A frequency is set in the form's Herhalen list, so an income that repeats goes through the form
+    // too.
+    private void Record(string amount, string? label, string? date, string? account = null, Frequency? repeat = null)
     {
         var day = date is null ? null : (DateOnly?)Ledger.Date(date);
-        if (account is null)
+        if (account is null && repeat is null)
         {
             context.Record(context.App.RecordIncome(amount, label, day)
                 ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
@@ -136,7 +142,8 @@ public sealed class RecordIncomeSteps(SpecContext context)
         var form = context.App.IncomeForm;
         (form.Amount, form.Label) = (amount, label);
         form.Date = day?.ToDateTime(TimeOnly.MinValue);
-        form.ChosenAccount = Ledger.Account(account);
+        if (account is not null) form.ChosenAccount = Ledger.Account(account);
+        if (repeat is not null) form.ChosenFrequency = new FrequencyChoice(repeat);
         context.Record(form.Record() ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
     }
 

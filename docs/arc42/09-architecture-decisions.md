@@ -16,10 +16,11 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010**, by dated notes | 2026-09-26 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), by dated notes | 2026-09-26 |
 | [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
-| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated note, 2026-09-28: **its saving gap narrowed for sweeps by 0010** | 2026-09-27 |
-| [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4 | 2026-09-28 |
+| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated notes, 2026-09-28: **its saving gap narrowed for sweeps by 0010, and for occurrences by 0011**; settling event by event and no longer at most once a day, by 0011 | 2026-09-27 |
+| [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011 | 2026-09-28 |
+| [0011](../decisions/0011-recurring-entries.md) | A recurring entry is state beside its occurrences, and settling works event by event | Accepted; takes 0007's format to version 5 and reads version 4 | 2026-09-28 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -183,3 +184,24 @@ narrowed by a later ruling, not a decision reversed, so 0009 carries a dated not
 version 4. **Version 3 is refused, not read** (decision D2, approved at the plan gate as recommended):
 it has no record of past period ends, and reading it would mean guessing them. As for version 2, that
 is in the record's consequences rather than a record of its own.
+
+**The recurring-entries increment added one: ADR 0011**, approved at its plan gate on 2026-09-28
+(decision D1 of the plan) and built the same day. The rulings (§12, *Recurring entries*) need four
+things no single entry can hold: the day a monthly repeat was last set to, the next date once the
+latest occurrence is removed, which entries are a repeat's occurrences, and whether it was stopped.
+And follow-up 5 needs settling to work through the days in order. The answer is that **a recurring
+entry is state beside its occurrences**, which stay ordinary expenses and incomes; that **the latest
+occurrence is the highest id and is not stored**; that **a stopped repeat stays a repeat**; that
+**settling works event by event**, the boundary first on a boundary day; and that **an occurrence is
+saved straight away**. The rejected alternatives were a frequency field on the latest entry only,
+occurrences worked out rather than stored, the latest stored as a field, and a count of steps instead
+of the next date. It passes this section's test as 0009 and 0010 did: it touches the file format, and
+settling that no longer runs at most once a day would draw a "why on earth" without its reasoning.
+
+**It extends ADR 0009 and 0010 rather than superseding either.** Their decisions stand: movements are
+entries written on their day, and a period's end is recorded and swept by settling. What changed in
+0009 is one sentence of decision 3, "at most once a day", and its saving gap, narrowed again; what
+changed in 0010 is where its boundary sits among other events. Those are dated notes, as before, and
+so is version 5 on 0007. **Version 4 is read, not refused** (decision D2, approved as recommended),
+the first time any MoneyBud reads an older version: version 4 has no repeats because nothing could
+repeat, so reading it guesses nothing. That is in the record's consequences, not a record of its own.

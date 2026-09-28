@@ -10,6 +10,16 @@ saving, for sweeps only (below). It takes [ADR 0007](0007-keeping-the-ledger.md)
 **version 4**, as 0007's consequences foresaw for any change of format. 0009 and 0007 carry dated
 notes that point here.
 
+> **Note, 2026-09-28, later the same day.** Recurring entries give settling a third writer and a new
+> order ([ADR 0011](0011-recurring-entries.md)). Settling works **event by event**, so the occurrences
+> dated in a period are recorded **before that period is swept**, and on a boundary day the boundary,
+> as decision 2 describes it, comes first and that day's occurrences after it. Decision 2's three
+> steps, and their order, are unchanged. **An occurrence is saved straight away, as a sweep is**, for
+> the same reason, and the screen takes the occurrences made wherever it takes the sweeps made. A
+> clock set wrongly ahead now reaches further still: it would record occurrences as well as sweep. The
+> file format is version 5, and **version 4, this record's, is read** as data with no repeats. The body
+> is unchanged.
+
 ## Context
 
 The sweep's rulings ([§12](../arc42/12-glossary.md), *The sweep and Restant*) settle what happens to a

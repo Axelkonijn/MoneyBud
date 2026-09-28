@@ -114,36 +114,42 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // These are separate bindings rather than one pattern with optional groups because Reqnroll
     // passes only the groups that matched — an unmatched optional group changes the method's
     // arity rather than arriving as null.
+    //
+    // Since recurring entries, the variants a recurring file uses may end in ", repeating monthly"
+    // or ", repeating weekly": the Herhalen list set so before recording (repeat-an-entry.feature).
+    // That ending is a group that always matches, empty when absent, for the same reason; and a
+    // date stops before it.
 
     [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)""")]
     public void WhenIRecordAnExpenseFor(string amount, string category) =>
         Record(amount, category, label: null, date: null);
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" without a label")]
-    public void WhenIRecordAnExpenseWithoutALabel(string amount, string category) =>
-        Record(amount, category, label: null, date: null);
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" without a label" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnExpenseWithoutALabel(string amount, string category, string repeating) =>
+        Record(amount, category, label: null, date: null, repeat: SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)""")]
-    public void WhenIRecordAnExpenseLabelled(string amount, string category, string label) =>
-        Record(amount, category, label, date: null);
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)""" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnExpenseLabelled(string amount, string category, string label, string repeating) =>
+        Record(amount, category, label, date: null, repeat: SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?((?:(?! on the account |, repeating ).)+)" + SpecParsing.RepeatingEnding)]
     public void WhenIRecordAnExpenseLabelledAndDated(
-        string amount, string category, string label, string date) =>
-        Record(amount, category, label, date);
+        string amount, string category, string label, string date, string repeating) =>
+        Record(amount, category, label, date, repeat: SpecParsing.Repeating(repeating));
 
     // On an account chosen from the form's list, rather than the one it starts out on
     // (record-on-an-account.feature).
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" on the account ""([^""]*)""")]
-    public void WhenIRecordAnExpenseLabelledOnTheAccount(string amount, string category, string label, string account) =>
-        Record(amount, category, label, date: null, account);
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" on the account ""([^""]*)""" + SpecParsing.RepeatingEnding)]
+    public void WhenIRecordAnExpenseLabelledOnTheAccount(
+        string amount, string category, string label, string account, string repeating) =>
+        Record(amount, category, label, date: null, account, SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""")]
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" labelled ""([^""]*)"" dated (?:on )?(.+) on the account ""([^""]*)""" + SpecParsing.RepeatingEnding)]
     public void WhenIRecordAnExpenseLabelledAndDatedOnTheAccount(
-        string amount, string category, string label, string date, string account) =>
-        Record(amount, category, label, date, account);
+        string amount, string category, string label, string date, string account, string repeating) =>
+        Record(amount, category, label, date, account, SpecParsing.Repeating(repeating));
 
-    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" dated (?:on )?((?:(?! on the account ).)+)")]
+    [When(@"I (?:record|try to record) an expense of (\S+) euro for ""([^""]*)"" dated (?:on )?((?:(?! on the account |, repeating ).)+)")]
     public void WhenIRecordAnExpenseDated(string amount, string category, string date) =>
         Record(amount, category, label: null, date);
 
@@ -259,14 +265,17 @@ public sealed class RecordExpenseSteps(SpecContext context)
     // does not name is left out rather than filled in here, so that the screen's own default is what
     // decides it. An account the step does not name is left as the form shows it once the category
     // is typed: the backing account of a backed category, the pool account otherwise
-    // (spend-against-a-backed-category.feature). One it names is picked in the form's list.
-    private void Record(string amount, string? category, string? label, string? date, string? account = null)
+    // (spend-against-a-backed-category.feature). One it names is picked in the form's list. So is a
+    // frequency; none leaves the Herhalen list on one-off, as it starts out.
+    private void Record(
+        string amount, string? category, string? label, string? date, string? account = null, Frequency? repeat = null)
     {
         var day = date is null ? null : (DateOnly?)Ledger.Date(date);
         var form = context.App.ExpenseForm;
         (form.Amount, form.Category, form.Label) = (amount, category, label);
         form.Date = day?.ToDateTime(TimeOnly.MinValue);
         if (account is not null) form.ChosenAccount = Ledger.Account(account);
+        if (repeat is not null) form.ChosenFrequency = new FrequencyChoice(repeat);
 
         context.Record(form.Record() ?? throw new InvalidOperationException($"\"{amount}\" was not read as an amount."));
     }

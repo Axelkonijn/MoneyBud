@@ -63,6 +63,8 @@ public sealed partial class TekstTests
         ["Still to sweep (an ended period's line)"] = [Tekst.StillToSweep],
         ["Swept too much (an ended period's line)"] = [Tekst.SweptTooMuch],
         ["A shortfall (the marker's badge)"] = [Tekst.PeriodShortfall],
+        ["Frequency (the list on the income and expense forms that sets it)"] = [Tekst.Frequency],
+        ["One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label)"] = [Tekst.OneOff, Tekst.Weekly, Tekst.Monthly],
     };
 
     [Fact]

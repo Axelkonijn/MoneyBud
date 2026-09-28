@@ -1,4 +1,5 @@
 using MoneyBud.Domain;
+using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
 using Reqnroll;
 
@@ -177,6 +178,14 @@ public sealed class SharedSteps(SpecContext context)
                 Assert.Equal(ChangeOutcome.Changed, changed.Outcome);
                 Assert.True(changed.CategoryBroughtBack, "Expected the change to bring the category back.");
                 Assert.Equal(category, changed.Expense!.Category.Name);
+                break;
+            case null:
+                // Only time passed: an occurrence MoneyBud recorded by itself brought it back, and
+                // the notice that names the occurrence says so (repeat-an-entry.feature, ruling 8).
+                var notice = context.App.Notice ?? throw new InvalidOperationException("Nothing was said.");
+                Assert.Contains(notice.Repeated, o => o.BroughtBack?.Name == category);
+                Assert.Contains(Tekst.Repeated(notice.Repeated), notice.Text);
+                Assert.Contains($"\"{category}\" is weer in gebruik.", notice.Text);
                 break;
             default:
                 throw NothingAttempted();
