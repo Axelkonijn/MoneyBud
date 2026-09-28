@@ -131,6 +131,13 @@ public sealed record ExpenseLine(Expense Entry)
     /// the pool account as it is when shown.
     /// </summary>
     public string? AccountName { get; init; }
+
+    /// <summary>
+    /// "maandelijks" or "wekelijks" on the latest occurrence of a running repeat, the row to open to
+    /// change or stop it; null on every other row (arc42 §12, ruling 6). Only the Overview's lists
+    /// carry it, not an account's history (ruled at the scenario stage, 3).
+    /// </summary>
+    public string? RepeatLabel { get; init; }
 }
 
 /// <summary>An income's row in the period's list, carrying the income for the reason <see cref="ExpenseLine"/> does.</summary>
@@ -144,6 +151,9 @@ public sealed record IncomeLine(Income Entry)
 
     /// <summary>The account the income is on, when that is not the pool account, as for an expense.</summary>
     public string? AccountName { get; init; }
+
+    /// <summary>The repeat's label on its latest occurrence, as for an expense.</summary>
+    public string? RepeatLabel { get; init; }
 }
 
 /// <summary>
@@ -283,9 +293,9 @@ public sealed record PeriodOverview(
             ring,
             unassigned,
             NewestFirst(ledger.ExpensesIn(period), e => e.Date)
-                .Select(e => new ExpenseLine(e) { AccountName = NameUnlessPool(e.Account) }).ToList(),
+                .Select(e => new ExpenseLine(e) { AccountName = NameUnlessPool(e.Account), RepeatLabel = LabelOf(e) }).ToList(),
             NewestFirst(incomes, i => i.Date)
-                .Select(i => new IncomeLine(i) { AccountName = NameUnlessPool(i.Account) }).ToList(),
+                .Select(i => new IncomeLine(i) { AccountName = NameUnlessPool(i.Account), RepeatLabel = LabelOf(i) }).ToList(),
             offer)
         {
             ShowsSweepDestination = period.FirstDay >= ledger.CurrentPeriod.FirstDay,
@@ -296,6 +306,8 @@ public sealed record PeriodOverview(
         };
 
         string? NameUnlessPool(Account account) => account == ledger.PoolAccount ? null : account.Name;
+
+        string? LabelOf(IEntry entry) => ledger.FrequencyOf(entry) is { } frequency ? Tekst.RepeatLabel(frequency) : null;
     }
 
     /// <summary>

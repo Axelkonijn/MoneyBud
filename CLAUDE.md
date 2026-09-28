@@ -90,7 +90,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1471 passing: 888 scenario cases, 583 developer unit tests
+dotnet test  MoneyBud.slnx     # 1587 passing: 949 scenario cases, 638 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -98,11 +98,11 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-28, after increment 11 (the sweep) was tried by Axel ("looks good") and merged into `main`, and stage 1 of increment 12 (recurring entries) began. Update this when a stage completes._
+_Last updated 2026-09-28, after increment 12 (recurring entries) was built, tried by Axel and merged into `main`. **Start here in a new conversation: the Opgebouwd rule change** (first item under *Next, in order*), then the configurable period start day. Update this when a stage completes._
 
-**Done: all five stages, eleven times — for `record-expense`, `record-income`, categories,
+**Done: all five stages, twelve times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
-and the sweep.** All eleven are built and green, tried by Axel and merged into `main`.
+the sweep, and recurring entries.** All twelve are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -498,9 +498,30 @@ absorbs a later rise first); a crash in the minute after a boundary was fixed. *
 urgent:** `keep-data`'s scenario about the backing at a period's end cannot tell kept records from
 lost ones (a unit test holds it); he may want it rewritten (§12, *A note for the stakeholder*).
 
-**Next, in order** — agreed with Axel on 2026-09-28, "the three still important to me":
+**Next, in order** — agreed with Axel on 2026-09-28, "the three still important to me", with one
+small change put in front of them the same day:
 
-1. **Recurring entries** on income and expenses — increment 12, **stage 1 in progress**. His shape:
+0. **Opgebouwd counts every expense entered after the backing, whatever its date — do this first.**
+   Found by Axel while trying increment 12 (2026-09-28): Boodschappen, Budget 300, backed; then a
+   weekly *broodje kip* of € 4 set up from 14 September, so MoneyBud recorded the 14th, 21st and 28th
+   at once. Resterend 288, but **Opgebouwd 296**. That is the increment-10 rule working as ruled: an
+   expense counts against *Accumulated* only if it is **dated** after the backing day, or on it and
+   recorded after (`spend-against-a-backed-category.feature` header, a follow-up with its cost
+   accepted), so the 14th and 21st did not count. A repeat set up in the past makes that common.
+   **Axel wants it changed**, on the lean route he chose to save tokens: no subagents, the suite and
+   a mutation check instead of `spec-reviewer`. **Confirm the rule with him first**, as proposed:
+   *"Opgebouwd counts every expense entered after the category was backed, whatever its date"* (so
+   a late receipt from before the backing lowers it too; his test would show 288). The work:
+   - the expense filter in `Ledger.AccumulatedFor` goes from `since.IsBefore(e)` to recorded after
+     the mark (id only);
+   - decide with him whether `ThereFor` (what unbacking returns and re-pointing takes) follows;
+   - the `yesterday` example of *An expense dated before the day of backing does not lower
+     Accumulated…* goes from 300.00 to 250.00, with the scenario's name and the file header's rule;
+   - the unit tests asserting the old rule;
+   - a dated ruling note in §12 *Backing and Accumulated*, and this file.
+
+1. **Recurring entries** on income and expenses — increment 12, **done**: built, tried by Axel and
+   merged into `main` on 2026-09-28 (below: stages 1–4 as they ran, then *Stage 5*). His shape:
    "just an extra drop-down where you can choose default one time, or weekly or monthly". Ruled so far
    (2026-09-28, each on the recommendation, not yet in §12): the choices are **Eenmalig** (default),
    **wekelijks**, **maandelijks** — yearly left until missed; each occurrence is **recorded on its own
@@ -508,7 +529,51 @@ lost ones (a unit test holds it); he may want it rewritten (§12, *A note for th
    start, **told once**; the same rule for income and expenses, so a future expense is still never
    recorded; **the latest occurrence sets the next** (amount, label, category, account, frequency),
    changing it changes what follows, setting it to *Eenmalig* stops it, earlier occurrences are never
-   touched.
+   touched; **removing an occurrence removes only that one** and the repeat carries on; a monthly one
+   that started on the 31st falls on a short month's **last day and returns to the 31st** (it keeps
+   the day it started on); the **latest occurrence's row carries a grey "maandelijks"/"wekelijks"**,
+   earlier ones are plain; occurrences recorded by themselves are **told in one notice, once**, and
+   saved straight away, as the sweep is; an occurrence on an **archived category is recorded and
+   brings it back**, as recording by hand does. **Stage 2** wrote them into §12 *Recurring entries*,
+   and six follow-ups were ruled the same day: removing the latest makes the **newest remaining
+   occurrence the latest**, and removing the only one ends the repeat; an **earlier occurrence shows
+   *Eenmalig*, locked**; **changing the latest occurrence's date moves the day for all later ones**
+   (against the recommendation, with the one-off-Saturday consequence put to him); a repeat set up in
+   the past records what is already due **at once**; closed across a period end, MoneyBud settles
+   **day by day**, so occurrences come before their period's sweep; the drop-down is **last on the
+   form, captioned *Herhalen***. **Stage 3 written** (2026-09-28): `repeat-an-entry.feature` (its header
+   explains the shared steps), `change-a-repeat.feature` and a "Repeats are kept" section in
+   `keep-data.feature` — 51 scenarios, 61 cases — the **first files to use calendar dates** (a monthly
+   repeat keeps a day of the month). Three more rulings at the scenario stage, all on the
+   recommendation: removing a stopped repeat's last occurrence **leaves it stopped** (the one before
+   shows *Eenmalig*, changeable); the drop-down order is **Eenmalig, wekelijks, maandelijks**; the grey
+   label is **only in the Overview's lists**, not in an account's history (a unit test, not a
+   scenario). Binding note: a "today is <date>" Given must also make that day the first start.
+   **Approved by Axel at the first gate on 2026-09-28**, with every documentation's reading in their
+   headers (§12, *Approved at the scenario gate*, under *Recurring entries*). **Stage 4 written**
+   (2026-09-28): [the plan](docs/plans/increment-12-recurring.md) — D1, a recurring entry kept beside
+   the entries (occurrence ids, frequency, day, next date; the latest is the highest id) and settling
+   event by event (ADR 0011, version 5); D2, **read** version 4 as data with no repeats (recommended);
+   ten readings under *Chosen in this plan*. **Approved by Axel at the second gate on 2026-09-28**,
+   every point on the recommendation. **Stage 5 done** (2026-09-28), all but Axel's try:
+   - **Built as planned** ([ADR 0011](docs/decisions/0011-recurring-entries.md), file format version 5,
+     version 4 read). A `RecurringEntry` beside the entries (occurrence ids, frequency, day, next
+     date), the latest being the highest id; `Settle` works event by event, a period's end before that
+     day's occurrences; `FrequencyOf`/`SetsTheRepeat` drive the grey label and the *Herhalen* lock.
+   - **Ruled at the build**, on the recommendation: the notice says things **in the order they
+     happened**. What settling did before an act comes in front of it, and the occurrences the act
+     caused come after it (`MoneyBudApp.SettleBeforeActing`), because the increment-6 "was changed"
+     step needs the change first.
+   - `spec-reviewer` found no faked scenario and no money defect, and two low items, both fixed. Three
+     deliberate mutations, and a fourth for the review's finding, were each caught. A headless run of
+     the real window passed. Its rendered frame showed the *Herhalen* caption off-centre by the fields'
+     style margin, now on the panel.
+   - **Tried by Axel** (2026-09-28). His one finding is item 0 above, a rule change, not a defect.
+   - **For Axel, not urgent:** the approved derivation that only a repeat set up in the past or a latest
+     date moved back can record into an already-swept period is incomplete. Restarting a stopped repeat
+     from an old occurrence, and switching the latest from monthly to weekly, can do it too (a dated
+     note in §12). Within what settling did, the notice lists all occurrences, then all sweeps: after
+     a long absence that is not strictly chronological (plan reading 7).
 2. **A configurable period start day.** His salary comes on the 27th. Deferred since increment 5
    because budgets are stored by their period's first day (§12, *The period start day stays at the
    1st*); the clamping rule for short months stands.

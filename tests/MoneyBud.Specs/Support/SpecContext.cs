@@ -377,6 +377,31 @@ public sealed class SpecContext : IDisposable
     public void SetToday(DateOnly day) => clock.Now = Noon(day);
 
     /// <summary>
+    /// "Today is 25 August 2026": the scenario begins on that day, and its empty ledger counts as
+    /// first started then, so a period is swept by itself only if it ends after it (the binding note
+    /// at the scenario gate for repeat-an-entry.feature). So the empty ledger is made afresh on that
+    /// day. It must come before any other setup, which it would otherwise lose — and that fails here
+    /// rather than silently.
+    /// </summary>
+    public void BeginOn(DateOnly day)
+    {
+        if (app is not null || Ledger.ToSnapshot() is not { LastEntryId: 0, Categories.Count: 0, Accounts.Count: 1 })
+            throw new InvalidOperationException("\"Today is\" a calendar date must come before any other setup.");
+
+        SetToday(day);
+        Ledger = new Ledger(clock, "Bank");
+    }
+
+    /// <summary>
+    /// Only time passed, which is no act of the user's: what the last act came to is no longer what
+    /// the next step is about (the recurring files' "the day becomes …" and starting again on a day).
+    /// </summary>
+    public void TimePassed() => LastAttempt = null;
+
+    /// <summary>The screen if it is open, without opening it over the Givens as <see cref="App"/> does.</summary>
+    public MoneyBudApp? AppIfOpen => app;
+
+    /// <summary>
     /// Does something as it would have been done on another day, then puts the clock back
     /// exactly where it was.
     ///

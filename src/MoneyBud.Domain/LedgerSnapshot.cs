@@ -24,6 +24,9 @@ namespace MoneyBud.Domain;
 /// <para><b>Since the sweep</b> (ADR 0010): <see cref="SweepDestination"/>, the key of the category
 /// a period's leftover goes to, or null; <see cref="PeriodEnds"/>, which categories were backed when
 /// each period ended; and <see cref="LetGo"/>, what a period's line stopped asking for.</para>
+///
+/// <para><b>Since recurring entries</b> (ADR 0011): <see cref="Repeats"/>, every recurring entry with
+/// the ids of its occurrences, how often it repeats, the day it was last set to and its next date.</para>
 /// </summary>
 public sealed record LedgerSnapshot(
     IReadOnlyList<CategorySnapshot> Categories,
@@ -39,7 +42,8 @@ public sealed record LedgerSnapshot(
     DateOnly SettledThrough,
     int? SweepDestination,
     IReadOnlyList<PeriodEndSnapshot> PeriodEnds,
-    IReadOnlyList<LetGoSnapshot> LetGo);
+    IReadOnlyList<LetGoSnapshot> LetGo,
+    IReadOnlyList<RepeatSnapshot> Repeats);
 
 public sealed record AccountSnapshot(int Key, string Name);
 
@@ -74,3 +78,10 @@ public sealed record PeriodEndSnapshot(DateOnly PeriodStart, IReadOnlyList<int> 
 
 /// <summary>What a period's line stopped asking for, for good: swept too much, and nowhere to come back from.</summary>
 public sealed record LetGoSnapshot(DateOnly PeriodStart, Money Amount);
+
+/// <summary>
+/// A recurring entry (ADR 0011): the ids of its occurrences, which are expenses or incomes, and — while
+/// it runs — how often it repeats, the day a monthly one falls on and the date of the next. A stopped
+/// one has none of the three.
+/// </summary>
+public sealed record RepeatSnapshot(IReadOnlyList<int> Occurrences, Frequency? Frequency, int? Day, DateOnly? Next);

@@ -73,6 +73,10 @@ public static class Tekst
     public const string StillToSweep = "nog niet weggezet";
     public const string SweptTooMuch = "te veel weggezet";
     public const string PeriodShortfall = "Tekort";
+    public const string Frequency = "Herhalen";
+    public const string OneOff = "Eenmalig";
+    public const string Weekly = "Wekelijks";
+    public const string Monthly = "Maandelijks";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -296,11 +300,16 @@ public static class Tekst
     // The question names the entry, so it is clear which one goes. It says nothing about what the
     // removal does to the figures: being asked is not being warned (§12, *Removing an entry asks
     // first*).
-    public static string AskToRemove(Domain.Expense expense) =>
-        $"{Describe(expense)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+    //
+    // On the latest occurrence of a running repeat it adds that the repeat goes on, since removing
+    // could be taken for stopping it (plan for increment 12, 9). That is copy.
+    public static string AskToRemove(Domain.Expense expense, bool repeatGoesOn = false) =>
+        $"{Describe(expense)} {Remove.ToLowerInvariant()}? {AreYouSure}" + (repeatGoesOn ? " " + RepeatGoesOn : "");
 
-    public static string AskToRemove(Domain.Income income) =>
-        $"{Describe(income)} {Remove.ToLowerInvariant()}? {AreYouSure}";
+    public static string AskToRemove(Domain.Income income, bool repeatGoesOn = false) =>
+        $"{Describe(income)} {Remove.ToLowerInvariant()}? {AreYouSure}" + (repeatGoesOn ? " " + RepeatGoesOn : "");
+
+    private static readonly string RepeatGoesOn = $"De herhaling gaat door; zet hem op {OneOff} om te stoppen.";
 
     public static string ExpenseRemoved(Domain.Expense expense) => $"{Describe(expense)} verwijderd.";
 
@@ -521,6 +530,41 @@ public static class Tekst
             _ => $"{went} · {more}",
         };
     }
+
+    // ------------------------------------------------------------------ recurring entries
+
+    /// <summary>What the <i>Herhalen</i> list shows for a frequency, one-off being none (§12, ruling 1).</summary>
+    public static string FrequencyName(Domain.Frequency? frequency) => frequency is { } repeats
+        ? repeats switch
+        {
+            Domain.Frequency.Weekly => Weekly,
+            Domain.Frequency.Monthly => Monthly,
+        }
+        : OneOff;
+
+    /// <summary>The small grey label on a latest occurrence's row: "maandelijks", lower-case, as ruling 6 writes it.</summary>
+    public static string RepeatLabel(Domain.Frequency frequency) => FrequencyName(frequency).ToLowerInvariant();
+
+    /// <summary>
+    /// The notice for what MoneyBud recorded by itself, in one sentence, in the order recorded:
+    /// "Herhaald: Netflix € 13,99 (25 september), Salaris € 2.500,00 (27 september)." An expense with
+    /// no label is named by its category. Then a sentence for each category an occurrence brought
+    /// back. Copy; that it is one notice, said once, is the ruling (§12, rulings 7 and 8).
+    /// </summary>
+    public static string Repeated(IReadOnlyList<OccurrenceMade> occurrences)
+    {
+        var named = occurrences.Select(o => o.Entry switch
+        {
+            Domain.Expense e => $"{e.Label ?? e.Category.Name} {Euro(e.Amount)} ({DayOfMonth(e.Date)})",
+            Domain.Income i => $"{i.Label} {Euro(i.Amount)} ({DayOfMonth(i.Date)})",
+            _ => throw new InvalidOperationException("Only incomes and expenses repeat."),
+        });
+        var broughtBack = occurrences.Where(o => o.BroughtBack is not null).Select(o => o.BroughtBack!.Name).Distinct();
+
+        return string.Join(" ", [$"Herhaald: {string.Join(", ", named)}.", .. broughtBack.Select(WasBroughtBack)]);
+    }
+
+    private static string DayOfMonth(DateOnly day) => $"{day.Day} {Months[day.Month - 1]}";
 
     /// <summary>The notice that an entry landed in a period other than the one on screen.</summary>
     public static string WentInto(BudgetPeriod period) => $"Dit staat in {PeriodName(period)}.";

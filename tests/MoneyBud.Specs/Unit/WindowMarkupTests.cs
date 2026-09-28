@@ -6,16 +6,17 @@ namespace MoneyBud.Specs.Unit;
 
 /// <summary>
 /// The one ruling that lives only in the Desktop's markup: each form asks what the entry is
-/// before its amount (arc42 §12, <i>The fields ask what before how much</i>), and the account list
-/// comes last, after the date (§12, <i>Accounts and net worth</i>). The Desktop is
+/// before its amount (arc42 §12, <i>The fields ask what before how much</i>), the account list
+/// comes after the date (§12, <i>Accounts and net worth</i>), and <i>Herhalen</i> after that, last
+/// (§12, <i>Recurring entries</i>, follow-up 6). The Desktop is
 /// otherwise untested by plan (ADR 0006); reading its markup as text is how this one ruling is
 /// held, the way <see cref="TekstTests"/> holds the display terms by reading §12.
 /// </summary>
 public sealed partial class WindowMarkupTests
 {
     [Theory]
-    [InlineData("ExpenseForm", new[] { "Label", "Category", "Amount", "Date", "ChosenAccount" })]
-    [InlineData("IncomeForm", new[] { "Label", "Amount", "Date", "ChosenAccount" })]
+    [InlineData("ExpenseForm", new[] { "Label", "Category", "Amount", "Date", "ChosenAccount", "ChosenFrequency" })]
+    [InlineData("IncomeForm", new[] { "Label", "Amount", "Date", "ChosenAccount", "ChosenFrequency" })]
     [InlineData("AssignForm", new[] { "Category", "Amount" })]
     [InlineData("TransferForm", new[] { "ChosenFrom", "ChosenTo", "Amount", "Date" })]
     public void Each_form_asks_what_before_how_much(string form, string[] fields) =>

@@ -14,7 +14,9 @@
 #     a later period that has not moved yet. Since the sweep increment, the sweep destination, every
 #     sweep and every difference moved since, with the period each was for and the category it went
 #     into, which categories were backed when each period ended, and when MoneyBud was first
-#     started (sweep-at-a-period-end.feature, start-moneybud.feature). So is the order things were
+#     started (sweep-at-a-period-end.feature, start-moneybud.feature). Since the recurring increment,
+#     every repeat: which occurrence is its latest, how often it repeats, the day it repeats on, its
+#     next date, and whether it has been stopped (repeat-an-entry.feature). So is the order things were
 #     recorded in, which decides whether an entry on a balance correction's day is in it
 #     (correct-a-balance.feature), and
 #     whether an expense on the day of backing counts against Accumulated
@@ -73,7 +75,8 @@
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
 #     steps overview.feature's, the correcting steps change-an-entry.feature's and
 #     remove-an-entry.feature's, the account steps show-accounts.feature's, the backing steps
-#     back-a-category.feature's, and the sweep steps sweep-at-a-period-end.feature's.
+#     back-a-category.feature's, the sweep steps sweep-at-a-period-end.feature's, and the steps about
+#     repeats repeat-an-entry.feature's, which names dates as calendar dates.
 #
 # The empty ledger every scenario starts from holds one account, "Bank", the pool account, with no
 # starting balance and nothing on it (show-accounts.feature). The names, labels and amounts are
@@ -490,6 +493,120 @@ Feature: Keep my data between runs
     And I close MoneyBud and start it again
     Then the previous budget period should show that 960 euro was swept into "Savings"
     And I should not be able to bring the swept amount of the previous budget period up to date
+
+  # ----------------------------------------------------------------------------------
+  # Repeats are kept
+  #
+  # A repeat is more than its entries (repeat-an-entry.feature, change-a-repeat.feature): after a short
+  # month no occurrence's date says which day it repeats on, and after its latest occurrence is removed
+  # no entry says when the next comes. Both have to survive starting again.
+  # ----------------------------------------------------------------------------------
+
+  # One weekly and one monthly repeat. Starting again on the same day records nothing and says nothing.
+  # The label is still on each latest row, Netflix still opens as monthly, and the next occurrences
+  # still come on their dates: Bijbaan on 1, 8, 15 and 22 September, Netflix on 25 September.
+  Scenario: A repeat is there after starting again: its latest occurrence carries the label and opens with its frequency, and the next still come on their dates
+    Given my budget periods are one month long
+    And today is 25 August 2026
+    And I have a category "Subscriptions"
+    When I record an expense of 13.99 euro for "Subscriptions" labelled "Netflix", repeating monthly
+    And I record an income of 85 euro labelled "Bijbaan", repeating weekly
+    And I close MoneyBud and start it again
+    Then I should not have been told anything
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date           | category      | label   | amount | repeats |
+      | 25 August 2026 | Subscriptions | Netflix | 13.99  | monthly |
+    And the incomes listed in the current budget period should be exactly these, in this order:
+      | date           | label   | amount | repeats |
+      | 25 August 2026 | Bijbaan | 85.00  | weekly  |
+    And the expense labelled "Netflix" dated 25 August 2026 should open with the frequency monthly, changeable
+    When I close MoneyBud, and start it again on 1 September 2026
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry  | category | label   | amount |
+      | income |          | Bijbaan | 85.00  |
+    When I close MoneyBud, and start it again on 25 September 2026
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry   | category      | label   | amount |
+      | income  |               | Bijbaan | 85.00  |
+      | income  |               | Bijbaan | 85.00  |
+      | income  |               | Bijbaan | 85.00  |
+      | expense | Subscriptions | Netflix | 13.99  |
+    And the incomes listed in the current budget period should be exactly these, in this order:
+      | date              | label   | amount | repeats |
+      | 22 September 2026 | Bijbaan | 85.00  | weekly  |
+      | 15 September 2026 | Bijbaan | 85.00  |         |
+      | 8 September 2026  | Bijbaan | 85.00  |         |
+      | 1 September 2026  | Bijbaan | 85.00  |         |
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date              | category      | label   | amount | repeats |
+      | 25 September 2026 | Subscriptions | Netflix | 13.99  | monthly |
+
+  # After 28 February the only date on the page says the 28th. Were the day it repeats on not kept,
+  # March's would come on the 28th after starting again, instead of on the 31st.
+  Scenario: The day a month-end repeat comes on is kept, though no occurrence's date shows it
+    Given my budget periods are one month long
+    And today is 31 January 2027
+    And I have a category "Rent"
+    When I record an expense of 900 euro for "Rent" labelled "Huur", repeating monthly
+    And I close MoneyBud, and start it again on 28 February 2027
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry   | category | label | amount |
+      | expense | Rent     | Huur  | 900.00 |
+    When I close MoneyBud, and start it again on 30 March 2027
+    Then I should not have been told anything
+    When I close MoneyBud, and start it again on 31 March 2027
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry   | category | label | amount |
+      | expense | Rent     | Huur  | 900.00 |
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date          | category | label | amount | repeats |
+      | 31 March 2027 | Rent     | Huur  | 900.00 | monthly |
+
+  # Stopped stays stopped, and the earlier occurrence stays locked, while the stopped repeat's last
+  # occurrence stays changeable (change-a-repeat.feature).
+  Scenario: A stopped repeat is still stopped after starting again
+    Given my budget periods are one month long
+    And today is 25 August 2026
+    And I have a category "Subscriptions"
+    When I record an expense of 13.99 euro for "Subscriptions" labelled "Netflix", repeating monthly
+    And the day becomes 25 September 2026 while MoneyBud is open
+    And I step forward one budget period
+    And I change the frequency of the expense labelled "Netflix" dated 25 September 2026 to one-off
+    And I close MoneyBud, and start it again on 26 October 2026
+    Then I should not have been told anything
+    And no expenses should be listed in the current budget period
+    And the expenses listed in the previous budget period should be exactly these, in this order:
+      | date              | category      | label   | amount | repeats |
+      | 25 September 2026 | Subscriptions | Netflix | 13.99  |         |
+    When I step back one budget period
+    Then the expense labelled "Netflix" dated 25 September 2026 should open with the frequency one-off, changeable
+    When I step back one budget period
+    Then the expense labelled "Netflix" dated 25 August 2026 should open with the frequency one-off, locked
+
+  # Follow-up 1 across a restart. October's Netflix was moved to the 20th and then removed. No entry left
+  # says the 20th: September's is dated the 25th. Were the next date not kept, November's would come on
+  # the 25th, or October's would be recorded again.
+  Scenario: After the latest occurrence is removed, its next date is kept, a day moved on the removed occurrence included
+    Given my budget periods are one month long
+    And today is 25 August 2026
+    And I have a category "Subscriptions"
+    When I record an expense of 13.99 euro for "Subscriptions" labelled "Netflix", repeating monthly
+    And I close MoneyBud, and start it again on 26 October 2026
+    And I change the date of the expense labelled "Netflix" dated 25 October 2026 to 20 October 2026
+    And I remove the expense labelled "Netflix" dated 20 October 2026 and confirm
+    And I close MoneyBud and start it again
+    Then I should not have been told anything
+    And no expenses should be listed in the current budget period
+    And the expenses listed in the previous budget period should be exactly these, in this order:
+      | date              | category      | label   | amount | repeats |
+      | 25 September 2026 | Subscriptions | Netflix | 13.99  | monthly |
+    When I close MoneyBud, and start it again on 20 November 2026
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry   | category      | label   | amount |
+      | expense | Subscriptions | Netflix | 13.99  |
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date             | category      | label   | amount | repeats |
+      | 20 November 2026 | Subscriptions | Netflix | 13.99  | monthly |
 
   # ----------------------------------------------------------------------------------
   # A kept entry is the same entry

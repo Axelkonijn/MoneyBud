@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using MoneyBud.Domain;
 using MoneyBud.Presentation;
 using MoneyBud.Specs.Support;
@@ -230,15 +231,19 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 4, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 5, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 4", "\"version\": 5") },
-        { "version 3, from before the sweep", Valid().Replace("\"version\": 4", "\"version\": 3") },
-        { "version 2, from before backing", Valid().Replace("\"version\": 4", "\"version\": 2") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 4", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 4", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 4,", "") },
+        { "a newer version", Valid().Replace("\"version\": 5", "\"version\": 6") },
+        { "version 4 with repeats, which version 4 never wrote", Valid().Replace("\"version\": 5", "\"version\": 4") },
+        { "version 3, from before the sweep", Valid().Replace("\"version\": 5", "\"version\": 3") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 5", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 5", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 5", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 5,", "") },
+        { "no repeats", Valid().Replace("\"repeats\"", "\"herhalingen\"") },
+        { "a repeat without its next date", Valid().Replace("\"next\"", "\"volgende\"") },
+        { "a frequency this version does not know", Valid().Replace("\"frequency\": \"monthly\"", "\"frequency\": \"jaarlijks\"") },
         { "no sweep destination", Valid().Replace("\"sweepDestination\"", "\"restantNaar\"") },
         { "no period ends", Valid().Replace("\"periodEnds\"", "\"periodeEindes\"") },
         { "nothing let go", Valid().Replace("\"letGo\"", "\"losgelaten\"") },
@@ -264,7 +269,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_4_document_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_5_document_or_a_version_4_one_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -278,6 +283,7 @@ public sealed class StorageTests : IDisposable
         ledger.RecordIncome(1832.45m, "Salaris", Today);
         ledger.Assign(400m, "Groceries", ledger.CurrentPeriod);
         ledger.RecordExpense(32.15m, "Groceries", Today, "Albert Heijn");
+        ledger.RecordExpense(9.99m, "Groceries", Today, "Abonnement", repeat: Frequency.Monthly);
         ledger.AddAccount("Deposit", 0m);
         ledger.AddCategory("Savings");
         ledger.Assign(100m, "Savings", ledger.CurrentPeriod);
@@ -287,7 +293,62 @@ public sealed class StorageTests : IDisposable
         Assert.Contains("\"backing\": null", text);
         Assert.Contains("\"reason\": \"backed\"", text);
         Assert.Contains("\"direction\": \"in\"", text);
+        Assert.Contains("\"frequency\": \"monthly\"", text);
         return text;
+    }
+
+    // ------------------------------------------------------------------ repeats (ADR 0011)
+
+    // One running on the 31st and clamped to 30 April, one weekly, one stopped. After 30 April no
+    // date says the 31st, so only the kept day brings May's back to it.
+    [Fact]
+    public void Repeats_come_back_from_the_format_with_their_day_their_next_date_and_whether_they_were_stopped()
+    {
+        var march31 = new DateOnly(2026, 3, 31);
+        var clock31 = new FixedClock(new DateTimeOffset(march31.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero));
+        var ledger = new Ledger(clock31, "Bank");
+        ledger.AddCategory("Rent");
+        ledger.RecordExpense(900m, "Rent", march31, "Huur", repeat: Frequency.Monthly);
+        ledger.RecordIncome(85m, "Bijbaan", march31, repeat: Frequency.Weekly);
+        var netflix = ledger.RecordExpense(13.99m, "Rent", march31, "Netflix", repeat: Frequency.Monthly).Expense!;
+        ledger.ChangeExpense(netflix, 13.99m, "Rent", march31, "Netflix", null, null);
+        clock31.Now = new DateTimeOffset(new DateTime(2026, 4, 30, 12, 0, 0), TimeSpan.Zero);
+        ledger.Settle();
+
+        var text = LedgerJson.Write(ledger.ToSnapshot());
+        Assert.Contains("\"day\": 31", text);
+        Assert.Contains("\"next\": \"2026-05-31\"", text);
+        Assert.Contains("\"frequency\": \"weekly\"", text);
+        Assert.Contains("\"frequency\": null", text);
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(text)!, clock31);
+
+        Assert.Equal(text, LedgerJson.Write(restored.ToSnapshot()));
+        clock31.Now = new DateTimeOffset(new DateTime(2026, 5, 31, 12, 0, 0), TimeSpan.Zero);
+        restored.Settle();
+        var may = restored.Calendar.PeriodContaining(new DateOnly(2026, 5, 1));
+        Assert.Equal([new DateOnly(2026, 5, 31)], restored.ExpensesIn(may).Select(e => e.Date));
+        Assert.Equal(Frequency.Monthly, restored.FrequencyOf(restored.ExpensesIn(may)[0]));
+    }
+
+    // Version 4 had no repeats, so reading it guesses nothing: every entry is a one-off (plan for
+    // increment 12, D2).
+    [Fact]
+    public void A_version_4_document_is_read_as_data_with_no_repeats()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        ledger.AddCategory("Groceries");
+        ledger.RecordExpense(32.15m, "Groceries", Today, "Albert Heijn");
+        var written = LedgerJson.Write(ledger.ToSnapshot());
+        var version4 = Regex.Replace(written, @",\s*""repeats"": \[\]", "").Replace("\"version\": 5", "\"version\": 4");
+        Assert.DoesNotContain("repeats", version4);
+
+        var read = LedgerJson.Read(version4);
+
+        Assert.NotNull(read);
+        Assert.Empty(read.Repeats);
+        var restored = Ledger.FromSnapshot(read, clock);
+        Assert.Null(restored.FrequencyOf(restored.ExpensesIn(restored.CurrentPeriod)[0]));
+        Assert.Contains("\"version\": 5", LedgerJson.Write(restored.ToSnapshot()));
     }
 
     // ------------------------------------------------------------------ the rules kept data is read against
@@ -310,15 +371,17 @@ public sealed class StorageTests : IDisposable
                 IReadOnlyList<TransferSnapshot>? transfers = null,
                 IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null,
                 IReadOnlyList<MovementSnapshot>? movements = null, int? destination = null,
-                IReadOnlyList<PeriodEndSnapshot>? periodEnds = null, IReadOnlyList<LetGoSnapshot>? letGo = null) =>
+                IReadOnlyList<PeriodEndSnapshot>? periodEnds = null, IReadOnlyList<LetGoSnapshot>? letGo = null,
+                IReadOnlyList<RepeatSnapshot>? repeats = null) =>
                 new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
                     accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today,
-                    destination, periodEnds ?? [], letGo ?? []);
+                    destination, periodEnds ?? [], letGo ?? [], repeats ?? []);
 
             MovementSnapshot movement = new(1, Today, 1, 1, 2, Money.FromCents(100), MovementReason.Assigned, MovementDirection.In);
             BackingSnapshot backing = new(2, new EntryMark(Today, 1), new EntryMark(Today, 1));
             var february = new DateOnly(2026, 2, 1);
             MovementSnapshot sweep = movement with { Reason = MovementReason.Swept, SweptFor = february };
+            RepeatSnapshot monthly = new([1], Frequency.Monthly, 15, Today.AddMonths(1));
 
             return new()
             {
@@ -380,6 +443,19 @@ public sealed class StorageTests : IDisposable
                 { "a period end naming no category", With(periodEnds: [new(february, [9])]) },
                 { "an amount let go of zero", With(movements: [sweep], letGo: [new(february, Money.Zero)]) },
                 { "an amount let go for a period nothing was swept for", With(letGo: [new(february, Money.FromCents(100))]) },
+                { "a repeat with no occurrences", With(expenses: [expense], repeats: [monthly with { Occurrences = [] }]) },
+                { "a repeat of no entry", With(expenses: [expense], repeats: [monthly with { Occurrences = [9] }]) },
+                { "a repeat of a transfer", With(transfers: [new(1, Money.FromCents(100), Today, 1, 2)], repeats: [monthly]) },
+                { "a repeat of an expense and an income", With(expenses: [expense], incomes: [income], repeats: [monthly with { Occurrences = [1, 2] }]) },
+                { "an entry in two repeats", With(expenses: [expense], repeats: [monthly, monthly]) },
+                { "an entry twice in one repeat", With(expenses: [expense], repeats: [monthly with { Occurrences = [1, 1] }]) },
+                { "a running repeat with no next date", With(expenses: [expense], repeats: [monthly with { Next = null }]) },
+                { "a stopped repeat with a next date", With(expenses: [expense], repeats: [monthly with { Frequency = null, Day = null }]) },
+                { "a monthly repeat with no day", With(expenses: [expense], repeats: [monthly with { Day = null }]) },
+                { "a monthly repeat on the 32nd", With(expenses: [expense], repeats: [monthly with { Day = 32 }]) },
+                { "a weekly repeat with a day", With(expenses: [expense], repeats: [monthly with { Frequency = Frequency.Weekly }]) },
+                { "a stopped repeat with a day", With(expenses: [expense], repeats: [new([1], null, 15, null)]) },
+                { "a frequency MoneyBud does not know", With(expenses: [expense], repeats: [monthly with { Frequency = (Frequency)7 }]) },
             };
         }
     }
@@ -399,7 +475,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [new(1, new DateOnly(9999, 12, 1), Money.FromCents(100))], [], [], 0,
-            [new(1, "Bank")], 1, [], [], [], Today, null, [], []);
+            [new(1, "Bank")], 1, [], [], [], Today, null, [], [], []);
 
         Assert.Throws<InvalidDataException>(() => Ledger.FromSnapshot(snapshot, clock));
     }
@@ -411,7 +487,7 @@ public sealed class StorageTests : IDisposable
     {
         var snapshot = new LedgerSnapshot(
             [new(1, "Groceries", false)], [], [new(1, Money.FromCents(100), Today.AddDays(5), 1, null, 1)], [], 1,
-            [new(1, "Bank")], 1, [], [], [], Today, null, [], []);
+            [new(1, "Bank")], 1, [], [], [], Today, null, [], [], []);
 
         Assert.Single(Ledger.FromSnapshot(snapshot, clock).ExpensesIn(new BudgetPeriod(Today, Today.AddDays(30))));
     }

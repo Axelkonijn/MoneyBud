@@ -61,9 +61,26 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-Thirty-five feature files exist. **All thirty-five are approved and bound, and every scenario in them
-passes**: 888 scenario cases, beside 583 developer unit tests, 1471 in all (2026-09-28). The latest,
-the sweep increment's four, were built with that increment.
+**Thirty-seven feature files exist. All thirty-seven are approved and bound, and every scenario in
+them passes**: 949 scenario cases, beside 638 developer unit tests, 1587 in all (2026-09-28). The
+latest, the recurring-entries increment's two, were built with that increment.
+
+The recurring-entries increment's files — `repeat-an-entry.feature` (22 scenarios, 29 cases) and
+`change-a-repeat.feature` (25 scenarios, 28 cases), with a "Repeats are kept" section of 4 scenarios
+added to `keep-data.feature`, 51 scenarios and 61 cases in all — were **approved at the scenario gate
+on 2026-09-28**. They are bound since that increment was built, the same day, in `RecurringSteps.cs`,
+with the frequency steps of an entry opened for changing in `CorrectionSteps.cs`. They are the first
+files to name days by calendar date, since a monthly repeat keeps a day of the month;
+`repeat-an-entry.feature` explains the steps the three share. What the build added to earlier steps,
+none changing what an earlier scenario asserts: every record step, *Given* and *When*, may end in
+", repeating monthly" or ", repeating weekly", and a *When* with that ending records through the form's
+*Herhalen* list; "today is <calendar date>" makes a new empty ledger on that day and must come before
+any other setup; a date phrase may be a calendar date, and an entry may be named by one ("the
+expense labelled "X" dated 25 September 2026"); and the income and expense
+list steps take an optional `repeats` column.
+
+Before them, thirty-five feature files existed, with 888 scenario cases beside 583 developer unit
+tests, 1471 in all (2026-09-28, at the close of the sweep increment).
 
 The sweep increment's four files — `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`,
 `bring-a-swept-period-up-to-date.feature` and `choose-a-sweep-destination.feature` — were
@@ -134,5 +151,6 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | Accounts | `add-an-account.feature`, `record-on-an-account.feature`, `correct-a-balance.feature`, `transfer-between-accounts.feature`, `manage-accounts.feature`, `show-accounts.feature` — approved and bound 2026-09-27 |
 | Backing | `back-a-category.feature`, `assign-to-a-backed-category.feature`, `spend-against-a-backed-category.feature`, `show-accumulated.feature`, `show-moved-money.feature` — approved and bound 2026-09-27 |
 | The sweep | `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`, `bring-a-swept-period-up-to-date.feature`, `choose-a-sweep-destination.feature` — approved 2026-09-27, bound 2026-09-28 |
+| Recurring entries | `repeat-an-entry.feature`, `change-a-repeat.feature` — approved and bound 2026-09-28 |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

@@ -307,6 +307,21 @@
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
+            <!-- Herhalen, the last field (arc42 §12, Recurring entries, follow-up 6). Locked on Eenmalig
+                 for an earlier occurrence of a repeat; the form decides that, not the window. The field
+                 spacing is on the panel, so the caption centres on the list itself. -->
+            <DockPanel Margin="0,0,0,8">
+              <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Tekst.Frequency}" Classes="caption"
+                         VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding FrequencyChoices}" Margin="0"
+                        SelectedItem="{Binding ChosenFrequency}" IsEnabled="{Binding CanChangeFrequency}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="p:FrequencyChoice">
+                    <TextBlock Text="{Binding Text}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </DockPanel>
             <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
             <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
@@ -330,8 +345,14 @@
                         <StackPanel>
                           <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                           <TextBlock Text="{Binding DateText}" Classes="caption" />
-                          <TextBlock Text="{Binding AccountName}" Classes="caption"
-                                     IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          <!-- The account, when not the pool, and the repeat's grey label on its latest
+                               occurrence (arc42 §12, ruling 6), side by side. -->
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding AccountName}" Classes="caption"
+                                       IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Text="{Binding RepeatLabel}" Classes="caption"
+                                       IsVisible="{Binding RepeatLabel, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          </StackPanel>
                         </StackPanel>
                         <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
                       </Grid>
@@ -561,6 +582,21 @@
                 </DataTemplate>
               </ComboBox.ItemTemplate>
             </ComboBox>
+            <!-- Herhalen, the last field (arc42 §12, Recurring entries, follow-up 6). Locked on Eenmalig
+                 for an earlier occurrence of a repeat; the form decides that, not the window. The field
+                 spacing is on the panel, so the caption centres on the list itself. -->
+            <DockPanel Margin="0,0,0,8">
+              <TextBlock DockPanel.Dock="Left" Text="{x:Static p:Tekst.Frequency}" Classes="caption"
+                         VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding FrequencyChoices}" Margin="0"
+                        SelectedItem="{Binding ChosenFrequency}" IsEnabled="{Binding CanChangeFrequency}">
+                <ComboBox.ItemTemplate>
+                  <DataTemplate x:DataType="p:FrequencyChoice">
+                    <TextBlock Text="{Binding Text}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </DockPanel>
             <Button Command="{Binding SubmitCommand}" Content="{Binding SubmitText}"
                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="accent" />
             <UniformGrid Columns="2" Margin="0,8,0,0" IsVisible="{Binding IsEditing}">
@@ -585,8 +621,14 @@
                           <TextBlock Text="{Binding Category}" FontWeight="SemiBold" />
                           <TextBlock Text="{Binding Label}" IsVisible="{Binding Label, Converter={x:Static ObjectConverters.IsNotNull}}" />
                           <TextBlock Text="{Binding DateText}" Classes="caption" />
-                          <TextBlock Text="{Binding AccountName}" Classes="caption"
-                                     IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          <!-- The account, when not the pool, and the repeat's grey label on its latest
+                               occurrence (arc42 §12, ruling 6), side by side. -->
+                          <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding AccountName}" Classes="caption"
+                                       IsVisible="{Binding AccountName, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                            <TextBlock Text="{Binding RepeatLabel}" Classes="caption"
+                                       IsVisible="{Binding RepeatLabel, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                          </StackPanel>
                         </StackPanel>
                         <TextBlock Grid.Column="1" Text="{Binding AmountText}" VerticalAlignment="Center" />
                       </Grid>

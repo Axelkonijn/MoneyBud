@@ -75,12 +75,14 @@ internal static partial class SpecParsing
     private static partial Regex NamedPeriod();
 
     /// <summary>
-    /// Resolves a date as the scenarios phrase it: "today", "yesterday", "tomorrow", or a day of a
-    /// named budget period. A null phrase means the step named no date, which means today.
+    /// Resolves a date as the scenarios phrase it: "today", "yesterday", "tomorrow", a day of a
+    /// named budget period, or a calendar date, "25 August 2026" (repeat-an-entry.feature). A null
+    /// phrase means the step named no date, which means today.
     /// </summary>
     public static DateOnly Date(this Ledger ledger, string? phrase)
     {
         if (phrase is null) return ledger.Today;
+        if (CalendarDate(phrase) is { } day) return day;
 
         switch (phrase.Trim())
         {
@@ -110,6 +112,34 @@ internal static partial class SpecParsing
     /// </summary>
     public static DateOnly ADayInside(this Ledger ledger, BudgetPeriod period) =>
         period.Contains(ledger.Today) ? ledger.Today : period.LastDay;
+
+    /// <summary>A calendar date as the recurring files write it, "25 August 2026", or null for any other phrase.</summary>
+    public static DateOnly? CalendarDate(string phrase) =>
+        DateOnly.TryParseExact(phrase.Trim(), "d MMMM yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day
+            : null;
+
+    /// <summary>"one-off", "weekly" or "monthly": a frequency as the recurring files name it, one-off being none.</summary>
+    public static Frequency? Frequency(string word) => word switch
+    {
+        "one-off" => null,
+        "weekly" => Domain.Frequency.Weekly,
+        "monthly" => Domain.Frequency.Monthly,
+        _ => throw new ArgumentException($"Unknown frequency \"{word}\".", nameof(word)),
+    };
+
+    /// <summary>
+    /// The ending a record step may carry, ", repeating monthly" or ", repeating weekly", or none:
+    /// the Herhalen list set so, or left on one-off (repeat-an-entry.feature).
+    /// </summary>
+    public static Frequency? Repeating(string ending) =>
+        ending.Length == 0 ? null : Frequency(ending.Replace(", repeating ", "", StringComparison.Ordinal));
+
+    /// <summary>
+    /// What a record step's pattern ends with to take that ending: a group that always matches,
+    /// empty or not, since a group that may not match changes the step method's arity.
+    /// </summary>
+    public const string RepeatingEnding = @"((?:, repeating (?:weekly|monthly))?)";
 
     [GeneratedRegex(@"^the (first|last) day of the (?:(current|previous|next) budget period|budget period (\d+) (before|after) the current one)$")]
     private static partial Regex DayOfPeriod();

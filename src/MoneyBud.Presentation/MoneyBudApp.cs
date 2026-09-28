@@ -7,8 +7,13 @@ namespace MoneyBud.Presentation;
 /// <summary>
 /// What MoneyBud said after the last thing the user did. <see cref="WentInto"/> is set when the
 /// entry landed in a period other than the one on screen, and names that period.
+/// <see cref="Repeated"/> is every occurrence the notice names, recorded by MoneyBud itself since it
+/// last said anything (arc42 §12, <i>Recurring entries</i>, ruling 7).
 /// </summary>
-public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto = null);
+public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto = null)
+{
+    public IReadOnlyList<OccurrenceMade> Repeated { get; init; } = [];
+}
 
 /// <summary>
 /// A question MoneyBud is waiting on an answer to. There is only ever one kind — whether to remove
@@ -73,6 +78,13 @@ public sealed record Question(string Text);
 /// inside any act, refused ones and ones that change nothing included. So after each of those the
 /// screen takes the sweeps made, says them first, one sentence per period, and keeps the ledger
 /// straight away, so that each sweep is announced exactly once.</para>
+///
+/// <para><b>Occurrences</b> of a recurring entry (§12, <i>Recurring entries</i>; ADR 0011) are the
+/// same: settling records them wherever it runs, and an act that sets up or moves a repeat records
+/// what is already due. They are said in one sentence with the sweeps, and kept straight away. The
+/// notice says things in the order they happened (ruled at the build, 2026-09-28): what settling did
+/// before an act in front of the act's own sentence, and the occurrences the act itself caused after
+/// it.</para>
 /// </summary>
 public sealed partial class MoneyBudApp : ObservableObject
 {
@@ -93,8 +105,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         TransferForm = new TransferForm(this);
 
         if (Ledger.Settle()) Keep();
-        if (Ledger.TakeSweepsMade() is { Count: > 0 } swept)
-            Notice = new Notice(Tekst.Swept(swept), IsRefusal: false);
+        if (TakeWhatSettlingDid() is { Said: { } said } settled)
+            Notice = new Notice(said, IsRefusal: false) { Repeated = settled.Repeated };
     }
 
     public Ledger Ledger { get; }
@@ -241,11 +253,15 @@ public sealed partial class MoneyBudApp : ObservableObject
             OnPropertyChanged(name);
     }
 
+    // Also the Herhalen lists: an entry open in its form locks there once it is no longer the one
+    // that sets its repeat (plan for increment 12, 4).
     private void RefreshFormAccounts()
     {
         ExpenseForm?.RefreshAccount();
         IncomeForm?.RefreshAccount();
         TransferForm?.RefreshAccounts();
+        ExpenseForm?.RefreshFrequency();
+        IncomeForm?.RefreshFrequency();
     }
 
     // ------------------------------------------------------------------ keeping
@@ -267,25 +283,26 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// Once a minute, from the Desktop's timer: looks again, so the current-period label moves when
-    /// a period ends; moves the money planned for a period that has just begun, and keeps it; sweeps
-    /// the period that ended, and says so; and tries again to save when a save has failed — so that
-    /// once saving works again, the changes are kept with nothing done (§12).
+    /// a period ends; moves the money planned for a period that has just begun, and keeps it; records
+    /// the occurrences that have come due and sweeps the period that ended, and says so; and tries
+    /// again to save when a save has failed — so that once saving works again, the changes are kept
+    /// with nothing done (§12).
     ///
-    /// <para>A sweep's notice replaces a question still waiting, since a question and a notice are
-    /// never shown together: money moved, and being told of it wins (plan for increment 11, 7).
-    /// Anything else the tick does says nothing.</para>
+    /// <para>That notice replaces a question still waiting, since a question and a notice are never
+    /// shown together: MoneyBud did something, and being told of it wins (plan for increment 11, 7;
+    /// increment 12, 7). Anything else the tick does says nothing.</para>
     /// </summary>
     public void Tick()
     {
-        var moved = Ledger.Settle();
-        if (Ledger.TakeSweepsMade() is { Count: > 0 } swept)
+        var changed = Ledger.Settle();
+        if (TakeWhatSettlingDid() is { Said: { } said } settled)
         {
             DropQuestion();
-            Notice = new Notice(Tekst.Swept(swept), IsRefusal: false);
+            Notice = new Notice(said, IsRefusal: false) { Repeated = settled.Repeated };
             savedAgain = false;
         }
 
-        if (moved | IsUnsaved) Keep();
+        if (changed | IsUnsaved) Keep();
         Refresh();
     }
 
@@ -314,7 +331,8 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
     public RecordExpenseResult? RecordExpense(
-        string? amount, string? category, string? label, DateOnly? date = null, Account? account = null)
+        string? amount, string? category, string? label, DateOnly? date = null, Account? account = null,
+        Frequency? repeat = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -322,7 +340,8 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.RecordExpense(euros, category, date ?? Ledger.Today, label, account);
+        SettleBeforeActing();
+        var result = Ledger.RecordExpense(euros, category, date ?? Ledger.Today, label, account, repeat);
 
         if (result.Expense is { } expense)
             Tell(Tekst.ExpenseRecorded(expense, result.CategoryBroughtBack), PeriodOf(expense.Date));
@@ -333,7 +352,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     }
 
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
-    public RecordIncomeResult? RecordIncome(string? amount, string? label, DateOnly? date = null, Account? account = null)
+    public RecordIncomeResult? RecordIncome(
+        string? amount, string? label, DateOnly? date = null, Account? account = null, Frequency? repeat = null)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -341,7 +361,8 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.RecordIncome(euros, label, date ?? Ledger.Today, account);
+        SettleBeforeActing();
+        var result = Ledger.RecordIncome(euros, label, date ?? Ledger.Today, account, repeat);
 
         if (result.Income is { } income)
             Tell(Tekst.IncomeRecorded(income), PeriodOf(income.Date));
@@ -459,11 +480,21 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// Changes an expense, judged as recording it now would be (arc42 §12). A change that goes
     /// through is announced, and says which period the expense went into when that is not the
     /// period on screen; one that changes nothing is quiet.
+    ///
+    /// <para>This keeps the repeat's frequency as it is. The overload that takes a frequency, which the
+    /// form uses, changes it too.</para>
     /// </summary>
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
     public ChangeExpenseResult? ChangeExpense(
         Expense expense, string? amount, string? category, string? label, DateOnly? date = null,
-        Account? account = null)
+        Account? account = null) =>
+        ChangeExpense(expense, amount, category, label, date, account, Ledger.FrequencyOf(expense));
+
+    /// <summary>Changes an expense and its repeat, the frequency null being one-off (§12, ruling 3).</summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeExpenseResult? ChangeExpense(
+        Expense expense, string? amount, string? category, string? label, DateOnly? date, Account? account,
+        Frequency? repeat)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -471,7 +502,8 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.ChangeExpense(expense, euros, category, date ?? Ledger.Today, label, account);
+        SettleBeforeActing();
+        var result = Ledger.ChangeExpense(expense, euros, category, date ?? Ledger.Today, label, account, repeat);
 
         switch (result.Outcome)
         {
@@ -489,10 +521,16 @@ public sealed partial class MoneyBudApp : ObservableObject
         return result;
     }
 
-    /// <summary>Changes an income, as <see cref="ChangeExpense"/> changes an expense.</summary>
+    /// <summary>Changes an income as an expense is changed, keeping its repeat's frequency as it is.</summary>
     /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
     public ChangeIncomeResult? ChangeIncome(
-        Income income, string? amount, string? label, DateOnly? date = null, Account? account = null)
+        Income income, string? amount, string? label, DateOnly? date = null, Account? account = null) =>
+        ChangeIncome(income, amount, label, date, account, Ledger.FrequencyOf(income));
+
+    /// <summary>Changes an income and its repeat.</summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ChangeIncomeResult? ChangeIncome(
+        Income income, string? amount, string? label, DateOnly? date, Account? account, Frequency? repeat)
     {
         if (!AmountInput.TryRead(amount, out var euros))
         {
@@ -500,7 +538,8 @@ public sealed partial class MoneyBudApp : ObservableObject
             return null;
         }
 
-        var result = Ledger.ChangeIncome(income, euros, label, date ?? Ledger.Today, account);
+        SettleBeforeActing();
+        var result = Ledger.ChangeIncome(income, euros, label, date ?? Ledger.Today, account, repeat);
 
         switch (result.Outcome)
         {
@@ -523,7 +562,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// question replaces whatever was said before; the only thing asked is the act, never the
     /// state of the money (§12, *Being asked is not being warned*).
     /// </summary>
-    public void AskToRemove(Expense expense) => Ask(Tekst.AskToRemove(expense), () =>
+    public void AskToRemove(Expense expense) => Ask(Tekst.AskToRemove(expense, Ledger.FrequencyOf(expense) is not null), () =>
     {
         Ledger.RemoveExpense(expense);
         if (ExpenseForm.Editing?.Id == expense.Id) ExpenseForm.Clear();
@@ -531,7 +570,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     });
 
     /// <summary>Asks whether to remove an income, as <see cref="AskToRemove(Expense)"/>.</summary>
-    public void AskToRemove(Income income) => Ask(Tekst.AskToRemove(income), () =>
+    public void AskToRemove(Income income) => Ask(Tekst.AskToRemove(income, Ledger.FrequencyOf(income) is not null), () =>
     {
         Ledger.RemoveIncome(income);
         if (IncomeForm.Editing?.Id == income.Id) IncomeForm.Clear();
@@ -1154,48 +1193,110 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// An act that went through: said, and then the ledger is kept — unless the act changed
-    /// nothing, such as adding a name already there, when there is nothing to keep. Any sweep the
-    /// act's settling made is said first, and kept whatever the act was.
+    /// nothing, such as adding a name already there, when there is nothing to keep. Whatever the
+    /// act's settling did by itself is said first, and kept whatever the act was.
     /// </summary>
     private void Tell(string text, BudgetPeriod? landedIn, bool changed = true)
     {
-        var swept = Ledger.TakeSweepsMade();
+        var settled = TakeWhatSettlingDid();
         DropQuestion();
         Notice = landedIn is { } period && period != ShownPeriod
-            ? new Notice(SweptFirst(swept, $"{text} {Tekst.WentInto(period)}"), IsRefusal: false, WentInto: period)
-            : new Notice(SweptFirst(swept, text), IsRefusal: false);
+            ? new Notice(settled.Around($"{text} {Tekst.WentInto(period)}"), IsRefusal: false, WentInto: period)
+                { Repeated = settled.Repeated }
+            : new Notice(settled.Around(text), IsRefusal: false) { Repeated = settled.Repeated };
         savedAgain = false;
-        if (changed || swept.Count > 0) Keep();
+        if (changed || settled.Said is not null) Keep();
         Refresh();
     }
 
     private void Refuse(string text)
     {
-        var swept = Ledger.TakeSweepsMade();
+        var settled = TakeWhatSettlingDid();
         DropQuestion();
-        Notice = new Notice(SweptFirst(swept, text), IsRefusal: true);
+        Notice = new Notice(settled.Around(text), IsRefusal: true) { Repeated = settled.Repeated };
         savedAgain = false;
-        if (swept.Count > 0) Keep();
+        if (settled.Said is not null) Keep();
         Refresh();
     }
 
     /// <summary>
     /// An act with no outcome to tell: nothing is said, and what was said before is gone. Nothing
-    /// changed, so there is nothing to keep — unless the act's settling swept a period, which is
-    /// said, and kept.
+    /// changed, so there is nothing to keep — unless the act's settling did something by itself,
+    /// which is said, and kept.
     /// </summary>
     private void SayNothing()
     {
-        var swept = Ledger.TakeSweepsMade();
+        var settled = TakeWhatSettlingDid();
         DropQuestion();
-        Notice = swept.Count > 0 ? new Notice(Tekst.Swept(swept), IsRefusal: false) : null;
+        Notice = settled.Said is { } said ? new Notice(said, IsRefusal: false) { Repeated = settled.Repeated } : null;
         savedAgain = false;
-        if (swept.Count > 0) Keep();
+        if (settled.Said is not null) Keep();
         Refresh();
     }
 
-    private static string SweptFirst(IReadOnlyList<SweepMade> swept, string text) =>
-        swept.Count > 0 ? $"{Tekst.Swept(swept)} {text}" : text;
+    // What settling did before an act that can itself record occurrences, taken apart from what the
+    // act caused, so that the notice says each where it happened.
+    private Said? saidBeforeAct;
+
+    /// <summary>
+    /// Settles before an act that can record occurrences itself — recording or changing an income or
+    /// an expense, which may set up or move a repeat — and holds what settling did, so the notice
+    /// can say it in front of the act and what the act caused after it: in the order it happened
+    /// (ruled at the build, 2026-09-28).
+    /// </summary>
+    private void SettleBeforeActing()
+    {
+        Ledger.Settle();
+        saidBeforeAct = TakeSaid();
+    }
+
+    /// <summary>
+    /// What settling did by itself since last asked, to be said once (plan for increment 12, 7): in
+    /// front of what the act says, and — after an act that settled first — what the act itself
+    /// caused after it. <see cref="Settled.Said"/> is null when it did nothing to say.
+    /// </summary>
+    private Settled TakeWhatSettlingDid()
+    {
+        var before = saidBeforeAct;
+        saidBeforeAct = null;
+        var now = TakeSaid();
+        return before is null ? new Settled(now, Said.Nothing) : new Settled(before, now);
+    }
+
+    /// <summary>
+    /// The occurrences settling recorded, in one sentence with any category they brought back, then
+    /// the periods it swept.
+    /// </summary>
+    private Said TakeSaid()
+    {
+        var repeated = Ledger.TakeOccurrencesMade();
+        var swept = Ledger.TakeSweepsMade();
+        string?[] sentences = [repeated.Count > 0 ? Tekst.Repeated(repeated) : null, swept.Count > 0 ? Tekst.Swept(swept) : null];
+        var text = string.Join(" ", sentences.OfType<string>());
+        return new Said(text.Length > 0 ? text : null, repeated);
+    }
+
+    private sealed record Said(string? Text, IReadOnlyList<OccurrenceMade> Repeated)
+    {
+        public static readonly Said Nothing = new(null, []);
+    }
+
+    // What settling did in front of an act's own sentence, and what the act caused after it.
+    private sealed record Settled(Said InFront, Said After)
+    {
+        public string? Said => (InFront.Text, After.Text) switch
+        {
+            (null, null) => null,
+            (var first, null) => first,
+            (null, var then) => then,
+            var (first, then) => $"{first} {then}",
+        };
+
+        public IReadOnlyList<OccurrenceMade> Repeated => [.. InFront.Repeated, .. After.Repeated];
+
+        public string Around(string text) =>
+            string.Join(" ", new[] { InFront.Text, text, After.Text }.OfType<string>());
+    }
 
     private void NotAnAmount(string? typed) =>
         Refuse(AmountInput.Read(typed, out _) == AmountReading.Ambiguous

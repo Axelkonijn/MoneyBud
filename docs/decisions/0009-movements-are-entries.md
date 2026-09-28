@@ -18,6 +18,18 @@ that points here.
 > gap. Any sweep also counts as use of its category and its account, a sweep from an account to
 > itself included, where other such movements do not. The file format is version 4, and version 3
 > is refused. Everything else this record decided stands. The body is unchanged.
+>
+> **Note, 2026-09-28, later the same day.** Recurring entries make settling a **third writer**, of
+> incomes and expenses ([ADR 0011](0011-recurring-entries.md)). **Decision 3 is changed in two
+> points.** Settling now works **event by event**, an occurrence due before the next boundary or else
+> the boundary, rather than period by period; and **"It runs at most once a day" no longer holds**:
+> `Settle` lost that early return, because a repeat set up or moved back in the past has occurrences
+> due on days already settled through. A call with nothing due still does nothing, and a clock turned
+> back still finds nothing to do. **The accepted gap in saving narrows again**: it no longer holds for
+> an occurrence, which is saved straight away because it is announced. Planned-money moves keep it.
+> The argument that settling sees exactly what the day saw still holds, because occurrences are
+> written in date order with the period ends between them. The file format is version 5. The body is
+> unchanged.
 
 ## Context
 

@@ -1446,7 +1446,7 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. **Settled for the accounts increment on 2026-09-27, and built the same day** (*Accounts and net worth*, above): an account is **a name and what is on it**. The kinds above are examples, not a type, and nothing behaves differently by kind (*derived*). It is added with a name and, if the user types one, a *Starting balance* (follow-up, 2026-09-27: left empty, the account has none), can be renamed, and can be deleted only while **unused**: no income, expense or transfer on it (*derived*). Deleting one is **never confirmed** and is announced afterwards, even with a starting balance (follow-up, 2026-09-27). Its name follows the category name rules and is unique among accounts, and it may share a name with a category (*derived*). **Adding a name another account has is refused**, not handed back as a category's would be, so a starting balance just typed is never dropped (follow-up, 2026-09-27). Accounts are listed **pool account first, then in the order added**, in the strip and in the forms (follow-up, 2026-09-27). Archiving an account is deferred until missed. A first start has one, *Betaalrekening*, as the *Pool account*, **with no starting balance**, so its balance is the sum of what is on it until first corrected. Backing waits for the increment after. On screen *Rekening*, renamed with *Hernoemen* and deleted with *Verwijderen* (approved 2026-09-27; into the display-terms table at the build). **Backing settled on 2026-09-27, and built the same day** (*Backing and Accumulated*, above): an account may back a category, chosen in the category's *Staat op* list (several categories, in the documentation's reading), and **an account that backs a category, or has a *Movement* on it, counts as used**, so it cannot be deleted. Money MoneyBud moves into or out of it on a category's behalf shows in its history, one row per movement. Money already in it when it starts backing a category keeps no purpose. |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). A category with history is taken out of use by **archiving**, never by deleting: its history stays, and adding its name again, recording an expense against it or assigning a positive amount to it brings it back (*A category is taken out of use, not deleted*, above). A category with **no history in any period** can instead be **deleted** (*Deleting a category that has no history anywhere*, above). It can be **renamed**, under the same name rules, to any name no other category has (*Renaming a category*, above). Deleting and renaming were settled on 2026-09-26 and built in the corrections increment. MoneyBud ships with six **default categories** (above). |
-| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. An archived category can be **renamed**, and stays archived (*Renaming a category*, above). On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). **Archiving does nothing to backing** (follow-up, 2026-09-27, built the same day): an archived backed category stays backed, keeps and shows *Opgebouwd*, and its later budgets still move; unbacking it is a separate act (*Archiving does nothing to backing*, above). **An archived backed category is also shown in the current period and every later one while its *Accumulated* there is not zero**, even with no history there, so money still there for it is never hidden (ruled after the build, 2026-09-27; *Backing: ruled after the build*, above). |
+| **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. An archived category can be **renamed**, and stays archived (*Renaming a category*, above). On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). **Archiving does nothing to backing** (follow-up, 2026-09-27, built the same day): an archived backed category stays backed, keeps and shows *Opgebouwd*, and its later budgets still move; unbacking it is a separate act (*Archiving does nothing to backing*, above). **An archived backed category is also shown in the current period and every later one while its *Accumulated* there is not zero**, even with no history there, so money still there for it is never hidden (ruled after the build, 2026-09-27; *Backing: ruled after the build*, above). **Since the recurring rulings** (2026-09-28, built the same day): **an occurrence MoneyBud records by itself on an archived category brings it back too**, said in the occurrences' notice. It is the first way back not taken by the user himself (*Recurring entries*, ruling 8, above). |
 | **Rename** | Giving a category a new name. The new name follows the rules for adding one: trimmed, stored otherwise as typed, and refused if it trims to nothing. A name **another** category has, archived ones included, is **refused**, and the user is told it is taken. The category's **own** name in a new spelling is allowed, which is the front door *The existing spelling is kept* kept adding from being. **Past periods show the new name.** An archived category can be renamed and **stays archived**. See *Renaming a category* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.RenameCategory`. |
 | **Delete** | Said of a **category** only: removing one that has **no history in any period**, meaning no expense and no budget of more than zero. It is gone, not archived, and adding its name again creates a new category. A separate act from archiving, with its own button, shown only on such a category. **Never confirmed**, and announced afterwards. A category with history cannot be deleted; it is archived. Decided by figures, never by `Ledger.HasBudget`. See *Deleting a category that has no history anywhere* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.CanDelete` and `Ledger.DeleteCategory`. **Since backing** (ruled 2026-09-27), **a category also cannot be deleted while a *Movement* between two different accounts stands for it**, since those rows name it in both histories; *Archiveren* is still offered. A movement from the pool account to itself does not count and goes with the category. This extends "history" for backing and does not reverse the rejection of "never touched" (*Backing: ruled after the build*, above). **Since the sweep's scenario stage** (ruled 2026-09-27, built 2026-09-28): **any sweep into a category blocks deleting it, a pool-to-pool one included**, because an ended period's line names it (*The sweep and Restant*, *Ruled at the scenario stage*). |
 | **Default categories** | The six categories MoneyBud ships with: **Boodschappen, Huur, Hobby, Sparen, Verzekeringen, Abonnementen**. A starting set chosen to be tried, not a claim about what a household needs. Their names are **Dutch** because they are user-facing **content**, unlike the names in the feature files, which are synthetic test data in whichever language suits the scenario — and unlike *Dutch source terms* below, which is vocabulary rather than content. *Sparen* ships **unbacked** and becomes an *account-backed category* when accounts exist. See *The default categories* above. Refined 2026-09-27: when **backing** exists, the increment after accounts (*Sparen ships unbacked, and that is temporary*, above). **Revised the same day, for the backing increment:** a first start leaves *Sparen* unbacked even once backing is built. It has only *Betaalrekening*, so the user adds a savings account and backs *Sparen* himself (*A first start leaves Sparen unbacked*, above). |
@@ -1467,7 +1467,9 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
 | **Change** | Said of an **entry**: correcting an expense or an income after it was recorded. Allowed in **any** budget period, past ones included. A change is judged exactly as the changed entry would be if it were recorded now, so it is refused on the same rules, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings that category back, announced. Fixing an expense that is already on an archived category does **not** bring it back. A change **overwrites** the entry: MoneyBud keeps no record of what it was. A changed date that moves the entry to another period leaves the screen where it was and says where the entry went. See *An entry can be changed or removed* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.ChangeExpense` and `Ledger.ChangeIncome`. |
 | **Remove** | Said of an **entry**: taking an expense or an income away entirely. From the accounts increment, only from the Overview's lists, never from an account's history (follow-up, 2026-09-27; built). Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. **From the accounts increment** (settled and built 2026-09-27), a *Transfer* and a *Balance correction* can be removed too, from an account's history, and removing either asks first by the same principle (*derived*). "The only act that does" then means the only **kind** of act: removing a record. Deleting an unused account does **not** ask, even with a starting balance: a follow-up ruling of 2026-09-27 (*Managing accounts*, above). |
-| **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). |
+| **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). **Settled, specified and built on 2026-09-28** (*Recurring entries*, above; [ADR 0011](../decisions/0011-recurring-entries.md)), where the increment calls it a *recurring entry*: the same thing, since an entry and a transaction are both an income or an expense in this glossary. **Weekly or monthly; yearly is deferred until missed.** Set by one drop-down on the income and expense forms (*Frequency*, below). It is a series of **occurrences** (next), each recorded by MoneyBud on its own date the first time it runs on or after that date, the same for income and expenses, said once in one notice and saved straight away. **The latest occurrence sets the next**: change it to change what follows, set it to *Eenmalig* to stop. Removing an occurrence removes only that one. A monthly one keeps the day it started on, clamped to a short month's last day and returning after; since a follow-up the same day, changing the latest occurrence's date moves that day for every later one, so in the documentation's reading it is the day it was **last set to**. Occurrences already due when it is set up in the past are recorded at once, and after MoneyBud was closed across a period's end they are recorded before that period is swept (follow-ups). It has no display term of its own. **Built as** `RecurringEntry`, state kept beside its occurrences: their ids, the frequency (none once stopped), the day a monthly one was last set to, and the next date. A stopped one stays a recurring entry, so its earlier occurrences stay locked ([§8.1](08-crosscutting-concepts.md)). |
+| **Occurrence** | One entry of a *Recurring transaction*: an **ordinary income or expense**, counted, changed and removed like any other. The first is the entry the user set to repeat; the rest MoneyBud records by itself. Each new one **copies the latest occurrence**: amount, label, category (for an expense), account and frequency, but not the date, which comes from the day and frequency the recurring transaction has (*derived*). **The latest occurrence** is, in the documentation's reading, the one recorded most recently. Its row carries a small grey *maandelijks* or *wekelijks*, and changing it changes what follows. Earlier occurrences are plain rows and are never touched by it. An occurrence is never refused; one on an archived category brings it back, announced. **Follow-ups the same day:** once the latest is removed, the most recently recorded occurrence left becomes the latest, and removing the only one ends the repeat; an earlier occurrence loaded into the form shows *Eenmalig*, locked; **changing the latest occurrence's date moves the day for every later one** (against the recommendation), while an earlier one's date changes only itself (*Recurring entries*, above). Settled 2026-09-28, specified by [`repeat-an-entry.feature`](../../features/repeat-an-entry.feature) and [`change-a-repeat.feature`](../../features/change-a-repeat.feature), and built the same day. "The one recorded most recently" is **approved** (at the scenario gate) and **built as the highest id**, not stored ([ADR 0011](../decisions/0011-recurring-entries.md)). The occurrences MoneyBud records are named in a *"Herhaald: …"* notice with their days (*Recurring entries: chosen in the build*, below). |
+| **Frequency** | What the drop-down on the income and expense forms sets: **one-off**, the default, **weekly**, every 7 days, or **monthly**, the same day each month. A monthly day a month is too short for clamps to its last day and returns where the month has it (*Recurring entries*, ruling 5). One-off is the absence of a repeat, so an entry left at it is the one-off entry of every earlier increment. Yearly is deferred until missed. On screen ***Eenmalig***, ***wekelijks*** and ***maandelijks***, in a drop-down captioned ***Herhalen***, the form's last field after *Rekening* (follow-up, 2026-09-28), all ruled 2026-09-28 and held in *Proposed display terms for recurring entries* until the build. Settled 2026-09-28, and **built the same day** as `Frequency` (`Weekly`, `Monthly`), with one-off as its absence. **The terms moved into *Dutch display terms* at the build** (rows *Frequency* and *One-off / Weekly / Monthly*); the proposals table stays as the record of where each was ruled. **The build capitalises the drop-down's items**, *Eenmalig*, *Wekelijks*, *Maandelijks*, and the row's grey label is lower-case, *wekelijks* / *maandelijks*, as ruling 6 writes it (plan reading 8, approved at the plan gate). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
 | **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker's badge reads *Over budget*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). Built in the UI increment. |
 | **Accumulated** | **Account-backed categories only.** Everything ever assigned to the category minus everything ever spent against it — the running sum of its *Remaining* across all periods, and so the money its backing accounts have built up on its behalf. Shown beside the period's *Budget* and *Remaining*, which reset at every boundary while *Accumulated* does not. An unbacked category has no such figure, because it is swept empty at every boundary and nothing accumulates. Related to, but not equal to, a backing account's *Balance* — see *Backed categories accumulate* above. Not in the first increment. **Revised on 2026-09-27, and built the same day:** it is **what has moved in on the category's behalf since it was last backed, minus what has been spent against it since**. It is no longer the running sum of *Remaining* over every period, although for a category backed before anything was assigned to it, and never unbacked, the two agree. It starts at €0, or at what moves when the category is backed. Money already in the account is not part of it. **It starts over when a category is backed again after being unbacked**, not when its backing is pointed at another account, and an unbacked category shows none. It is **not** what unbacking and re-pointing move: they move what is there for the category in the backing account, which counts only its expenses paid from that account, where *Accumulated* counts every one, whichever account paid (follow-up). The two differ by the category's expenses paid from other accounts. It is shown **up to and including the period on screen**, so a later period includes what is planned; in periods before the backing it follows today's backing, €0 before anything moved (follow-up). **The expenses that lower it** are those dated after the backing day, or on it and recorded after the backing, **on any account** (follow-ups). **Below zero it carries the one marker, badge *Rood*** (follow-up). An archived backed category keeps and shows it (follow-up). Counts a later period's *Budget* as planned until that period is settled (*Backing: chosen in the build*, above). On screen ***Opgebouwd*** (ruled, *Backing and Accumulated*, above; in *Dutch display terms* since the build). **Since the sweep's rulings** (2026-09-27, built 2026-09-28): the sweep destination's includes **swept money from the day it moves**, and the one-click difference moves it up or down; swept money is not a *Budget*, so a later period's view does not count a sweep still to come (*derived* and the documentation's reading, *The sweep and Restant*, above). |
@@ -2989,7 +2991,9 @@ current and **the period on screen has become the previous one**. From then on:
 Settled by the stakeholder on 2026-09-25, over a short notice. **One exception since 2026-09-27**
 (settled then, built 2026-09-28): **a sweep that moved money is announced once**, because money moved without
 the user doing anything (*The sweep and Restant*, *When the sweep runs*, follow-up). Everything else at
-a boundary stays unannounced. **What it means**, in the
+a boundary stays unannounced. **A second since 2026-09-28** (settled and built the same day): occurrences of a
+recurring entry that MoneyBud records by itself are said once, whatever day they fall on, so one dated
+a period's first day is said at the boundary (*Recurring entries*, ruling 7). **What it means**, in the
 documentation's reading: the user can find out that the boundary has passed from the label, or from
 one of the effects above. For example, an assignment in the period on screen is refused, with the
 past-period reason. MoneyBud does not tell the user ahead of time.
@@ -3068,6 +3072,10 @@ the amount first.
 **Extended on 2026-09-27, and built the same day:** the expense and income forms gain *Rekening* as their last
 field, after *Datum* (*Every income and expense is on an account*, under *Accounts and net worth*,
 below). The order above is unchanged.
+
+**Extended again on 2026-09-28, and built the same day:** both forms gain *Herhalen*, the recurring
+drop-down, as their last field, after *Rekening* (*Recurring entries*, follow-up 6, below). The order
+above is still unchanged. `WindowMarkupTests` holds *Herhalen* after *Rekening* on both forms.
 
 This is window behaviour, so a unit test holds it, not scenarios. **Built** in the Desktop's
 markup, `MainWindow.axaml`, and held by `WindowMarkupTests`, which reads that markup as text, the
@@ -6482,6 +6490,714 @@ the same day on the recommendation (*Sweep: ruled at the build*, above):
 scenario that cannot tell kept period-end records from lost ones, held by a unit test meanwhile (*A
 note for the stakeholder*, above). **Nothing else is open in this section.**
 
+## Recurring entries
+
+The rulings for the recurring-entries increment, settled with the stakeholder on 2026-09-28. Like
+*The sweep and Restant*, they were answers to multiple-choice questions, each put to him with a
+recommendation, and they went straight into this glossary rather than into a new interview round.
+**He took the recommended option every time.** **The reasoning given with each ruling is the
+documentation's**, offered with the recommended option as the argument for it. A rejected option's
+reason is the one given with the question, and where none was given the section says so. **One
+ruling carries his own words**: the shape of the whole increment, which he gave when he chose it
+(ruling 1).
+
+**Eight rulings, and a set of derivations.** The derivations were drawn up with the rulings and not
+put to him as questions. Each is marked *derived*. They stand as the documentation's reading and are
+**open to contradiction at the scenario gate**, like the derivations of earlier increments. What
+neither settles is listed under *What this section leaves open* (below), for him before the
+scenarios.
+
+**Follow-ups, the same day.** Writing the rulings up left six points open. **All six were put back to
+him on 2026-09-28**, each as a multiple-choice question with a recommendation. **He took the
+recommendation five times. Once he chose against it**: changing the latest occurrence's date moves
+the day for every later one (*follow-up 3*, under *The latest occurrence sets the next*), with the
+consequence the recommendation warned of accepted as it is. Each follow-up sits in the subsection it
+belongs to, marked *follow-up*, with the rejected options and the reasons they were put with. The
+derivations they change are revised where they stand, the first wording kept where it matters.
+*What this section leaves open* (below) now says where each point went. **Nothing is left open for him
+before the scenarios.** **Three more were ruled at the scenario stage** the same day, each on the
+recommendation (*Ruled at the scenario stage, 2026-09-28*, below).
+
+**Where it comes from.** Recurring entries were in the first interview. For income: *"Dus dingen
+zoals maandelijks, wekelijks of jaarlijks. Maar ook uitzonderlijke situaties of eenmalige
+toevoegingen moeten makkelijk toe te voegen zijn."* For expenses: *"Mogelijk abonnementen, dus weer
+maandelijks, wekelijks, jaarlijks."* The same interview named, as a later wish, changing a monthly
+amount whose price changes *"zonder dat ik een hele nieuwe reeks moet starten"*
+([round 1](../stakeholder/2026-09-24-interview.md)). Round 3 put recurring items outside the first
+version ([round 3](../stakeholder/2026-09-24-verdieping.md)). On 2026-09-28 he chose them as the
+next of three increments: then a configurable period start day, because his salary comes on the
+27th, then a mobile front-end. In his words, given in English:
+
+> *"Recurring entries on income and spending. This should just be a extra drop down where you can
+> choose default one time, or weekly or monthly."*
+
+**Specified and built.** The scenarios were **approved by the stakeholder at the scenario gate on
+2026-09-28** (*Approved at the scenario gate*, below), and [the plan](../plans/increment-12-recurring.md)
+**at the plan gate the same day**, with [ADR 0011](../decisions/0011-recurring-entries.md): a
+recurring entry is state kept beside its occurrences, which stay ordinary entries, and settling works
+event by event, so a period's occurrences are recorded before it is swept. Data saved by the sweep
+version is **read**, as data with no repeats (decision D2, on the recommendation). **Built on
+2026-09-28** and green. One approved corrections scenario conflicted with the plan's order of the
+notice, and **the stakeholder ruled on it at the build** the same day, on the recommendation. That
+ruling, and what the build chose beyond the rulings, are in *Recurring entries: chosen in the build*
+(below). This paragraph read "Settled, not specified or built. There is no feature file, plan or code
+yet." until then.
+
+> **An income or an expense can repeat, weekly or monthly, chosen in one drop-down on its form. Each
+> occurrence is an ordinary entry, recorded by MoneyBud on its own date, the first time MoneyBud runs
+> on or after that date, and said once. The latest occurrence sets the next: change it to change what
+> follows, and set it to *Eenmalig* to stop. Removing an occurrence removes only that one.**
+
+An example, with synthetic figures. On 25 August the user records the expense *Netflix*, €13,99 on
+Abonnementen, and sets the drop-down to *maandelijks*. On 27 August he records the income *Salaris*,
+€2.500 on Betaalrekening, *maandelijks* too. MoneyBud records Netflix on 25 September and Salaris on
+27 September, each the first time it runs on or after that day, and says so each time. He does not
+open MoneyBud from 20 to 29 October. On 29 October it records Netflix of 25 October and Salaris of 27
+October, each dated its own day, and says once: *"Herhaald: Netflix € 13,99, Salaris € 2.500,00."*
+In November the salary comes in at €2.600. He clicks November's Salaris row, the one with the small
+grey *maandelijks*, and changes the amount. December's comes at €2.600; August to October stay at
+€2.500. In January he cancels Netflix: on the latest Netflix row he sets the drop-down to *Eenmalig*,
+and no more come.
+
+### What the recurring increment covers, and what waits
+
+> **Weekly and monthly repeats of an income or an expense.**
+
+| Not in this increment | When |
+|---|---|
+| **Yearly**, *jaarlijks* | **Deferred until missed**, not rejected (ruling 1) |
+| **A repeating transfer, assignment or balance correction** | ***Derived***: not asked. The rulings name income and expenses only. What a regular transfer to savings would do is already done by assigning to a backed category, which moves money every period it is assigned in, and a month's whole plan is repeated in one press by taking it over (*Opening a period*, above) |
+| **A list of recurring entries**, to edit, pause and stop them | **Rejected** (ruling 3) |
+
+**It stands beside one-off entry, as settled** (*Recurring transaction*, *Terms*, above;
+[§1.1](01-introduction-and-goals.md)). *Eenmalig* is the default, and an entry left at it is exactly
+the one-off entry of every earlier increment.
+
+### The choices: *Eenmalig*, *wekelijks*, *maandelijks*
+
+> **Ruling 1. A drop-down on the income form and on the expense form offers *Eenmalig*, the default,
+> *wekelijks* and *maandelijks*.**
+
+**Why:** it is what he asked for, in his words above: one more field, defaulting to what every entry
+already is, so a one-off entry costs nothing extra. In the documentation's reading, that is quality
+goal 2 kept for the entries that do not repeat ([§1.2](01-introduction-and-goals.md)).
+
+| Rejected | Why |
+|---|---|
+| **Also *jaarlijks* now** | Left until missed. His first interview named yearly beside monthly and weekly, for income and for subscriptions, so this is recorded as **deferred, not rejected** |
+
+***Derived*:**
+
+- **The entry the drop-down is set on is the first occurrence.** It is recorded as any entry is, and
+  the recurring entry starts from its date. The next occurrence comes one step later.
+- **Weekly is every 7 days** from the day the recurring entry started on. **Monthly is the same day
+  each month**, with a short month handled by ruling 5.
+- ***Eenmalig* is the absence of a repeat, not a third kind of repeat.** So every approved scenario,
+  none of which sets the drop-down, stays true as written.
+- **An entry being changed shows the drop-down too**, in the form's *Wijzigen* state (*On screen:
+  picking an entry to correct*, above), since that is the same form. That is how ruling 3 works. **A
+  one-off entry changed to *wekelijks* or *maandelijks* starts repeating from its date**, as if it had
+  been set so when recorded. What the drop-down shows on an *earlier* occurrence was open, and is
+  settled by *follow-up 2* (under *The latest occurrence sets the next*, below).
+- ~~**Where the drop-down sits on the form, and its caption, are not ruled.**~~ **Settled by follow-up
+  6 (next).** The field order is his ruling (*The fields ask what before how much*, above), so its
+  place was put to him.
+
+> ***Follow-up 6*, 2026-09-28: the drop-down is the last field, after *Rekening*, captioned
+> *Herhalen*.** Expense: *Omschrijving*, *Categorie*, *Bedrag*, *Datum*, *Rekening*, *Herhalen*.
+> Income: the same without *Categorie*.
+
+**Why**, the reason put with the recommendation: like *Rekening*, it is pre-filled and mostly left as
+it is, which is why *Rekening* went last (*Every income and expense is on an account*, above), and the
+order he ruled stays untouched. The caption was the documentation's proposal, and is now ruled with
+the place.
+
+| Rejected | Why |
+|---|---|
+| **Directly after *Datum*, before *Rekening*** | Put as the case for it, not against: the repeat is about the date, and would sit beside it. Not taken |
+
+### An occurrence is recorded on its own date
+
+> **Ruling 2. Each occurrence is recorded on its own date, as an ordinary entry, the first time
+> MoneyBud runs on or after that date.** Occurrences missed while MoneyBud was closed are **all**
+> recorded on the next start, each on its own date. **The same rule for income and for expenses**, so
+> a future-dated expense is still never recorded: that refusal stands.
+
+**Why**, in the documentation's reasoning: one rule for both kinds of entry. An occurrence is
+recorded once it has happened, which is what an entry on the *actual* layer is (*The second
+distinction: plan and actual*, above). And because no occurrence is ever recorded ahead, the refusal
+of a future-dated expense needs no exception (*Income may be dated in the future; an expense may not*,
+above).
+
+| Rejected | Why |
+|---|---|
+| **Income recorded ahead, when its period begins**, so that it counts towards *Niet toegewezen* for planning, **and expenses on the day** | Two rules, and less relevant once the period starts on payday, which is the next increment |
+
+**What that costs, stated plainly**, in the documentation's reading. A repeated salary counts in its
+period's *Niet toegewezen* only from its date. Planning a period before payday still means typing
+that income ahead by hand, which stays allowed, or assigning past *Niet toegewezen* for a while, shown
+with the marker (*Over-assigned*). **Until the start day is configurable**, a salary on the 27th falls
+in the period before the one it pays for, exactly as it does when typed by hand today. Recurring
+entries change nothing about that. The rejected option's second reason rests on the next increment.
+
+**Typing an income ahead is unchanged.** A future-dated income set to repeat is its own first
+occurrence, and the next comes one step after its date, recorded when that date arrives (*derived*).
+
+***Derived*:**
+
+- **"Runs on or after that date" means settling** ([ADR 0009](../decisions/0009-movements-are-entries.md)):
+  the first thing MoneyBud does when it opens, on every tick of the minute's timer and before every
+  act. So an occurrence dated today is recorded before anything the user types today.
+- **An occurrence is an income or an expense like any other.** It counts in its period's figures, its
+  account's balance, *Unassigned*, *Remaining* and *Accumulated* exactly as a typed one would. It
+  lands in its period's list, newest first. It can be changed and removed like any entry, removing
+  asking first. Its id is its recording moment, so **a balance correction typed on its day holds
+  it**, being typed after it (*A typed balance is what the bank said that day*, above). An occurrence
+  dated before a balance correction's day and recorded later, as happens when a recurring entry is
+  set up back-dated, is held by it like any late entry.
+- **An occurrence is never refused.** It copies an entry that was accepted (ruling 3), and its date
+  is never in the future. The one rule that could stand in its way, an archived category, brings the
+  category back instead (ruling 8). The account and the category it copies cannot have been deleted:
+  the latest occurrence on them is history, which keeps both in use.
+- **Several missed occurrences of one recurring entry are recorded in date order**, each copying the
+  one before, which amounts to copying the latest, since nothing can change in between.
+- **A recurring entry set up in the past has occurrences already due**: a new entry dated back and set
+  to repeat, or a one-off changed to repeat. Read literally, ruling 2 records them all at once, each on
+  its own date, in one notice. That reading was put to him, and is now *follow-up 4* (next).
+- **When MoneyBud was closed across a period's end**, the occurrences dated in the ended period and
+  that period's sweep both fall due at the next start. Which comes first changes what the ended period
+  shows. It was put to him, and is now *follow-up 5* (below).
+
+> ***Follow-up 4*, 2026-09-28: a recurring entry set up in the past records every occurrence already
+> due at once**, each on its own date, in one notice. That is ruling 2 as it stands, whether the entry
+> was typed back-dated or a one-off was changed to repeat.
+
+**Why**, the reason put with the recommendation: one rule, whether MoneyBud was closed or the entry
+was typed late. Setting up last month's salary on the first day of real use then brings this month's
+too. **The cost, put with it and accepted**: a weekly entry dated months back records many entries at
+once. Each is named in the notice and can be removed.
+
+| Rejected | Why |
+|---|---|
+| **Start from today**: the first occurrence recorded is the next one due after today | No reason against it was put beyond the recommendation's. In the documentation's reading, a second rule beside ruling 2, for the same missing occurrences |
+
+> ***Follow-up 5*, 2026-09-28: settling works through the days in order, as if MoneyBud had been
+> open.** The occurrences dated in a period are recorded **before that period is swept**, so the sweep
+> includes them.
+
+**Why**, the reason put with the recommendation: being closed then changes nothing about a period's
+end, which is what [ADR 0009](../decisions/0009-movements-are-entries.md) and
+[ADR 0010](../decisions/0010-sweeps-and-period-ends.md) rely on: settling sees exactly what the day
+would have seen.
+
+| Rejected | Why |
+|---|---|
+| **The sweep first, then the occurrences**, so the ended period shows *"nog niet weggezet"* or *"te veel weggezet"*, with *Restant bijwerken* | Every month-end he was away from MoneyBud would leave a button to press, for amounts MoneyBud recorded itself |
+
+**In the documentation's reading**, "the days in order" covers every writer settling has: on each day,
+that day's occurrences, and on a period's first day the ended period's end and sweep and the new
+period's planned money. How they order within one day changes no balance, since all are recorded
+before anything typed that day. That order is the plan's. **The plan put the boundary first** on a
+boundary day, and that day's occurrences after it, with several due on one day recorded in the order
+their repeats were set up; built so ([ADR 0011](../decisions/0011-recurring-entries.md)).
+
+### The latest occurrence sets the next
+
+> **Ruling 3. Each new occurrence copies the most recent one: its amount, label, category (for an
+> expense), account and frequency. Changing the latest occurrence changes what follows. Setting it to
+> *Eenmalig* stops the repeat. Earlier occurrences are never touched.**
+
+**Why**, in the documentation's reasoning: there is nothing new to learn. Changing and stopping a
+repeat happen in the form the user already corrects entries in, by the act he already has. It also
+meets the first interview's later wish, in his words: a changed price adjusted *"zonder dat ik een
+hele nieuwe reeks moet starten"*. Earlier occurrences are what happened, and a new price is not
+back-dated.
+
+| Rejected | Why |
+|---|---|
+| **A separate list of recurring entries**, to edit, pause and stop them | More to build and to show |
+
+***Derived*:**
+
+- **The date is not copied.** Ruling 3's list leaves it out, and ruling 5 keeps the day a monthly
+  entry started on apart from any one occurrence's date. So the next occurrence's date comes from the
+  recurring entry's own day and frequency. **Whether changing an occurrence's date moves that day** was
+  open, and **follow-up 3 (below) settles it: changing the latest occurrence's date does.**
+- **The account is copied, not worked out afresh**: not the pool account of the day for an income, and
+  not the category's backing account of the day for an expense. **Why:** the account on an occurrence
+  says where the money really comes in or goes out, the account the salary is paid into or the
+  subscription is charged to. That does not change when another account is made the pool, or when a
+  category is re-pointed. So a subscription on a backed category keeps being paid from the account it
+  was on, and still lowers *Opgebouwd*, whichever account paid (*Spending against a backed category
+  from another account*, above). To move it, the user changes the latest occurrence's account.
+- **The category is copied as the category, not as its name**, so a rename carries over (*Renaming a
+  category*, above).
+- **Changing the frequency of the latest occurrence** starts the new frequency from that occurrence's
+  date: from *maandelijks* to *wekelijks*, the next comes a week after it.
+- **A change to the latest occurrence is judged as if it were recorded now** (*A changed entry is
+  judged as if it were recorded now*, above), so a refused change leaves what follows as it was too.
+  **Changing only the drop-down is a change**, announced as one; the wording is copy. Saving the entry
+  with nothing changed stays quiet, the drop-down included (*Changes and renames are announced*,
+  above).
+- **Changing an earlier occurrence changes only that entry**, its date included (follow-up 3, below).
+  It is correcting history.
+- **A stopped recurring entry is started again** by setting its last occurrence back to *wekelijks* or
+  *maandelijks*. That entry is then a one-off set to repeat, so any occurrences already due since its
+  date are recorded at once (*follow-up 4*, above).
+- **"The latest occurrence" is, in the documentation's reading, the one recorded most recently**: the
+  one MoneyBud recorded last, or the entry the repeat started from until MoneyBud has recorded one. Not
+  the one with the latest date, so that correcting an older occurrence's date cannot hand the recurring
+  entry to it. What happens when the latest is removed is *follow-up 1* (under *Removing an occurrence
+  removes only that one*, below).
+
+> ***Follow-up 2*, 2026-09-28: on an earlier occurrence loaded into the form, the drop-down shows
+> *Eenmalig*, and cannot be changed there.** Only the latest occurrence's drop-down changes the repeat.
+> A one-off entry that never repeated stays changeable.
+
+**Why**, the reason put with the recommendation: the row is plain and the entry is a one-time record,
+so the form says what it is. Locked, it cannot start a second recurring entry beside the running one.
+
+| Rejected | Why |
+|---|---|
+| **The recurring entry's frequency, locked** | Once the repeat has been stopped, its earlier occurrences would still read *maandelijks* |
+| ***Eenmalig*, changeable**, so that setting it starts a second recurring entry from that entry | It would record every month twice, beside the running repeat |
+
+**In the documentation's reading**, "an earlier occurrence" means any occurrence of a recurring entry
+that is not its latest, a stopped one's included: those were all recorded as part of a repeat. The
+latest occurrence of a stopped repeat, the one set to *Eenmalig*, is no longer anyone's earlier
+occurrence, so its drop-down stays changeable, which is how a stopped repeat is started again (above).
+**Ruled at the scenario stage** (*Ruled at the scenario stage, 2026-09-28*, ruling 1, below), with what
+happens when that last occurrence is removed.
+
+> ***Follow-up 3*, 2026-09-28: changing the latest occurrence's date moves the day for every later
+> one.** The next comes one step after the new date, and a monthly entry repeats on the new date's day
+> from then on. **Changing an earlier occurrence's date changes only that occurrence.** **He chose this
+> against the recommendation.**
+
+The question was put with an example: the salary comes on the 25th once, because the 27th is a
+Saturday. **The consequence, stated plainly and accepted**: correcting the latest occurrence's date for
+a one-off like that moves every later occurrence too, so the next salary comes on the 25th, **unless
+the date is changed back before the next is recorded**. Once the next has been recorded, the new day
+stands, and the way back is to change the new latest occurrence's date to the 27th. No reason for the
+choice was recorded beyond the option itself. **In the documentation's reading**, it is ruling 3 taken
+at its word: the latest occurrence sets the next, its date included, so a changed billing day is put
+right the same way as a changed price, on the one row that carries the label.
+
+| Rejected | Why |
+|---|---|
+| **The recommendation: a date change corrects that occurrence only, except on the entry the repeat started from**, whose date sets the day | Put as the argument for it: a one-off like the salary on the 25th would not move later salaries, and a typo at setup would be put right where it was made. Not taken |
+| **A date change never moves the day**; to move it, stop the repeat and set it up again | Put with it: a mistyped first date would cost a new setup |
+
+**How it meets ruling 5**, in the documentation's reading, open to contradiction at the scenario gate
+rather than put to him: **"the day it started on" becomes "the day it was last set to"**. The user sets
+the day by setting up the repeat and by changing the latest occurrence's date. MoneyBud never sets it,
+so a clamped occurrence does not move it:
+
+- *Huur* on the 31st is recorded on 28 February, and returns to 31 March, as ruling 5 says. The 28
+  February occurrence is the latest, but its date was clamped, not changed.
+- **Changing the latest occurrence's amount, label, category or account leaves the day alone**, even
+  on a clamped occurrence, because its date was not changed. Only a changed date moves the day.
+- Changing the latest occurrence's date **to** the 31st makes it a month-end repeat from then on, clamped
+  and returning by ruling 5. Changing a clamped 28 February to the 27th makes the 27th the day.
+- **Weekly** moves to the new date's weekday, every 7 days from it.
+- **A new date far enough back that the next occurrence is already due** records it at once, each on
+  its own date, like a repeat set up in the past (*follow-up 4*, above). A new date ahead delays the
+  next; for an income it may be in the future, for an expense it may not, as typed.
+- **A typo in the first entry's date is fixed on that entry while it is still the latest.** After
+  MoneyBud has recorded the next one, correcting the first entry changes only it, and the day is moved
+  by correcting the latest instead.
+
+### Removing an occurrence removes only that one
+
+> **Ruling 4. Removing an occurrence removes only that one. The recurring entry carries on**, and
+> next month's still comes. **To stop it, set the latest occurrence to *Eenmalig*.**
+
+**Why**, in the documentation's reasoning: removing is how a single wrong or skipped occurrence is put
+right, such as a subscription not charged one month or an income typed by hand as well. One act keeps
+one meaning: removing takes an entry away, and the drop-down decides what follows.
+
+| Rejected | Why |
+|---|---|
+| **Removing the latest occurrence stops the repeat** | It would quietly stop a subscription meant to be kept |
+
+***Derived*:** removing an occurrence still **asks first** (*Removing an entry asks first*, above).
+The next occurrence comes on the date it would have come on: removing one does not move the schedule.
+
+**Left open by rulings 3 and 4 together**, and settled by *follow-up 1* (next): which occurrence counts
+as the latest once the latest has been removed, and what removing the only occurrence does.
+
+> ***Follow-up 1*, 2026-09-28: when the latest occurrence is removed, the most recently recorded
+> occurrence left becomes the latest.** It carries the grey label, and the next copies it. **The next
+> date does not move. Removing the only occurrence ends the recurring entry.**
+
+**Why**, the reason put with the recommendation: there is always a row on screen that carries the
+label, so a repeat can always be seen and stopped. Removing the only occurrence is almost always
+undoing a mistake.
+
+| Rejected | Why |
+|---|---|
+| **The removed occurrence's values go on setting the next**, with nothing on screen, until the next is recorded | A repeat could run with no row to stop it from |
+| **As ruled, but removing the only occurrence leaves the recurring entry running** with nothing on screen | The same, and its category and account would have no history left and could be deleted from under it |
+
+**In the documentation's reading:** "the next date does not move" holds although the new latest has
+an earlier date: the day was set before the removal, and removing is not changing a date (follow-up
+3, above). So a day moved on the removed occurrence stays moved. **What else was changed on it goes
+with it**: had it been given a new price, the next copies the occurrence before it, at the old price,
+and the same for its label, category, account and frequency. The next date stays as it was; the ones
+after it follow the new latest's frequency from there.
+
+### A monthly entry started on the 31st
+
+> **Ruling 5. A monthly entry started on the 31st falls on a short month's last day, and returns to
+> the 31st where the month has one.** It keeps the day it started on, not the clamped day. It is the
+> clamp already ruled for a period start day (*A start day the month is too short for clamps to its
+> last day*, above).
+
+So *Huur* started on 31 January falls on 28 February (29 in a leap year), 31 March, 30 April and 31
+May.
+
+**Why**, in the documentation's reasoning: one rule for a day a month is too short for, the one
+MoneyBud already has and the one billing cycles use, so a payment "on the 31st" stays a month-end
+payment.
+
+| Rejected | Why |
+|---|---|
+| **Once on the 28th, it stays there**, each occurrence one month after the one before | No reason was recorded. In the documentation's reading, one February would move a month-end payment to the 28th for good |
+
+***Derived*:** the 29th and the 30th behave the same way. Weekly has nothing to clamp. **The day it
+started on has to be kept beside the occurrences**, because after 28 February no occurrence's date
+says "the 31st" (*For the plan*, below).
+
+**Since follow-up 3** (above), "the day it started on" reads as **the day it was last set to**, by
+setting the repeat up or by changing the latest occurrence's date. A date clamped by MoneyBud never
+sets it. That is the documentation's reading, open at the scenario gate.
+
+### In the lists, the latest occurrence is labelled
+
+> **Ruling 6. The latest occurrence's row carries a small grey label, *maandelijks* or *wekelijks*,**
+> as a row on an account other than the pool account names its account. **Earlier occurrences are
+> plain rows.** Clicking the row loads it into the form with the drop-down set.
+
+**Why**, in the documentation's reasoning: it shows that an entry repeats, and which row to open to
+change or stop it. It reuses a look the lists already have (*Every income and expense is on an
+account*, above).
+
+| Rejected | Why |
+|---|---|
+| **The label on every occurrence** | No reason was recorded. In the documentation's reading, it would repeat on every period's row and stop pointing at the one row that sets what follows |
+
+**In the documentation's reading:** a row may carry both labels, its account and its frequency, and how
+they sit together is the build's. **"The lists" are the Overview's income and expense lists only**, not
+an account's history (*Ruled at the scenario stage, 2026-09-28*, ruling 3, below). **The latest occurrence is in the period its date falls in**, so on
+3 October, with Netflix due on the 25th, October's list has no Netflix row yet, and September's
+carries the label. Stopping a repeat before its next occurrence means stepping back to that period.
+
+### Said once, and saved straight away
+
+> **Ruling 7. Occurrences MoneyBud records by itself are said in one notice, once, naming what was
+> added**, such as *"Herhaald: Salaris € 2.500,00, Netflix € 13,99."* The sentence is copy. They are
+> **saved straight away**, as a sweep is (*Ruled at the scenario stage*, ruling 1, under *The sweep
+> and Restant*, above). **Several at one start go in the same notice.**
+
+**Why**, in the documentation's reasoning: entries the user did not type appear in his lists and
+change his figures, and without a word they would look like a mistake or a duplicate. Saved straight
+away so that it happens, and is said, exactly once: left unsaved, a restart with no change in between
+would record the same occurrences again from the kept data, and say so again. That is the sweep's
+reason, word for word.
+
+| Rejected | Why |
+|---|---|
+| **Not said, like planned money moving at a period's start** | No reason was recorded beyond the ruling's. In the documentation's reading, planned money moves between accounts on a plan the user made; an occurrence puts a new entry in the lists he reads |
+
+**In the documentation's reading:**
+
+- **This is a second exception to *Nothing is announced when a new period begins while MoneyBud is
+  open*** (*Staying open across a period boundary*, above), after the sweep. Occurrences are said
+  whatever day they fall on, a period's first day included, so one dated the 1st is said at the
+  boundary.
+- **Recorded on the minute's tick while MoneyBud is open, the notice comes then.** By the sweep's
+  precedent, a notice on the tick drops a waiting removal question (*For the plan*, under *The sweep
+  and Restant*, above).
+- **An occurrence landing in a period other than the one on screen leaves the screen where it is**,
+  as any entry does. Whether the notice names the period is copy.
+- **An expense occurrence without a label** is named in the notice some other way, by its category in
+  the documentation's reading. Copy.
+
+### An archived category comes back
+
+> **Ruling 8. An occurrence on a category archived since is recorded, and brings the category back,
+> and the notice says so**, as recording an expense against an archived category by hand does.
+
+**Why:** a subscription still paid goes on being tracked, and the rule is the one the user already
+knows for recording by hand (*Recording an expense against an archived category brings it back*,
+above).
+
+| Rejected | Why |
+|---|---|
+| **Archiving a category stops every repeat on it** | A subscription still paid would stop being tracked without a word |
+
+**In the documentation's reading:** this is a **fourth way back**, and the first not taken by the user
+himself. It is announced like the other three, so the reason there is no separate un-archive act still
+holds: bringing back is a side effect, and always said. **To keep a category archived**, the user sets
+its recurring expense's latest occurrence to *Eenmalig*, before archiving or after it comes back.
+**Bringing back a former sweep destination does not set it again** (*The destination is one list*,
+under *The sweep and Restant*, above).
+
+### What else an occurrence meets
+
+***Derived*, all of this subsection**, each from an occurrence being an ordinary entry (ruling 2):
+
+- **Deleting.** Every occurrence is history, so a category with one cannot be deleted, and neither can
+  an account with one (*Deleting a category that has no history anywhere*, *Managing accounts*,
+  above). Nothing new is needed, because a recurring entry always has an occurrence: removing the only
+  one ends it (*follow-up 1*).
+- **Backing.** A recurring expense on a backed category is an expense against it: it lowers
+  *Opgebouwd*, whichever account it is on. A recurring income on the pool account joins *Unassigned*
+  as any income does, and the sweep collects from there.
+- **The sweep.** An occurrence is recorded before its period is swept, while MoneyBud runs and, by
+  *follow-up 5*, after it was closed across the period's end too. **An occurrence dated in a period
+  already swept** changes that period's *Restant*: the ended period shows the difference, and *Restant
+  bijwerken* moves it, never MoneyBud by itself (*A swept period that changes*, under *The sweep and
+  Restant*, above). Only a recurring entry set up in the past (*follow-up 4*) or a latest occurrence's
+  date moved far enough back (*follow-up 3*) can produce one. **Noted at the build, 2026-09-28**: that
+  list is short by two, both following from rules above rather than new ones. A stopped repeat
+  started again from an old last occurrence, and a latest occurrence whose frequency is changed to a
+  shorter step (monthly to weekly), set the next date from that occurrence's date, so either can
+  record an occurrence into a period already swept. The period then shows the difference, as for the
+  two cases named.
+- **Opening a period.** Unchanged. An occurrence is not a *Budget*, so it neither makes nor ends the
+  offer of a plan.
+- **The clock turned back.** Nothing is recorded until the clock passes the next occurrence's date
+  again, and nothing already recorded is undone. An expense occurrence then dated after the clock's
+  today is a future-dated expense, which typing refuses: changing it would be refused too, since a
+  change is judged as if recorded now, although saving it unchanged is not.
+- **The clock set wrongly ahead.** Every occurrence up to that date is recorded, incomes and expenses
+  that have not happened, and they stay once the clock is put right. Each can be removed; the recurring
+  entry does not record it again, because removing one does not move the schedule (ruling 4). Low, as
+  for settling ([§11](11-risks-and-technical-debt.md)).
+
+### Ruled at the scenario stage, 2026-09-28
+
+`scenario-writer` raised three points while writing the recurring feature files. **All three were put
+to the stakeholder on 2026-09-28**, each with a recommendation, and **he took the recommendation every
+time**. They are rulings of the scenario stage, not approvals of the scenarios: the files still go to
+the scenario gate, and the documentation's readings in this section stay readings until then. No
+reason was recorded with any of the three beyond the ruling's own, so each *Why* is the
+documentation's.
+
+> **1. Removing a stopped repeat's last occurrence leaves the repeat stopped.** Removing the
+> occurrence that was set to *Eenmalig* makes the occurrence before it the stopped repeat's last one.
+> **It shows *Eenmalig* and is changeable**, so the repeat can be started again from there. **Nothing
+> is recorded by itself.**
+
+**Why**, in the documentation's reading: the user stopped the repeat, and removing one entry is not
+an act of starting it again (ruling 4: removing takes an entry away, the drop-down decides what
+follows). Starting again stays one deliberate change, on the one row that can make it.
+
+| Rejected | Why |
+|---|---|
+| **The one before, recorded as *maandelijks*, becomes the latest of a running repeat again**, and anything overdue is recorded at once | No reason was recorded. In the documentation's reading, removing an entry would restart a repeat the user stopped, and could record a run of overdue entries he did not ask for |
+| **It stays stopped, with every remaining occurrence locked** | No reason was recorded. In the documentation's reading, the repeat could then never be started again from what is left, only set up anew |
+
+**How it fits the follow-ups.** It is *follow-up 1* applied to a stopped repeat: the most recently
+recorded occurrence left takes the removed one's place, and here that place is "last of a stopped
+repeat". So it shows what the removed one showed, *Eenmalig*, although it was recorded while the
+repeat ran. It is the one exception to *follow-up 2*'s lock, and a narrow one: *follow-up 2* locks an
+occurrence that is not the last, and this one has become the last. The reading under *follow-up 2*,
+that a stopped repeat's last occurrence stays changeable, is **ruled** by this.
+
+> **2. The *Herhalen* drop-down offers *Eenmalig*, *wekelijks*, *maandelijks*, in that order.**
+
+**Why**, in the documentation's reading: the default first, then the steps from short to long, the
+order ruling 1 names them in. A yearly step, if it is ever missed, goes last without reordering the
+rest.
+
+| Rejected | Why |
+|---|---|
+| **Most-used first**: *Eenmalig*, *maandelijks*, *wekelijks* | No reason was recorded. In the documentation's reading, "most used" is a guess about his use, and the list is three items long |
+
+> **3. The grey *maandelijks* or *wekelijks* label is shown only in the Overview's income and expense
+> lists**, not in an account's history.
+
+**Why**, in the documentation's reading: the label points at the row to open to change or stop a
+repeat, and income and expenses are changed only from the Overview's lists (*The accounts strip, and
+an account's history*, follow-up, under *Accounts and net worth*, above). In the history the label
+would point at a row that cannot be opened for it.
+
+| Rejected | Why |
+|---|---|
+| **On the latest occurrence's row in the history too** | No reason was recorded. In the documentation's reading, as above: a label on a row that does not open the entry |
+
+This narrows the documentation's reading under ruling 6, which spoke only of "the lists": it means the
+Overview's two lists.
+
+**A note for the scenario gate: the recurring scenarios are the first to use calendar dates.** Every
+approved scenario so far names days relative to a period ("the current budget period", "the previous
+one"), and none configures a start day (*A start day the month is too short for clamps to its last
+day*, above). A monthly repeat keeps a **day of the month**, and a short month clamps it (ruling 5),
+which no period-relative phrase can name. So these scenarios say "31 January" and "28 February". It is
+a change of convention in the feature files, not a new rule of MoneyBud.
+
+### Approved at the scenario gate, 2026-09-28
+
+**The stakeholder approved the scenarios** on 2026-09-28: `repeat-an-entry.feature` (22 scenarios, 29
+cases), `change-a-repeat.feature` (25 scenarios, 28 cases) and four scenarios added to
+`keep-data.feature`, 51 scenarios and 61 cases in all. **With them he approved every documentation's
+reading their headers list as open to contradiction at the gate**, since the scenarios assert them.
+Among them: the day a monthly repeat falls on is the day it was last set to, never a date MoneyBud
+clamped; "the latest" is the occurrence recorded most recently; a day moved on a removed latest
+occurrence stays moved; occurrences dated a period's first day are announced; the notice drops a
+waiting removal question; an occurrence with no label is named by its category; and the feature files'
+move to calendar dates. Where this section still says "in the documentation's reading" about one of
+these, it now stands as approved. The plan is next.
+
+### Proposed display terms for recurring entries
+
+Ruled on 2026-09-28, the caption in *follow-up 6*. **Moved into *Dutch display terms* (below) at the
+build, 2026-09-28**, when `Tekst` got their constants, by the precedent of the earlier proposals
+tables: `TekstTests` reads that table and holds `Tekst` to every row in it. This table is kept as the
+record of where each was ruled.
+
+| English (this project) | Proposed Dutch | Status |
+|---|---|---|
+| One-off (the default frequency) | Eenmalig | **Ruled** 2026-09-28 (ruling 1) |
+| Weekly (a frequency, and the row's label) | wekelijks | **Ruled** 2026-09-28 (rulings 1 and 6) |
+| Monthly (a frequency, and the row's label) | maandelijks | **Ruled** 2026-09-28 (rulings 1 and 6) |
+| Frequency (the drop-down's caption) | Herhalen | **Ruled** 2026-09-28 (*follow-up 6*). First the documentation's proposal |
+
+**Capitals.** Ruling 1 writes *Eenmalig* with a capital and the other two without, as the row label in
+ruling 6 is. The row's label is lower-case. Whether the drop-down's own items are capitalised is the
+build's, and the table will hold whatever it chooses. *"Herhaald:"* in the notice is copy, not a term.
+**The plan capitalised them** (reading 8, approved at the plan gate): the drop-down shows *Eenmalig*,
+*Wekelijks*, *Maandelijks*, and the grey label stays lower-case. `TekstTests` compares without case,
+so the table's row holds both.
+
+### For the plan
+
+What the rulings leave to the plan, and do not ask of the stakeholder.
+
+**Answered by [the plan](../plans/increment-12-recurring.md), approved at the plan gate on 2026-09-28,
+and built.** The list below is kept as it was written. Where each point went:
+
+| Point | Answer |
+|---|---|
+| How a recurring entry is kept | **State beside the entries**, `RecurringEntry`: its occurrences' ids, its frequency (none once stopped), the day a monthly one was last set to, and the next date. **The latest is the highest id, not stored.** A stopped repeat stays a repeat ([ADR 0011](../decisions/0011-recurring-entries.md), decisions 1 to 3) |
+| The file format | **Version 5**, with a `repeats` list. **Version 4 is read**, as data with no repeats (plan D2, approved on the recommendation); versions 1 to 3 stay refused |
+| Settling's third writer, in date order | **Event by event**: an occurrence due before the next boundary, otherwise the boundary. On a boundary day the boundary comes first, then that day's occurrences; several on one day in the order set up. `Settle` lost its once-a-day early return (ADR 0011, decision 4) |
+| The field order | *Herhalen* last on both forms, held by `WindowMarkupTests` |
+| Saved straight away | Built: wherever the screen takes the sweeps settling made, it takes the occurrences too, and keeps the ledger, a refused act and one that changed nothing included. ADR 0011 narrows ADR 0009's gap again, and 0009 and 0010 carry dated notes |
+| One notice, in what order | The plan (reading 7) put everything MoneyBud did by itself first. **Ruled at the build: in the order it happened** (*Recurring entries: chosen in the build*, below) |
+| An occurrence open in the form when the next is recorded | It locks on *Eenmalig* at the next redraw, and saving it changes that entry alone (plan, reading 4) |
+| Saving the latest unchanged | The unchanged check compares the frequency for an entry that sets the repeat, and the list writing back the value it holds changes nothing (plan, reading 5) |
+| Recording occurrences changes the ledger | The screen keeps the ledger whenever settling recorded one, on opening, on the tick and after any act |
+| The removal question on a latest occurrence | One sentence more: *"De herhaling gaat door; zet hem op Eenmalig om te stoppen."* Copy (plan, reading 9) |
+| A record | **ADR 0011**, written with the build |
+
+- **How a recurring entry is kept.** Ruling 4 makes it outlive the removal of its latest occurrence,
+  and ruling 5 needs the day it was last set to, which no occurrence's date says after a short month.
+  Follow-up 3 moves that day when the latest occurrence's date is changed, and only then, so a change
+  must tell a changed date from an unchanged one. Follow-up 1 needs the next date to survive removing
+  the latest. So it is **state beside the entries**, not only a field on the latest one. How it is held
+  is the plan's.
+  It changes the file format, to version 5, and whether version 4 is read or refused is a question for
+  the stakeholder at the plan gate, as it was for the last three increments.
+- **Settling gains a third writer**, of incomes and expenses, beside planned money and the sweep.
+  ADR 0009 and 0010 rest on settling seeing exactly what the day saw, because nothing changes while
+  MoneyBud is closed. Occurrences dated while it was closed are written later, so that argument holds
+  only if they are written in date order with the period ends between them, which *follow-up 5*
+  rules.
+- **The field order** grows by one, *Herhalen* last (*follow-up 6*). `WindowMarkupTests` holds the
+  order, so it changes with the markup.
+- **Saved straight away** (ruling 7) narrows ADR 0009's accepted saving gap again, as ADR 0010 did for
+  sweeps.
+- **One notice** with a sweep's sentences and whatever the act says: in what order.
+- **An occurrence loaded in the form when MoneyBud records the next one** stops being the latest while
+  it is open. What saving it then does, with its drop-down still set, is the plan's to settle.
+- **Saving the latest occurrence unchanged** must hand the drop-down back as it was loaded, so that it
+  is recognised as unchanged (*Changes and renames are announced*, above).
+- **Recording occurrences changes the ledger**, so the screen must save after it (*Tell(changed:)* in
+  [§8.4](08-crosscutting-concepts.md)).
+- **The removal question on a latest occurrence** could say that the repeat carries on and how to stop
+  it. That is copy.
+
+**A record is likely**, in the documentation's judgement: how a recurring entry is kept, what settling
+writes and in what order, and the file format are architecture, costly to change once data is real,
+and the same kind of choice ADR 0009 and 0010 recorded. **None is written now.** These rulings are
+requirements. The record belongs with the plan that makes the choice, as the last two did. **It is
+[ADR 0011](../decisions/0011-recurring-entries.md)**, from the plan's decision D1.
+
+### Recurring entries: chosen in the build
+
+**One ruling the stakeholder took at the build**, and **four choices the build made without putting
+them to him**, listed so that they can be contradicted. Everything else the user can see is the
+plan's, approved at the plan gate with its ten readings. Choices inside the code, such as the
+overload the plan left to the build, are in [§8.1](08-crosscutting-concepts.md).
+
+#### Ruled at the build, 2026-09-28: the notice says things in the order they happened
+
+> **What settling did before an act comes in front of the act's own sentence. The occurrences the
+> act itself caused come after it**: those of a repeat set up in the past, started again, or whose
+> latest occurrence's date was moved back.
+
+**What forced it.** Plan reading 7 put everything MoneyBud did by itself first in the notice, as the
+sweep does. That conflicted with a step approved in the corrections increment, *"I should be told
+that the expense was changed"*, which requires the notice to **open with** the change. An expense
+dated back and set to repeat, or a latest occurrence moved back, records occurrences as part of the
+act, and reading 7 would have put them in front of it. Put to him as a multiple-choice question with
+a recommendation, **he chose the recommendation**. No reason was recorded beyond the option's own. In
+the documentation's reading, a notice read from left to right then tells what happened in the order it
+happened, and the approved step stays exactly as approved.
+
+| Rejected | Why |
+|---|---|
+| **Occurrences always first**, loosening the corrections step from "opens with" to "contains" | No reason was recorded. In the documentation's reading, it would have changed an approved scenario's step to fit a plan reading, rather than the reading to fit what was approved |
+
+**Built** as `MoneyBudApp.SettleBeforeActing`, called by the four acts that can record occurrences
+themselves: recording and changing an expense or an income. It settles before the act and holds what
+that did, so the notice is: what settling did, the act's sentence, what the act caused. For every other
+act, whatever settling did is still said in front ([§6](06-runtime-view.md), *Settling day by day*).
+**Plan reading 7 is superseded in this one point**; its sentences, their order within what settling
+did (occurrences, the categories they brought back, then sweeps) and the tick dropping a waiting
+question stand.
+
+#### Chosen in the build, not put to the stakeholder
+
+| Choice | Why |
+|---|---|
+| **The *Herhalen* caption sits to the left of its list**, in a panel that carries the field spacing, so the caption centres on the list | A rendered frame of the headless run first showed it off-centre by the style's bottom margin, the same margin the stakeholder noticed on *Staat op* at the backing increment. With the margin moved from the list to the panel, it centres. The same run, over the real window with synthetic data outside the repository, passed every other check: the lists writing back said and saved nothing, the latest occurrence opened changeable and an earlier one locked, a frequency picked in the window was a change, an entry open across a tick locked there with the tick's notice shown, and the label sat beside an account name ([§8.4](08-crosscutting-concepts.md), *Recurring entries on screen*) |
+| **A row's account name and its grey repeat label sit side by side on one caption line** | Ruling 6 left how the two labels sit together to the build (*In the lists, the latest occurrence is labelled*, above). Both are the same grey caption, so they share its line |
+| **The notice names each occurrence with its day**: *"Herhaald: Netflix € 13,99 (25 september), …"* | Plan reading 7's proposed copy, built as proposed, so that several occurrences of one entry at one start do not read like a duplicate. An expense with no label is named by its category, as approved at the scenario gate. Ruling 7's example, without days, is kept as it was ruled; the sentence is copy |
+| **What `spec-reviewer` found, fixed** | No faked scenario and no money defect, and two low items. The one-notice step accepted a notice left over from before the last *When*; it now requires a notice new since then, proved by a mutation that stopped the tick announcing occurrences, which now fails it. And a class comment still described the plan's order of the notice, since corrected |
+
+### What this section leaves open
+
+**Nothing is open for the stakeholder before the scenarios.** Six points stood here, found while the
+rulings were written up. **All six were put to him on 2026-09-28** as multiple-choice questions with a
+recommendation, and **ruled the same day: five on the recommendation, one against it.** The list is
+kept as a record of where each went; the ruling, its reasoning and the rejected options are in the
+subsection it went to.
+
+| Point raised | Where it went |
+|---|---|
+| 1. What sets the next once the latest occurrence is removed, and what removing the only one does | ***Follow-up 1***, on the recommendation: the most recently recorded occurrence left becomes the latest; the next date does not move; removing the only one ends the repeat (*Removing an occurrence removes only that one*) |
+| 2. What the drop-down shows on an earlier occurrence loaded into the form | ***Follow-up 2***, on the recommendation: *Eenmalig*, locked (*The latest occurrence sets the next*) |
+| 3. Whether changing an occurrence's date moves the day it repeats on | ***Follow-up 3*, against the recommendation**: changing the **latest** occurrence's date moves the day for every later one, with the cost of a one-off date accepted; an earlier occurrence's date changes only itself (same subsection) |
+| 4. Whether a repeat set up in the past records what is already due | ***Follow-up 4***, on the recommendation: at once, each on its own date, in one notice (*An occurrence is recorded on its own date*) |
+| 5. The order of occurrences and a period's sweep after MoneyBud was closed across its end | ***Follow-up 5***, on the recommendation: day by day, occurrences before their period's sweep (same subsection) |
+| 6. The drop-down's place and caption | ***Follow-up 6***, on the recommendation: last, after *Rekening*, captioned ***Herhalen*** (*The choices*) |
+
+**Still open, and only at the scenario gate:** the documentation's readings and derivations in this
+section, **most of all how follow-up 3 meets ruling 5**: that the day a monthly entry repeats on is the
+day it was **last set to**, by setting it up or by changing the latest occurrence's date, and never a
+date MoneyBud clamped (*The latest occurrence sets the next*, follow-up 3). It follows from the two
+rulings read together, so it was not put to him separately. The scenarios will assert it, which is
+where he can contradict it.
+
+**Three more points came from the scenario stage**, 2026-09-28, and all three were ruled the same day
+on the recommendation (*Ruled at the scenario stage, 2026-09-28*, above): removing a stopped repeat's
+last occurrence leaves it stopped, with the one before changeable; the drop-down's order; and the grey
+label only in the Overview's lists. **Nothing from the scenario stage is left open for him.**
+
 ## Dutch source terms
 
 The stakeholder material is in Dutch. This table fixes the mapping, so that reading the interviews
@@ -6509,6 +7225,9 @@ rather than terms this project reasons in (*The default categories* above).
 | Inkomsten / Uitgaven | Income / Expenses |
 | Waar het van is | What an income **is from** — carried by the income's **Label**, which is why that label is required. Not a category: it says what this money is, not what it is for |
 | Overzichtelijk | Legible, clear at a glance — see quality goal 1 in [§1](01-introduction-and-goals.md) |
+| Maandelijks, wekelijks, jaarlijks | The **frequencies** of a *Recurring transaction*, from round 1. Monthly and weekly are settled; yearly is deferred until missed (*Recurring entries*, above) |
+| Eenmalig, eenmalige toevoegingen | A **one-off** entry: round 1's *"eenmalige toevoegingen"*. Since 2026-09-28 also what MoneyBud displays for the default frequency |
+| Reeks | A *Recurring transaction*: round 1's *"een hele nieuwe reeks"*, which ruling 3 of *Recurring entries* spares him when a price changes |
 | Startscherm | The **Overview**, the screen MoneyBud opens on (*The overview, and its ring* above). In the interviews "overzicht" is also the everyday word for insight in general, which is not a screen |
 | Radiaal diagram | The **Ring** at the head of the Overview |
 
@@ -6579,6 +7298,8 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Still to sweep (an ended period's line) | nog niet weggezet |
 | Swept too much (an ended period's line) | te veel weggezet |
 | A shortfall (the marker's badge) | Tekort |
+| Frequency (the list on the income and expense forms that sets it) | Herhalen |
+| One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label) | Eenmalig / wekelijks / maandelijks |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -6602,7 +7323,14 @@ marker's first new badge since *Rood*. **All six came into the table with the sw
 *Proposed display terms for the sweep*, under *The sweep and Restant* (above), which is kept as the
 record of the ruling. *Restant* displays the *Period leftover*. ***Leftover***, one category's, and
 ***Sweep***, the act, still have no display term of their own: nothing on screen names either apart
-from the period's *Restant*, and the notices that say a sweep happened are copy.
+from the period's *Restant*, and the notices that say a sweep happened are copy. **The recurring
+entries' two rows, *Herhalen* and *Eenmalig / wekelijks / maandelijks*, were ruled on 2026-09-28**
+and came into the table with that increment's build the same day, by the same precedent. Until then
+they waited in *Proposed display terms for recurring entries*, under *Recurring entries* (above),
+which is kept as the record. The table writes the frequencies as the grey row label does, lower-case
+after *Eenmalig*; the drop-down shows them capitalised, *Wekelijks* and *Maandelijks*, and `TekstTests`
+compares without case, as for every row. *Recurring transaction* and *Occurrence* have no display term:
+the notice that names occurrences, *"Herhaald: …"*, is copy.
 
 **The accounts increment's twelve rows came with its build** (2026-09-27). They were proposed and
 approved in *Proposed display terms*, under *Accounts and net worth* (above), and held there until
@@ -6657,7 +7385,9 @@ row*, above). The two rows share the word *Plan*, which is deliberate.
 **None since 2026-09-27.** The last one, below, was answered with the sweep's rulings. It is kept
 where it stood, with its reasoning, because the answer chose between the two answers it set out. The
 points the sweep's rulings leave unsettled are listed where they arise, under *The sweep and Restant*
-(*What this section leaves open*), not filed here, as backing's were.
+(*What this section leaves open*), not filed here, as backing's were. **So were the six points the
+recurring rulings of 2026-09-28 left**, under *Recurring entries* (*What this section leaves open*).
+All six were ruled in follow-ups the same day, one against the recommendation, so none is open.
 
 **As it read until then:** **One**, below. It is recorded so that it is not rediscovered late, and it is **not** waiting on an
 answer from anyone: there is nothing yet for either answer to be true of (*Why it cannot be answered
@@ -6819,6 +7549,17 @@ announced. The remaining point, the English term *Period leftover*, stays the do
 *What this section leaves open*, in that section, says where each went. None of it is specified or
 built. **Since then it is both**: specified at the scenario gate on 2026-09-27, and built on 2026-09-28
 ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)).
+
+Eight more were answered on 2026-09-28 for **recurring entries** (*Recurring entries*, above), each on
+the recommendation: the choices in the drop-down, when an occurrence is recorded, how a repeat is
+changed and stopped, what removing an occurrence does, a monthly entry started on the 31st, how the
+lists show a repeat, whether recorded occurrences are said, and an occurrence on an archived category.
+Writing them up left **six points**, and **six follow-ups were ruled the same day**: five on the
+recommendation, and one against it, changing the latest occurrence's date moving the day for every
+later one. *What this section leaves open*, in that section, says where each went. **Three more were
+ruled at the scenario stage** the same day, each on the recommendation: removing a stopped repeat's
+last occurrence, the drop-down's order, and where the grey label shows. None of it is specified or
+built.
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -7133,6 +7874,23 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Does backing the only backed category make it the destination? | Same section, ruling 9 — **no, backing never chooses the destination**. Chosen over choosing the only backed category by itself. Ruled at the scenario stage, 2026-09-27 |
 | How is a shortfall shown? | Same section, ruling 10 — **as the negative figure**, with the one marker and the badge *Tekort*; the wording is copy. Ruled at the scenario stage, 2026-09-27 |
 | May a past row show *Opgebouwd* under today's backing while that period's *Resterend* was swept? | *What a period sweeps*, follow-up — **yes, accepted as it is**: both are true, and the line says where the money went. Chosen over hiding *Opgebouwd* in periods that ended before the backing, an exception to "*Opgebouwd* follows today's backing in every period". Follow-up, 2026-09-27 |
+| How often can an entry repeat? | *The choices: Eenmalig, wekelijks, maandelijks*, under *Recurring entries*, ruling 1 — **a drop-down on the income and expense forms: *Eenmalig*, the default, *wekelijks* and *maandelijks***, in the stakeholder's own words "an extra drop down". *Jaarlijks* is **deferred until missed**, not rejected. Settled 2026-09-28 |
+| When is an occurrence recorded? | *An occurrence is recorded on its own date*, ruling 2 — **on its own date, as an ordinary entry, the first time MoneyBud runs on or after that date**; missed ones all on the next start, each on its own date; **the same for income and expenses**, so a future-dated expense is still never recorded. Chosen over income recorded ahead when its period begins and expenses on the day: two rules, and less relevant once the period starts on payday. Settled 2026-09-28 |
+| How is a repeat changed or stopped? | *The latest occurrence sets the next*, ruling 3 — **each new occurrence copies the most recent one**, amount, label, category, account and frequency; changing it changes what follows, **setting it to *Eenmalig* stops it**, and earlier occurrences are never touched. Chosen over a separate list of repeating items, more to build and to show. Settled 2026-09-28 |
+| What does removing an occurrence do? | *Removing an occurrence removes only that one*, ruling 4 — **only that one goes; the repeat carries on**. To stop, set the latest to *Eenmalig*. Chosen over removing the latest stopping the repeat, which would quietly stop a subscription meant to be kept. Settled 2026-09-28 |
+| What does a monthly entry started on the 31st do in a short month? | *A monthly entry started on the 31st*, ruling 5 — **it falls on the month's last day and returns to the 31st** where the month has one, the clamp ruled for a period start day. Chosen over staying on the 28th once it got there. Settled 2026-09-28 |
+| How do the lists show a repeat? | *In the lists, the latest occurrence is labelled*, ruling 6 — **the latest occurrence's row carries a small grey *maandelijks* or *wekelijks***, earlier ones are plain, and clicking loads it with the drop-down set. Chosen over the label on every occurrence. Settled 2026-09-28 |
+| Is an occurrence MoneyBud records by itself said? | *Said once, and saved straight away*, ruling 7 — **yes, in one notice, once**, naming what was added, several at one start together, and **saved straight away**, as a sweep is. Chosen over saying nothing, like planned money moving. Settled 2026-09-28 |
+| What happens to an occurrence on a category archived since? | *An archived category comes back*, ruling 8 — **it is recorded and brings the category back**, and the notice says so, as recording by hand does. Chosen over archiving stopping every repeat on it, which would stop tracking a subscription still paid without a word. Settled 2026-09-28 |
+| What sets the next occurrence once the latest is removed? | *Removing an occurrence removes only that one*, follow-up 1 — **the most recently recorded occurrence left becomes the latest**; the next date does not move; **removing the only occurrence ends the repeat**. Chosen over the removed one's values setting the next unseen, and over the repeat running on with nothing on screen. Follow-up, 2026-09-28 |
+| What does the drop-down show on an earlier occurrence? | *The latest occurrence sets the next*, follow-up 2 — ***Eenmalig*, locked**. Chosen over the frequency locked, which would still read *maandelijks* after a stop, and over *Eenmalig* changeable, which could record every month twice. Follow-up, 2026-09-28 |
+| Does changing an occurrence's date move the day it repeats on? | Same section, follow-up 3 — **changing the latest occurrence's date moves the day for every later one**; an earlier occurrence's date changes only itself. **Chosen against the recommendation**, which moved the day only from the entry the repeat started from, so that a salary paid early once would not move later salaries; that cost is accepted, undone by changing the date back before the next is recorded. Also chosen over never moving the day. Follow-up, 2026-09-28 |
+| Does a repeat set up in the past record what is already due? | *An occurrence is recorded on its own date*, follow-up 4 — **yes, at once**, each on its own date, in one notice. Chosen over starting from today. Follow-up, 2026-09-28 |
+| Which comes first after MoneyBud was closed across a period's end: its occurrences or its sweep? | Same section, follow-up 5 — **the occurrences**: settling works through the days in order, so the sweep includes them. Chosen over sweeping first, which would leave a button to press after every month-end away. Follow-up, 2026-09-28 |
+| Where does the drop-down sit, and what is it called? | *The choices*, follow-up 6 — **last, after *Rekening***, captioned ***Herhalen***. Chosen over directly after *Datum*. Follow-up, 2026-09-28 |
+| What does removing a stopped repeat's last occurrence do? | *Ruled at the scenario stage, 2026-09-28*, under *Recurring entries*, ruling 1 — **the repeat stays stopped**: the occurrence before becomes its last, shows *Eenmalig* and is changeable, so it can be restarted from there; nothing is recorded by itself. Chosen over the one before running the repeat again and recording what is overdue, and over every remaining occurrence locked. Ruled at the scenario stage, 2026-09-28 |
+| In what order does the *Herhalen* drop-down list its choices? | Same section, ruling 2 — ***Eenmalig*, *wekelijks*, *maandelijks***. Chosen over most-used first. Ruled at the scenario stage, 2026-09-28 |
+| Where is the grey *maandelijks* / *wekelijks* label shown? | Same section, ruling 3 — **only in the Overview's income and expense lists**, not in an account's history. Chosen over the history's row too. Ruled at the scenario stage, 2026-09-28 |
 
 **Eight** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
@@ -7336,3 +8094,15 @@ start needed nothing stored. The increment was built to it and is green. Two poi
 raised were ruled the same day (*Sweep: ruled at the build*, above), and what the build chose beyond
 the rulings is in *Sweep: chosen in the build, not put to the stakeholder*. It answers the question
 this section held last, now built as ruled: the difference is shown, and one click moves it.
+
+**Recurring entries are settled, not specified** (2026-09-28). The eight rulings are in *Recurring
+entries* (above). They reach nothing in the table above except by treating an occurrence as the
+ordinary entry it is, and one answer is extended: an archived category now has a fourth way back, an
+occurrence MoneyBud records by itself. **Nothing here blocks its scenarios.** The six points the
+write-up left were ruled in follow-ups the same day (*What this section leaves open*, in that
+section): which occurrence is the latest once the latest is removed, what the drop-down shows on an
+earlier occurrence, whether a changed date moves the repeat (the one ruled against the
+recommendation), whether a repeat set up in the past records what is already due, the order of
+occurrences and a period's sweep after MoneyBud was closed across its end, and where the drop-down
+sits. Three more were ruled at the scenario stage, each on the recommendation. What is left is the
+documentation's readings, for the scenario gate.

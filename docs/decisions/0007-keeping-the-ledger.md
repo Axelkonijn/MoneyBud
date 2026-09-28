@@ -22,6 +22,15 @@ points here.
 > sweep destination, which categories were backed when each period ended, and what a period's line
 > let go. Version 3 is refused as well, approved by the stakeholder at the plan gate: it has no record
 > of past period ends, and reading it would mean guessing them.
+>
+> **Note, 2026-09-28, later the same day.** The file format is **version 5** since the
+> recurring-entries increment, [ADR 0011](0011-recurring-entries.md). It adds a `repeats` list: each
+> recurring entry's occurrence ids, frequency, the day a monthly one was last set to, and its next
+> date. **Version 4 is read**, as data with no repeats, approved by the stakeholder at the plan gate:
+> nothing could repeat when it was written, so reading it guesses nothing. It is the first older
+> version any MoneyBud reads. A version-4 document carrying `repeats` is refused, and versions 1 to 3
+> still are. "Until real use an older file is simply unreadable" is so far true of every version but
+> this one; reading it was free, and promises nothing for the next.
 
 ## Context
 

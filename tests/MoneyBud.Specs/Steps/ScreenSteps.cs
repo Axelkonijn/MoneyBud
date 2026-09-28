@@ -378,6 +378,7 @@ public sealed class ScreenSteps(SpecContext context)
 
         Assert.Equal(expected, actual);
         AssertAccountColumn(table, lines.Select(e => e.AccountName));
+        AssertRepeatsColumn(table, lines.Select(e => e.RepeatLabel));
     }
 
     [Then(@"^the incomes listed in the (current|previous|next) budget period should be exactly these, in this order:$")]
@@ -391,6 +392,7 @@ public sealed class ScreenSteps(SpecContext context)
 
         Assert.Equal(expected, actual);
         AssertAccountColumn(table, lines.Select(i => i.AccountName));
+        AssertRepeatsColumn(table, lines.Select(i => i.RepeatLabel));
     }
 
     // The account a row names, checked only where the table has the column; a blank cell is a row
@@ -400,6 +402,17 @@ public sealed class ScreenSteps(SpecContext context)
         if (!table.ContainsColumn("account")) return;
 
         Assert.Equal(table.Rows.Select(row => row["account"] is "" ? null : row["account"]), named);
+    }
+
+    // The small grey label a row carries, checked only where the table has the column; a blank cell
+    // is a row that carries none (repeat-an-entry.feature's header).
+    internal static void AssertRepeatsColumn(Table table, IEnumerable<string?> labels)
+    {
+        if (!table.ContainsColumn("repeats")) return;
+
+        Assert.Equal(
+            table.Rows.Select(row => row["repeats"] is "" ? null : Tekst.RepeatLabel(SpecParsing.Frequency(row["repeats"])!.Value)),
+            labels);
     }
 
     [Then(@"^no expenses should be listed in the (current|previous|next) budget period$")]

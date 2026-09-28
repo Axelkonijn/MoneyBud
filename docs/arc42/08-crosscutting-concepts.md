@@ -100,7 +100,8 @@ to them:
   it first. So "nothing acts when a period opens" (the carry-over row, below) is no longer true
   without exception, and this is the exception. It is kept to one member with one piece of state,
   and the sweep is meant to use the same step. The runtime is in [§6](06-runtime-view.md). **Since the
-  sweep increment it does** (next subsection).
+  sweep increment it does** (next subsection). **Since the recurring-entries increment it also acts
+  because a day came**, recording occurrences (*Recurring entries: state beside the entries*, below).
 - **Two figures, two questions, and neither stored.** `ThereFor` is location-side: what is in the
   backing account for the category since that account became its backing, counting only expenses
   paid from that account. `AccumulatedFor` is purpose-side: what has moved in since the category was
@@ -181,6 +182,71 @@ to them:
   takes the category out of every period-end record.
 - **`HasBudget` is still not a reader.** The *Restant* reads `UnassignedIn` and `RemainingFor`, which
   read the figures.
+
+### Recurring entries: state beside the entries, and settling day by day
+
+Since the recurring-entries increment (2026-09-28; [§12](12-glossary.md), *Recurring entries*;
+[ADR 0011](../decisions/0011-recurring-entries.md)). The rulings are in §12. What the code adds to
+them:
+
+- **An occurrence is an ordinary entry.** `Expense` and `Income` keep their shape. Nothing that works
+  out a balance, a *Budget* figure, *Remaining*, *Unassigned* or the *Restant* knows whether an entry
+  repeats, so every rule about a recorded entry, a balance correction holding it included, applies to
+  an occurrence with no new code.
+- **The repeat is state beside the entries, in `Recurring.cs`.** `Frequency` is `Weekly` or `Monthly`.
+  **One-off is `null`**, the absence of a repeat rather than a third kind, so an entry left at it is
+  exactly the one-off entry of every earlier increment. `RecurringEntry`, internal to the domain,
+  holds the ids of its occurrences, its `Frequency?` (null once stopped), its `Day` (a monthly one's,
+  null otherwise) and its `Next` date (null once stopped). It is kept because no single entry can say
+  any of those: after 28 February no date says "the 31st", the next date must outlive the removal of
+  the latest occurrence, an earlier occurrence must be known as one to open locked, and a stopped
+  repeat must still be a repeat. `SetFrom(date, frequency)` is **the only thing that sets the day**, so
+  a date MoneyBud clamped to a short month's last day never moves it (§12, ruling 5 read with
+  follow-up 3). Weekly adds 7 days; monthly takes the kept day in the next month, or that month's last
+  day.
+- **The latest occurrence is the highest id, and is not stored.** The id is the recording order
+  (*An entry has an id*, below), and an occurrence always takes the next one, so the last id in a
+  repeat's list is the one recorded most recently. Changing an earlier occurrence's date past the
+  latest's does not make it the latest. Removing the latest hands the role to the one before, with
+  nothing to update.
+- **Two queries hold the drop-down, and the domain enforces the lock.** `FrequencyOf(entry)` is the
+  frequency for the latest occurrence of a running repeat and null for every other entry: it is both
+  the value the *Herhalen* list loads and the grey label. `SetsTheRepeat(entry)` is true for a one-off,
+  the latest occurrence and a stopped repeat's last one. For any other entry the frequency handed to a
+  change is **ignored**, and the change is to that entry alone.
+- **A frequency is one more field of a change.** `ChangeExpense` and `ChangeIncome` gained an overload
+  that takes a `Frequency?`. The overload without it passes `FrequencyOf(entry)`, so existing callers
+  keep the frequency as it is; a changed date on the latest occurrence still moves the day, as
+  follow-up 3 rules for any change of that date. The plan had offered a `RepeatChoice?` wrapper or an overload, because
+  `null` already means one-off and cannot also mean "unchanged"; the build chose the overload. The
+  unchanged check includes the frequency only for an entry that sets the repeat, so a frequency alone
+  is a change and a locked entry saved unchanged is still unchanged. The repeat is touched only after
+  the change has gone through, so **a refused change leaves the repeat as it was**. Setting it to
+  one-off stops the repeat; a new frequency or a new date on the latest sets the day and next date
+  from its date; a frequency on a stopped repeat's last starts it again.
+- **Removing takes the id out.** The next date does not move, and a repeat left with no occurrence is
+  dropped: the repeat ends.
+- **Settling becomes a third writer, of incomes and expenses, and acts because a day came.** Until
+  now it acted only because a period began (*Where the dimensions meet*, above). `Settle` now steps
+  from event to event: the earliest due occurrence if it falls before the next boundary, otherwise
+  the boundary. So an occurrence is recorded before its period is swept, and on a boundary day after
+  the boundary. The once-a-day early return is gone, because a repeat set up or moved back in the
+  past has occurrences due on days already settled through. The runtime is in
+  [§6](06-runtime-view.md), *Settling day by day*.
+- **An occurrence is never checked, and still never in the future.** It copies the latest occurrence
+  and cannot be refused. Only an occurrence whose date has come is recorded, so "a future expense is
+  never recorded" holds without a check. One on an archived category brings it back, as recording by
+  hand does (§12, ruling 8). `OccurrenceMade` carries the entry and the category brought back, and
+  `TakeOccurrencesMade` empties the list, as `TakeSweepsMade` does: the ledger decides what was
+  recorded, the screen what to say.
+- **"Shows, never blocks" needs nothing new.** No act gained a refusal. A refused recording sets no
+  repeat up.
+- **`FromSnapshot` checks the repeats**: each has occurrences, all existing expenses or all existing
+  incomes; no entry is in two repeats or twice in one; a running one has a frequency and a next date,
+  a stopped one neither; a monthly one has a day from 1 to 31, any other none; and the frequency is
+  one MoneyBud knows.
+- **`HasBudget` is still not a reader.** An occurrence touches no *Budget*, and does not change whether
+  a period is offered a plan.
 
 ### The two layers meet in exactly one method
 
@@ -625,12 +691,16 @@ source, *Leftover* and the *Period leftover* (*The sweep: a movement for a perio
 row had named three things the plan must store. ADR 0010 stores two of them, the backing at a period's
 end and which period a sweep was for, and shows the third, the day of the first start, to be
 unneeded. The *Leftover* row said a leftover needs a period end to be computed at: the period-end
-record is that. Read the absence of a §12 term from this table as "built", not as "nobody wrote a row
-for it".
+record is that. **Recurring transactions** left when the recurring-entries increment was built
+(2026-09-28): *Recurring transaction*, *Occurrence* and *Frequency* (*Recurring entries: state beside
+the entries*, above). Their row had left two things for the plan, a recurring entry kept beside its
+entries and settling as a third writer working through the days in order, and ADR 0011 does both.
+**With it the table holds no concept waiting to be built**: the two rows left are things that are
+deliberately never coded. Read the absence of a §12 term from this table as "built", not as "nobody
+wrote a row for it".
 
 | §12 concept | Why there is no code |
 |---|---|
-| *Recurring transaction* | A later increment ([§1.1](01-introduction-and-goals.md)) |
 | *Over budget* as a stored state | Not missing — deliberately never stored. It is derived from *Remaining* wherever it is asked for, because §12 defines it as a property of a figure rather than a flag on a category |
 | A period **closing** | Not missing — deliberately impossible. `BudgetPeriod` is a pair of dates with no state at all, so there is nothing that could ever refuse an expense on grounds of age (§12, *Ending versus closing*) |
 
@@ -839,7 +909,10 @@ switch to real use**, at least up to and including the accounts increment
 ([§12](12-glossary.md), *Demo data may not survive a new version*, *Real use before accounts*). The
 backing increment changed it again, to version 3, with the stakeholder's leave. A movement's amount
 is stored as cents like every other entry's. The sweep increment changed it to version 4, approved at
-its plan gate; an amount let go is stored as cents too.
+its plan gate; an amount let go is stored as cents too. The recurring-entries increment's version 5
+stores no new amount: an occurrence is an ordinary expense or income, and a repeat holds ids, a
+frequency, a day and a date, but no money. An occurrence copies its latest's `Money` as it is, so
+nothing is computed either.
 
 **The sweep moves a worked-out amount without reopening whole cents.** The *Restant* is *Unassigned*
 plus a set of *Remaining* figures, and the difference a swept period shows is that minus what moved:
@@ -905,6 +978,21 @@ categories that exist; a let-go amount is above zero, once per period, and for a
 swept for. **A start that sweeps saves straight away**, like any sweep ([§6](06-runtime-view.md), *The
 sweep at settling*).
 
+**The recurring-entries increment took the file to version 5** (2026-09-28,
+[ADR 0011](../decisions/0011-recurring-entries.md)). It adds a top-level `repeats` list, each with
+`occurrences` (entry ids, in the order recorded), `frequency` (`"weekly"`, `"monthly"`, or null once
+stopped), `day` (the day of the month a monthly one was last set to, or null) and `next` (a date, or
+null once stopped). The occurrences themselves are ordinary `expenses` and `incomes`, and the latest
+occurrence is not written, since it is the highest id. **Version 4 is read, not refused**, the first
+older version any MoneyBud has read. It was decision D2 of the plan, approved at the plan gate on the
+recommendation: version 4 has no repeats because nothing could repeat when it was written, so reading
+it as data with no repeats guesses nothing, unlike versions 1 to 3. **A version-4 document that has a
+`repeats` property is refused**, since that is not what version 4 wrote. Versions 1 to 3 are still
+refused. The next save writes version 5. A frequency word MoneyBud does not know makes the file
+unreadable, as an unknown movement reason does. `Ledger.FromSnapshot` checks the new rules too
+([§8.1](#81-domain-model), *Recurring entries*). **A start that records an occurrence saves straight
+away**, like one that sweeps ([§6](06-runtime-view.md), *Settling day by day*).
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -944,7 +1032,7 @@ the code at the close of the increment:
 | Ruling | What it means for the build, and how it is built |
 |---|---|
 | **Everything is kept**, as one continuous history, indefinitely. No fresh start per year | Nothing is pruned or archived by age. Periods never close, so there is no boundary to cut at. **Built:** `Ledger.ToSnapshot` takes every category, budget, expense and income, and nothing anywhere removes kept data by age |
-| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), then the sweep destination, period-end records and amounts let go (ADR 0010), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
+| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), then the sweep destination, period-end records and amounts let go (ADR 0010), then the repeats (ADR 0011), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
 | **Saved automatically after every change.** No save button. **A save that works says nothing** | Every act that changes the ledger ends with the data written. There is no save act and no "save now" state to offer, and no notice for a save that succeeds. **Built:** `MoneyBudApp.Tell` calls `Keep` after every act that went through **and changed the ledger** (`Tell(changed:)`). Adding a name already there, assigning zero and a negative assignment clipped in full against a *Budget* of zero are said but not saved. A refusal, an unchanged save and a declined question never reach `Tell`. A save that works sets nothing the screen shows, unless it ends a failure (below). The scenario "offer no act for saving" lists every command of the screen and the forms in full, and checks every `Command` binding in the window's markup against them |
 | **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
 | **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
@@ -956,7 +1044,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010) |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -1385,6 +1473,66 @@ the list writing back on first show and when the backed categories change said a
 line and the button showed in an ended period, and a tick across a boundary showed the sweep's notice
 ([§11](11-risks-and-technical-debt.md), the Desktop row).
 
+### Recurring entries on screen
+
+The rulings are in [§12](12-glossary.md), *Recurring entries*, with the build's own readings and the
+one ruling taken at the build in *Recurring entries: chosen in the build*, there. How the presentation
+layer holds them:
+
+- **Each entry form ends with a *Herhalen* list.** `FrequencyChoices` is `FrequencyChoice.All`:
+  *Eenmalig*, *Wekelijks*, *Maandelijks*, in the ruled order, each a `FrequencyChoice` over a
+  `Frequency?`. `Frequency` is what the form holds, null (*Eenmalig*) until chosen or loaded.
+  `ChosenFrequency` is the two-way binding.
+- **The lock is the domain's, read afresh.** `CanChangeFrequency` is true for a new entry and, in
+  *Wijzigen*, `Ledger.SetsTheRepeat` of the entry. While locked, `ChosenFrequency` shows *Eenmalig*
+  and ignores every write. `Load` takes the frequency from `Ledger.FrequencyOf`, and `Clear` resets
+  it. `MoneyBudApp.Refresh` has both forms re-read the lock, so an entry open in the form when the
+  tick records its next occurrence locks there (plan reading 4).
+- **The list writes back like the account list**: a plain value, a null write ignored, and a write of
+  the value already held changing nothing. So a list writing back on first show, on load or after a
+  tick cannot turn an unchanged save into a change. `Record` hands on `Frequency`, and `Save` hands on
+  `ChosenFrequency.Frequency`, so a locked entry always hands on one-off, which the domain ignores.
+- **The grey label is on the Overview's rows only.** `ExpenseLine.RepeatLabel` and
+  `IncomeLine.RepeatLabel` are *maandelijks* or *wekelijks* when `FrequencyOf` is not null, and null
+  on every other row. `HistoryLine` has no such field (scenario-stage ruling 3).
+- **Occurrences are said and kept wherever settling ran**, taken beside the sweeps in the
+  constructor, `Tick`, `Tell`, `Refuse` and `SayNothing`. `Notice.Repeated` lists the occurrences a
+  notice names, so a step can check what was named without parsing the sentence. The order of the
+  sentences, and `SettleBeforeActing` in the four entry acts, are in [§6](06-runtime-view.md),
+  *Settling day by day*.
+- **Removing the latest occurrence of a running repeat asks one sentence more**, that the repeat goes
+  on and how to stop it (`Tekst.AskToRemove` with `repeatGoesOn`). Every other removal question is as
+  it was.
+- **The words are two rows of §12's display-terms table**: `Tekst.Frequency` (*Herhalen*), and
+  `OneOff`, `Weekly` and `Monthly` (*Eenmalig*, *Wekelijks*, *Maandelijks*), held by `TekstTests`. The
+  grey label is `Tekst.RepeatLabel`, the same word lower-cased. The *"Herhaald: …"* sentence
+  (`Tekst.Repeated`) and the removal question's extra sentence are copy.
+
+**The Desktop only binds.** The *Herhalen* `ComboBox` is the last field of both entry forms, in a
+`DockPanel` with its caption to the left, bound to `FrequencyChoices` and `ChosenFrequency` and
+enabled by `CanChangeFrequency`. The grey label is a caption beside the account name on the row, on
+one line. `WindowMarkupTests` holds the list last on both forms, after the account. No markup test
+covers the lock, the write-back or the label. **A headless run of the real window checked them**, in
+a scratch Avalonia.Headless harness outside the repository, over the real `MainWindow` with synthetic
+data, and every check passed:
+
+- on first show both *Herhalen* lists showed *Eenmalig*, and their write-back said and saved nothing;
+- two rows carried *maandelijks*, one of them beside its account name, *Creditcard*, and the caption
+  *Herhalen* was shown;
+- the latest occurrence opened on *Maandelijks*, changeable, and saving it unchanged after the list's
+  write-back said and saved nothing;
+- picking *Wekelijks* in the window's own list and saving was a change, *"Uitgave gewijzigd…"*, and
+  the row then said *wekelijks*;
+- an income left open in the form across a tick that recorded its next occurrence stayed open, was
+  then locked on *Eenmalig* with the list disabled, the tick's *"Herhaald: …"* notice was on screen,
+  and the ledger was saved;
+- the screen stayed on the period it showed; the earlier occurrence opened locked on *Eenmalig*, saving
+  it unchanged said nothing, and the new latest occurrence, a period on, still carried the label;
+- a rendered frame showed the caption off-centre by the style's bottom margin, the same margin the
+  stakeholder had noticed on *Staat op*. With the margin moved to the `DockPanel`, it centres.
+
+([§11](11-risks-and-technical-debt.md), the Desktop row.)
+
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
 `RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
@@ -1518,6 +1666,38 @@ licence to leave a decision in the window because a text test could reach it. A 
   period's row when an ended period with no row for the category is on screen, and the correction
   steps step back to the current period the same way.
 
+**How the recurring-entries scenarios reach the screen** (`RecurringSteps`, with additions to
+`RecordExpenseSteps`, `RecordIncomeSteps`, `CorrectionSteps`, `ScreenSteps`, `SharedSteps`,
+`KeepingSteps`, `SpecContext` and `SpecParsing`). They are the first to use calendar dates, because a
+monthly repeat keeps a day of the month:
+
+- **"Today is 25 August 2026" makes a new empty ledger on that day** (`SpecContext.BeginOn`), so the
+  empty ledger counts as first started then, which is the binding note approved at the scenario gate.
+  It must come before any other setup, and throws otherwise rather than silently losing what was set
+  up.
+- **", repeating monthly" or ", repeating weekly" is an ending on the record steps**, *Given* and
+  *When*, with and without a date, an account or a label. It is one group that **always matches**,
+  empty or not (`SpecParsing.RepeatingEnding`), because a group that may not match would change the
+  step method's number of arguments. The date and account patterns stop before it, so the ending is
+  never swallowed into either. A *When* that repeats goes through the form, choosing in its *Herhalen*
+  list. A *Given* sets the repeat up on the ledger, as every *Given* does, and **fails if an occurrence
+  was already due**, since a setup step must not record one that no *Then* would account for.
+- **"The day becomes D while MoneyBud is open"** moves the clock and calls `Tick`, as the Desktop's
+  timer would. **"I close MoneyBud, and start it again on D"** restarts through the real store on
+  that day.
+- **"I should be told, in one notice, that these repeating entries were recorded"** compares the
+  table, as a multiset, with `Notice.Repeated`, and checks that each occurrence's words are in the
+  notice's text. It requires a notice **new since the last *When***: a `BeforeStep` hook notes the
+  notice before each *When*, and a notice left over from an earlier step fails the step even when it
+  names the same entries. `spec-reviewer` found the step accepting a stale notice; a mutation that
+  stopped the tick announcing occurrences now fails it.
+- **"MoneyBud should not have recorded any repeating entry"** uses the same hook: it notes, before
+  each *When*, every occurrence MoneyBud has recorded (all of each repeat's but the first, which the
+  user typed), and checks that none was added since, and that a new notice names none.
+- **The list tables take an optional `repeats` column**, checked against the row's `RepeatLabel`; a
+  table without it does not check it. Frequency changes and "should open with the frequency X,
+  changeable / locked" go through the form, like every correction.
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -1610,6 +1790,35 @@ no period. One of its tests stands in for a scenario that cannot tell kept perio
 lost ones (§12, *A note for the stakeholder*), and a mutation check confirmed it fails when they are
 lost. `TekstTests` holds the six new rows.
 
+The recurring-entries increment added `RecurringTests`, for the domain, which covers:
+
+- the date arithmetic: weekly, and monthly on a late day through short months, back to its day after;
+- settling day by day: a period's occurrences before its sweep and the boundary day's after it,
+  several due on one day in the order set up, a repeat set up in the past recording what is due at
+  once, the occurrences made given once, and a clock turned back recording nothing;
+- an occurrence: copying the latest, its account included, and becoming the new latest; bringing an
+  archived category back and saying so; an income repeating as an expense does;
+- the latest by id, not by date, when an earlier occurrence is moved past it;
+- changing: a locked occurrence ignoring the frequency it is given, the latest saved with its own
+  frequency unchanged and with another a change, a change naming no frequency leaving the repeat, a
+  refused change leaving it as it was, and only a changed date on the latest moving the day;
+- removing: the latest handing over and keeping the next date, the only one ending the repeat, and a
+  stopped repeat's last leaving it stopped; one-off stopping it and the last occurrence starting it
+  again with what is due.
+
+`RecurringScreenTests` covers the presentation layer: the list's choices, order and default; the list
+writing back what it shows leaving an unchanged save unchanged; an entry open in the form locking once
+the next occurrence is recorded; the label on the latest row of the Overview and nowhere in an
+account's history, and *wekelijks* on a weekly income; the notice's sentence with each day, and its
+order, occurrences an act caused after the act's sentence and those settling recorded before it in
+front; occurrences said and kept after a refused act; a category brought back in the same notice; the
+tick dropping a waiting question when it records one and saying nothing when it does not; and the
+removal question's extra sentence. `StorageTests` now reads version 5, reads version 4 as data with no
+repeats and writes version 5 back, refuses a version-4 document with repeats and versions 1 to 3,
+keeps a running, a weekly and a stopped repeat exactly, a monthly one on the 31st included, refuses a
+frequency word it does not know, and holds every new load check. `WindowMarkupTests` holds *Herhalen*
+last on both entry forms, and `TekstTests` the two new rows.
+
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
 it was held only by `StorageTests`. That test checks that the store reports such a folder as
@@ -1695,3 +1904,17 @@ boundary, now handled, and one kept-data scenario that could not tell what it wa
 unit test. A headless run of the real window checked that the *Restant naar* list writing back what it
 shows says and saves nothing, that an ended period shows its line and the button, and that a tick
 across a boundary shows the sweep's notice.
+
+**At the close of the recurring-entries increment** (2026-09-28): **1587 tests passing** with zero
+warnings. That is 949 scenario cases, 61 more than the 888 above, from `repeat-an-entry.feature` (29
+cases), `change-a-repeat.feature` (28) and the four scenarios added to `keep-data.feature`, and 638
+developer unit tests, 55 more than the 583 above. `spec-reviewer` found no faked scenario and no money
+defect, and two low items, both fixed: the one-notice step accepted a notice left from before the last
+*When*, and a class comment still described the plan's order of the notice. One approved corrections
+step conflicted with the plan's order of the notice, and the stakeholder ruled at the build (§12,
+*Recurring entries: chosen in the build*). A headless run of the real window passed every check the
+plan listed, and more: the *Herhalen* lists writing back on first show, on load and after a tick said
+and saved nothing, an earlier occurrence opened locked, the label sat beside an account name, an entry
+open across a tick locked there with the tick's notice on screen, and a frequency picked in the window
+was a change. It also found the caption off-centre on its list, now fixed (*Recurring entries on
+screen*, above).

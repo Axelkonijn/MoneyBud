@@ -35,6 +35,11 @@ describing.
 - **The sweep at settling**, since the sweep increment, in words: what settling does at a period's
   end, and why a sweep is said and saved straight away wherever settling ran, a refused act included
   ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)).
+- **Settling day by day**, since the recurring-entries increment, in words: settling steps from event
+  to event, so an occurrence of a recurring entry is recorded before its period is swept, and it is
+  said and saved straight away, as a sweep is. An act that sets up or moves a repeat settles again
+  after its change, and the notice says each thing where it happened
+  ([ADR 0011](../decisions/0011-recurring-entries.md)).
 
 ## Recording an expense through the screen
 
@@ -92,8 +97,9 @@ What the diagram shows that the static view does not:
   can notice that. If it ever matters, the place to cache is once per `Refresh`.
 
 **The same `Refresh` runs on a timer.** Once a minute the Desktop calls `MoneyBudApp.Tick`, which
-settles money planned for a period that has begun and sweeps a period that has ended (*Settling* and
-*The sweep at settling*, below), retries a save that failed
+settles money planned for a period that has begun, sweeps a period that has ended and records the
+occurrences that have come due (*Settling*, *The sweep at settling* and *Settling day by day*, below),
+retries a save that failed
 (below) and then refreshes, so that the *Huidige periode* label follows
 the clock when a period ends while MoneyBud is open ([§8.4](08-crosscutting-concepts.md)).
 
@@ -194,7 +200,11 @@ the pool account to the backing account, dated the period's first day, with the 
 and the pool account of that day, however late it runs**, because nothing can change the ledger
 between that day and the first act, start or tick after it, and each of those settles first. Since
 the sweep increment it also records and sweeps the period that ended, before the planned money moves
-(*The sweep at settling*, below).
+(*The sweep at settling*, below). **Since the recurring-entries increment the "nothing to do the same
+day" no longer holds as a rule**: `Settle` has no once-a-day early return, because a repeat set up or
+moved back in the past has occurrences due on days already settled through, and they are recorded by
+the next call (*Settling day by day*, below). A second call with nothing due still finds nothing to
+do, which is what the tick relies on.
 
 **The one gap.** An act that settles and is then refused does not save. It has changed nothing of its
 own, and only an act that changes the ledger saves (`Tell(changed:)`, below). The movements its
@@ -204,7 +214,9 @@ Nothing is lost all the same. If MoneyBud closes or crashes first, the next star
 data again, from the same `settledThrough`, and writes the same movements, because nothing could have
 changed in between. **Since the sweep increment the gap no longer holds for a sweep**: an act whose
 settling swept a period saves, refused or not (*The sweep at settling*, below;
-[ADR 0010](../decisions/0010-sweeps-and-period-ends.md)). Planned money keeps the gap.
+[ADR 0010](../decisions/0010-sweeps-and-period-ends.md)). **Since the recurring-entries increment it
+no longer holds for an occurrence either** (*Settling day by day*, below;
+[ADR 0011](../decisions/0011-recurring-entries.md)). Planned money keeps the gap.
 
 **A read never settles.** `PeriodOverview.Of`, `BalanceOf`, `AccumulatedFor` and the rest only read.
 In the minute between a period beginning and the next tick, *Opgebouwd* counts that period's
@@ -261,6 +273,68 @@ what it shows on first show and on every redraw. `Ledger.SetSweepDestination` re
 destination already set **before settling** and returns `Unchanged`, and `MoneyBudApp` then says
 nothing, saves nothing and redraws nothing (*Backing a category*, below, for the same pattern).
 
+## Settling day by day: occurrences before their period's sweep
+
+Since the recurring-entries increment ([ADR 0011](../decisions/0011-recurring-entries.md)). An
+occurrence of a recurring entry is written by settling, as planned money and a sweep are, so it runs
+from the same three places. What changed is the shape of settling's loop, and where an act's notice
+puts what settling did.
+
+**Inside `Settle`, event by event.** Each step takes whichever comes first:
+
+- **an occurrence**, when the earliest next date among the running repeats is due by today and falls
+  before the next period boundary. It is a copy of the repeat's latest occurrence (amount, label,
+  category, account), dated the next date, with the next id. It is never checked and never refused,
+  and one on an archived category brings the category back. The ledger adds it to its list of
+  **occurrences made**, and the repeat's next date moves on a step;
+- **the next period boundary**, when it has begun: the period-end record, the sweep and the planned
+  money, exactly as in *The sweep at settling*, above, and `settledThrough` moves to that day.
+
+When neither is left, `settledThrough` moves to today. Because an occurrence must come *before* the
+boundary to go first, **on a boundary day the boundary comes first** and that day's occurrences after
+it. Several due on one day are recorded in the order their repeats were set up, which is the order the
+ledger holds them in. So after MoneyBud was closed across a period end, every occurrence dated in the
+ended period is in it before the period is swept, as if MoneyBud had been open (§12, *Recurring
+entries*, follow-up 5). A clock turned back finds nothing due and passes no boundary.
+
+**An act that sets up or moves a repeat settles again after its change.** Recording an expense or
+income with a frequency, a change that gives a one-off a frequency, and any change that goes through
+to the occurrence that sets a repeat (the latest, or a stopped repeat's last) each call `Settle` once
+more inside the ledger once the change is made. Only a new frequency or a new date on it moves the
+next date, and only then can anything come due. So what is already due is recorded **within the same act** (follow-up 4), rather than
+by the next tick in a notice of its own. By then the act's first settling has passed every boundary
+up to today, so these occurrences are simply recorded, each into the period its date is in. One that
+lands in a period already swept is a late entry there like any other, and the period's line shows the
+difference.
+
+**Said in the order it happened.** `MoneyBudApp` takes the occurrences made wherever it takes the
+sweeps made: in the constructor, in `Tick`, and in `Tell`, `Refuse` and `SayNothing`. What settling
+did becomes one *"Herhaald: …"* sentence naming every occurrence with its day, a sentence for each
+category an occurrence brought back, then the sweep sentences. **For the four entry acts**, recording
+and changing an expense or an income, `MoneyBudApp.SettleBeforeActing` settles first, in the screen,
+and holds what that did. The act then calls the ledger, whose own settling finds nothing left, and
+whatever the act itself caused is taken afterwards. The notice is: what settling did before the act,
+the act's own sentence, what the act caused. For every other act all of it goes in front, as for a
+sweep. This order was ruled at the build (§12, *Recurring entries: chosen in the build*); the plan
+had put everything MoneyBud did by itself first, which broke an approved corrections scenario.
+
+**Saved straight away, for the sweep's reason.** An occurrence is announced, so settling it again
+after a restart would announce it twice. The notice's `Settled.Said` is not null whenever an
+occurrence was recorded, so `Tell`, `Refuse` and `SayNothing` keep the ledger, a refused act and one
+that changed nothing included. The constructor and `Tick` keep it because `Settle` returned that it
+changed something. **On the tick** an occurrence's notice drops a waiting removal question, as a
+sweep's does.
+
+**An entry open in its form can stop being the latest.** Every `Refresh` has the expense and income
+forms re-read `CanChangeFrequency` through `Ledger.SetsTheRepeat`. So when the tick records the next
+occurrence while the latest is open in *Wijzigen*, the form now shows *Eenmalig*, locked, and saving
+it changes that entry alone.
+
+**The *Herhalen* list writing back is not an act.** It writes back what it shows, like the account
+list. `ChosenFrequency` ignores a write of nothing and any write while locked, and a write of the
+value already held changes nothing. The list only sets a field of the form; the ledger hears of it
+when the entry is recorded or saved.
+
 ## Backing a category: one choice, at most one movement
 
 `CategoryRow.ChosenBacking` is bound two-way to the row's *Staat op* list. When it is set, it calls
@@ -312,7 +386,7 @@ sequenceDiagram
             Start->>Ledger: StartNew (the six defaults, nothing saved yet)
         else moneybud.json is there
             Store->>Json: Read(text)
-            alt not a whole version-4 document
+            alt not a whole version-5 document, nor a version-4 one without repeats
                 Json-->>Store: null
                 Store-->>Start: Unreadable
                 Start->>Store: Dispose()
@@ -329,7 +403,7 @@ sequenceDiagram
             end
         end
         Start-->>Desktop: Opened(new MoneyBudApp(ledger, store))
-        Note over Start,Ledger: the new MoneyBudApp calls Ledger.Settle(),<br/>saves if planned money moved or a period was swept,<br/>and says any sweep in the notice
+        Note over Start,Ledger: the new MoneyBudApp calls Ledger.Settle(),<br/>saves if planned money moved, a period was swept or an occurrence recorded,<br/>and says any occurrence and sweep in the notice
     end
     Note over Desktop: Opened: the main window, on the current period<br/>Refused: a small window with the refusal's text, and OK closes MoneyBud
 ```
@@ -350,14 +424,17 @@ What the diagram shows that the static view does not:
   exactly where this one began. A new ledger has settled through today, so settling writes nothing
   either.
 - **The version in the diagram is the current one**: version 1 when this was drawn, version 2 since
-  the accounts increment, version 3 since the backing increment, and version 4 since the sweep
-  increment. Every older version is met as unreadable
-  ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)).
+  the accounts increment, version 3 since the backing increment, version 4 since the sweep
+  increment, and version 5 since the recurring-entries increment. **Version 4 is the first older
+  version that is read**, as data with no repeats, unless it carries a `repeats` list. Versions 1 to 3
+  are met as unreadable ([ADR 0011](../decisions/0011-recurring-entries.md)).
 - **Loaded data may be saved at once.** Since the backing increment, a start on or after the first
   day of a period that has not been settled moves that period's planned money and saves it before
   the user does anything (*Settling*, above). Since the sweep increment it may also sweep the periods
   that ended while MoneyBud was closed, each at its own end, and say so in one notice (*The sweep at
-  settling*, above).
+  settling*, above). Since the recurring-entries increment it may also record every occurrence that
+  came due while it was closed, day by day and before each period's sweep, named in the same notice
+  (*Settling day by day*, above).
 
 ## Saving after an act, and a save that fails
 
@@ -374,11 +451,11 @@ sequenceDiagram
 
     Note over App: an act went through (recorded, changed, removed,<br/>assigned, plan taken over, added, archived, renamed, deleted,<br/>backing set, destination set, brought up to date),<br/>having settled first inside the ledger
     App->>App: Tell(text, landedIn, changed)
-    App->>Ledger: TakeSweepsMade()
-    Note over App: any sweep is said first, in front of the act's text
-    alt changed nothing (already there, assign 0, clipped in full against 0), and nothing swept
+    App->>Ledger: TakeOccurrencesMade(), TakeSweepsMade()
+    Note over App: what settling did before the act is said in front of the act's text,<br/>occurrences the act itself caused after it (entry acts only)
+    alt changed nothing (already there, assign 0, clipped in full against 0),<br/>and nothing swept or recorded by itself
         Note over App: said, not saved
-    else changed, or a sweep was made
+    else changed, or a sweep or an occurrence was made
         App->>Ledger: ToSnapshot()
         Ledger-->>App: the whole ledger, categories keyed 1..n
         App->>Store: TrySave(snapshot)
@@ -397,11 +474,11 @@ sequenceDiagram
     loop once a minute
         Timer->>App: Tick()
         App->>Ledger: Settle()
-        App->>Ledger: TakeSweepsMade()
-        opt a sweep was made
-            Note over App: drop a waiting question, show the sweep's notice
+        App->>Ledger: TakeOccurrencesMade(), TakeSweepsMade()
+        opt an occurrence or a sweep was made
+            Note over App: drop a waiting question, show their notice
         end
-        opt Settle moved money, or IsUnsaved
+        opt Settle moved money or recorded an occurrence, or IsUnsaved
             App->>Store: TrySave(the whole ledger, as above)
         end
         App->>App: Refresh
@@ -421,13 +498,16 @@ What the diagram shows that the static view does not:
   "not saved" that described no change, and `Tell(changed:)` was the fix. **The one exception, since
   the sweep increment, is a sweep**: if the act's own settling swept a period, the ledger has changed
   and is saved, a refusal included (*The sweep at settling*, above). A refusal is drawn beside the
-  `Refuse`, which the diagram does not draw, saves only for a sweep.
+  `Refuse`, which the diagram does not draw, saves only for a sweep. **Since the recurring-entries
+  increment an occurrence is the second exception**, for the same reason (*Settling day by day*,
+  above).
 - **The save line is not the notice.** `SaveLine` is its own property, and the window shows it as a
   line of its own beside the notice and the question ([§8.4](08-crosscutting-concepts.md)). "Not
   saved" stays until a save works, stepping included. "Saved again" stays until the next act or step.
 - **The timer is the Desktop's; what it does is the presentation layer's.** `Tick` saves only when
   something is unsaved or, since the backing increment, when settling moved money because a period
-  began. So on a healthy disk the timer writes at most once a period.
+  began. So on a healthy disk the timer writes at most once a period, and since the
+  recurring-entries increment also on each day an occurrence comes due while MoneyBud is open.
 - **Choosing the backing already set is not an act.** It reaches neither the ledger's settling nor
   `Tell`, so it neither saves nor retries (*Backing a category*, above). Nor is choosing the sweep
   destination already set.

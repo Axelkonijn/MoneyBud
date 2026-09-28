@@ -34,6 +34,25 @@ namespace MoneyBud.Presentation;
 // already shows is the list writing back, and changes nothing; a write of any other account is a
 // pick. Picking the account already shown is indistinguishable from the list writing back, and leaves
 // the account following the category.
+//
+// Since recurring entries, both forms end with a Herhalen list (arc42 §12, Recurring entries,
+// follow-up 6): Eenmalig, the default, then Wekelijks and Maandelijks. It is locked on Eenmalig for an
+// earlier occurrence of a repeat, which cannot change it (follow-up 2), and a form in Wijzigen reads
+// that afresh on every redraw, so an entry that stops being the latest while it is open locks there
+// (plan for increment 12, 4). The list writes back like the account list: a plain value, a write of
+// nothing ignored, and a write while locked ignored too.
+
+/// <summary>One item of the <i>Herhalen</i> list: a frequency, or none for <i>Eenmalig</i>.</summary>
+public sealed record FrequencyChoice(Frequency? Frequency)
+{
+    public string Text => Tekst.FrequencyName(Frequency);
+
+    /// <summary>The list, in the ruled order: <i>Eenmalig</i>, <i>Wekelijks</i>, <i>Maandelijks</i> (§12, ruled at the scenario stage, 2).</summary>
+    public static IReadOnlyList<FrequencyChoice> All { get; } =
+        [new((Frequency?)null), new(Domain.Frequency.Weekly), new(Domain.Frequency.Monthly)];
+
+    public override string ToString() => Text;
+}
 
 public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
 {
@@ -87,8 +106,34 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
         if (Account == deleted) Account = null;
     }
 
+    /// <summary>What the <i>Herhalen</i> list is set to: null, <i>Eenmalig</i>, until another is chosen or loaded.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText))]
+    [NotifyPropertyChangedFor(nameof(ChosenFrequency))]
+    public partial Frequency? Frequency { get; set; }
+
+    public IReadOnlyList<FrequencyChoice> FrequencyChoices => FrequencyChoice.All;
+
+    /// <summary>Whether the list can be changed: not on an earlier occurrence of a repeat (§12, follow-up 2).</summary>
+    public bool CanChangeFrequency => Editing is not { } expense || app.Ledger.SetsTheRepeat(expense);
+
+    /// <summary>What the list shows and sets: <i>Eenmalig</i> while locked. Setting nothing, or anything while locked, changes nothing.</summary>
+    public FrequencyChoice ChosenFrequency
+    {
+        get => new(CanChangeFrequency ? Frequency : null);
+        set
+        {
+            if (value is not null && CanChangeFrequency) Frequency = value.Frequency;
+        }
+    }
+
+    internal void RefreshFrequency()
+    {
+        OnPropertyChanged(nameof(CanChangeFrequency));
+        OnPropertyChanged(nameof(ChosenFrequency));
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText), nameof(CanChangeFrequency), nameof(ChosenFrequency))]
     public partial Expense? Editing { get; private set; }
 
     public bool IsEditing => Editing is not null;
@@ -108,6 +153,7 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
         Amount = AmountInput.Format(expense.Amount);
         Date = expense.Date.ToDateTime(TimeOnly.MinValue);
         Account = expense.Account;
+        Frequency = app.Ledger.FrequencyOf(expense);
     }
 
     [RelayCommand]
@@ -125,7 +171,7 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
     /// <returns>What came of recording, or null when the amount could not be read.</returns>
     public RecordExpenseResult? Record()
     {
-        var result = app.RecordExpense(Amount, Category, Label, DateOf(Date), ChosenAccount);
+        var result = app.RecordExpense(Amount, Category, Label, DateOf(Date), ChosenAccount, Frequency);
         if (result is { WasRecorded: true }) Clear();
         return result;
     }
@@ -136,7 +182,7 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
     {
         var expense = Editing ?? throw new InvalidOperationException("No expense is being changed.");
 
-        var result = app.ChangeExpense(expense, Amount, Category, Label, DateOf(Date), ChosenAccount);
+        var result = app.ChangeExpense(expense, Amount, Category, Label, DateOf(Date), ChosenAccount, ChosenFrequency.Frequency);
         if (result is { WasRefused: false }) Clear();
         return result;
     }
@@ -162,6 +208,7 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
         Label = null;
         Date = null;
         Account = null;
+        Frequency = null;
     }
 
     internal static DateOnly? DateOf(DateTime? date) => date is { } d ? DateOnly.FromDateTime(d) : null;
@@ -205,8 +252,34 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
         if (Account == deleted) Account = null;
     }
 
+    /// <summary>What the <i>Herhalen</i> list is set to, as on the expense form.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText))]
+    [NotifyPropertyChangedFor(nameof(ChosenFrequency))]
+    public partial Frequency? Frequency { get; set; }
+
+    public IReadOnlyList<FrequencyChoice> FrequencyChoices => FrequencyChoice.All;
+
+    /// <summary>Whether the list can be changed, as on the expense form.</summary>
+    public bool CanChangeFrequency => Editing is not { } income || app.Ledger.SetsTheRepeat(income);
+
+    /// <summary>What the list shows and sets, as on the expense form.</summary>
+    public FrequencyChoice ChosenFrequency
+    {
+        get => new(CanChangeFrequency ? Frequency : null);
+        set
+        {
+            if (value is not null && CanChangeFrequency) Frequency = value.Frequency;
+        }
+    }
+
+    internal void RefreshFrequency()
+    {
+        OnPropertyChanged(nameof(CanChangeFrequency));
+        OnPropertyChanged(nameof(ChosenFrequency));
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText), nameof(CanChangeFrequency), nameof(ChosenFrequency))]
     public partial Income? Editing { get; private set; }
 
     public bool IsEditing => Editing is not null;
@@ -221,6 +294,7 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
         Amount = AmountInput.Format(income.Amount);
         Date = income.Date.ToDateTime(TimeOnly.MinValue);
         Account = income.Account;
+        Frequency = app.Ledger.FrequencyOf(income);
     }
 
     [RelayCommand]
@@ -238,7 +312,7 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
     /// <returns>What came of recording, or null when the amount could not be read.</returns>
     public RecordIncomeResult? Record()
     {
-        var result = app.RecordIncome(Amount, Label, ExpenseForm.DateOf(Date), ChosenAccount);
+        var result = app.RecordIncome(Amount, Label, ExpenseForm.DateOf(Date), ChosenAccount, Frequency);
         if (result is { WasRecorded: true }) Clear();
         return result;
     }
@@ -249,7 +323,7 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
     {
         var income = Editing ?? throw new InvalidOperationException("No income is being changed.");
 
-        var result = app.ChangeIncome(income, Amount, Label, ExpenseForm.DateOf(Date), ChosenAccount);
+        var result = app.ChangeIncome(income, Amount, Label, ExpenseForm.DateOf(Date), ChosenAccount, ChosenFrequency.Frequency);
         if (result is { WasRefused: false }) Clear();
         return result;
     }
@@ -274,6 +348,7 @@ public sealed partial class IncomeForm(MoneyBudApp app) : ObservableObject
         Label = null;
         Date = null;
         Account = null;
+        Frequency = null;
     }
 }
 

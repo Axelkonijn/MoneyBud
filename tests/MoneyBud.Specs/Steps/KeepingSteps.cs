@@ -60,7 +60,7 @@ public sealed class KeepingSteps(SpecContext context)
             "is blank, with nothing at all in it" => [],
             "was written by a newer version of MoneyBud" => Encoding.UTF8.GetBytes(WrittenByANewerVersion()),
             "was written by a version without accounts" => Encoding.UTF8.GetBytes(WrittenBeforeAccounts),
-            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0, [new(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], []))),
+            _ => Encoding.UTF8.GetBytes(LedgerJson.Write(new LedgerSnapshot([new(1, "Groceries", false)], [], [], [], 0, [new(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], [], []))),
         });
 
         // Readable data, out of reach: a folder stands where MoneyBud claims its data, so the
@@ -224,10 +224,11 @@ public sealed class KeepingSteps(SpecContext context)
             row["label"] is "" ? null : row["label"],
             SpecParsing.MoneyAmount(row["amount"])));
 
-        var actual = App.OverviewFor(Ledger.PeriodsFromCurrent(-count)).Expenses
-            .Select(e => (e.Date, e.Category, e.Label, e.Amount));
+        var lines = App.OverviewFor(Ledger.PeriodsFromCurrent(-count)).Expenses;
+        var actual = lines.Select(e => (e.Date, e.Category, e.Label, e.Amount));
 
         Assert.Equal(expected, actual);
+        ScreenSteps.AssertRepeatsColumn(table, lines.Select(e => e.RepeatLabel));
     }
 
     [Then(@"^the expense form should be empty and ready for a new expense$")]
@@ -350,7 +351,7 @@ public sealed class KeepingSteps(SpecContext context)
     private static string WrittenByANewerVersion()
     {
         var snapshot = new LedgerSnapshot(
-            [new CategorySnapshot(1, "Groceries", false)], [], [], [], 0, [new AccountSnapshot(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], []);
+            [new CategorySnapshot(1, "Groceries", false)], [], [], [], 0, [new AccountSnapshot(1, "Bank")], 1, [], [], [], SpecContext.Today, null, [], [], []);
         var text = LedgerJson.Write(snapshot);
         Assert.Contains($"\"version\": {LedgerJson.Version}", text);
         return text.Replace($"\"version\": {LedgerJson.Version}", $"\"version\": {LedgerJson.Version + 1}");
