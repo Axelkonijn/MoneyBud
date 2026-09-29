@@ -13,6 +13,15 @@
     <PackageReference Include="Avalonia" Version="12.1.3" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+    <!-- The kintsugi ring is drawn by a Skia shader, through Avalonia's lease on the Skia canvas. -->
+    <PackageReference Include="Avalonia.Skia" Version="12.1.3" />
+  </ItemGroup>
+
+  <!-- Kintsugi's heading face, Cormorant Garamond, under the SIL Open Font License (Theme/Fonts/OFL.txt),
+       and its tables, graded from CC0 wood textures (Theme/Kintsugi/README.md). -->
+  <ItemGroup>
+    <AvaloniaResource Include="Theme/Fonts/*.ttf" />
+    <AvaloniaResource Include="Theme/Kintsugi/*.jpg" />
   </ItemGroup>
 
 </Project>

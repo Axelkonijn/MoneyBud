@@ -2,9 +2,20 @@
   The default theme: every colour the prototype uses, by name, once for dark and once for light.
   Nothing else in the prototype names a colour, so a new theme is a new copy of this file.
   The slice colours are Colors, not brushes, because the ring's painter mixes them itself.
+  PanelEdge, CardEdge, the grain and the heading font exist for other themes; here they leave the
+  look as it was.
 -->
 <ResourceDictionary xmlns="https://github.com/avaloniaui"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+
+  <FontFamily x:Key="HeadingFont">fonts:Inter#Inter, $Default</FontFamily>
+  <sys:Double x:Key="H1Size">30</sys:Double>
+  <sys:Double x:Key="H2Size">21</sys:Double>
+  <!-- What a panel does to the home screen under it: glass blurs and darkens it. -->
+  <sys:Double x:Key="HomeBlur">22</sys:Double>
+  <sys:Double x:Key="HomeDim">0.32</sys:Double>
+
   <ResourceDictionary.ThemeDictionaries>
 
     <ResourceDictionary x:Key="Dark">
@@ -38,6 +49,10 @@
       <SolidColorBrush x:Key="Positive" Color="#5FD4A0" />
       <SolidColorBrush x:Key="Handle" Color="#44FFFFFF" />
       <SolidColorBrush x:Key="Toast" Color="#F02A3142" />
+      <SolidColorBrush x:Key="HoleBackdrop" Color="Transparent" />
+      <SolidColorBrush x:Key="PanelEdge" Color="Transparent" />
+      <SolidColorBrush x:Key="CardEdge" Color="Transparent" />
+      <sys:Double x:Key="GrainOpacity">0</sys:Double>
     </ResourceDictionary>
 
     <ResourceDictionary x:Key="Light">
@@ -71,6 +86,10 @@
       <SolidColorBrush x:Key="Positive" Color="#1F9C6A" />
       <SolidColorBrush x:Key="Handle" Color="#330B0D12" />
       <SolidColorBrush x:Key="Toast" Color="#F21C2130" />
+      <SolidColorBrush x:Key="HoleBackdrop" Color="Transparent" />
+      <SolidColorBrush x:Key="PanelEdge" Color="Transparent" />
+      <SolidColorBrush x:Key="CardEdge" Color="Transparent" />
+      <sys:Double x:Key="GrainOpacity">0</sys:Double>
     </ResourceDictionary>
 
   </ResourceDictionary.ThemeDictionaries>

@@ -29,6 +29,9 @@ public sealed class RingFrame
     /// <summary>How far the spent part is filled in yet, 0 to 1.</summary>
     public required double Fill { get; init; }
 
+    /// <summary>How far a drawn-in ring is finished off, 0 to 1: kintsugi's gold running into the seams.</summary>
+    public required double Mend { get; init; }
+
     public required Func<int, Color> SliceColour { get; init; }
 
     public required Color Unassigned { get; init; }
@@ -36,6 +39,12 @@ public sealed class RingFrame
     public required Color Danger { get; init; }
 
     public required Color Line { get; init; }
+
+    /// <summary>Any other named colour of the theme, for what only one painter draws.</summary>
+    public required Func<string, Color> Named { get; init; }
+
+    /// <summary>Asks for the ring to be drawn again, for a painter that finished preparing in the background.</summary>
+    public required Action Invalidate { get; init; }
 }
 
 /// <summary>
@@ -65,6 +74,13 @@ public abstract class RingPainter
 
     protected static Color Faded(Color colour, double opacity) =>
         Color.FromArgb((byte)Math.Clamp(colour.A * opacity, 0, 255), colour.R, colour.G, colour.B);
+
+    protected static Color Mix(Color from, Color to, double amount) =>
+        Color.FromArgb(
+            (byte)Math.Round(from.A + (to.A - from.A) * amount),
+            (byte)Math.Round(from.R + (to.R - from.R) * amount),
+            (byte)Math.Round(from.G + (to.G - from.G) * amount),
+            (byte)Math.Round(from.B + (to.B - from.B) * amount));
 }
 
 /// <summary>The default look: clean bands with small gaps, the spent part solid over a dim track.</summary>

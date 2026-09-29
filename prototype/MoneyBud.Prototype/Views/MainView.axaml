@@ -6,6 +6,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ring="using:MoneyBud.Prototype.Ring"
+             xmlns:views="using:MoneyBud.Prototype.Views"
              x:Class="MoneyBud.Prototype.Views.MainView"
              Background="{DynamicResource Bg}"
              Foreground="{DynamicResource Text}"
@@ -23,8 +24,11 @@
       <Grid x:Name="HomeGrid" RowDefinitions="*,Auto,112">
         <Panel x:Name="RingArea" Margin="14,40,14,4">
           <ring:RingView x:Name="Ring" HorizontalAlignment="Center" VerticalAlignment="Center" />
-          <StackPanel x:Name="Hole" HorizontalAlignment="Center" VerticalAlignment="Center"
-                      IsHitTestVisible="False" Spacing="3" />
+          <!-- What the hole says, over a soft oval where a theme wants one behind the figures. -->
+          <Panel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+            <Border x:Name="HoleBackdrop" Margin="-34,-22" Background="{DynamicResource HoleBackdrop}" />
+            <StackPanel x:Name="Hole" Spacing="3" />
+          </Panel>
         </Panel>
         <Grid x:Name="PeriodBar" Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="8,0">
           <Button x:Name="PreviousPeriod" Theme="{StaticResource Icon}" />
@@ -43,27 +47,31 @@
     <Border x:Name="Scrim" Background="#000000" Opacity="0" IsHitTestVisible="False" />
 
     <!-- Below: the budget, a sheet that stops halfway or opens fully. -->
-    <Border x:Name="BudgetSheet" VerticalAlignment="Bottom" IsVisible="False"
+    <views:Surface x:Name="BudgetSheet" Side="Bottom" VerticalAlignment="Bottom" IsVisible="False"
             Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
             BorderThickness="0,1,0,0" CornerRadius="28,28,0,0" />
 
     <!-- Left: income. The list first, the form one more swipe further. -->
     <Panel x:Name="IncomeSide" IsVisible="False">
-      <Border x:Name="IncomeList" Background="{DynamicResource Glass}" />
-      <Border x:Name="IncomeForm" Background="{DynamicResource Glass}" />
+      <views:Surface x:Name="IncomeList" Side="Left" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="0,0,1,0" />
+      <views:Surface x:Name="IncomeForm" Side="Left" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="0,0,1,0" />
     </Panel>
 
     <!-- Right: expenses, the same two steps. -->
     <Panel x:Name="ExpenseSide" IsVisible="False">
-      <Border x:Name="ExpenseList" Background="{DynamicResource Glass}" />
-      <Border x:Name="ExpenseForm" Background="{DynamicResource Glass}" />
+      <views:Surface x:Name="ExpenseList" Side="Right" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="1,0,0,0" />
+      <views:Surface x:Name="ExpenseForm" Side="Right" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="1,0,0,0" />
     </Panel>
 
     <!-- Above: the accounts, and an account's history under a tap. -->
     <Panel x:Name="AccountsSide" IsVisible="False" VerticalAlignment="Top">
-      <Border x:Name="AccountsList" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
+      <views:Surface x:Name="AccountsList" Side="Top" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
               BorderThickness="0,0,0,1" CornerRadius="0,0,28,28" />
-      <Border x:Name="AccountHistory" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
+      <views:Surface x:Name="AccountHistory" Side="Top" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
               BorderThickness="0,0,0,1" CornerRadius="0,0,28,28" />
     </Panel>
 
@@ -73,6 +81,9 @@
             CornerRadius="18" Padding="18,14" Margin="14,0" />
 
     <Panel x:Name="ModalLayer" IsVisible="False" />
+
+    <!-- A theme's texture — kintsugi's ceramic grain — over everything, touching nothing. -->
+    <Border x:Name="Texture" IsHitTestVisible="False" />
 
   </Panel>
 </UserControl>

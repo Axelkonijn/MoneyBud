@@ -159,7 +159,7 @@ public sealed partial class MainView
 
         var amount = Ui.Field("0,00", entry is null ? "" : Dutch.Typed(entry.Amount));
         amount.Classes.Add("amount");
-        var euro = Ui.Text("€", "h2");
+        var euro = Ui.Text("€", "h2", "figure");
         euro.Margin = new Thickness(16, 0, 0, 0);
         euro.Res(TextBlock.ForegroundProperty, "Muted");
         amount.InnerLeftContent = euro;
@@ -350,7 +350,7 @@ public sealed partial class MainView
     private StackPanel BudgetOverview()
     {
         var unassigned = _ledger.Unassigned(_offset);
-        var figure = Ui.Text(Dutch.Euro(unassigned), "h2");
+        var figure = Ui.Text(Dutch.Euro(unassigned), "h2", "figure");
         if (unassigned < 0)
         {
             figure.Classes.Add("danger");
@@ -584,6 +584,7 @@ public sealed partial class MainView
     private void BuildAccounts()
     {
         var gear = Ui.IconButton(Ui.FilledIcon(Ui.Gear, "Muted", 22), ShowSettings);
+        gear.Name = "Gear";
         var net = _ledger.NetWorth;
         var figure = Ui.Text(Dutch.Euro(net), "big");
         var worth = Ui.Stack(0, Ui.Text("Vermogen", "muted"), Ui.Row(0, figure));

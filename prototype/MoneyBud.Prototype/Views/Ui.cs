@@ -100,8 +100,8 @@ public static class Ui
             .Res(Border.BackgroundProperty, brush);
 
     public static Border Card(Control child, double padding = 6) =>
-        new Border { CornerRadius = new CornerRadius(20), Padding = new Thickness(padding), Child = child }
-            .Res(Border.BackgroundProperty, "Card");
+        new Border { CornerRadius = new CornerRadius(20), Padding = new Thickness(padding), BorderThickness = new Thickness(1), Child = child }
+            .Res(Border.BackgroundProperty, "Card").Res(Border.BorderBrushProperty, "CardEdge");
 
     public static Border Handle() =>
         new Border

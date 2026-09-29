@@ -1,0 +1,114 @@
+<!--
+  Kintsugi: a porcelain bowl, broken and mended with gold, standing on a table. Dark is black
+  porcelain on walnut, light white porcelain on hinoki; both follow the phone. Every key of
+  Default.axaml is here, plus the few only the kintsugi ring painter reads: the porcelain, its gold
+  and the red lacquer of an overspent shard. Each shard has its own glaze, so categories stay easy
+  to tell apart; Niet toegewezen (UnassignedColor) is raw clay.
+-->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="using:System">
+
+  <FontFamily x:Key="HeadingFont">avares://MoneyBud.Prototype/Theme/Fonts#Cormorant Garamond</FontFamily>
+  <sys:Double x:Key="H1Size">34</sys:Double>
+  <sys:Double x:Key="H2Size">25</sys:Double>
+  <!-- A porcelain slab lies on a table that stays sharp; it only darkens a little under it. -->
+  <sys:Double x:Key="HomeBlur">0</sys:Double>
+  <sys:Double x:Key="HomeDim">0.22</sys:Double>
+
+  <ResourceDictionary.ThemeDictionaries>
+
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="BgColor">#0D0B09</Color>
+      <Color x:Key="GlowColor">#40FFCF8A</Color>
+      <Color x:Key="LineColor">#1FE8D5B0</Color>
+      <Color x:Key="UnassignedColor">#7A6552</Color>
+      <Color x:Key="DangerColor">#E0604F</Color>
+
+      <!-- Celadon, indigo, persimmon rust, ash, oribe green, shino, plum, tenmoku. -->
+      <Color x:Key="Slice0">#8FB5A1</Color>
+      <Color x:Key="Slice1">#5E79AD</Color>
+      <Color x:Key="Slice2">#B8683E</Color>
+      <Color x:Key="Slice3">#A8A28A</Color>
+      <Color x:Key="Slice4">#71904A</Color>
+      <Color x:Key="Slice5">#D6BFA6</Color>
+      <Color x:Key="Slice6">#8A6B93</Color>
+      <Color x:Key="Slice7">#8C5C3C</Color>
+
+      <Color x:Key="BowlColor">#121010</Color>
+      <Color x:Key="SeamColor">#D4AF5A</Color>
+      <Color x:Key="LacquerColor">#C8372B</Color>
+
+      <ImageBrush x:Key="Bg" Source="avares://MoneyBud.Prototype/Theme/Kintsugi/walnut.jpg" Stretch="UniformToFill" />
+      <SolidColorBrush x:Key="Glass" Color="#D6120F0C" />
+      <SolidColorBrush x:Key="GlassEdge" Color="#70D4AF5A" />
+      <SolidColorBrush x:Key="PanelEdge" Color="#70D4AF5A" />
+      <SolidColorBrush x:Key="Card" Color="#1B1713" />
+      <SolidColorBrush x:Key="CardEdge" Color="#3AD4AF5A" />
+      <SolidColorBrush x:Key="Field" Color="#26201A" />
+      <SolidColorBrush x:Key="Line" Color="#1FE8D5B0" />
+      <SolidColorBrush x:Key="Text" Color="#F1EAE0" />
+      <SolidColorBrush x:Key="Muted" Color="#A39787" />
+      <SolidColorBrush x:Key="Faint" Color="#9A8D7B" />
+      <SolidColorBrush x:Key="Accent" Color="#D4AF5A" />
+      <SolidColorBrush x:Key="OnAccent" Color="#16120D" />
+      <SolidColorBrush x:Key="Danger" Color="#E0604F" />
+      <SolidColorBrush x:Key="Positive" Color="#8FB5A1" />
+      <SolidColorBrush x:Key="Handle" Color="#55D4AF5A" />
+      <SolidColorBrush x:Key="Toast" Color="#F2231D17" />
+
+      <sys:Double x:Key="GrainOpacity">0</sys:Double>
+      <!-- The gold runs under the figures; a tight shadow on the text keeps them readable. -->
+      <DropShadowEffect x:Key="HoleEffect" BlurRadius="8" OffsetX="0" OffsetY="0" Color="#000000" Opacity="0.95" />
+      <!-- A soft dark oval behind the figures: the gold stays visible, just quieter under the text. -->
+      <RadialGradientBrush x:Key="HoleBackdrop" RadiusX="50%" RadiusY="50%">
+        <GradientStop Color="#D8100D0B" Offset="0" />
+        <GradientStop Color="#B0100D0B" Offset="0.6" />
+        <GradientStop Color="#00100D0B" Offset="1" />
+      </RadialGradientBrush>
+    </ResourceDictionary>
+
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="BgColor">#F2EDE3</Color>
+      <Color x:Key="GlowColor">#48FFF6E0</Color>
+      <Color x:Key="LineColor">#1F2A2118</Color>
+      <Color x:Key="UnassignedColor">#C9B094</Color>
+      <Color x:Key="DangerColor">#B3321F</Color>
+
+      <Color x:Key="Slice0">#6E9A84</Color>
+      <Color x:Key="Slice1">#3F5B90</Color>
+      <Color x:Key="Slice2">#A5552C</Color>
+      <Color x:Key="Slice3">#8E8870</Color>
+      <Color x:Key="Slice4">#5A7535</Color>
+      <Color x:Key="Slice5">#BA9A78</Color>
+      <Color x:Key="Slice6">#6F5279</Color>
+      <Color x:Key="Slice7">#6E4428</Color>
+
+      <Color x:Key="BowlColor">#F4F1EA</Color>
+      <Color x:Key="SeamColor">#B8902F</Color>
+      <Color x:Key="LacquerColor">#A8261C</Color>
+
+      <ImageBrush x:Key="Bg" Source="avares://MoneyBud.Prototype/Theme/Kintsugi/hinoki.jpg" Stretch="UniformToFill" />
+      <SolidColorBrush x:Key="Glass" Color="#E8F7F3EA" />
+      <SolidColorBrush x:Key="GlassEdge" Color="#90B8902F" />
+      <SolidColorBrush x:Key="PanelEdge" Color="#90B8902F" />
+      <SolidColorBrush x:Key="Card" Color="#FBF8F2" />
+      <SolidColorBrush x:Key="CardEdge" Color="#50B8902F" />
+      <SolidColorBrush x:Key="Field" Color="#EAE3D6" />
+      <SolidColorBrush x:Key="Line" Color="#1F2A2118" />
+      <SolidColorBrush x:Key="Text" Color="#1E1914" />
+      <SolidColorBrush x:Key="Muted" Color="#6E6253" />
+      <SolidColorBrush x:Key="Faint" Color="#A0947F" />
+      <SolidColorBrush x:Key="Accent" Color="#946E1F" />
+      <SolidColorBrush x:Key="OnAccent" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="Danger" Color="#B3321F" />
+      <SolidColorBrush x:Key="Positive" Color="#4F7D66" />
+      <SolidColorBrush x:Key="Handle" Color="#50946E1F" />
+      <SolidColorBrush x:Key="Toast" Color="#F2231D17" />
+      <SolidColorBrush x:Key="HoleBackdrop" Color="Transparent" />
+
+      <sys:Double x:Key="GrainOpacity">0</sys:Double>
+    </ResourceDictionary>
+
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

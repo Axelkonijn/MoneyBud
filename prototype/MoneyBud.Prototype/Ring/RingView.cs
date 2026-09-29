@@ -31,6 +31,7 @@ public sealed class RingView : Control, ICustomHitTest
     private FrameLoop? _changeLoop;
     private double _reveal = 1;
     private double _fill = 1;
+    private double _mend = 1;
     private int _selected = -1;
 
     private bool _scrubbing;
@@ -64,6 +65,16 @@ public sealed class RingView : Control, ICustomHitTest
         set
         {
             _fill = value;
+            InvalidateVisual();
+        }
+    }
+
+    public double Mend
+    {
+        get => _mend;
+        set
+        {
+            _mend = value;
             InvalidateVisual();
         }
     }
@@ -166,10 +177,13 @@ public sealed class RingView : Control, ICustomHitTest
             Emphasis = _emphasis,
             Reveal = _reveal,
             Fill = _fill,
+            Mend = _mend,
             SliceColour = i => Colour("Slice" + i % 8),
             Unassigned = Colour("UnassignedColor"),
             Danger = Colour("DangerColor"),
             Line = Colour("LineColor"),
+            Named = Colour,
+            Invalidate = InvalidateVisual,
         });
     }
 

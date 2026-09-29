@@ -9,6 +9,7 @@ using MoneyBud.Prototype.Motion;
 using MoneyBud.Prototype.Platform;
 using MoneyBud.Prototype.Ring;
 using MoneyBud.Prototype.Sample;
+using MoneyBud.Prototype.Themes;
 
 namespace MoneyBud.Prototype.Views;
 
@@ -44,6 +45,10 @@ public sealed partial class MainView : UserControl
     private readonly TranslateTransform _sheetShift = new();
     private readonly TranslateTransform _accountsShift = new();
     private readonly TranslateTransform _historyShift = new();
+
+    /// <summary>What a panel does to the home screen under it, from the theme: glass blurs it, a slab does not.</summary>
+    private double _homeBlur = 22;
+    private double _homeDim = 0.32;
 
     private int _offset;
     private Side _open;
@@ -91,6 +96,12 @@ public sealed partial class MainView : UserControl
         PreviousPeriod.Click += (_, _) => StepPeriod(-1);
         NextPeriod.Click += (_, _) => StepPeriod(+1);
         PeriodButton.Click += (_, _) => ShowStartDay();
+
+        Ring.Painter = Looks.Current.Painter();
+        Texture.Background = Grain.Brush;
+        Texture.Bind(OpacityProperty, Texture.GetResourceObservable("GrainOpacity"));
+        Hole.Bind(EffectProperty, Hole.GetResourceObservable("HoleEffect"));
+        HoleBackdrop.Bind(OpacityProperty, Hole.GetObservable(OpacityProperty));
 
         Ring.Tick = () => Haptics.Tick();
         Ring.SelectedChanged += (_, _) =>
@@ -142,6 +153,8 @@ public sealed partial class MainView : UserControl
         }
 
         top.BackRequested += OnBack;
+        Looks.Changed += LookChanged;
+        LookChanged();
         if (top.InsetsManager is { } insets)
         {
             insets.DisplayEdgeToEdgePreference = true;
@@ -163,6 +176,8 @@ public sealed partial class MainView : UserControl
         {
             top.BackRequested -= OnBack;
         }
+
+        Looks.Changed -= LookChanged;
 
         base.OnDetachedFromVisualTree(e);
     }
@@ -300,8 +315,8 @@ public sealed partial class MainView : UserControl
         // other panel lies over a home screen that stays exactly where it is.
         var scale = Ease.Lerp(1, HalfScale(), shrink);
         Home.RenderTransform = scale < 1 ? new MatrixTransform(Matrix.CreateScale(scale, scale)) : null;
-        Scrim.Opacity = 0.32 * blur;
-        Home.Effect = blur > 0.01 ? new BlurEffect { Radius = 22 * blur } : null;
+        Scrim.Opacity = _homeDim * blur;
+        Home.Effect = blur > 0.01 && _homeBlur > 0 ? new BlurEffect { Radius = _homeBlur * blur } : null;
     }
 
     /// <summary>How small the home screen gets for the whole ring to fit above a half-open sheet.</summary>
@@ -375,6 +390,12 @@ public sealed partial class MainView : UserControl
         if (side == Side.Accounts)
         {
             _historyAccount = null;
+        }
+
+        if (_open == Side.None && _drawInWaiting)
+        {
+            _drawInWaiting = false;
+            DrawRingIn(delay: 0);
         }
 
         Unfocus();

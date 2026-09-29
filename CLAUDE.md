@@ -99,7 +99,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-29, after round 1 of the mobile prototype was approved. **Start here in a new conversation: round 2 of the mobile prototype** — a second theme, kintsugi, and switching themes (item 3 under *Next, in order*). Still stage 1: put the kintsugi details to Axel before building. Read [`prototype/README.md`](prototype/README.md) first, then the two `docs/stakeholder/2026-09-29-mobiel*.md` rounds. Update this when a stage completes._
+_Last updated 2026-09-29, after round 2 of the mobile prototype was approved. **Start here in a new conversation: what the prototype taught goes back through stage 2** (item 3 under *Next, in order*). Read [`prototype/README.md`](prototype/README.md) first, then the six `docs/stakeholder/2026-09-29-mobiel*.md` rounds. Update this when a stage completes._
 
 **Done: all five stages, thirteen times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -619,7 +619,15 @@ small change put in front of them the same day:
      behind.
    - **Look before technique:** a separate **prototype** (`prototype/`), invented data, in two
      rounds — round 1 layout, navigation and feel (**approved**, with the changes in
-     [ronde 1](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-1.md)), round 2 a second theme.
+     [ronde 1](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-1.md)), round 2 a second theme,
+     kintsugi, and switching themes. The first version was **not what he meant**: a theme is a
+     different world, not a palette — for kintsugi a table as the home screen, panels as mended
+     porcelain slabs, and a ring that looks like real porcelain with veins through every piece
+     ([ronde 2](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-2.md),
+     [its feedback](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback.md)). Ring and
+     table rebuilt (a Skia shader plate on CC0 wood), the panels porcelain slabs;
+     **approved** on 2026-09-29, after a performance fix (Avalonia's GPU budget, see the README). A third choice with
+     kintsugi's own motions throughout is his idea for a small round after that.
      What it teaches goes back through stage 2 onwards; the prototype itself is not the app.
    - **The shape:** the ring is a static home screen; panels are pulled over it — income from the
      left, expenses from the right, the budget from below (half or full), the accounts from above.

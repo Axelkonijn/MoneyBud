@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using MoneyBud.Prototype.Motion;
 using MoneyBud.Prototype.Platform;
 using MoneyBud.Prototype.Sample;
+using MoneyBud.Prototype.Themes;
 
 namespace MoneyBud.Prototype.Views;
 
@@ -129,22 +130,25 @@ public sealed partial class MainView
         }
     }
 
-    private Border Sheet(string title, Control body) =>
-        new Border
+    private Surface Sheet(string title, Control body) =>
+        new Surface
         {
+            Side = SurfaceSide.Bottom,
             CornerRadius = new CornerRadius(28, 28, 0, 0),
             Padding = new Thickness(18, 0, 18, _safe.Bottom + 18),
+            BorderThickness = new Thickness(0, 1, 0, 0),
             Child = Ui.Stack(12, Ui.Handle(), Ui.Text(title, "h2"), body),
-        }.Res(Border.BackgroundProperty, "Card");
+        }.Res(Border.BackgroundProperty, "Card").Res(Border.BorderBrushProperty, "CardEdge");
 
-    private Border Card(string title, Control body) =>
-        new Border
+    private Surface Card(string title, Control body) =>
+        new Surface
         {
             CornerRadius = new CornerRadius(26),
             Padding = new Thickness(22),
             Margin = new Thickness(18),
+            BorderThickness = new Thickness(1),
             Child = Ui.Stack(14, Ui.Text(title, "h2"), body),
-        }.Res(Border.BackgroundProperty, "Card");
+        }.Res(Border.BackgroundProperty, "Card").Res(Border.BorderBrushProperty, "CardEdge");
 
     /// <summary>A menu that slides up from below, for the things behind a ⋯.</summary>
     private void Choice(string title, IEnumerable<(string Label, bool Danger, Action Act)> options)
@@ -209,7 +213,7 @@ public sealed partial class MainView
                 "Licht" => ThemeVariant.Light,
                 _ => ThemeVariant.Default,
             });
-        var theme = Ui.Chips(["Standaard", "Kintsugi"], "Standaard", _ => { }, option => option == "Standaard");
+        var theme = Ui.Chips(Looks.All.Select(l => l.Name), Looks.Current.Name, picked => SwitchLook(Looks.All.First(l => l.Name == picked)));
         var hints = Ui.Pill("Aanwijzingen opnieuw tonen", () =>
         {
             CloseModal();
@@ -222,7 +226,7 @@ public sealed partial class MainView
 
         ShowModal(Card("Instellingen", Ui.Stack(0,
             Ui.Caption("Weergave"), look,
-            Ui.Caption("Thema"), theme, Ui.Text("Kintsugi komt in de volgende ronde.", "faint"),
+            Ui.Caption("Thema"), theme,
             new Border { Height = 20 }, hints, new Border { Height = 10 }, done)), fromBottom: false);
     }
 

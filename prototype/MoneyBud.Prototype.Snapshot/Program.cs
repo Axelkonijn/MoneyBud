@@ -1,17 +1,25 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using MoneyBud.Prototype;
 using MoneyBud.Prototype.Platform;
+using MoneyBud.Prototype.Themes;
 using MoneyBud.Prototype.Views;
 
-// Usage: dotnet run -- <folder> [dark|light]
+// Usage: dotnet run -- <folder> [dark|light|kintsugi-dark|kintsugi-light ...]
 var folder = args.Length > 0 ? args[0] : "snapshots";
 Directory.CreateDirectory(folder);
 var hadHints = Flags.HintsShown;
+var look = Looks.Standaard;
+
+// A shader-drawn ring renders slowly without a GPU, and animations only advance per frame: SLOW=10
+// waits ten times as long before and after each act, so pictures show where animations end.
+var slow = double.TryParse(Environment.GetEnvironmentVariable("SLOW"), out var factor) ? factor : 1;
 
 AppBuilder.Configure<App>()
     .UseSkia()
@@ -21,9 +29,11 @@ AppBuilder.Configure<App>()
 
 foreach (var variant in args.Length > 1 ? args[1..] : ["dark"])
 {
-    Application.Current!.RequestedThemeVariant = variant == "light" ? ThemeVariant.Light : ThemeVariant.Dark;
+    look = variant.StartsWith("kintsugi") ? Looks.Kintsugi : Looks.Standaard;
+    Application.Current!.RequestedThemeVariant = variant.EndsWith("light") ? ThemeVariant.Light : ThemeVariant.Dark;
 
     Shoot($"{variant}-01-opening", w => Wait(0.5), hints: true);
+    Shoot($"{variant}-01b-mending", w => Wait(1.3), hints: true, settle: 0);
     Shoot($"{variant}-02-home", _ => { }, hints: true);
     Shoot($"{variant}-03-scrub", w =>
     {
@@ -61,6 +71,23 @@ foreach (var variant in args.Length > 1 ? args[1..] : ["dark"])
         w.MouseUp(new Point(30, 760), MouseButton.Left);
         Wait(0.35);
     }, settle: 0.2);
+    Shoot($"{variant}-14-settings", w =>
+    {
+        Drag(w, new Point(206, 800), new Point(206, 1150));
+        ClickOn(w, v => v is Button { Name: "Gear" });
+    }, settle: 0.6);
+    Shoot($"{variant}-15-switched", w =>
+    {
+        Drag(w, new Point(206, 800), new Point(206, 1150));
+        ClickOn(w, v => v is Button { Name: "Gear" });
+        Wait(0.6);
+        ClickOn(w, v => v is ToggleButton { Content: string name } && name != Looks.Current.Name && Looks.All.Any(l => l.Name == name));
+        Wait(0.8);
+        w.MouseDown(new Point(206, 880), MouseButton.Left);
+        w.MouseUp(new Point(206, 880), MouseButton.Left);
+        Wait(0.6);
+        Drag(w, new Point(206, 700), new Point(206, 300));
+    }, settle: 2.6);
 }
 
 Flags.HintsShown = hadHints;
@@ -74,15 +101,25 @@ void Shoot(string name, Action<Window> act, bool hints = false, double settle = 
     }
 
     Flags.HintsShown = !hints;
+    Looks.Use(look);
     var window = new Window { Width = 412, Height = 900, Content = new MainView() };
     window.Show();
-    Wait(name.EndsWith("opening") ? 0.4 : 3.2);
+    Wait((name.EndsWith("opening") || name.EndsWith("mending") ? 0.4 : 3.2) * slow);
     Report("before", window);
     act(window);
-    Wait(settle);
+    Wait(settle * slow);
     Report("after", window);
     window.CaptureRenderedFrame()!.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     window.Close();
+}
+
+void ClickOn(Window window, Func<Visual, bool> which)
+{
+    var target = window.GetVisualDescendants().OfType<Control>().Where(c => c.IsEffectivelyVisible).LastOrDefault(which)
+        ?? throw new InvalidOperationException("Nothing to click.");
+    var point = target.TranslatePoint(new Point(target.Bounds.Width / 2, target.Bounds.Height / 2), window)!.Value;
+    window.MouseDown(point, MouseButton.Left);
+    window.MouseUp(point, MouseButton.Left);
 }
 
 void Drag(Window window, Point from, Point to, bool release = true)

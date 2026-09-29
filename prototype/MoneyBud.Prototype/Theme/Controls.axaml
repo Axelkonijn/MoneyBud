@@ -136,13 +136,20 @@
 
   </Styles.Resources>
 
+  <!-- Headings take the theme's face and size; a figure set as a heading keeps the clear face. -->
   <Style Selector="TextBlock.h1">
-    <Setter Property="FontSize" Value="30" />
+    <Setter Property="FontFamily" Value="{DynamicResource HeadingFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource H1Size}" />
     <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
   <Style Selector="TextBlock.h2">
-    <Setter Property="FontSize" Value="21" />
+    <Setter Property="FontFamily" Value="{DynamicResource HeadingFont}" />
+    <Setter Property="FontSize" Value="{DynamicResource H2Size}" />
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.figure">
+    <Setter Property="FontFamily" Value="fonts:Inter#Inter, $Default" />
+    <Setter Property="FontSize" Value="21" />
   </Style>
   <Style Selector="TextBlock.big">
     <Setter Property="FontSize" Value="38" />

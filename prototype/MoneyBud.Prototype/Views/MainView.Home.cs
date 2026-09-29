@@ -26,21 +26,31 @@ public sealed partial class MainView
         LayOut();
         ShowPeriod();
         Ring.Show(SlicesFor(_offset), animate: false);
-        Ring.Reveal = 0;
-        Ring.Fill = 0;
         PeriodText.Opacity = 0;
-        Hole.Opacity = 0;
-
-        Tween.Run(this, 1.0, Ease.OutCubic, t => Ring.Reveal = t, delay: 0.1);
-        Tween.Run(this, 0.8, Ease.InOutCubic, t => Ring.Fill = t, delay: 0.7);
+        DrawRingIn(delay: 0.1);
         Tween.Run(this, 0.6, Ease.OutCubic, t =>
         {
             PeriodText.Opacity = t;
             PeriodText.RenderTransform = new TranslateTransform(0, 10 * (1 - t));
         }, delay: 0.25);
-        Tween.Run(this, 0.5, Ease.OutCubic, t => Hole.Opacity = t, delay: 0.5);
-        ShowHole(countUp: true, delay: 0.5);
         MaybeShowHints();
+    }
+
+    /// <summary>
+    /// The ring draws itself in, the spent parts fill, the figure counts up — and then the theme
+    /// may finish it off: kintsugi's gold runs into the seams.
+    /// </summary>
+    private void DrawRingIn(double delay)
+    {
+        Ring.Reveal = 0;
+        Ring.Fill = 0;
+        Ring.Mend = 0;
+        Hole.Opacity = 0;
+        Tween.Run(this, 1.0, Ease.OutCubic, t => Ring.Reveal = t, delay: delay);
+        Tween.Run(this, 0.8, Ease.InOutCubic, t => Ring.Fill = t, delay: delay + 0.6);
+        Tween.Run(this, 1.1, Ease.InOutCubic, t => Ring.Mend = t, delay: delay + 1.1);
+        Tween.Run(this, 0.5, Ease.OutCubic, t => Hole.Opacity = t, delay: delay + 0.4);
+        ShowHole(countUp: true, delay: delay + 0.4);
     }
 
     private void ShowPeriod()
@@ -80,6 +90,7 @@ public sealed partial class MainView
             ShowPeriod();
             Ring.Show(SlicesFor(_offset), animate: false);
             Ring.Fill = 0;
+            Ring.Mend = 0;
             ShowHole(countUp: true);
             RebuildAll();
 
@@ -91,6 +102,7 @@ public sealed partial class MainView
                 PeriodText.RenderTransform = new TranslateTransform(direction * 36 * (1 - t), 0);
             }, done: () => _stepping = false);
             Tween.Run(this, 0.55, Ease.InOutCubic, t => Ring.Fill = t, delay: 0.35);
+            Tween.Run(this, 0.9, Ease.InOutCubic, t => Ring.Mend = t, delay: 0.55);
         });
     }
 
