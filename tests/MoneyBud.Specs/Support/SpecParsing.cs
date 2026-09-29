@@ -75,6 +75,15 @@ internal static partial class SpecParsing
     private static partial Regex NamedPeriod();
 
     /// <summary>
+    /// A step pattern's group for a period named in full, without its "the", to be read by
+    /// <see cref="PeriodNamed"/>: "current budget period", "budget period 2 after the current one".
+    /// </summary>
+    public const string PeriodPhrase = @"((?:current|previous|next) budget period|budget period \d+ (?:before|after) the current one)";
+
+    /// <summary>A day of the month as the start-day files write it, "the 27th", as a group of its number.</summary>
+    public const string DayOfMonth = @"(\d{1,2})(?:st|nd|rd|th)";
+
+    /// <summary>
     /// Resolves a date as the scenarios phrase it: "today", "yesterday", "tomorrow", a day of a
     /// named budget period, or a calendar date, "25 August 2026" (repeat-an-entry.feature). A null
     /// phrase means the step named no date, which means today.

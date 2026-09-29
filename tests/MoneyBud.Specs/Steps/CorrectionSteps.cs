@@ -307,9 +307,16 @@ public sealed partial class CorrectionSteps(SpecContext context)
     [Then(@"^I should not be warned about the budget period becoming over-assigned$")]
     public void ThenIShouldNotBeWarnedAboutOverAssigned()
     {
-        var removed = Assert.IsType<SpecContext.Removed>(context.LastAttempt);
+        // Removing an entry, or changing the period start day, which cuts a period short
+        // (change-the-period-start-day.feature).
+        var (asked, said) = context.LastAttempt switch
+        {
+            SpecContext.Removed removed => (removed.Asked, removed.Said),
+            SpecContext.StartDayChanged changed => (changed.Asked, changed.Said),
+            var other => throw new InvalidOperationException($"The last thing done was not a removal or a change of start day: {other}."),
+        };
 
-        foreach (var text in new[] { removed.Asked, removed.Said })
+        foreach (var text in new[] { asked, said })
         {
             Assert.DoesNotContain(Tekst.OverAssigned, text, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain("toegewezen", text, StringComparison.OrdinalIgnoreCase);

@@ -54,8 +54,13 @@ public enum HistoryKind
 /// correction shows the balance typed and the difference, worked out afresh, so that it always says
 /// how much is still unexplained. A starting balance shows no difference: it corrected
 /// nothing.</para>
+///
+/// <para><paramref name="SweptPeriod"/> is the period a sweep's row names, found through the ledger's
+/// own calendar: a sweep keeps only that period's first day, and once the period start day has been
+/// changed no calendar but the ledger's can say which period that was (arc42 §12, <i>What else a
+/// change meets</i>). Null on every other row.</para>
 /// </summary>
-public sealed record HistoryLine(IEntry Entry, Account Account, Money? Difference)
+public sealed record HistoryLine(IEntry Entry, Account Account, Money? Difference, BudgetPeriod? SweptPeriod = null)
 {
     public HistoryKind Kind => Entry switch
     {

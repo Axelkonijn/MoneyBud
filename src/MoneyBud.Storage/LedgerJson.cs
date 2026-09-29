@@ -12,14 +12,15 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 6,
+///   "version": 7,
 ///   "lastEntryId": 7,
 ///   "settledThrough": "2026-03-15",
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
 ///                  { "key": 2, "name": "Sparen", "archived": false,
 ///                    "backing": { "account": 2, "accumulatingSince": { "date": "2026-03-15", "id": 5 },
 ///                                 "hereSince": { "date": "2026-03-15", "id": 5 },
-///                                 "notMovedCents": 0, "paidHereBeforeCents": 0 } } ],
+///                                 "notMovedCents": 0, "paidHereBeforeCents": 0,
+///                                 "accumulatingFrom": "2026-03-01", "hereFrom": "2026-03-01" } } ],
 ///   "budgets":    [ { "category": 1, "periodStart": "2026-03-01", "cents": 40000 } ],
 ///   "accounts":   [ { "key": 1, "name": "Betaalrekening" }, { "key": 2, "name": "Contant" } ],
 ///   "poolAccount": 1,
@@ -34,7 +35,8 @@ namespace MoneyBud.Storage;
 ///   "sweepDestination": 2,
 ///   "periodEnds": [ { "periodStart": "2026-03-01", "backed": [ 2 ] } ],
 ///   "letGo":      [ ],
-///   "repeats":    [ { "occurrences": [ 1, 9 ], "frequency": "monthly", "day": 15, "next": "2026-05-15" } ]
+///   "repeats":    [ { "occurrences": [ 1, 9 ], "frequency": "monthly", "day": 15, "next": "2026-05-15" } ],
+///   "calendar":   [ { "periodFrom": "2026-03-01", "from": "2026-03-27", "startDay": 27 } ]
 /// }
 /// </code>
 ///
@@ -65,7 +67,13 @@ namespace MoneyBud.Storage;
 /// <c>notMovedCents</c> and <c>paidHereBeforeCents</c>, the figure remembered with each mark
 /// (<see cref="Backing"/>).</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-6 document is not read at all.
+/// <para><b>Since version 7</b>, the period start day (ADR 0012): <c>calendar</c>, the start day's
+/// history of changes, each with the first day of the period it was made in, <c>periodFrom</c>, the
+/// day it took effect <c>from</c> and the <c>startDay</c> after it, empty for periods that have always
+/// started on the 1st; and a backing's <c>accumulatingFrom</c> and
+/// <c>hereFrom</c>, the first day each mark's period had at the time.</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-7 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
@@ -81,14 +89,19 @@ namespace MoneyBud.Storage;
 /// not what version 4 wrote, and is not read. <b>Version 5</b>, the form without the two remembered
 /// figures, <b>is read</b> too, and so is version 4 through it: the figures are worked out again from
 /// the order entries were recorded in, exact unless an expense from before a backing was changed after
-/// it (§12, ruling of 2026-09-28). Properties this version does not know are ignored.</para>
+/// it (§12, ruling of 2026-09-28). <b>Version 6</b>, the form without the start day, <b>is read</b>,
+/// and 5 and 4 through it: every period in it began on the 1st, which is what an empty history says,
+/// and each mark's period is the calendar month of its date, so nothing is guessed (plan for increment
+/// 13, D2). Properties this version does not know are ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 6;
+    public const int Version = 7;
 
-    // The older versions still read. Recurring entries', which differs only by not remembering a
-    // backing's two figures, and the sweep's, which also has no repeats.
+    // The older versions still read. Opgebouwd's, which differs only by having no start day,
+    // recurring entries', which also does not remember a backing's two figures, and the sweep's,
+    // which also has no repeats.
+    private const int VersionWithoutStartDay = 6;
     private const int VersionWithoutFigures = 5;
     private const int VersionWithoutRepeats = 4;
     private const string Format = "MoneyBud";
@@ -123,6 +136,8 @@ public static class LedgerJson
                     WriteMark(json, "hereSince", backing.HereSince);
                     json.WriteNumber("notMovedCents", backing.NotMoved!.Value.Cents);
                     json.WriteNumber("paidHereBeforeCents", backing.PaidHereBefore!.Value.Cents);
+                    json.WriteString("accumulatingFrom", Date(backing.AccumulatingFrom!.Value));
+                    json.WriteString("hereFrom", Date(backing.HereFrom!.Value));
                     json.WriteEndObject();
                 }
                 else
@@ -269,6 +284,17 @@ public static class LedgerJson
             }
             json.WriteEndArray();
 
+            json.WriteStartArray("calendar");
+            foreach (var change in snapshot.StartDayChanges ?? [])
+            {
+                json.WriteStartObject();
+                json.WriteString("periodFrom", Date(change.PeriodFrom));
+                json.WriteString("from", Date(change.From));
+                json.WriteNumber("startDay", change.StartDay);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
             json.WriteEndObject();
         }
 
@@ -290,13 +316,17 @@ public static class LedgerJson
 
             var version = Int(root, "version");
             var hasRepeats = root.TryGetProperty("repeats", out _);
-            if (!(version is Version or VersionWithoutFigures || (version == VersionWithoutRepeats && !hasRepeats)))
+            var hasCalendar = root.TryGetProperty("calendar", out _);
+            if (!(version == Version
+                  || ((version is VersionWithoutStartDay or VersionWithoutFigures) && !hasCalendar)
+                  || (version == VersionWithoutRepeats && !hasRepeats && !hasCalendar)))
                 return null;
-            var hasFigures = version == Version;
+            var hasFigures = version >= VersionWithoutStartDay;
+            var hasStartDay = version == Version;
 
             return new LedgerSnapshot(
                 Array(root, "categories", c => new CategorySnapshot(
-                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c, hasFigures))),
+                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c, hasFigures, hasStartDay))),
                 Array(root, "budgets", b => new BudgetSnapshot(Int(b, "category"), DateOf(b, "periodStart"), Cents(b))),
                 Array(root, "expenses", e => new ExpenseSnapshot(
                     Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"), Int(e, "account"))),
@@ -322,7 +352,10 @@ public static class LedgerJson
                     ? []
                     : Array(root, "repeats", r => new RepeatSnapshot(
                         Array(r, "occurrences", o => o.GetInt32()),
-                        WordOrNull<Frequency>(r, "frequency"), IntOrNull(r, "day"), DateOrNull(r, "next"))));
+                        WordOrNull<Frequency>(r, "frequency"), IntOrNull(r, "day"), DateOrNull(r, "next"))),
+                hasStartDay
+                    ? Array(root, "calendar", c => new StartDayChange(DateOf(c, "periodFrom"), DateOf(c, "from"), Int(c, "startDay")))
+                    : []);
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)
@@ -341,7 +374,7 @@ public static class LedgerJson
         json.WriteEndObject();
     }
 
-    private static BackingSnapshot? BackingOf(JsonElement category, bool hasFigures)
+    private static BackingSnapshot? BackingOf(JsonElement category, bool hasFigures, bool hasStartDay)
     {
         var backing = category.GetProperty("backing");
         if (backing.ValueKind == JsonValueKind.Null) return null;
@@ -349,7 +382,9 @@ public static class LedgerJson
         return new BackingSnapshot(
             Int(backing, "account"), MarkOf(backing, "accumulatingSince"), MarkOf(backing, "hereSince"),
             hasFigures ? Cents(backing, "notMovedCents") : null,
-            hasFigures ? Cents(backing, "paidHereBeforeCents") : null);
+            hasFigures ? Cents(backing, "paidHereBeforeCents") : null,
+            hasStartDay ? DateOf(backing, "accumulatingFrom") : null,
+            hasStartDay ? DateOf(backing, "hereFrom") : null);
     }
 
     private static EntryMark MarkOf(JsonElement parent, string name)

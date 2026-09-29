@@ -19,6 +19,19 @@ notes that point here.
 > clock set wrongly ahead now reaches further still: it would record occurrences as well as sweep. The
 > file format is version 5, and **version 4, this record's, is read** as data with no repeats. The body
 > is unchanged.
+>
+> **Note, 2026-09-29.** The period start day can be changed ([ADR 0012](0012-the-calendar-is-a-history.md)).
+> **"A sweep's period is kept as its first day, and the screen names it with the default calendar" no
+> longer holds in its second half**: the default calendar in `Tekst` is gone, and a sweep's period is
+> named through the ledger's own calendar, now a history of changes (`HistoryLine.SweptPeriod`). The
+> first half stands: `sweptFor` is still the period's first day, checked on loading against the
+> history. **A change that ends the current period passes into the next itself**, with decision 2's
+> three steps in their order, through the same `PassInto` settling uses, but **dated the day of the
+> change**, not the new period's first day (§12, *A configurable period start day*, follow-up 2). So a
+> sweep made by a change is the one sweep not dated the next period's first day, and a period ended by
+> a change is swept even when its new end falls before the first start (ruled at the scenario stage,
+> 2026-09-29). The file format is version 7, and version 4, this record's, is still read. The body is
+> unchanged.
 
 ## Context
 

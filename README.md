@@ -10,8 +10,9 @@ each budget period as a ring. It keeps accounts with their balances and your net
 money between accounts. A category can be backed by an account, so that money assigned to it really
 moves there and what has been built up for it shows. When a period ends, what is left of its money
 moves by itself into one backed category you choose, and a period whose figures change afterwards
-shows the difference and moves it in one click. Its data may not survive a new version until the
-switch to real use.
+shows the difference and moves it in one click. An income or an expense can repeat weekly or
+monthly, and the day budget periods start on can be set to payday. Its data may not survive a new
+version until the switch to real use.
 
 ```
 dotnet run --project src/MoneyBud.Desktop    # the app
@@ -39,8 +40,9 @@ it up. To start over, close MoneyBud and delete the file; the next start begins 
 default categories and one account, Betaalrekening. If MoneyBud says it cannot read your data, it
 has changed nothing: the file is still there as it was.
 
-**Data saved by the version with the sweep is read** by the version with recurring entries, as data
-in which nothing repeats. **Data saved before the sweep existed cannot be read**, and nor can data
+**Data saved by the versions with the sweep and with recurring entries is read** by the version
+with a configurable start day, as data whose periods have always started on the 1st, and nothing
+repeats in the sweep's. **Data saved before the sweep existed cannot be read**, and nor can data
 saved before backing or before accounts existed. MoneyBud says it cannot read your data and closes.
 Delete the file to start fresh.
 

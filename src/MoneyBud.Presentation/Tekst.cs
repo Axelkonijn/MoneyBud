@@ -77,6 +77,7 @@ public static class Tekst
     public const string OneOff = "Eenmalig";
     public const string Weekly = "Wekelijks";
     public const string Monthly = "Maandelijks";
+    public const string PeriodStartDay = "Periode begint op";
 
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
@@ -149,9 +150,18 @@ public static class Tekst
         "juli", "augustus", "september", "oktober", "november", "december",
     ];
 
+    // MoneyBud's own short month names, never the machine's: a Dutch Windows would write "mrt."
+    // (§12, ruled at the scenario stage, 2026-09-29, ruling 2).
+    private static readonly string[] ShortMonths =
+        ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+
     /// <summary>
-    /// A period's name. With periods starting on the 1st that is the month, "maart 2026"; a
-    /// period that does not match a calendar month is named by its first and last day.
+    /// A period's name (arc42 §12, <i>How a period is named</i>). A calendar month — the 1st to its
+    /// month's last day — is named by its month, "september 2026". Any other period is named by its
+    /// days, short: each day with its month, leaving out what the end repeats of the start, the year
+    /// always and the month when it is the same. So "27 sep – 26 okt 2026", "1 – 26 sep 2026",
+    /// "27 dec 2026 – 26 jan 2027", and a one-day period "27 sep 2026". The dash is an en dash with a
+    /// space either side.
     /// </summary>
     public static string PeriodName(BudgetPeriod period)
     {
@@ -161,7 +171,13 @@ public static class Tekst
         if (first.Day == 1 && last == first.AddMonths(1).AddDays(-1))
             return $"{Months[first.Month - 1]} {first.Year}";
 
-        return $"{DayName(first)} t/m {DayName(last)}";
+        if (first == last)
+            return $"{first.Day} {ShortMonths[first.Month - 1]} {first.Year}";
+
+        var start = first.Year != last.Year ? $"{first.Day} {ShortMonths[first.Month - 1]} {first.Year}"
+            : first.Month != last.Month ? $"{first.Day} {ShortMonths[first.Month - 1]}"
+            : $"{first.Day}";
+        return $"{start} – {last.Day} {ShortMonths[last.Month - 1]} {last.Year}";
     }
 
     public static string DayName(DateOnly day) => $"{day.Day} {Months[day.Month - 1]} {day.Year}";
@@ -391,7 +407,7 @@ public static class Tekst
         Domain.Transfer t => $"{Transfer} {From.ToLowerInvariant()} {Quoted(t.From.Name)} {To.ToLowerInvariant()} {Quoted(t.To.Name)}",
         Domain.Income i => $"{Income} {Quoted(i.Label)}",
         Domain.Expense e => $"{Expense} {Quoted(e.Category.Name)}" + (e.Label is { } label ? $", {label}" : ""),
-        Domain.Movement m => MovementText(m),
+        Domain.Movement m => MovementText(m, line.SweptPeriod),
         _ => throw new InvalidOperationException($"{line.Entry.GetType().Name} is not in a history."),
     };
 
@@ -440,7 +456,7 @@ public static class Tekst
     /// accounts — "Toegewezen aan "Sparen" — van "Betaalrekening" naar "Spaarrekening"". The amount
     /// is the row's own column. Copy (§12, <i>Moved money in the account's history</i>).
     /// </summary>
-    private static string MovementText(Domain.Movement movement)
+    private static string MovementText(Domain.Movement movement, BudgetPeriod? sweptPeriod)
     {
         var name = Quoted(movement.Category.Name);
         var what = (movement.Reason, movement.Direction) switch
@@ -450,8 +466,8 @@ public static class Tekst
             (MovementReason.Backed, _) => $"{name} staat op {Quoted(movement.To.Name)}",
             (MovementReason.Unbacked, _) => $"{name} staat niet meer op {Quoted(movement.From.Name)}",
             (MovementReason.Repointed, _) => $"{name} staat nu op {Quoted(movement.To.Name)}",
-            (MovementReason.Swept, MovementDirection.Out) => $"{PeriodLeftover} van {PeriodName(SweptPeriod(movement))} teruggehaald van {name}",
-            (MovementReason.Swept, _) => $"{PeriodLeftover} van {PeriodName(SweptPeriod(movement))} naar {name}",
+            (MovementReason.Swept, MovementDirection.Out) => $"{PeriodLeftover} van {PeriodName(Swept(sweptPeriod))} teruggehaald van {name}",
+            (MovementReason.Swept, _) => $"{PeriodLeftover} van {PeriodName(Swept(sweptPeriod))} naar {name}",
         };
 
         return $"{what} — {From.ToLowerInvariant()} {Quoted(movement.From.Name)} {To.ToLowerInvariant()} {Quoted(movement.To.Name)}";
@@ -459,10 +475,10 @@ public static class Tekst
 
     // ------------------------------------------------------------------ the sweep (§12, *The sweep and Restant*)
 
-    // A sweep keeps the first day of the period it was for. The start day is fixed at the 1st for
-    // now (§12, *The period start day stays at the 1st*), so the default calendar names the period.
-    private static BudgetPeriod SweptPeriod(Domain.Movement sweep) =>
-        new BudgetPeriodCalendar().PeriodContaining(sweep.SweptFor!.Value);
+    // A sweep keeps only the first day of the period it was for, so its row is handed the period,
+    // found through the ledger's own calendar (HistoryLine.SweptPeriod).
+    private static BudgetPeriod Swept(BudgetPeriod? period) =>
+        period ?? throw new InvalidOperationException("A sweep's row names the period it was for.");
 
     /// <summary>
     /// The automatic sweep's notice, one sentence per period swept, oldest first: "Restant van
@@ -530,6 +546,31 @@ public static class Tekst
             _ => $"{went} · {more}",
         };
     }
+
+    // ------------------------------------------------------------------ the period start day
+
+    /// <summary>What the <i>Periode begint op</i> list shows for a day: the number, "27".</summary>
+    public static string StartDayName(int day) => day.ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// The question before a change of the period start day (§12, ruling 5; plan for increment 13,
+    /// reading 1): "Perioden laten beginnen op de 27e? De huidige periode wordt dan 27 sep – 26 okt
+    /// 2026. 1 – 26 sep 2026 is dan afgelopen." The last sentence only when the change ends the
+    /// current period on the spot. Answered <see cref="Change"/> or <see cref="Cancel"/>. Copy.
+    /// </summary>
+    public static string AskToChangeStartDay(ChangeStartDayResult change) =>
+        $"Perioden laten beginnen op de {Ordinal(change.Day)}? De huidige periode wordt dan {PeriodName(change.Current)}."
+        + (change.Ended is { } ended ? $" {PeriodName(ended)} is dan afgelopen." : "");
+
+    /// <summary>
+    /// Said once the start day is changed: "Perioden beginnen nu op de 27e. De huidige periode is 27
+    /// sep – 26 okt 2026." A sweep the change caused comes after it (reading 2). Copy.
+    /// </summary>
+    public static string StartDayChanged(ChangeStartDayResult change) =>
+        $"Perioden beginnen nu op de {Ordinal(change.Day)}. De huidige periode is {PeriodName(change.Current)}.";
+
+    // Dutch writes every day of the month as the number with "e": 1e, 2e, 27e.
+    private static string Ordinal(int day) => $"{day}e";
 
     // ------------------------------------------------------------------ recurring entries
 

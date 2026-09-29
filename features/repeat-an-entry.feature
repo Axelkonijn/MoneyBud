@@ -74,9 +74,10 @@
 # the order it names things in, which are copy; and where Herhalen sits on the form (above).
 #
 # DATES. For the first time in these files, dates are named as CALENDAR DATES: a monthly repeat keeps a
-# day of the month, which no phrase relative to a budget period can name. The period start day is still
-# fixed at the 1st, so here a budget period is a calendar month, and periods are still named relative to
-# today, as everywhere else. The years are chosen: 2027 has a 28 February, and 2028 a 29th.
+# day of the month, which no phrase relative to a budget period can name. No scenario here changes the
+# period start day, which begins at the 1st, so here a budget period is a calendar month, and periods are
+# still named relative to today, as everywhere else. (A change of start day leaves a repeat's day alone:
+# change-the-period-start-day.feature.) The years are chosen: 2027 has a 28 February, and 2028 a 29th.
 #
 # Reading the steps. These are shared by repeat-an-entry.feature, change-a-repeat.feature and the
 # scenarios about repeats in keep-data.feature:

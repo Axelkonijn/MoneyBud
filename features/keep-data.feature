@@ -16,7 +16,9 @@
 #     into, which categories were backed when each period ended, and when MoneyBud was first
 #     started (sweep-at-a-period-end.feature, start-moneybud.feature). Since the recurring increment,
 #     every repeat: which occurrence is its latest, how often it repeats, the day it repeats on, its
-#     next date, and whether it has been stopped (repeat-an-entry.feature). So is the order things were
+#     next date, and whether it has been stopped (repeat-an-entry.feature). Since the period start day
+#     increment, the day budget periods start on, AS A HISTORY OF CHANGES, since every earlier period
+#     keeps the boundaries it had (change-the-period-start-day.feature). So is the order things were
 #     recorded in, which decides whether an entry on a balance correction's day is in it
 #     (correct-a-balance.feature), and
 #     whether an expense on the day of backing counts against Accumulated
@@ -75,8 +77,9 @@
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
 #     steps overview.feature's, the correcting steps change-an-entry.feature's and
 #     remove-an-entry.feature's, the account steps show-accounts.feature's, the backing steps
-#     back-a-category.feature's, the sweep steps sweep-at-a-period-end.feature's, and the steps about
-#     repeats repeat-an-entry.feature's, which names dates as calendar dates.
+#     back-a-category.feature's, the sweep steps sweep-at-a-period-end.feature's, the steps about
+#     repeats repeat-an-entry.feature's, which names dates as calendar dates, and the steps about the
+#     period start day change-the-period-start-day.feature's.
 #
 # The empty ledger every scenario starts from holds one account, "Bank", the pool account, with no
 # starting balance and nothing on it (show-accounts.feature). The names, labels and amounts are
@@ -607,6 +610,48 @@ Feature: Keep my data between runs
     And the expenses listed in the current budget period should be exactly these, in this order:
       | date             | category      | label   | amount | repeats |
       | 20 November 2026 | Subscriptions | Netflix | 13.99  | monthly |
+
+  # ----------------------------------------------------------------------------------
+  # The period start day is kept
+  #
+  # A changed start day must survive starting again, and so must every period an earlier change left
+  # behind: the calendar is a history of start days, not one (glossary: "A configurable period start day",
+  # "What else a change meets"). The steps are change-the-period-start-day.feature's.
+  # ----------------------------------------------------------------------------------
+
+  # The start day, the periods it made, and October's plan, which went into the new current period, are
+  # all as they were. Starting again says nothing and asks nothing.
+  Scenario: A changed start day, the periods it made, and a plan it moved are all there after starting again
+    Given my budget periods are one month long
+    And today is 29 September 2026
+    And I have a category "Groceries"
+    When I assign 400 euro to "Groceries" in the next budget period
+    And I change the period start day to the 27th and confirm
+    And I close MoneyBud and start it again
+    Then I should not have been told anything
+    And the Overview should show the current budget period
+    And the period start day shown in the current budget period should be the 27th
+    And the current budget period should run from 27 September 2026 to 26 October 2026
+    And the previous budget period should run from 1 September 2026 to 26 September 2026
+    And the budget period 2 before the current one should run from 1 August 2026 to 31 August 2026
+    And the budget for "Groceries" in the current budget period should be 400 euro
+
+  # Two changes. On 5 October, back to the 1st, which leaves 27 to 30 September as a short period. Were
+  # only the latest start day kept, September would be read as one whole month again after starting
+  # again, and the two short periods would be gone.
+  Scenario: Every change is kept, so the short periods between changes are still there after starting again
+    Given my budget periods are one month long
+    And today is 29 September 2026
+    When I change the period start day to the 27th and confirm
+    And the day becomes 5 October 2026 while MoneyBud is open
+    And I change the period start day to the 1st and confirm
+    And I close MoneyBud, and start it again on 2 November 2026
+    Then the period start day shown in the current budget period should be the 1st
+    And the current budget period should run from 1 November 2026 to 30 November 2026
+    And the previous budget period should run from 1 October 2026 to 31 October 2026
+    And the budget period 2 before the current one should run from 27 September 2026 to 30 September 2026
+    And the budget period 3 before the current one should run from 1 September 2026 to 26 September 2026
+    And the budget period 4 before the current one should run from 1 August 2026 to 31 August 2026
 
   # ----------------------------------------------------------------------------------
   # A kept entry is the same entry

@@ -18,6 +18,8 @@
 #     pool account to the backing account: a Budget of 300 with 100 spent moves 200, because the 100
 #     spent has already left the pool. IF NOTHING REMAINS, OR THE CATEGORY IS OVERSPENT, NOTHING MOVES.
 #     Budgets already set for LATER periods move on those periods' first day, like any assignment.
+#     (Since 2026-09-29: or on the day of a change of the period start day, when the change puts one in
+#     a period that has already begun: carry-plans-and-money-across-a-start-day-change.feature.)
 #     ACCUMULATED STARTS AT WHAT MOVED. (Raised by the stakeholder himself, and ruled.)
 #   - UNBACKING RETURNS THE MONEY to the pool account on that day, and RE-POINTING TAKES IT ALONG to
 #     the new account. Revised by the stakeholder the same day, his own idea: "if you unback a

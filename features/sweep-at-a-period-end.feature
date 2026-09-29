@@ -30,7 +30,9 @@
 #     before anything else is done, as money planned for a later period does (show-moved-money.feature).
 #     It is a movement DATED THAT FIRST DAY, from the pool account of that moment into the destination's
 #     backing account of that moment. IF MONEYBUD WAS NOT OPENED FOR SEVERAL PERIODS, EACH ENDED PERIOD
-#     IS SWEPT AT ITS OWN END, IN ORDER.
+#     IS SWEPT AT ITS OWN END, IN ORDER. (Since 2026-09-29, one exception: a period ended by a change of
+#     the period start day is swept at once, dated the day of the change:
+#     carry-plans-and-money-across-a-start-day-change.feature.)
 #   - WHEN THE POOL ACCOUNT BACKS THE DESTINATION, the sweep changes no balance and leaves no history
 #     row, but Accumulated counts it, as assigning does (back-a-category.feature).
 #   - SWEPT MONEY RAISES THE DESTINATION'S ACCUMULATED FROM THE DAY IT MOVES. IT IS NOT A BUDGET in any

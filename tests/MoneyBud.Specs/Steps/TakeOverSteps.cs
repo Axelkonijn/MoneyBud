@@ -23,11 +23,11 @@ public sealed class TakeOverSteps(SpecContext context)
     // ------------------------------------------------------------------ Given
 
     // Through the form's own buttons, as the Desktop moves it; the screen stays where it is.
-    [Given(@"^I have set the period to assign in to the (current|previous|next) budget period, and assigned nothing$")]
-    public void GivenIHaveSetThePeriodToAssignIn(string which)
+    [Given(@"^I have set the period to assign in to the " + SpecParsing.PeriodPhrase + @", and assigned nothing$")]
+    public void GivenIHaveSetThePeriodToAssignIn(string period)
     {
         var shown = App.ShownPeriod;
-        var target = Ledger.Period(which);
+        var target = Ledger.PeriodNamed(period);
         var form = App.AssignForm;
 
         while (form.Period.FirstDay > target.FirstDay) form.EarlierPeriodCommand.Execute(null);

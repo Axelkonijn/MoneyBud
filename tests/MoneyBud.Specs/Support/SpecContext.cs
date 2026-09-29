@@ -356,6 +356,14 @@ public sealed class SpecContext : IDisposable
     public void RecordDeclined(string what) => LastAttempt = new Declined(what);
 
     /// <summary>
+    /// The period start day was changed, after the user confirmed: the question put first and what
+    /// MoneyBud said afterwards (change-the-period-start-day.feature).
+    /// </summary>
+    public sealed record StartDayChanged(string Asked, string Said);
+
+    public void Record(StartDayChanged changed) => LastAttempt = changed;
+
+    /// <summary>
     /// Whether the last removal asked first: a question was waiting while the entry was still
     /// there. Null until something was removed or declined.
     /// </summary>
