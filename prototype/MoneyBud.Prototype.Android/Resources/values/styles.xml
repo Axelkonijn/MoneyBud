@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Dark from the first frame, so opening never flashes white before the ring draws. -->
+  <style name="MoneyBudTheme" parent="@style/Theme.AppCompat.DayNight.NoActionBar">
+    <item name="android:windowBackground">@color/moneybud_background</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+  </style>
+  <color name="moneybud_background">#0B0D12</color>
+</resources>

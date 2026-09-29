@@ -51,6 +51,7 @@ quietly.
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
 | `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
 | `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
+| `prototype/` | The **mobile prototype**, a stage-1 aid: how MoneyBud looks and feels on a phone, on invented data, not connected to `src/`. Its own solution, `MoneyBud.Prototype.slnx`, outside `MoneyBud.slnx` and its tests. See its README |
 
 The stakeholder material is Dutch and the documentation is English. `docs/arc42/12-glossary.md`
 holds the agreed translation of the domain terms — use it rather than translating afresh.
@@ -98,7 +99,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-29, after the start day was tried by Axel and merged. **Start here in a new conversation: the mobile front-end** (item 3 under *Next, in order*), at stage 1 — a conversation with Axel, whose big question is where the data lives with two devices. Update this when a stage completes._
+_Last updated 2026-09-29, after round 1 of the mobile prototype was approved. **Start here in a new conversation: round 2 of the mobile prototype** — a second theme, kintsugi, and switching themes (item 3 under *Next, in order*). Still stage 1: put the kintsugi details to Axel before building. Read [`prototype/README.md`](prototype/README.md) first, then the two `docs/stakeholder/2026-09-29-mobiel*.md` rounds. Update this when a stage completes._
 
 **Done: all five stages, thirteen times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -606,11 +607,30 @@ small change put in front of them the same day:
      *Staat op* list in the same row. Older than this increment, seen in the rendered frame.
 3. **A mobile front-end** — "the biggest and last for now", and what makes him actually use it. Wanted
    with **no double work** between desktop and mobile: that is what the toolkit-free
-   `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. The big stage-1
-   question will be **where the data lives** with two devices.
+   `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. **Stage 1 in
+   progress** (2026-09-29), on branch `mobile-prototype`. Settled so far, all in
+   [`2026-09-29-mobiel.md`](docs/stakeholder/2026-09-29-mobiel.md):
+   - **Android only, phone only.** No sync: the data lives on the phone, and the desktop stays for
+     development. Axel moves a file between them by cable, by hand; nothing is built for it. The
+     builds stay in step: one codebase, every feature on both, one file format.
+   - **Everything the desktop does**, laid out for a phone. **Real use starts with this increment**:
+     from the first phone version, later versions must keep reading its data (reopens ADR 0002, as
+     that ADR says). The phone **starts fresh**, with the six defaults; the desktop's demo data stays
+     behind.
+   - **Look before technique:** a separate **prototype** (`prototype/`), invented data, in two
+     rounds — round 1 layout, navigation and feel (**approved**, with the changes in
+     [ronde 1](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-1.md)), round 2 a second theme.
+     What it teaches goes back through stage 2 onwards; the prototype itself is not the app.
+   - **The shape:** the ring is a static home screen; panels are pulled over it — income from the
+     left, expenses from the right, the budget from below (half or full), the accounts from above.
+     Income, expenses and accounts have two steps (list, then form or history). The ring is held and
+     slid over, a pizza-shaped hit area; a selected slice opens the budget on that category. Premium
+     through responsiveness and animation; dark and light follow the phone; themes change more than
+     colours.
 
-Not chosen for now: switching to real use (a migration promise for the data file), the month in
-review, importing bank transactions, and the items deferred until missed.
+Not chosen for now: the month in review, importing bank transactions, and the items deferred until
+missed. Switching to real use (a migration promise for the data file) was chosen on 2026-09-29, with
+the mobile front-end.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:
