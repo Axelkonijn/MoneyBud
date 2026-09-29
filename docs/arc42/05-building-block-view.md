@@ -16,6 +16,12 @@ persistence increment added the fourth, `MoneyBud.Storage`, which keeps the ledg
 ([ADR 0007](../decisions/0007-keeping-the-ledger.md), which amends 0006). This section stays short,
 for the same reason [§7](07-deployment-view.md) is.
 
+**A phone head is settled, not built** (2026-09-29, [ADR 0013](../decisions/0013-an-android-phone-app.md)).
+It will be a second thin Avalonia head beside `MoneyBud.Desktop`, over the same domain, presentation
+layer and storage, and held to the Desktop's rule: it decides nothing. **Which projects it needs, and
+what they are called, are left to this increment's plan**, so the diagram below does not draw it yet.
+The one thing it has that the Desktop has not is themes, which change only how MoneyBud looks.
+
 ## Level 1 — Whitebox: MoneyBud
 
 ```

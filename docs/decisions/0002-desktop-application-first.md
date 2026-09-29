@@ -1,7 +1,13 @@
 # 0002 — The first version is a desktop application
 
-**Status:** Accepted
+**Status:** **Superseded by [ADR 0013](0013-an-android-phone-app.md)** on 2026-09-29
 **Date:** 2026-09-24
+
+> The record below is left as it was written. It named the moment it would expire, "the moment the
+> stakeholder starts keeping data he would mind losing", and that moment came on 2026-09-29, when the
+> stakeholder ruled that real use starts with a phone app. ADR 0013 makes his Android phone the place
+> MoneyBud is used and keeps the desktop for development; ADR 0014 says what real use means for the
+> data. Read what follows as true until then.
 
 ## Context
 

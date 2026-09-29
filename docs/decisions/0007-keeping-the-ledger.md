@@ -1,6 +1,11 @@
 # 0007 — Keeping the ledger: one JSON file in the user's profile, in a fourth project
 
-**Status:** Accepted
+**Status:** Accepted. **Superseded in part by [ADR 0014](0014-real-use-and-the-phone-data.md)**
+on 2026-09-29: the consequences "until the switch to real use an older file is simply unreadable" and
+"reversal is cheap while the data is demo data", and the argument under *The version field, while no
+version need read another's data*, end with the phone version the stakeholder accepts at the mobile
+increment's end review. Decisions 1 to 6 stand; decision
+2's folder is the desktop's, and ADR 0014 adds the phone's.
 **Date:** 2026-09-26
 **Amends:** [ADR 0006](0006-three-source-projects.md). It adds a fourth source project, `MoneyBud.Storage`,
 beside the three that record set out. Nothing 0006 decided is reversed: the domain, the presentation
@@ -44,6 +49,19 @@ points here.
 > added two remembered amounts to a backing and read version 5; it had no record of its own and no
 > note here until this one ([§12](../arc42/12-glossary.md), *Backing a category that already has
 > money*). The body is unchanged.
+>
+> **Note, 2026-09-29, later the same day. Real use starts with the phone**,
+> [ADR 0014](0014-real-use-and-the-phone-data.md). The stakeholder ruled that from the phone version he
+> accepts at that increment's end review, a new version must keep reading the data it saved. **The
+> switch this record waits for in *The version field* and in two of its consequences has come**, so
+> those parts are superseded: from the accepted version, "cannot read" is no longer an allowed answer to
+> an older promised version, and reversal is no longer cheap. **The rest of this record stands**, on both
+> heads: one JSON file written whole, strict reading, the version field, the temporary file and rename,
+> the keys, and the storage project. The lock claimed before loading stands on the desktop; Android runs
+> only one instance of an app, so a second start is not a case there, and whether the phone keeps the
+> lock is for the plan. **Decision 2's folder is the desktop's.** On the
+> phone the file lives in the app's own folder, `Android/data/<package>/files`, under a fixed signing
+> key (ADR 0014). The body is unchanged.
 
 ## Context
 

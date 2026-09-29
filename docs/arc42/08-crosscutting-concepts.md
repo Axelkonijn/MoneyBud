@@ -9,7 +9,9 @@ know regardless of which part of the system they're touching.
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
 built, since 2026-09-26. Opening a period, accounts, backing and the sweep are built, and appear in
 §8.1, §8.3 and §8.4. So, since 2026-09-28 and 2026-09-29, are recurring entries and a configurable
-period start day._
+period start day. **§8.5 is new, for the phone** (settled 2026-09-29, not built): what the mobile
+prototype taught about drawing with Avalonia on Android, which binds the real build. §8.3 records that
+real use starts with the phone._
 
 ## 8.1 Domain Model
 
@@ -1081,6 +1083,25 @@ records against it, and that a backing's two days are period starts on or before
 ([§8.1](#81-domain-model), *The period start day*). **A change of start day saves once**, through
 `Tell`, with any sweep it made.
 
+**Real use starts with the phone** (ruled 2026-09-29, not built;
+[ADR 0014](../decisions/0014-real-use-and-the-phone-data.md), [§12](12-glossary.md), *MoneyBud on the
+phone*). **From the phone version the stakeholder accepts at the increment's end review, every later
+version reads the data it wrote**, on both heads: a change of format is still a new version number, but
+"cannot read" is no longer an allowed answer to an older promised version. It stays the answer to
+damaged, blank and newer data. The row *Until real use starts* below ends there. **Until he accepts a
+version, the review may still change the format**, and data entered on an earlier build may have to be
+entered again, by his ruling. Nothing saved before the accepted version is promised: the phone starts
+fresh, and the desktop's demo data stays behind. **On the phone the file lives in the app's own
+folder**, `Android/data/<package>/files`, reachable over USB, under a signing key and package name that
+never change, so an update never uninstalls it. The desktop keeps `%LOCALAPPDATA%\MoneyBud`. **The app
+opts out of Android's automatic backup**, so the file stays on the phone, and **the phone's own lock is
+its protection**. **The phone's theme and light or dark setting are kept in the app's settings, not in
+the file**, so the file is the same on both heads, and nothing about it changes for themes. How the
+store finds the phone's folder, and how the lock and the rename behave there, are for the plan. **The
+rulings about closing and starting meet Android as ruled in [§12](12-glossary.md), *Android's
+lifecycle***: the last attempt is made on going to the background, there is no second start, and the
+unreadable-data message closes the app when it is tapped away.
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -1132,7 +1153,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused. **Not exercised by version 6 or 7 either**: version 6 reads 5 and 4 (2026-09-28), and version 7 reads 6, 5 and 4 (2026-09-29, approved at the plan gate on the recommendation, ADR 0012) |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused. **Not exercised by version 6 or 7 either**: version 6 reads 5 and 4 (2026-09-28), and version 7 reads 6, 5 and 4 (2026-09-29, approved at the plan gate on the recommendation, ADR 0012). **Ended by the switch to real use** (ruled 2026-09-29, not built): from the phone version accepted at the end review, every later version must read it ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -2174,3 +2195,58 @@ current period, the tick keeping the question, the day already set asking, the s
 old first day, and a pending change never replaced. A headless run of the real window passed 28 checks
 (*The period start day on screen*, above). Two rulings were taken at the build (§12, *A configurable
 period start day: chosen in the build*).
+
+## 8.5 Drawing on the phone
+
+**Settled 2026-09-29, not built.** The phone app is a second Avalonia head over the same projects
+([ADR 0013](../decisions/0013-an-android-phone-app.md)). Before it, a **prototype** in `prototype/`,
+on invented data and connected to nothing in `src/`, was built and run on the stakeholder's phone in two
+approved rounds ([`prototype/README.md`](../../prototype/README.md); [§12](12-glossary.md), *MoneyBud on
+the phone*). It is not the app, and its sample data is not meant to carry over. **What it found about
+drawing on Android is**, because every item below is invisible on the desktop and in a headless run,
+and the real build is done without the phone connected. These are rules for whoever touches the phone
+head, whatever part of it.
+
+### Four traps that show only on the phone
+
+| Trap | What happened in the prototype | The rule |
+|---|---|---|
+| **Avalonia's GPU resource budget is small for screen-sized pictures** | The kintsugi theme keeps several screen-sized pictures on the GPU: the table, the slabs, the plate's textures. Past Avalonia's default budget they were pushed out and sent again every frame, which held a drag to about 24 frames a second | **Raise the budget on Android.** The prototype sets `SkiaOptions.MaxGpuResourceSizeBytes` to 256 MB in its `MainActivity`, and a drag then runs at the phone's full 120 |
+| **A custom draw operation's `Render` runs on the render thread on Android** | On the desktop and in a headless run it runs on the UI thread, so a mistake there shows only on the phone. The first shader ring read a theme colour inside `Render`, which throws off the UI thread; every frame threw, and the screen froze and flickered. The stakeholder met it as two builds that hung | **Read everything a drawing needs before handing it over**, in `Paint` on the UI thread. `Render` touches no theme resource and no other UI object |
+| **A frame request alone may never get its frame** | `TopLevel.RequestAnimationFrame` waited for ever just after opening, when nothing else had changed, so the opening animation hung until the first touch | **Invalidate the visual with every frame request** (the prototype's `FrameLoop` does) |
+| **A control can be touched only where it draws** | The ring's hole and its margin ignored touches, so the pizza-shaped hit area ([§12](12-glossary.md), *Touching the ring*) did not work there | **Give the ring its own hit test** (`ICustomHitTest` in the prototype's `RingView`), covering the whole zone the finger is held in |
+
+### Pictures drawn once, at 96 dpi
+
+**A surface that never changes is drawn once into a picture and reused.** Each kintsugi slab, with its
+chipped edges and gold breaks, was far too slow drawn as shapes every frame. So is the plate: what never
+changes for a plate of a given size, its light, its veins and how the breaks wander, is worked out once,
+in the background, about half a second on the phone, and a light shader combines it with the slices each
+frame.
+
+**Such a picture is made at 96 dpi and scaled by hand.** Made at the screen's own dpi, the slab came out
+magnified on the phone and right on the desktop, where the two are the same, so the desktop could not
+show the mistake.
+
+**Where the phone cannot compile the plate's shader, the plain ring is drawn instead**, so a device
+without the GPU feature still shows every figure. That is the prototype's choice, *approved with the
+prototype*.
+
+### Measured on the phone, and nowhere else
+
+**Frames are measured on the device**, with `dumpsys SurfaceFlinger --latency` on the app's layer, which
+gives the frames that really reached the screen, not a counter inside the app. **Feel is judged on a
+Release build**, which is compiled ahead of time. A headless run is too slow to trust for anything under
+about a second: a picture taken 0.1 seconds into a half-second fade showed the fade already over.
+
+**What that means while the phone is not connected.** None of these can be checked during the build.
+The traps above are known, and the prototype's fixes carry over with its drawing code, but whether the
+real app meets them is first seen when the stakeholder installs it, at the review that replaces this
+increment's gates ([§11](11-risks-and-technical-debt.md)).
+
+### Building for Android
+
+The Android build needs the `android` .NET workload and **JDK 17 or 21**; the `java` on the development
+machine's path is 25, too new, so the prototype's project points at JDK 21 where it finds it. `adb` is in
+`%LOCALAPPDATA%\Android\Sdk\platform-tools`. These are facts of the development machine, recorded
+because the next build will meet them ([§7](07-deployment-view.md)).

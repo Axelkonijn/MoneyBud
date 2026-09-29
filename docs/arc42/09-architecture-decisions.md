@@ -11,17 +11,19 @@ later ask "why on earth is it like this?".
 | # | Decision | Status | Date |
 |---|---|---|---|
 | [0001](../decisions/0001-dotnet-and-reqnroll.md) | .NET 10 and Reqnroll for BDD | Accepted | 2026-09-24 |
-| [0002](../decisions/0002-desktop-application-first.md) | The first version is a desktop application | Accepted | 2026-09-24 |
+| [0002](../decisions/0002-desktop-application-first.md) | The first version is a desktop application | **Superseded by 0013** (2026-09-29) | 2026-09-24 |
 | [0003](../decisions/0003-money-representation.md) | How money is represented in code | Accepted, amended same day | 2026-09-24 |
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
-| [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
-| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), **version 7 since 0012**, by dated notes. Dated note, 2026-09-29: **the start day is stored**, as the calendar's history, and version 6, from the change to *Opgebouwd*, had no record | 2026-09-26 |
+| [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted. Dated note, 2026-09-29: **the phone's toolkit too**, by 0013 | 2026-09-25 |
+| [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project. Dated note, 2026-09-29: **a second head, the phone**, by 0013 | 2026-09-25 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), **version 7 since 0012**, by dated notes. Dated note, 2026-09-29: **the start day is stored**, as the calendar's history, and version 6, from the change to *Opgebouwd*, had no record. **Superseded in part by 0014** (2026-09-29): from the phone version accepted at the end review, "cannot read" is no longer an answer to an older version, and reversal is no longer cheap | 2026-09-26 |
 | [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
 | [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated notes, 2026-09-28: **its saving gap narrowed for sweeps by 0010, and for occurrences by 0011**; settling event by event and no longer at most once a day, by 0011 | 2026-09-27 |
 | [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011. Dated note, 2026-09-29: a sweep's period named through the ledger's calendar, and a sweep made by a change of start day dated that day, by 0012 | 2026-09-28 |
 | [0011](../decisions/0011-recurring-entries.md) | A recurring entry is state beside its occurrences, and settling works event by event | Accepted; takes 0007's format to version 5 and reads version 4 | 2026-09-28 |
 | [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4 | 2026-09-29 |
+| [0013](../decisions/0013-an-android-phone-app.md) | MoneyBud is used on an Android phone, as a second head over the same projects | Accepted; **supersedes 0002**; extends 0005 and 0006 by dated notes | 2026-09-29 |
+| [0014](../decisions/0014-real-use-and-the-phone-data.md) | Real use: every later version reads the data, which on the phone lives in the app's own folder under one fixed signing key | Accepted; **supersedes 0007 in part** | 2026-09-29 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -237,3 +239,37 @@ calendar holds only in its first half. Both were consequences written about a st
 read, not refused** (decision D2, approved as recommended): it has no start day because every period in
 it began on the 1st, so reading it guesses nothing. That is in the record's consequences, as version 4
 was in 0011's.
+
+**The mobile front-end added two, 0013 and 0014**, on 2026-09-29, and unlike every record since 0005
+**they come from the stakeholder's rulings in stage 1, not from a plan**. He settled the platform, the
+place of use, sync, parity, real use, where the data lives on the phone, its protection and its backup
+himself, and those are
+exactly the choices this section's test is about: costly to reverse, and sure to draw a "why on earth"
+without their reasoning. So they are recorded now, ahead of this increment's scenarios and plan. What
+they deliberately leave to the plan is the project layout for the phone. **The two approval gates are
+waived for this increment**, by his ruling ([§12](12-glossary.md), *MoneyBud on the phone*), so no plan
+gate will approve a record that the plan adds. He reviews the scenarios, the plan and the app together
+at the end, and any record the plan adds is reviewed with them.
+
+**ADR 0013 supersedes ADR 0002 outright.** 0002's decision was the deployment form, and it named its
+own expiry: the moment the stakeholder keeps data he would mind losing. He ruled that real use starts
+with the phone, so the deployment form changed, and a changed decision gets a new record, as 0004's
+decision 1 did. 0002 is marked **Superseded**, with a note at its head, and its body is kept. 0013 also
+reaches **ADR 0005**, whose toolkit now draws the phone, and **ADR 0006**, whose presentation layer now
+has a second head, as 0006's own *Why* foresaw. Neither decision is reversed, so each carries a dated
+note, as 0006 did for 0007.
+
+**ADR 0014 supersedes ADR 0007 in part**, the second partial supersession after 0004. What changed is
+not how the file is written but what it owes the future: from the phone version the stakeholder accepts
+at the end review, every later version reads it. That ends 0007's consequence that an older file is simply unreadable until real use,
+its "reversal is cheap" consequence, and the argument written for the time before real use. Its six
+decisions stand. That is closer to 0004's case than to a dated note, because a stated part of the record
+no longer holds, so 0007's status line names what is superseded and a note points to 0014. **ADRs 0008
+to 0012 carry no note.** Each has a consequence "reversal is cheap while the data is demo data", which
+ends with the accepted phone version by its own condition. Their decisions are untouched, and a note on
+each would only repeat 0014.
+
+**Three answers the stakeholder gave while these records were written went into 0014's body, not into
+a note** (2026-09-29): the promise runs from the version he accepts at the review, not the first
+installed; the phone's own lock is the protection; and the app opts out of Android's automatic backup.
+0014 was written the same day and nothing had been built on it, so there was no earlier belief to keep.

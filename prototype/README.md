@@ -92,9 +92,14 @@ performance fix.
 Kept from the first version: switching in *Instellingen* (the gear on the accounts panel) with a
 cross-fade, not remembered between starts; gold accents; Cormorant Garamond for headings.
 
-**Later, not this round:** a third choice with kintsugi's own motions throughout (the bowl breaking
-into shards when stepping periods, for instance), Axel's idea. It is a small round of its own, to
-compare against this calm version once he has lived with it.
+**Dropped:** a third choice with kintsugi's own motions throughout (the bowl breaking into shards
+when stepping periods, for instance), Axel's idea. At first kept for a small round of its own; after
+round 2 he dropped it — he will bring it up again if he wants it
+([na het prototype](../docs/stakeholder/2026-09-29-mobiel-na-het-prototype.md)).
+
+**The prototype is closed** (2026-09-29). What it taught is in arc42 — §12 *MoneyBud on the phone*,
+§8.5 *Drawing on the phone*, ADRs 0013 and 0014 — and the real phone app is built from those, not
+from this code. Its layout, styling, animations and theme files are what is meant to carry over.
 
 How a theme is built: a `ResourceDictionary` with the same keys as `Theme/Default.axaml`, and a
 `RingPainter` of its own, named together in `Theme/Looks.cs`. Nothing else in the prototype names a

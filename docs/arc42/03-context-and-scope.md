@@ -33,7 +33,7 @@ recorded here because each one changes this section rather than merely adding a 
 |---|---|
 | Bank transaction import (statement download, CSV or similar) | Deferred. The stakeholder wants automatic entry eventually but has no view yet on how it would work |
 | Direct bank connection | Deferred, and in tension with the local-operation constraint in [§2](02-architecture-constraints.md) |
-| Sync between desktop and mobile | Wanted, but explicitly a nice-to-have. Would introduce a second instance of the system and something between them |
+| Sync between desktop and mobile | Wanted, but explicitly a nice-to-have. Would introduce a second instance of the system and something between them. **Settled as not built** (2026-09-29, [ADR 0013](../decisions/0013-an-android-phone-app.md)): the phone app is the second instance, and **nothing is between them**. The stakeholder moves the file by hand, over USB, "daar hoeft niets voor gemaakt te worden". So this row no longer waits on mobile. It would come back only if he wanted the two kept in step |
 | Live investment valuations | Deferred. Investment values are entered by hand; the stakeholder noted he might later look at whether realistic integration is possible |
 
 ## 3.3 Technical Context
@@ -65,3 +65,17 @@ it.
 The UI toolkit, Avalonia, is now chosen ([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)).
 It changes nothing in this section: it sits inside the application, on the first row above, and
 adds no channel to anything outside it.
+
+**The phone (settled 2026-09-29, not built) adds no channel either** ([ADR 0013](../decisions/0013-an-android-phone-app.md),
+[ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). It is a second copy of the two rows
+above, on a second device: the user and MoneyBud through the phone's screen, and MoneyBud and its own
+file in the app's folder on the phone. **Copying that file between phone and desktop, over USB, is the
+user's act, outside the boundary**, as backing up is. MoneyBud neither knows about it nor takes part.
+What MoneyBud reads from the phone itself, its light or dark setting and whether touch feedback is on,
+is the platform it runs on, not a party to exchange data with.
+
+**One channel is closed on purpose**: Android can copy an app's files to the user's Google account
+unless the app opts out, and **MoneyBud opts out**, by the stakeholder's ruling of 2026-09-29. The data
+stays on the phone only; his copies over the cable are the backup
+([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). Had it been allowed, it would have been
+the first thing to move this boundary.

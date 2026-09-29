@@ -45,6 +45,15 @@ describing.
   and, when it ends the current period, passes the boundary itself, dated today, because settling
   cannot ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)).
 
+**The scenarios below were drawn for the desktop.** The phone app, settled on 2026-09-29 and not built
+([ADR 0013](../decisions/0013-an-android-phone-app.md)), runs the same collaboration behind every act.
+Where it will differ is at the edges this section draws for the desktop: *Starting*, *Saving* and
+*Closing* rest on a window that opens and closes and a timer once a minute, and Android stops an app in
+the background without closing it. **What the user meets there is ruled** (2026-09-29; [§12](12-glossary.md),
+*Android's lifecycle*): the last save attempt is made when MoneyBud goes to the background, there is no
+second start to refuse, and unreadable data shows its message and closes the app when it is tapped away.
+How the calls run is for the plan, and is drawn here once it is built.
+
 ## Recording an expense through the screen
 
 The main use case, and the one that shows where each decision is taken.

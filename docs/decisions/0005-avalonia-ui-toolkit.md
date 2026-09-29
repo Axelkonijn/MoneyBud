@@ -1,6 +1,7 @@
 # 0005 — The desktop UI toolkit is Avalonia
 
-**Status:** Accepted
+**Status:** Accepted. Dated note, 2026-09-29: the phone app is built with Avalonia too, by
+[ADR 0013](0013-an-android-phone-app.md)
 **Date:** 2026-09-25
 
 ## Context
@@ -89,3 +90,14 @@ window. A different toolkit, or a mobile head, could bind to the same view model
   control, and no scenario would change.
 - **ADR 0002's statement that the toolkit is open is now answered here.** ADR 0002 is not
   superseded. It decided the deployment form, and that stands.
+
+## Note, 2026-09-29: Avalonia draws the phone too
+
+This note adds to the record and rewrites nothing above. [ADR 0013](0013-an-android-phone-app.md) makes
+an Android phone the place MoneyBud is used, and **the phone app is built with Avalonia as well**, as a
+second head beside the Desktop. The first reason given above, that Avalonia "keeps the deferred mobile
+wish reachable without settling it", is what that record cashes in. The stakeholder's prototype, built
+with Avalonia and run on his phone, was approved on 2026-09-29. It found four traps that show only on
+the phone, recorded in [§8.5](../arc42/08-crosscutting-concepts.md). ADR 0002, which the second bullet
+above says stands, has since been superseded by ADR 0013. The decision above, the toolkit, is
+unchanged; its reach is wider.

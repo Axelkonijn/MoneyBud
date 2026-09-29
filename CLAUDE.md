@@ -99,7 +99,32 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-29, after round 2 of the mobile prototype was approved. **Start here in a new conversation: what the prototype taught goes back through stage 2** (item 3 under *Next, in order*). Read [`prototype/README.md`](prototype/README.md) first, then the six `docs/stakeholder/2026-09-29-mobiel*.md` rounds. Update this when a stage completes._
+_Last updated 2026-09-30, after stage 2 of the phone app. Update this when a stage completes._
+
+**Start here in a new conversation: build the phone app — increment 14 — autonomously.** Stages
+1 and 2 are done: the mobile prototype is approved and closed, and arc42 is updated (§12 *MoneyBud
+on the phone*, §8.5 *Drawing on the phone*, ADRs 0013 and 0014). Axel's instructions for this
+increment ([na het prototype](docs/stakeholder/2026-09-29-mobiel-na-het-prototype.md)):
+
+- **Run stages 3–5 without stopping.** Both gates are **waived for this increment only**: write the
+  scenarios (`scenario-writer`) and the plan (`docs/plans/increment-14-phone.md`) as usual, but do
+  not wait for approval — build to green, run `spec-reviewer`, then present scenarios, plan and app
+  together for Axel's review, with **every decision taken without him listed**.
+- **No phone is connected.** Nothing can be installed or measured on the device; the build must still
+  produce the signed APK for Axel to install. **Stop only if something makes continuing impossible**,
+  and say what.
+- **Theming is phone-only.** Everything else is identical on desktop and phone: every feature, one
+  file format.
+- Work on a new branch, `increment-14-phone`, from `mobile-prototype` (the prototype's layout,
+  styling, animations and theme files are meant to carry over; its `Sample/` data is not).
+- **Signing: one fixed key of Axel's, outside the repository.** If none exists, create one outside the
+  repo (never commit the key or its password) and tell Axel exactly where it is: losing it means an
+  update cannot install over the app, and uninstalling deletes the phone's data.
+- The data promise starts with **the version Axel accepts at the review**, not the first build.
+
+Read first: §12 *MoneyBud on the phone* and §8.5, ADRs 0013 and 0014,
+[`prototype/README.md`](prototype/README.md) (its Avalonia traps bind the build), then the
+`docs/stakeholder/2026-09-29-mobiel*.md` rounds.
 
 **Done: all five stages, thirteen times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -627,8 +652,10 @@ small change put in front of them the same day:
      [its feedback](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback.md)). Ring and
      table rebuilt (a Skia shader plate on CC0 wood), the panels porcelain slabs;
      **approved** on 2026-09-29, after a performance fix (Avalonia's GPU budget, see the README). A third choice with
-     kintsugi's own motions throughout is his idea for a small round after that.
+     kintsugi's own motions throughout was his idea, then **dropped** after round 2.
      What it teaches goes back through stage 2 onwards; the prototype itself is not the app.
+     **Stage 2 done** (2026-09-30): ADRs 0013 and 0014, §8.5, §12 *MoneyBud on the phone*. Stages 3–5
+     run next, autonomously — see *Start here* above.
    - **The shape:** the ring is a static home screen; panels are pulled over it — income from the
      left, expenses from the right, the budget from below (half or full), the accounts from above.
      Income, expenses and accounts have two steps (list, then form or history). The ring is held and
