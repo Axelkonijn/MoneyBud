@@ -46,10 +46,11 @@ public sealed class RecordExpenseSteps(SpecContext context)
     public void GivenIHaveABudgetFor(string amount, string category, string which) =>
         GiveBudget(amount, category, Ledger.Period(which));
 
-    // Further back than the previous period, in keep-data.feature's words (take-over-a-plan.feature).
-    [Given(@"^I have a budget of (\S+) euro for ""([^""]*)"" in the budget period (\d+) before the current one$")]
-    public void GivenIHaveABudgetForAnEarlierPeriod(string amount, string category, int count) =>
-        GiveBudget(amount, category, Ledger.PeriodsFromCurrent(-count));
+    // Further back than the previous period, in keep-data.feature's words (take-over-a-plan.feature),
+    // or further on than the next (carry-plans-and-money-across-a-start-day-change.feature).
+    [Given(@"^I have a budget of (\S+) euro for ""([^""]*)"" in the budget period (\d+) (before|after) the current one$")]
+    public void GivenIHaveABudgetForAnotherPeriod(string amount, string category, int count, string way) =>
+        GiveBudget(amount, category, Ledger.PeriodsFromCurrent(way == "before" ? -count : count));
 
     private void GiveBudget(string amount, string category, BudgetPeriod period)
     {
@@ -198,11 +199,11 @@ public sealed class RecordExpenseSteps(SpecContext context)
 
     // Both this and the remaining-budget step below are used by record-income.feature too,
     // which asserts that recording income leaves the plan layer alone.
-    [Then(@"the budget for ""([^""]*)"" in the (current|previous|next) budget period should (?:still )?be (\S+) euro")]
-    public void ThenTheBudgetForShouldBe(string category, string which, string expected) =>
+    [Then(@"the budget for ""([^""]*)"" in the " + SpecParsing.PeriodPhrase + @" should (?:still )?be (\S+) euro")]
+    public void ThenTheBudgetForShouldBe(string category, string period, string expected) =>
         Assert.Equal(
             SpecParsing.MoneyAmount(expected),
-            Ledger.BudgetFor(category, Ledger.Period(which)));
+            Ledger.BudgetFor(category, Ledger.PeriodNamed(period)));
 
     [Then(@"the remaining ""([^""]*)"" budget in the (current|previous|next) budget period should (?:still )?be (\S+) euro")]
     public void ThenTheRemainingBudgetShouldBe(string category, string which, string expected) =>

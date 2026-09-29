@@ -66,6 +66,13 @@ namespace MoneyBud.Domain;
 /// (<see cref="TakeOccurrencesMade"/>). The latest occurrence — the one recorded most recently — sets
 /// the next; changing it changes what follows, and one-off stops it (<see cref="FrequencyOf"/>,
 /// <see cref="SetsTheRepeat"/>).</para>
+///
+/// <para><b>The period start day</b> (arc42 §12, <i>A configurable period start day</i>; ADR 0012)
+/// can be changed at any time, from the current period on (<see cref="ChangeStartDay"/>). The
+/// <see cref="Calendar"/> is then a history of changes, and is kept. Everything keyed by a period's
+/// first day stays true of the periods that existed when it was written, since no period before the
+/// current one moves; only plans made ahead are moved, into the period their old first day falls
+/// in.</para>
 /// </summary>
 public sealed class Ledger
 {
@@ -115,8 +122,8 @@ public sealed class Ledger
     /// <paramref name="poolAccount"/>, with no starting balance. There is always exactly one pool
     /// account, so an empty ledger cannot have none.
     /// </summary>
-    public Ledger(TimeProvider clock, string poolAccount, BudgetPeriodCalendar? calendar = null)
-        : this(clock, calendar)
+    public Ledger(TimeProvider clock, string poolAccount)
+        : this(clock, new BudgetPeriodCalendar())
     {
         var stored = NameRule.Normalise(poolAccount)
             ?? throw new ArgumentException("The pool account needs a name.", nameof(poolAccount));
@@ -124,10 +131,10 @@ public sealed class Ledger
         settledThrough = Today;
     }
 
-    private Ledger(TimeProvider clock, BudgetPeriodCalendar? calendar)
+    private Ledger(TimeProvider clock, BudgetPeriodCalendar calendar)
     {
         this.clock = clock;
-        Calendar = calendar ?? new BudgetPeriodCalendar();
+        Calendar = calendar;
     }
 
     /// <summary>
@@ -153,9 +160,9 @@ public sealed class Ledger
     /// caller's naming. That is what the scenarios start from unless they are about the first start,
     /// which is how the suite proves that no other scenario leans on the defaults being there.</para>
     /// </summary>
-    public static Ledger StartNew(TimeProvider clock, BudgetPeriodCalendar? calendar = null)
+    public static Ledger StartNew(TimeProvider clock)
     {
-        var ledger = new Ledger(clock, DefaultAccountName, calendar);
+        var ledger = new Ledger(clock, DefaultAccountName);
         foreach (var name in DefaultCategoryNames) ledger.AddCategory(name);
         return ledger;
     }
@@ -178,7 +185,8 @@ public sealed class Ledger
                 keys[c], c.Name, archived.Contains(c),
                 backings.TryGetValue(c, out var b)
                     ? new BackingSnapshot(
-                        accountKeys[b.Account], b.AccumulatingSince, b.HereSince, b.NotMoved, b.PaidHereBefore)
+                        accountKeys[b.Account], b.AccumulatingSince, b.HereSince, b.NotMoved, b.PaidHereBefore,
+                        b.AccumulatingFrom, b.HereFrom)
                     : null)).ToList(),
             budgets.Select(b => new BudgetSnapshot(keys[b.Key.Category], b.Key.PeriodStart, b.Value)).ToList(),
             expenses.Select(e => new ExpenseSnapshot(
@@ -201,7 +209,8 @@ public sealed class Ledger
                     p.Key, categoriesInOrderAdded.Where(p.Value.Contains).Select(c => keys[c]).ToList()))
                 .ToList(),
             letGo.OrderBy(l => l.Key).Select(l => new LetGoSnapshot(l.Key, l.Value)).ToList(),
-            repeats.Select(r => new RepeatSnapshot(r.Occurrences.ToList(), r.Frequency, r.Day, r.Next)).ToList());
+            repeats.Select(r => new RepeatSnapshot(r.Occurrences.ToList(), r.Frequency, r.Day, r.Next)).ToList(),
+            Calendar.Changes.ToList());
     }
 
     /// <summary>
@@ -230,9 +239,19 @@ public sealed class Ledger
     /// future, but one recorded today is still valid kept data if the clock is later turned
     /// back.</para>
     /// </summary>
-    public static Ledger FromSnapshot(
-        LedgerSnapshot snapshot, TimeProvider clock, BudgetPeriodCalendar? calendar = null)
+    public static Ledger FromSnapshot(LedgerSnapshot snapshot, TimeProvider clock)
     {
+        BudgetPeriodCalendar calendar;
+        try
+        {
+            calendar = BudgetPeriodCalendar.FromChanges(snapshot.StartDayChanges ?? []);
+        }
+        catch (ArgumentException e)
+        {
+            throw Invalid($"the period start day's history is not one MoneyBud could have made ({e.Message})");
+        }
+
+        // The calendar first: every day a period starts on below is checked against it.
         var ledger = new Ledger(clock, calendar);
         var byKey = new Dictionary<int, Category>();
         var accountByKey = new Dictionary<int, Account>();
@@ -356,7 +375,9 @@ public sealed class Ledger
             ledger.backings.Add(category, new Backing(
                 account, backing.AccumulatingSince, backing.HereSince,
                 backing.NotMoved ?? ledger.NotMovedBefore(category, backing.AccumulatingSince),
-                backing.PaidHereBefore ?? ledger.PaidBefore(category, account, backing.HereSince)));
+                backing.PaidHereBefore ?? ledger.PaidBefore(category, account, backing.HereSince),
+                PeriodFrom(backing.AccumulatingFrom, backing.AccumulatingSince),
+                PeriodFrom(backing.HereFrom, backing.HereSince)));
         }
 
         if (snapshot.SweepDestination is { } destinationKey)
@@ -415,6 +436,16 @@ public sealed class Ledger
         ledger.settledThrough = snapshot.SettledThrough;
         return ledger;
 
+        // Data from before version 7 knew only periods starting on the 1st, so the mark's period is
+        // the calendar's. A day kept is the first day of a period on or before the mark.
+        DateOnly PeriodFrom(DateOnly? kept, EntryMark mark)
+        {
+            if (kept is not { } from) return ledger.Calendar.PeriodContaining(mark.Date).FirstDay;
+            if (from > mark.Date || !StartsAPeriod(from))
+                throw Invalid($"a backing counts from {from}, which starts no period on or before its mark");
+            return from;
+        }
+
         void CheckMark(EntryMark mark)
         {
             if (mark.Id < 1 || mark.Id > snapshot.LastEntryId || ids.Contains(mark.Id))
@@ -460,7 +491,11 @@ public sealed class Ledger
         static InvalidDataException Invalid(string what) => new($"The kept ledger cannot be read: {what}.");
     }
 
-    public BudgetPeriodCalendar Calendar { get; }
+    /// <summary>
+    /// How dates fall into periods. Replaced, never changed, by <see cref="ChangeStartDay"/>: every
+    /// period before the current one keeps its boundaries.
+    /// </summary>
+    public BudgetPeriodCalendar Calendar { get; private set; }
 
     /// <summary>
     /// The day MoneyBud considers today, in the user's own time. How a configurable period start
@@ -1699,7 +1734,9 @@ public sealed class Ledger
             backings[category] = new Backing(
                 account!, mark, mark,
                 NotMoved: BudgetFor(category.Name, CurrentPeriod) - moving,
-                PaidHereBefore: PaidFrom(category, account!, CurrentPeriod));
+                PaidHereBefore: PaidFrom(category, account!, CurrentPeriod),
+                AccumulatingFrom: CurrentPeriod.FirstDay,
+                HereFrom: CurrentPeriod.FirstDay);
             if (moving.Cents > 0)
                 moved = Move(category, pool, account!, moving, MovementReason.Backed, MovementDirection.In);
             return new SetBackingResult(category, BackingOutcome.Backed, null, account, moved);
@@ -1721,6 +1758,7 @@ public sealed class Ledger
         backings[category] = current with
         {
             Account = account, HereSince = NewMark(), PaidHereBefore = PaidFrom(category, account, CurrentPeriod),
+            HereFrom = CurrentPeriod.FirstDay,
         };
         if (there.Cents > 0)
             moved = Move(category, current.Account, account, there, MovementReason.Repointed, MovementDirection.Along);
@@ -1737,7 +1775,9 @@ public sealed class Ledger
     /// <para>"Since" counts expenses by period, as <see cref="AccumulatedFor"/> does (§12, <i>ruling of
     /// 2026-09-28</i>): every expense from that account dated in the period the account became the
     /// backing account, or later, whenever it was entered, less what the account had already paid for
-    /// the category in that period by then (<see cref="Backing.PaidHereBefore"/>).</para>
+    /// the category in that period by then (<see cref="Backing.PaidHereBefore"/>). That period is
+    /// counted from the first day it had then (<see cref="Backing.HereFrom"/>), so a change of the
+    /// period start day never changes this figure (§12, <i>follow-up 5</i>).</para>
     ///
     /// <para>It is what unbacking returns, what re-pointing takes along, and the most a negative
     /// assignment moves back. It is <b>not</b> <i>Accumulated</i>, which counts the category's expenses
@@ -1758,9 +1798,8 @@ public sealed class Ledger
         var moved = Money.Sum(movements
             .Where(m => m.Category == category && backing.HereSince.IsBefore(m))
             .Select(m => m.Direction == MovementDirection.Out ? -m.Amount : m.Amount));
-        var from = Calendar.PeriodContaining(backing.HereSince.Date).FirstDay;
         var spent = Money.Sum(expenses
-            .Where(e => e.Category == category && e.Account == backing.Account && e.Date >= from)
+            .Where(e => e.Category == category && e.Account == backing.Account && e.Date >= backing.HereFrom)
             .Select(e => e.Amount));
         return moved - spent + backing.PaidHereBefore;
     }
@@ -1814,6 +1853,12 @@ public sealed class Ledger
     /// added back, so in that period <i>Opgebouwd</i> moves with <i>Resterend</i>, a change to an
     /// earlier expense included. An expense dated before that period does not count: it is for the
     /// sweep. Below zero is allowed and shown.</para>
+    ///
+    /// <para>The period of backing is counted from the first day it had when the category was backed
+    /// (<see cref="Backing.AccumulatingFrom"/>), even once a change of the period start day has cut it
+    /// short: <i>Opgebouwd</i> is <i>Resterend</i> summed over every period since the backing, and a
+    /// change only moves expenses between the two halves of the period it cuts, so it never changes
+    /// this figure (§12, <i>A change never changes Opgebouwd</i>, follow-up 5).</para>
     /// </summary>
     public Money? AccumulatedFor(string categoryName, BudgetPeriod period)
     {
@@ -1829,7 +1874,7 @@ public sealed class Ledger
                 MovementDirection.Out => -m.Amount,
                 _ => Money.Zero,
             }));
-        var from = Calendar.PeriodContaining(since.Date).FirstDay;
+        var from = backing.AccumulatingFrom;
         var spent = Money.Sum(expenses
             .Where(e => e.Category == category && e.Date >= from && e.Date <= period.LastDay)
             .Select(e => e.Amount));
@@ -1894,7 +1939,7 @@ public sealed class Ledger
             }
             else if (boundary.FirstDay <= today)
             {
-                changed |= PassInto(boundary);
+                changed |= PassInto(boundary, boundary.FirstDay);
                 settledThrough = boundary.FirstDay;
             }
             else
@@ -1907,8 +1952,10 @@ public sealed class Ledger
         return changed;
     }
 
-    // A period boundary: the period that ended, its sweep, and the new period's planned money.
-    private bool PassInto(BudgetPeriod period)
+    // A period boundary: the period that ended, its sweep, and the new period's planned money, all
+    // dated the day given — the new period's first day, unless a change of the start day passed it.
+    // A change also says what of the new period's plan settling had already moved, by category.
+    private bool PassInto(BudgetPeriod period, DateOnly on, IReadOnlyDictionary<Category, Money>? settledAlready = null)
     {
         var moved = false;
         var ended = Calendar.Previous(period);
@@ -1917,7 +1964,7 @@ public sealed class Ledger
         if (sweepDestination is { } destination && DifferenceFor(ended) is { Cents: > 0 } leftover)
         {
             var sweep = Move(destination, pool, backings[destination].Account, leftover,
-                             MovementReason.Swept, MovementDirection.In, period.FirstDay, ended);
+                             MovementReason.Swept, MovementDirection.In, on, ended);
             sweepsMade.Add(new SweepMade(ended, sweep));
             moved = true;
         }
@@ -1925,16 +1972,115 @@ public sealed class Ledger
         foreach (var category in categoriesInOrderAdded)
         {
             if (backings.TryGetValue(category, out var backing)
-                && budgets.TryGetValue((category, period.FirstDay), out var budget)
-                && budget.Cents > 0)
+                && budgets.TryGetValue((category, period.FirstDay), out var planned)
+                && planned - (settledAlready?.GetValueOrDefault(category) ?? Money.Zero) is { Cents: > 0 } budget)
             {
-                Move(category, pool, backing.Account, budget, MovementReason.Assigned, MovementDirection.In,
-                     period.FirstDay);
+                Move(category, pool, backing.Account, budget, MovementReason.Assigned, MovementDirection.In, on);
                 moved = true;
             }
         }
 
         return moved;
+    }
+
+    // ================================================================== the period start day
+
+    /// <summary>
+    /// What changing the period start day to <paramref name="day"/> would do now, without doing it:
+    /// the current period it would give, and the period it would end on the spot, if any. What the
+    /// question asks about (arc42 §12, ruling 5). <see cref="ChangeStartDayResult.WasChanged"/> is
+    /// false for the day already set.
+    /// </summary>
+    public ChangeStartDayResult PreviewStartDay(int day)
+    {
+        if (day == Calendar.StartDay)
+            return new ChangeStartDayResult(day, WasChanged: false, CurrentPeriod, Ended: null);
+
+        var current = CurrentPeriod;
+        var changed = Calendar.ChangedFrom(current, day);
+        var now = changed.PeriodContaining(Today);
+        return new ChangeStartDayResult(
+            day, WasChanged: true, now, now.FirstDay != current.FirstDay ? changed.Previous(now) : null);
+    }
+
+    /// <summary>
+    /// Changes the day budget periods start on, from the current period on (arc42 §12, <i>A
+    /// configurable period start day</i>; ADR 0012). Asking first is the screen's to do; by the time
+    /// this is called, the user has confirmed. Never refused.
+    /// <list type="bullet">
+    /// <item>The current period keeps its first day and ends the day before <paramref name="day"/>
+    /// first comes round after it; every later period starts on the new day, and every earlier one is
+    /// as it was (<see cref="BudgetPeriodCalendar.ChangedFrom"/>).</item>
+    /// <item>A plan made ahead for a period that no longer exists goes into the period its old first
+    /// day falls in, adding to any plan already there (ruling 4). The current period's own plan stays
+    /// with it, cut short or not (follow-up 4). Where the period it lands in has already begun, a
+    /// backed category's money for it moves at once, dated today (follow-up 2): the new current
+    /// period's, below, and the current period's own when it grows back over a period a change made
+    /// earlier the same period had cut off — changed to the 30th on the 29th, planned ahead, and
+    /// changed back to the 1st.</item>
+    /// <item>When the new day has already come round, the current period <b>ends on the spot</b>, and
+    /// the new current period is passed into at once, as settling passes any boundary, but <b>dated
+    /// today</b> (follow-up 2): the ended period is recorded with what is backed now and swept, and the
+    /// money planned for the new period moves. Settling itself cannot do it, since it looks for the
+    /// next boundary after the day already settled, and this one lies before it. So the ended period is
+    /// swept even when its new end falls before the first start (ruled at the scenario stage, 1).</item>
+    /// </list>
+    ///
+    /// <para>Nothing else moves: no other money, no <i>Opgebouwd</i>, which counts from the first day
+    /// the period of backing had (<see cref="Backing.AccumulatingFrom"/>), and no repeat, which keeps
+    /// its day of the month.</para>
+    ///
+    /// <para><b>Choosing the day already set changes nothing</b>, and does not even settle: the
+    /// drop-down writes back what it shows on every redraw, as <see cref="SetBacking"/>'s list does.</para>
+    /// </summary>
+    public ChangeStartDayResult ChangeStartDay(int day)
+    {
+        if (day is < 1 or > 31)
+            throw new ArgumentOutOfRangeException(nameof(day), day, "A period starts on a day of the month.");
+
+        if (day == Calendar.StartDay)
+            return new ChangeStartDayResult(day, WasChanged: false, CurrentPeriod, Ended: null);
+
+        Settle();
+        var current = CurrentPeriod;
+        var changed = Calendar.ChangedFrom(current, day);
+
+        // A plan whose old first day settling has already passed — only when the clock was once ahead
+        // and has been turned back — had its chance to move then, so the change moves none of it:
+        // what it moves is only what is noted here as not yet settled.
+        var intoCurrent = new List<(Category Category, Money Amount)>();
+        var settledAlready = new Dictionary<Category, Money>();
+        foreach (var ((category, start), amount) in budgets.Where(b => b.Key.PeriodStart > current.FirstDay).ToList())
+        {
+            var into = changed.PeriodContaining(start).FirstDay;
+            if (into == start) continue;
+
+            budgets.Remove((category, start));
+            budgets[(category, into)] = budgets.GetValueOrDefault((category, into)) + amount;
+            if (start <= settledThrough)
+                settledAlready[category] = settledAlready.GetValueOrDefault(category) + amount;
+            else if (into == current.FirstDay)
+                intoCurrent.Add((category, amount));
+        }
+
+        Calendar = changed;
+        var now = CurrentPeriod;
+        if (now.FirstDay != current.FirstDay)
+        {
+            PassInto(now, Today, settledAlready);
+            return new ChangeStartDayResult(day, WasChanged: true, now, Calendar.Previous(now));
+        }
+
+        // The current period goes on, and may have grown back over a period a change made earlier the
+        // same period had begun to cut off: a plan made ahead for that period lands in this one, which
+        // has begun, so a backed category's money for it moves now, dated today (follow-up 2).
+        foreach (var (category, amount) in intoCurrent)
+        {
+            if (amount.Cents > 0 && backings.TryGetValue(category, out var backing))
+                Move(category, pool, backing.Account, amount, MovementReason.Assigned, MovementDirection.In);
+        }
+
+        return new ChangeStartDayResult(day, WasChanged: true, now, Ended: null);
     }
 
     // ================================================================== recurring entries

@@ -40,6 +40,10 @@ describing.
   said and saved straight away, as a sweep is. An act that sets up or moves a repeat settles again
   after its change, and the notice says each thing where it happened
   ([ADR 0011](../decisions/0011-recurring-entries.md)).
+- **Changing the period start day**, since the start-day increment, in words: a question worded from a
+  preview, then one act that settles under the old calendar, moves plans made ahead, swaps the calendar
+  and, when it ends the current period, passes the boundary itself, dated today, because settling
+  cannot ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)).
 
 ## Recording an expense through the screen
 
@@ -335,6 +339,63 @@ list. `ChosenFrequency` ignores a write of nothing and any write while locked, a
 value already held changes nothing. The list only sets a field of the form; the ledger hears of it
 when the entry is recorded or saved.
 
+## Changing the period start day: a preview, a question, and a boundary passed by the act
+
+Since the start-day increment ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). What the
+user meets is ruled in [§12](12-glossary.md), *A configurable period start day*. The static view shows
+one list and one act. What it cannot show is that the act has two presses, like removing, and that the
+second can pass a period boundary without settling, which until now only settling did.
+
+**The first press asks, and reaches the ledger only to read.** The *Periode begint op* list sets
+`MoneyBudApp.StartDayChoice`. A null, the day already set, or the day already asked about stops there,
+so the list's write-back on every redraw does nothing. Any other day calls `Ledger.PreviewStartDay`,
+which works out the change on a new calendar and returns what it would do, the new current period and
+any period it would end, **without changing the ledger or settling**. `MoneyBudApp` words the question
+from that, with *Wijzigen* as its confirming word, holds the change to be made beside it, and notes the
+day it was asked. While it waits, the list shows the day asked about.
+
+**Anything that drops the question puts the list back without calling the ledger.** *Annuleren*,
+stepping, anything said, choosing the day already set, and the tick on a new day. The last matters
+because the question names a current period: after midnight *Wijzigen* could act on another.
+
+**The second press is one act, in this order:**
+
+0. **A question asked on an earlier day is dropped, not answered**: nothing changes and nothing is
+   said, as if the tick had come first. The tick alone held that only to the minute, and
+   `spec-reviewer` found *Wijzigen* pressed in the minute after midnight acting on a period the
+   question did not name.
+1. `MoneyBudApp` settles first (`SettleBeforeActing`), and holds what that did, so it can be said in
+   front.
+2. It notes the current period, the period on screen and the assign form's period, and calls
+   `Ledger.ChangeStartDay`.
+3. Inside the ledger: the day already set would return at once, but cannot reach here. Otherwise it
+   **settles under the old calendar**, as every act does.
+4. It **re-keys** each budget for a period after the current one whose first day no longer starts a
+   period, adding into the period that day falls in. A plan whose old first day settling has already
+   passed, which only a clock once set ahead can leave, is noted as settled already, so the steps below
+   do not move its money a second time (a `spec-reviewer` finding).
+5. It **swaps in the new calendar**. From here, every period is found under it.
+6. **If the current period has ended on the spot**, it calls `PassInto(new current period, today)`:
+   the ended period's period-end record with what is backed now, its sweep if a destination is set and
+   there is something to sweep, and the new period's planned money, **all dated today**, and the sweep
+   added to the sweeps made. **Otherwise**, a plan made ahead that has landed in the current period has
+   its backed money moved now, dated today, since settling has already passed that period's first day.
+7. Back on the screen, the period on screen and the assign form's period each go to the new current
+   period if they were on the current period, and otherwise to the period their first day now falls in.
+8. `Tell` says the change, then takes the sweeps made and says them after it, in the order they
+   happened, and keeps the ledger once.
+
+**Why the act passes the boundary itself.** `Settle` looks for the next boundary after
+`settledThrough`, which is today. A change that ends the current period puts a boundary on a day already
+settled, which `Settle` would never pass. So the act passes it with settling's own steps, through the
+same `PassInto`, and gives it today's date, which the rulings ask for and settling could not have given.
+`settledThrough` does not move: the change leaves nothing unsettled after today. And because the act
+sweeps without settling's first-start test, a period ended by a change is swept even when its new end
+falls before the first start, as ruled at the scenario stage.
+
+**Saved once, said in order.** The notice is: what settling did before the change, the change, the
+sweep of the period it ended. One `Tell`, one save, which the headless run checked.
+
 ## Backing a category: one choice, at most one movement
 
 `CategoryRow.ChosenBacking` is bound two-way to the row's *Staat op* list. When it is set, it calls
@@ -386,7 +447,7 @@ sequenceDiagram
             Start->>Ledger: StartNew (the six defaults, nothing saved yet)
         else moneybud.json is there
             Store->>Json: Read(text)
-            alt not a whole version-6 or version-5 document, nor a version-4 one without repeats
+            alt not a whole version-7 document, nor a version-6, -5 or -4 one without a calendar (and, for 4, without repeats)
                 Json-->>Store: null
                 Store-->>Start: Unreadable
                 Start->>Store: Dispose()
@@ -429,6 +490,11 @@ What the diagram shows that the static view does not:
   *Opgebouwd* on 2026-09-28. **Version 4 is the first older version that is read**, as data with no
   repeats, unless it carries a `repeats` list; version 5 is read with a backing's two remembered figures
   worked out again. Versions 1 to 3 are met as unreadable ([ADR 0011](../decisions/0011-recurring-entries.md)).
+  **Version 7 since the start-day increment** (2026-09-29), which reads version 6 as a calendar never
+  changed, and 5 and 4 through it; any of those three carrying a `calendar` is unreadable
+  ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). `FromSnapshot` rebuilds the calendar's
+  history first, so a kept history no series of changes could have made is one more thing the ledger
+  refuses.
 - **Loaded data may be saved at once.** Since the backing increment, a start on or after the first
   day of a period that has not been settled moves that period's planned money and saves it before
   the user does anything (*Settling*, above). Since the sweep increment it may also sweep the periods
@@ -511,7 +577,8 @@ What the diagram shows that the static view does not:
   recurring-entries increment also on each day an occurrence comes due while MoneyBud is open.
 - **Choosing the backing already set is not an act.** It reaches neither the ledger's settling nor
   `Tell`, so it neither saves nor retries (*Backing a category*, above). Nor is choosing the sweep
-  destination already set.
+  destination already set, nor the period start day already set; and choosing another start day only
+  asks, so it saves nothing until *Wijzigen* (*Changing the period start day*, above).
 
 ## Closing
 

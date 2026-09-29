@@ -8,7 +8,8 @@ know regardless of which part of the system they're touching.
 
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
 built, since 2026-09-26. Opening a period, accounts, backing and the sweep are built, and appear in
-§8.1, §8.3 and §8.4._
+§8.1, §8.3 and §8.4. So, since 2026-09-28 and 2026-09-29, are recurring entries and a configurable
+period start day._
 
 ## 8.1 Domain Model
 
@@ -247,6 +248,60 @@ them:
   one MoneyBud knows.
 - **`HasBudget` is still not a reader.** An occurrence touches no *Budget*, and does not change whether
   a period is offered a plan.
+
+### The period start day: a calendar with a history, and one act that can end a period
+
+Since the start-day increment (2026-09-29; [§12](12-glossary.md), *A configurable period start day*;
+[ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). The rulings are in §12. What the code adds
+to them:
+
+- **`BudgetPeriodCalendar` is a history of changes.** A start day since always, the 1st, and a list of
+  `StartDayChange(PeriodFrom, From, StartDay)`: the first day of the period current when the change was
+  made, the first day the new start day came round after it (clamped), and the day. That period ends the
+  day before `From`, and from `From` on periods are regular on the new day until the next change. A
+  period is found as before, cut at the next change, so periods tile and nothing before the period a
+  change was made in moves. **`PeriodFrom` was the build's addition to the plan**: `From` alone cannot
+  tell which period a change cut, when two changes made in different periods take effect on the same
+  day (§12, *chosen in the build*, item 1).
+- **The calendar is immutable, and a change makes a new one.** `ChangedFrom(current, day)` drops any
+  change still to take effect after the current period's first day, so a second change in the same
+  period replaces the first, and choosing the day in force for the current period adds none.
+  `StartDay` is the day now set, which may still be to take effect. `FromChanges` rebuilds a kept
+  history by making each change again, and refuses any list no series of changes could have made.
+- **A ledger always begins on the 1st.** `Ledger`'s constructor, `StartNew` and `FromSnapshot` no longer
+  take a calendar; kept data carries its own history.
+- **One act, `Ledger.ChangeStartDay(day)` → `ChangeStartDayResult(Day, WasChanged, Current, Ended)`.**
+  The day already set is a complete no-op, recognised before settling, for the list's write-back.
+  Otherwise it settles under the old calendar; **re-keys** every budget for a period after the current
+  one whose first day no longer starts a period into the period that day falls in, adding up; swaps the
+  calendar; and, **when the current period ended on the spot, passes into the new one itself, dated
+  today**: `PassInto(period, on)` now takes the day, and records the ended period's end with what is
+  backed now, sweeps it and moves the new period's planned money. When the current period goes on and a
+  plan made ahead has landed in it, that plan's backed money moves at once, dated today. The runtime is
+  in [§6](06-runtime-view.md), *Changing the period start day*.
+- **`Ledger.PreviewStartDay(day)` answers what the act would, without acting**, so the screen can name
+  the new current period and any period it ends in its question.
+- **"Shows, never blocks" needs no refusal.** Every day in the list is allowed, and the result reports
+  what happened. A day outside 1 to 31 throws, since the list cannot offer one.
+- **A backing remembers two first days**, `AccumulatingFrom` and `HereFrom`, one beside each mark
+  (*Where the dimensions meet*, above). `AccumulatedFor` counts expenses from the first, and `ThereFor`
+  from the second, so neither works the period of backing out again under a changed calendar, and a
+  change moves neither figure (follow-up 5). **The plan named one day; a backing has two marks, each
+  with its own period**, so the build has two (§12, *chosen in the build*, item 2). The two figures
+  remembered since the change to *Opgebouwd* (`NotMoved`, `PaidHereBefore`) are unchanged.
+- **Two plans can land in one period**, when a second change in one period drops the first's pending
+  cut, and they add up. §12 had found no change that does it; the build found this one, and a unit test
+  holds it with the money it moves (§12, *chosen in the build*, item 3).
+- **A change never moves money for a plan whose old first day settling has already passed.** That
+  happens only when the clock was once ahead and has been turned back: settling then moved the plan's
+  backed money, dated its old first day. The plan is still re-keyed, since kept data needs every budget
+  on a period's first day, but `ChangeStartDay` notes it as `settledAlready`, and `PassInto` takes that
+  and moves only the rest. `spec-reviewer` found the change moving it a second time (§12, *chosen in the
+  build*, item 7).
+- **`FromSnapshot` builds the calendar first**, and checks budgets, sweeps and period-end records against
+  it, and that a backing's two days are period starts on or before their marks.
+- **`HasBudget` is still not a reader.** Re-keying moves the stored budgets as they are, zero ones with
+  their first day like any other.
 
 ### The two layers meet in exactly one method
 
@@ -697,7 +752,13 @@ the entries*, above). Their row had left two things for the plan, a recurring en
 entries and settling as a third writer working through the days in order, and ADR 0011 does both.
 **With it the table holds no concept waiting to be built**: the two rows left are things that are
 deliberately never coded. Read the absence of a §12 term from this table as "built", not as "nobody
-wrote a row for it".
+wrote a row for it". **Until 2026-09-29**, when the configurable start day was settled and gained the
+first row since. **Changing the period start day** left when the start-day increment was built the same
+day (*The period start day: a calendar with a history*, above). Its row said `BudgetPeriodCalendar`
+took one start day, that the rulings make it a history, and that `AccumulatedFor` and `ThereFor` must
+not work out the period of backing again under a new calendar. ADR 0012 does all three: a list of
+changes, and two first days remembered on each backing. **The table again holds no concept waiting to
+be built.**
 
 | §12 concept | Why there is no code |
 |---|---|
@@ -915,7 +976,11 @@ frequency, a day and a date, but no money. An occurrence copies its latest's `Mo
 nothing is computed either. Version 6, from the change to *Opgebouwd* on 2026-09-28, stores two
 amounts with each backing, as cents like every other: what did not move at backing, and what the
 backing account had already paid. Read from version 5 they are sums of stored cents, so nothing
-rounds there either.
+rounds there either. Version 7, from the configurable start day (2026-09-29,
+[ADR 0012](../decisions/0012-the-calendar-is-a-history.md)), stores no new amount: the calendar's
+history is dates and days, and a backing's two first days are dates. The one computation a change
+makes with money is **re-keying**, where two budgets landing in one period add up: a sum of whole
+cents, so nothing divides or rounds, and §12 says so where it rules it.
 
 **The sweep moves a worked-out amount without reopening whole cents.** The *Restant* is *Unassigned*
 plus a set of *Remaining* figures, and the difference a swept period shows is that minus what moved:
@@ -996,6 +1061,26 @@ unreadable, as an unknown movement reason does. `Ledger.FromSnapshot` checks the
 ([§8.1](#81-domain-model), *Recurring entries*). **A start that records an occurrence saves straight
 away**, like one that sweeps ([§6](06-runtime-view.md), *Settling day by day*).
 
+**The change to *Opgebouwd* took the file to version 6** (2026-09-28, with no record of its own;
+[§12](12-glossary.md), *Backing a category that already has money*). It adds `notMovedCents` and
+`paidHereBeforeCents` to a backing, and **reads version 5**, working the two figures out again from the
+order entries were recorded in. This paragraph was not written at the time, and is added with the
+next.
+
+**The start-day increment took the file to version 7** (2026-09-29,
+[ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). It adds a top-level `calendar` list, each
+change as `periodFrom`, `from` and `startDay`, **empty** for periods that have always started on the 1st,
+and on each backing `accumulatingFrom` and `hereFrom`, the first day of the period each mark was set
+in. **Versions 6, 5 and 4 are read** (decision D2 of the plan, approved at the plan gate on the
+recommendation): version 6 as a calendar never changed, which is exactly what it is, with each mark's
+period the calendar month of its date, and 5 and 4 through it as before. **A version 6, 5 or 4 document
+that has a `calendar` is refused**, and versions 1 to 3 still are. The next save writes version 7.
+`Ledger.FromSnapshot` builds the calendar first, through `BudgetPeriodCalendar.FromChanges`, which
+refuses a history no series of changes could have made, and then checks budgets, sweeps and period-end
+records against it, and that a backing's two days are period starts on or before their marks
+([§8.1](#81-domain-model), *The period start day*). **A change of start day saves once**, through
+`Tell`, with any sweep it made.
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -1035,7 +1120,7 @@ the code at the close of the increment:
 | Ruling | What it means for the build, and how it is built |
 |---|---|
 | **Everything is kept**, as one continuous history, indefinitely. No fresh start per year | Nothing is pruned or archived by age. Periods never close, so there is no boundary to cut at. **Built:** `Ledger.ToSnapshot` takes every category, budget, expense and income, and nothing anywhere removes kept data by age |
-| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), then the sweep destination, period-end records and amounts let go (ADR 0010), then the repeats (ADR 0011), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
+| **"Everything" is the ledger only**: categories, archived or not, budgets, expenses, incomes | Screen state is not stored: the period shown, a half-typed entry, a waiting question, a rename in progress. MoneyBud always opens on the current period. **Built:** `LedgerSnapshot` has the ledger's four lists and `lastEntryId`, and nothing else. Since then it has gained accounts and two more entry kinds (ADR 0008), then backings, movements and `settledThrough` (ADR 0009), then the sweep destination, period-end records and amounts let go (ADR 0010), then the repeats (ADR 0011), then the calendar's history (ADR 0012), all of them the ledger's and none of them screen state. `MoneyBudApp` is made fresh at every start, and its constructor puts the current period on screen |
 | **Saved automatically after every change.** No save button. **A save that works says nothing** | Every act that changes the ledger ends with the data written. There is no save act and no "save now" state to offer, and no notice for a save that succeeds. **Built:** `MoneyBudApp.Tell` calls `Keep` after every act that went through **and changed the ledger** (`Tell(changed:)`). Adding a name already there, assigning zero and a negative assignment clipped in full against a *Budget* of zero are said but not saved. A refusal, an unchanged save and a declined question never reach `Tell`. A save that works sets nothing the screen shows, unless it ends a failure (below). The scenario "offer no act for saving" lists every command of the screen and the forms in full, and checks every `Command` binding in the window's markup against them |
 | **An interrupted save never damages the previous one.** A crash or power cut loses at most the change being saved. **The next start opens normally and says nothing** about it | Writing must never leave a half-written save in place of a whole one. Nothing is recorded to detect or report a missing change at the next start. **Built:** `FileLedgerStore.TrySave` writes `moneybud.json.tmp`, flushes it to the disk, and renames it over `moneybud.json`. A leftover `.tmp` is never read and is overwritten by the next save. The next start loads `moneybud.json` as usual and says nothing. Held by `StorageTests`, and by a scenario that rebuilds the disk state a cut-off save leaves, approved at the plan gate as a simulation (§8.4) |
 | **A failed save is said and the user carries on.** Closing before a save succeeds loses what was not saved, accepted. **The "not saved" notice stays on screen until a later save succeeds**, shown beside any other notice and beside the removal question, and not cleared by stepping. **Retried by every change and by MoneyBud itself now and then.** **Recovery is said once.** **Closing makes one last attempt**, and if it fails just closes, with no question | Nothing is undone and nothing is refused because a save failed. Each save writes the whole ledger, not the last change, so one success catches up every failure before it. "Not saved" is a **lasting state** of the screen, cleared only by a successful save. **Built:** `TrySave` reports `false`, and `MoneyBudApp.IsUnsaved` becomes true. **The save line**, `MoneyBudApp.SaveLine`, is a line of its own beside the notice and the question, so the one-message rule between those two is untouched ([§8.4](#84-the-presentation-layer)). It reads *"Je wijzigingen zijn niet opgeslagen. MoneyBud probeert het opnieuw."* until a save works, and stepping leaves it. Every later act that changes the ledger retries. **"Now and then" is once a minute**: `MoneyBudApp.Tick`, on the Desktop's existing timer, retries while something is unsaved. The save that works puts *"Alles is weer opgeslagen."* **on the same save line**, not in the notice, until the next act or step. `MoneyBudApp.Close` makes one last `TrySave` if something is unsaved, asks nothing, and lets go of the store |
@@ -1047,7 +1132,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused. **Not exercised by version 6 or 7 either**: version 6 reads 5 and 4 (2026-09-28), and version 7 reads 6, 5 and 4 (2026-09-29, approved at the plan gate on the recommendation, ADR 0012) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -1086,6 +1171,21 @@ records them with their reasoning:
 budget is kept against its period's first day, and `FromSnapshot` refuses a budget on a day that
 starts no period. So a start day changed in code would make an existing file unreadable rather than
 misread.
+
+**Settled on 2026-09-29, not built: the start day becomes something MoneyBud keeps**
+([§12](12-glossary.md), *A configurable period start day*). The user can change it at any time, from
+the current period on, and earlier periods keep their boundaries, so what must be kept is not one start
+day but the start days in force from given periods on. Kept data from before, and a first start, begin
+on the 1st (*derived*). How the history is stored, the file format version it brings, and whether
+version 6 is read are for the plan, and the last of these for the stakeholder at the plan gate. The
+refusal above then has to read the history: a budget on a day that starts no period under the calendar
+as it was when that period existed.
+
+**Built on 2026-09-29: the start day is stored**, as the calendar's history, in file format version 7,
+and version 6 is read ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md); the version 7
+paragraph at the top of this section). "The period start day is not stored", above, no longer holds, and
+ADR 0007 carries a dated note. The refusal of a budget on a day that starts no period stands, read
+against the history.
 
 **What the rulings changed about the cost of these choices.** The deferral argued that the costly
 part of storage is the shape that accounts will need, and that choosing a shape early commits it
@@ -1183,6 +1283,24 @@ the clock on every call. The period on screen does not move, so it becomes a pas
 past-period refusal for assigning and the display rule then follow from the domain. Whether the
 period is labelled *Huidige periode* is worked out on every read.
 
+**A changed start day is the first thing that can make the held period stop existing** (settled
+2026-09-29, not built; [§12](12-glossary.md), *A configurable period start day*). Change the day to
+the 27th while 1–30 September is on screen, and that period is now 1–26 September plus part of the
+next. A held period that is not one of the calendar's makes `Assign` and `TakeOverPlan` throw
+([§8.1](#81-domain-model)), so the screen, and the assign form's own period, must move to a period that
+exists. **Which one was ruled the same day** (§12, *The period shown after a change*, follow-up 1): the
+period nearest to where it was, the new current period for a change made on the current one, and for a
+change made on a later one the period its old first day falls in, where its plan went. So `ShownPeriod`
+stops being something only stepping sets: a change sets it too. **The assign form's own period**, when
+it has been set apart from the screen, goes nearest to where it was by the same rule, not after the
+screen (ruled at the scenario stage, 2026-09-29).
+
+**Built on 2026-09-29.** On confirming, `MoneyBudApp` notes the current period, `ShownPeriod` and
+`AssignForm.Period` before the change, and afterwards moves each: to the new current period if it was
+on the current period, and otherwise to the period its first day now falls in (plan reading 5). A
+period earlier than the current one is not changed by a change, so it stays where it was; a later one
+goes to the period its plan went to. So the held period is never one the calendar no longer has.
+
 ### Nothing is cached, and the screen is told to look again
 
 `PeriodOverview` is worked out afresh from the ledger every time it is read, so nothing on screen can
@@ -1228,7 +1346,7 @@ ruling.
 | **Every date starts empty, and empty means today** | §12's default ("an entry's date defaults to today, whatever period is on screen"), built so the date never follows the period on screen. The picker shows *Vandaag* until a date is chosen |
 | **The assign form's period follows the screen when it steps, and can be moved on its own** | §12's "assigning defaults to the period on screen", plus a way to name another period without moving the screen, which is how an assignment lands elsewhere |
 | **Stepping clears the last notice** | A notice is about the last thing done. After stepping it would sit beside a period it may not describe |
-| **A period is named by its month, "maart 2026", or by its first and last day when it is not a calendar month** | Every period starts on the 1st in this increment, so the second form is not reachable yet. It exists so that a configurable start day would not produce a wrong month name ([§11](11-risks-and-technical-debt.md), the start-day row) |
+| **A period is named by its month, "maart 2026", or by its first and last day when it is not a calendar month** | Every period starts on the 1st in this increment, so the second form is not reachable yet. It exists so that a configurable start day would not produce a wrong month name ([§11](11-risks-and-technical-debt.md), the start-day row). **The second form is now ruled, and differently** (2026-09-29, not built; [§12](12-glossary.md), *A configurable period start day*, ruling 3): short month names and the year once, *"27 sep – 26 okt 2026"*, not the built *"27 september 2026 t/m 26 oktober 2026"*, which was never reachable. The month form stands. So this row is a build choice only in its first half now. A follow-up the same day adds the month once inside one month, *"1 – 26 sep 2026"*, and one day as *"27 sep 2026"*. The scenario stage ruled the abbreviations: *jan feb mrt apr mei jun jul aug sep okt nov dec*, without dots, MoneyBud's own list and not the machine culture's, which writes *"mrt."* **Built on 2026-09-29**: `Tekst.PeriodName` writes a calendar month *"september 2026"*, one day *"27 sep 2026"*, inside one month *"1 – 26 sep 2026"*, across months *"27 sep – 26 okt 2026"* and across years *"27 dec 2026 – 26 jan 2027"*, with an en dash and a space either side, from its own list of short months, and `TekstTests` holds all five and the twelve months |
 | **Amounts are shown as "€ 1.832,45" and "−€ 20,00"** | [§8.2](#82-money-handling), *display formatting is fixed* |
 
 **The corrections increment's choices are in [§12](12-glossary.md), not in this table.** What the
@@ -1241,7 +1359,8 @@ to the stakeholder*, beside the rulings each one fills in. **Opening a period's 
 *Taking a plan over: chosen in the build, not put to the stakeholder*, for the same reason. So are the
 accounts increment's (*Accounts: chosen in the build*), the backing increment's (*Backing: chosen
 in the build, not put to the stakeholder*) and the sweep increment's (*Sweep: chosen in the build, not
-put to the stakeholder*).
+put to the stakeholder*). So are the recurring-entries increment's (*Recurring entries: chosen in the
+build*) and the start-day increment's (*A configurable period start day: chosen in the build*).
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -1283,7 +1402,10 @@ How the presentation layer holds them:
   `Confirm`**, so nothing is removed while the question stands. `Decline` drops the question and
   says nothing. There is only ever one question, because removing is the only act that asks
   ([§8.1](#81-domain-model) says why the domain has no confirmation of its own). The Desktop shows it
-  in the message bar, where a notice would be.
+  in the message bar, where a notice would be. **Since the start-day increment (2026-09-29) there are
+  two kinds of question**, removing and changing the period start day, and still only ever one waiting:
+  asking either drops the other. `Question` carries `ConfirmText`, the word on its confirming button,
+  *Verwijderen* or *Wijzigen*, which the Desktop binds (*The period start day on screen*, below).
 - **Renaming is state on `MoneyBudApp`**: `Renaming` names the category whose row shows a text box,
   `NewName` holds what is typed in it, and `StartRename`, `SaveRename` and `CancelRename` move
   between the two. The row learns which one it is from `CategoryRow.IsRenaming`, and whether to
@@ -1466,7 +1588,12 @@ them:
   line's sentence and the history row are copy.
 - **A sweep's period is named with the default calendar.** `Tekst` turns a sweep's `SweptFor` into a
   period with a new `BudgetPeriodCalendar`, which is right while the start day is fixed at the 1st and
-  would be wrong under another ([§11](11-risks-and-technical-debt.md), the start-day row).
+  would be wrong under another ([§11](11-risks-and-technical-debt.md), the start-day row). **Due to
+  change with the configurable start day** (settled 2026-09-29, [§12](12-glossary.md)): every place
+  that names or finds a period must use the ledger's own calendar, which becomes a history. **Changed
+  on 2026-09-29**: the default calendar in `Tekst` is gone. A sweep's history row carries its period,
+  `HistoryLine.SweptPeriod`, which `MoneyBudApp.History` fills through the ledger's calendar, and
+  `Tekst` names that (§11's row, now resolved).
 
 **The Desktop only binds.** A line directly under the ring holds either the *Restant naar* caption and
 `ComboBox`, visible on `ShowsSweepDestination`, or the line's text, the marker with *Tekort* on
@@ -1535,6 +1662,67 @@ data, and every check passed:
   stakeholder had noticed on *Staat op*. With the margin moved to the `DockPanel`, it centres.
 
 ([§11](11-risks-and-technical-debt.md), the Desktop row.)
+
+### The period start day on screen
+
+The rulings are in [§12](12-glossary.md), *A configurable period start day*, with the two rulings taken
+at the build and the build's own readings in *A configurable period start day: chosen in the build*,
+there. How the presentation layer holds them:
+
+- **The list is on `MoneyBudApp`, not on the Overview**, because the day is the same on every period
+  where it shows. `StartDayChoices` is 1 to 31. `StartDayShownIn(period)` is what the list shows with
+  that period on screen: null on a past period, which hides it (ruling 6), otherwise the day set, or,
+  while the question waits, the day asked about (plan reading 3). `ShowsStartDay` is that, for
+  `ShownPeriod`.
+- **`StartDayChoice` is the two-way binding, and it is write-back safe.** An `int?`: a null written
+  while the list is rebuilt is ignored, the day already set does nothing at all, and the day already
+  asked about does nothing either. Any other day calls `ChooseStartDay`, which asks. So the list writing
+  back on first show, on stepping, after declining and on the tick asks, says and saves nothing, which
+  the headless run checked.
+- **Asking.** `ChooseStartDay` puts up a `Question` with *Wijzigen* as its `ConfirmText`, worded from
+  `Ledger.PreviewStartDay`: *"Perioden laten beginnen op de 27e? De huidige periode wordt dan 27 sep –
+  26 okt 2026."*, and when the change ends the current period, *" 1 – 26 sep 2026 is dan afgelopen."*
+  (plan reading 1). Asking drops any other waiting question. Nothing reaches the ledger until
+  `Confirm`.
+- **Dropping.** *Annuleren*, stepping, and anything said next drop the question, as for removing, and
+  the list shows the ledger's day again, because it shows the asked day only while the question
+  waits. **Choosing the day already set while the question waits is declining it** (§12, *chosen in the
+  build*, item 5). **The tick drops a start-day question when the day has changed since it was asked**,
+  and only that kind: a removal question waits on (plan reading 4; item 6). **And `Confirm` treats a
+  start-day question asked on an earlier day as dropped**: nothing changes, nothing is said, and the
+  list goes back. `spec-reviewer` found that the tick alone held reading 4 only to the minute, so
+  *Wijzigen* pressed after midnight but before the tick could act on a current period the question did
+  not name (item 8).
+- **Confirming** settles first (`SettleBeforeActing`), calls `Ledger.ChangeStartDay`, moves `ShownPeriod`
+  and `AssignForm.Period` (*The period on screen is held as a period*, above), and tells: *"Perioden
+  beginnen nu op de 27e. De huidige periode is 27 sep – 26 okt 2026."*, with the sweep of a period the
+  change ended after it, in the order it happened (plan reading 2). It saves once through `Tell`.
+- **Every period is named through the ledger's calendar** by `Tekst.PeriodName`, the header, the assign
+  form, the take-over button, notices and a sweep's history row included.
+- **The word is one row of §12's display-terms table**: `Tekst.PeriodStartDay` (*Periode begint op*),
+  held by `TekstTests`. The days, the question and the notice are copy (`Tekst.StartDayName`,
+  `AskToChangeStartDay`, `StartDayChanged`).
+
+**The Desktop only binds.** A `ComboBox` captioned *Periode begint op* stands to the right of the period
+name and its step buttons, in the header grid's fourth column, with `Margin="0"` as *Staat op* needed,
+visible on `ShowsStartDay` and bound to `StartDayChoices` and `StartDayChoice`. The question's confirming
+button binds `Question.ConfirmText`. No markup test covers either. **A headless run of the real window
+checked them**, in a scratch Avalonia.Headless harness outside the repository, over the real
+`MainWindow` with synthetic data, and passed 28 checks:
+
+- the list writing back on first show, after declining, on stepping and on a tick asked, said and saved
+  nothing;
+- choosing a day asked, with a *Wijzigen* button, and nothing changed while the question waited;
+- *Annuleren* put the list back;
+- *Wijzigen* changed the day, saved once, named the header *"27 sep – 26 okt 2026"*, and said the sweep
+  of *"1 – 26 sep 2026"*;
+- the list was hidden on the period cut short and on August, which kept their names;
+- midnight dropped the question;
+- the caption lined up with its list, measured.
+
+The rendered frame also showed an older blemish, not from this increment: while a plan is offered, the
+grey *"plan: € 400,00"* runs into the row's *Staat op* list ([§11](11-risks-and-technical-debt.md), the
+Desktop row).
 
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
@@ -1701,6 +1889,24 @@ monthly repeat keeps a day of the month:
   table without it does not check it. Frequency changes and "should open with the frequency X,
   changeable / locked" go through the form, like every correction.
 
+**How the start-day scenarios reach the screen** (`StartDaySteps`, with additions to `ScreenSteps`,
+`TakeOverSteps`, `CorrectionSteps`, `RecordExpenseSteps`, `SpecContext` and `SpecParsing`). The
+feature file's header explains the steps the three files share:
+
+- **A change goes the way the user's does**: the step sets `StartDayChoice`, as the list does, and
+  answers the question with *Wijzigen* or *Annuleren*. "I choose the 27th as the period start day" only
+  sets the choice, and leaves the question waiting. **"I have changed the period start day"** acts on
+  the ledger, as every *Given* does, must come before the screen opens, and takes what the change swept
+  or recorded, so it is not said again when the screen opens.
+- **Where a period runs from and to is read from the ledger's calendar**, a claim about the calendar.
+  What the list shows is read with `StartDayShownIn` for a period, without stepping to it. **How a period
+  is named is read from what the screen shows**, and `name-a-budget-period.feature`'s steps are the only
+  ones that compare the Dutch text, because the form of a name is what was ruled.
+- **The period phrases take any number**, "the budget period 2 before (after) the current one", and
+  after a change they are named under the calendar as changed, as the header says.
+- **"Today is 29 September 2026" coming before "I have never used MoneyBud"** sets only the day, so a
+  first start can be made on a chosen day (the note in `start-moneybud`).
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -1822,6 +2028,32 @@ keeps a running, a weekly and a stopped repeat exactly, a monthly one on the 31s
 frequency word it does not know, and holds every new load check. `WindowMarkupTests` holds *Herhalen*
 last on both entry forms, and `TekstTests` the two new rows.
 
+The start-day increment added to `BudgetPeriodCalendarTests`, for the calendar:
+
+- a change applies from the current period on and periods tile, for start days 1, 15, 27, 29, 30 and
+  31, changed to every day, on every third day of 2027;
+- §12's worked example, a second change replacing one still to take effect, two changes that take
+  effect on the same day, and ruling (b)'s lengthening corner;
+- `FromChanges` refusing histories no series of changes could make.
+
+It added `StartDayTests`, below what the scenarios see:
+
+- a plan landing in the current period adds up and its money moves, dated today; zero budgets move with
+  their first day;
+- a change moves neither *Opgebouwd* nor what is there for a category;
+- the day already set changes nothing and settles nothing, and the list writing back asks, says and saves
+  nothing;
+- the list shows the day asked about; a new day drops the start-day question but not a removal
+  question;
+- the change is said before its sweep, and the history names the swept period;
+- an assign form set to August stays on August;
+- since `spec-reviewer`: a plan settling already moved is not moved again by a change after the clock
+  went back, and *Wijzigen* after midnight, before the tick, changes nothing.
+
+`StorageTests` now reads version 6, keeps a changed calendar exactly, refuses what version 7 must not
+hold, and refuses broken histories and backings. `TekstTests` holds the five name forms, the twelve short
+months, the question's and the notice's copy, and the new row.
+
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
 it was held only by `StorageTests`. That test checks that the store reports such a folder as
@@ -1921,3 +2153,24 @@ and saved nothing, an earlier occurrence opened locked, the label sat beside an 
 open across a tick locked there with the tick's notice on screen, and a frequency picked in the window
 was a change. It also found the caption off-centre on its list, now fixed (*Recurring entries on
 screen*, above).
+
+**After the change to *Opgebouwd*** (2026-09-28): **1592 tests passing**. That is 951 scenario cases,
+2 more than the 949 above, and 641 developer unit tests, 3 more than the 638 above. It was built on a
+lean route, with six deliberate mutations instead of `spec-reviewer`, and this paragraph was added with
+the next.
+
+**At the close of the start-day increment** (2026-09-29): **1868 tests passing** with zero warnings.
+That is 1001 scenario cases, the 951 above and 50 from the three start-day feature files and the
+scenarios added to `keep-data.feature` and `start-moneybud.feature`, and 867 developer unit tests, 226
+more than the 641 above. Two of them came with `spec-reviewer`'s findings, and before them the count
+was 1866. **`spec-reviewer` found no faked or vacuous scenario and no money defect in normal use, and
+two low defects, both fixed**, each with a unit test that fails without the fix: a change moving a
+second time the money for a plan that settling had already moved while the clock was once ahead, and
+*Wijzigen* pressed after midnight but before the minute's tick acting on a current period the question
+did not name ([§12](12-glossary.md), *A configurable period start day: chosen in the build*).
+**Nine deliberate mutations were each caught**: dating the sweep the new first day, no re-keying,
+*Opgebouwd* or what is there worked out from the calendar again, no money for a plan landing in the
+current period, the tick keeping the question, the day already set asking, the screen following the
+old first day, and a pending change never replaced. A headless run of the real window passed 28 checks
+(*The period start day on screen*, above). Two rulings were taken at the build (§12, *A configurable
+period start day: chosen in the build*).

@@ -25,10 +25,10 @@ public sealed class ScreenSteps(SpecContext context)
     // ------------------------------------------------------------------ Given
 
     // Through the screen's own stepping: there is no other way to put a period on screen.
-    [Given(@"^the Overview shows the (current|previous|next) budget period$")]
-    public void GivenTheOverviewShows(string which)
+    [Given(@"^the Overview shows the " + SpecParsing.PeriodPhrase + "$")]
+    public void GivenTheOverviewShows(string period)
     {
-        var target = Ledger.Period(which);
+        var target = Ledger.PeriodNamed(period);
 
         while (App.ShownPeriod.FirstDay > target.FirstDay) App.StepBack();
         while (App.ShownPeriod.FirstDay < target.FirstDay) App.StepForward();

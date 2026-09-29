@@ -23,9 +23,16 @@ namespace MoneyBud.Domain;
 /// <i>Resterend</i> reads, overspent included. <see cref="PaidHereBefore"/> goes with
 /// <see cref="HereSince"/>: what the account had paid for the category in that period before it became
 /// the backing account, so what is there for it starts at what moved there.</para>
+///
+/// <para>And with each mark, the <b>first day its period had</b> at that moment:
+/// <see cref="AccumulatingFrom"/> and <see cref="HereFrom"/>. Expenses are counted from there. It is
+/// remembered, not worked out again from the mark's date, because a change of the period start day
+/// can cut that period short, and <i>Opgebouwd</i> must not move because of it (§12, <i>A change never
+/// changes Opgebouwd</i>, follow-up 5; ADR 0012).</para>
 /// </summary>
 public sealed record Backing(
-    Account Account, EntryMark AccumulatingSince, EntryMark HereSince, Money NotMoved, Money PaidHereBefore);
+    Account Account, EntryMark AccumulatingSince, EntryMark HereSince, Money NotMoved, Money PaidHereBefore,
+    DateOnly AccumulatingFrom, DateOnly HereFrom);
 
 /// <summary>What setting a category's backing did.</summary>
 public enum BackingOutcome

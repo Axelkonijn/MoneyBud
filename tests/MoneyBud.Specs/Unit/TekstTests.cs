@@ -65,6 +65,7 @@ public sealed partial class TekstTests
         ["A shortfall (the marker's badge)"] = [Tekst.PeriodShortfall],
         ["Frequency (the list on the income and expense forms that sets it)"] = [Tekst.Frequency],
         ["One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label)"] = [Tekst.OneOff, Tekst.Weekly, Tekst.Monthly],
+        ["Period start day (the list beside the period's name that sets it)"] = [Tekst.PeriodStartDay],
     };
 
     [Fact]
@@ -201,11 +202,47 @@ public sealed partial class TekstTests
     public void A_period_starting_on_the_first_is_named_by_its_month() =>
         Assert.Equal("maart 2026", Tekst.PeriodName(new BudgetPeriodCalendar().PeriodContaining(new(2026, 3, 15))));
 
+    // §12, How a period is named: ruling 3, follow-up 3, and the short month names of the scenario
+    // stage. Each day with its month, leaving out what the end repeats of the start.
+    [Theory]
+    [InlineData("2026-09-27", "2026-10-26", "27 sep – 26 okt 2026")]
+    [InlineData("2026-09-01", "2026-09-26", "1 – 26 sep 2026")]
+    [InlineData("2026-09-27", "2026-09-27", "27 sep 2026")]
+    [InlineData("2026-12-27", "2027-01-26", "27 dec 2026 – 26 jan 2027")]
+    [InlineData("2026-02-25", "2026-03-24", "25 feb – 24 mrt 2026")]
+    [InlineData("2026-09-01", "2026-09-30", "september 2026")]
+    [InlineData("2027-02-01", "2027-02-27", "1 – 27 feb 2027")]
+    [InlineData("2028-02-01", "2028-02-29", "februari 2028")]
+    public void A_period_is_named_by_its_month_when_it_is_one_and_otherwise_by_its_days(string first, string last, string name) =>
+        Assert.Equal(name, Tekst.PeriodName(new BudgetPeriod(DateOnly.Parse(first, System.Globalization.CultureInfo.InvariantCulture),
+                                                             DateOnly.Parse(last, System.Globalization.CultureInfo.InvariantCulture))));
+
     [Fact]
-    public void A_period_that_is_not_a_calendar_month_is_named_by_its_days() =>
-        Assert.Equal(
-            "25 februari 2026 t/m 24 maart 2026",
-            Tekst.PeriodName(new BudgetPeriodCalendar(25).PeriodContaining(new(2026, 3, 15))));
+    public void Every_month_has_its_own_short_name_and_none_has_a_dot()
+    {
+        var names = Enumerable.Range(1, 12)
+            .Select(m => Tekst.PeriodName(new BudgetPeriod(new(2026, m, 2), new(2026, m, 3))))
+            .Select(n => n.Split(' ')[3])
+            .ToList();
+
+        Assert.Equal(["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"], names);
+    }
+
+    // The question and the notice name the day as Dutch writes it, and the periods by their names
+    // (plan for increment 13, readings 1 and 2). Copy, so only its parts are held.
+    [Fact]
+    public void The_start_day_question_names_the_new_current_period_and_the_one_it_ends()
+    {
+        var current = new BudgetPeriod(new(2026, 9, 27), new(2026, 10, 26));
+        var ended = new BudgetPeriod(new(2026, 9, 1), new(2026, 9, 26));
+
+        var asked = Tekst.AskToChangeStartDay(new ChangeStartDayResult(27, true, current, ended));
+        var said = Tekst.StartDayChanged(new ChangeStartDayResult(27, true, current, ended));
+
+        Assert.Equal("Perioden laten beginnen op de 27e? De huidige periode wordt dan 27 sep – 26 okt 2026. 1 – 26 sep 2026 is dan afgelopen.", asked);
+        Assert.DoesNotContain("afgelopen", Tekst.AskToChangeStartDay(new ChangeStartDayResult(30, true, ended, null)));
+        Assert.Equal("Perioden beginnen nu op de 27e. De huidige periode is 27 sep – 26 okt 2026.", said);
+    }
 
     // ----------------------------------------------------------------- reading §12
 

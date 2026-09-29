@@ -1462,19 +1462,19 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Take over (a plan)** | The one act that assigns an earlier period's plan in full. It is **offered** in the current period and every later one while every *Budget* there is zero, a budget taken back to zero included and an archived category's budget counting, and only then. It acts on the **period on screen**, never on a period the assign form has been stepped to. The plan offered is that of the **latest earlier period that has a plan**: a *Budget* of more than zero for a category not archived now, however small, one cent included. Taking it over assigns each of that period's figures, for categories not archived, even past *Unassigned*, which may leave the period *Over-assigned*. It is **not confirmed first**, and a notice names the period it went into. Not offered in a past period: past a boundary it disappears quietly at the next refresh, and pressing it before then is refused like any past-period assignment. No undo: a take-over is corrected row by row by negative assignments. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as `Ledger.TakeOverPlan`, which assigns each figure through `Ledger.Assign`, with the offer worked out by `Ledger.PlanOfferedIn` ([§8.1](08-crosscutting-concepts.md)). On screen it is *Plan overnemen*. |
 | **Remembered figure** | A category's *Budget* in the plan being offered: what taking it over would assign to it. Shown in grey on the category's row, labelled *plan* ("plan: € 400,00"), *only while the plan is offered*, and gone once the period has a plan. It is not a comparison between months. A category archived now, or whose figure in that period is zero, is not part of the plan, and its row shows no label. While the plan is offered, the rows are **ordered by this figure**, largest first, ties in order added, so nothing jumps on taking it over. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as a `PlanFigure` in the `PlanOffer` and `CategoryRow.PlanFigure` on screen ([§8.4](08-crosscutting-concepts.md)). |
 | **Over-assigned** | The state of a budget period whose *Unassigned* is **negative** — more has been assigned to its categories than the period's income, which assigning is allowed to do. Shown, never blocked and never warned about, exactly like the other two members of its family: *Over budget* (a negative *Remaining*) and *Overdrawn* (a negative *Balance*). A property of a **budget period**, where those two are properties of a category and of an account. Exactly zero *Unassigned* is not over-assigned. Built in the assigning increment as `Ledger.IsOverAssigned`, derived from *Unassigned* and never stored — see *Over-assigned* below. On the Overview's ring an over-assigned period is drawn as its budgets only, and *Unassigned* is shown as the negative figure itself with the same marker as *Over budget*, a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). The marker's badge reads *Te veel toegewezen*. Built in the UI increment. |
-| **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). |
+| **Budget period** | The span a budget covers — normally a month. The day it starts is configurable, so it does not necessarily align with a calendar month. A start day later than a month has — the 31st in February — **clamps to that month's last day**, see *A start day the month is too short for clamps to its last day* below. A budget period **ends**, but it is never **closed** — see below. In the UI increment the start day is **fixed at the 1st** and not offered for change: deferred, not rejected, because the code cannot yet change it once budgets exist (*The period start day stays at the 1st, for now*, above). **Settled on 2026-09-29, not built** (*A configurable period start day*, above): the start day **can be changed at any time**, in a drop-down *Periode begint op* beside the period's name, shown on the current period and later ones, and MoneyBud **asks first**. It applies **from the current period on**: the current period keeps its first day and ends the day before the new day first comes round, which can end it on the spot; earlier periods keep their boundaries, so the calendar is a history of start days, not one (*derived*). A plan made ahead for a period that no longer exists goes into the period its old first day falls in. The default, for a first start and for data kept before, is the 1st (*derived*). A period that is not a calendar month is **named by its days**, *"27 sep – 26 okt 2026"*; a calendar month keeps its name, *"september 2026"*. **Follow-ups the same day:** a period inside one month is *"1 – 26 sep 2026"* and a one-day period *"27 sep 2026"*; a period cut short keeps its plan; money a change moves is dated the day of the change; the Overview shows the period nearest to where it was; and a change never changes *Opgebouwd*. **Specified and built the same day** ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)): the calendar is kept as a **history of changes**, each naming the period it was made in, the day the new start day took effect and the day, and a ledger always begins on the 1st. Two rulings at the build: for the 31st, the period from 31 March ends on **29 April**, by the clamp; and in one corner after a clamped month a change **lengthens** the current period, as ruling 1 gives (*A configurable period start day: chosen in the build*, above). |
 | **Transaction** | A single movement of money, with an amount, a date and an account. Income and expenses are both transactions. **They differ in two ways, and each difference has its own reason rather than being an inconsistency**: whether the transaction names a **category** (an expense must, an income does not — the two rows below), and whether it may be dated in the **future** (an income may, an expense may not — see *Income may be dated in the future; an expense may not*). The amount rules are the same for both: more than zero, never finer than a cent, refused rather than rounded ([§8.2](08-crosscutting-concepts.md)). Once recorded, a transaction can be **changed** or **removed**, in any budget period (*An entry can be changed or removed*, above). Settled 2026-09-26; built in the corrections increment. **Every transaction is on an account** from the accounts increment on (settled and built 2026-09-27). Until then none has one. A *Transfer* is **not** a transaction in this glossary's sense: the word stays for income and expenses, so that the two differences above stay the only two (the documentation's wording, *Transfers*, above). |
 | **Income** | A transaction that increases the total. It does **not** name a category: it lands as *Unassigned* and is given a purpose later, by a separate act of assigning. It **must** carry a **Label** — with no category on the record, the label is the only thing that says what the money is (see below). It **may be dated in the future**, unlike an expense; it counts against the budget period its date falls in, including a period still to come, and it joins that period's *Unassigned* **from the moment it is recorded** rather than when its date arrives. May be one-off or recurring, and both permanently — see *Recurring transaction*. In the income increment an income has an amount, a date and a label, and **no account at all** — the same gap an expense has ([§11](11-risks-and-technical-debt.md)). **Settled for the accounts increment on 2026-09-27, and built the same day:** every income is **on an account**, chosen from a list as the form's last field and pre-filled with the *Pool account*. A future-dated income reaches its account's *Balance*, and net worth, **only on its date**, while it still counts in its period's *Unassigned* from the moment it is recorded (*derived*). Its row names its account only when that is not the pool account. |
 | **Expense** | A transaction that decreases the total, and it **must** name a category — money being spent is money whose purpose is known by definition. Carries an **optional** **Label** of its own, below. **May not be dated in the future**, unlike an income — money not yet spent is a plan, and the plan layer already has a word for it, the *Budget* (see *Income may be dated in the future; an expense may not*). The account it leaves is **defaulted, not asked for**: the category's default backing account if the category is backed, otherwise the *pool account*, overridable per expense — see *An expense defaults to the pool account* above. May be one-off or recurring. In the first increment an expense has an amount, a date, a label and a category, and no account at all. **Settled for the accounts increment on 2026-09-27, and built the same day:** every expense is **on an account**, chosen from a list as the form's last field and pre-filled with the *Pool account*, since no category is backed yet. Its row names its account only when that is not the pool account. **Settled for backing on 2026-09-27, and built the same day** (follow-up): the account **follows the category typed**, its backing account or the pool account, until the user picks one himself; an expense being changed keeps its account. Against a backed category it lowers *Opgebouwd* whichever account paid (*Backing and Accumulated*, above). |
 | **Label** | A transaction's own free-text name, distinct from a category: "Albert Heijn" labels an expense whose category is "Groceries"; "Salaris september" labels an income that has no category at all. It says *which particular movement this was*, where a category says *what kind of spending it counts as*. **Optional on an expense, required on an income** — the asymmetry and its reason are in *Income carries a label, and it is required* below. **Always trimmed**, on both transactions: surrounding whitespace is stripped and the inner text left alone, so a label that trims to nothing is not a label — which an income refuses and an expense simply records as having none. Nothing is derived from it either way, which is why trimming costs nothing. Settled by [§1.1](01-introduction-and-goals.md) ("each labelled and categorised"), [round 1](../stakeholder/2026-09-24-interview.md) ("ik moet duidelijk kunnen aangeven waar het van is") and [round 3](../stakeholder/2026-09-24-verdieping.md) ("met een label erop"). |
 | **Change** | Said of an **entry**: correcting an expense or an income after it was recorded. Allowed in **any** budget period, past ones included. A change is judged exactly as the changed entry would be if it were recorded now, so it is refused on the same rules, and a refused change leaves the entry as it was. Changing an expense's category to an archived category's name brings that category back, announced. Fixing an expense that is already on an archived category does **not** bring it back. A change **overwrites** the entry: MoneyBud keeps no record of what it was. A changed date that moves the entry to another period leaves the screen where it was and says where the entry went. See *An entry can be changed or removed* above. Settled 2026-09-26; built in the corrections increment, as `Ledger.ChangeExpense` and `Ledger.ChangeIncome`. |
-| **Remove** | Said of an **entry**: taking an expense or an income away entirely. From the accounts increment, only from the Overview's lists, never from an account's history (follow-up, 2026-09-27; built). Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. **From the accounts increment** (settled and built 2026-09-27), a *Transfer* and a *Balance correction* can be removed too, from an account's history, and removing either asks first by the same principle (*derived*). "The only act that does" then means the only **kind** of act: removing a record. Deleting an unused account does **not** ask, even with a starting balance: a follow-up ruling of 2026-09-27 (*Managing accounts*, above). |
+| **Remove** | Said of an **entry**: taking an expense or an income away entirely. From the accounts increment, only from the Overview's lists, never from an account's history (follow-up, 2026-09-27; built). Allowed in any budget period. It **asks for confirmation first**, the only act that does, because it destroys a record. Removing an income may leave its period *Over-assigned*, which is allowed and shown with the marker. See *Removing an entry asks first* above. **Not said of a category** in this sense. Where *A category is taken out of use, not deleted* speaks of "removing a category", it means round 1's "hem eruit halen", which is **archiving** it. Destroying a category with no history is **deleting** it. Settled 2026-09-26; built in the corrections increment, as `Ledger.RemoveExpense` and `Ledger.RemoveIncome`, with the question asked by the screen before either is called. **From the accounts increment** (settled and built 2026-09-27), a *Transfer* and a *Balance correction* can be removed too, from an account's history, and removing either asks first by the same principle (*derived*). "The only act that does" then means the only **kind** of act: removing a record. Deleting an unused account does **not** ask, even with a starting balance: a follow-up ruling of 2026-09-27 (*Managing accounts*, above). **Since 2026-09-29 (settled, not built) it is no longer the only kind of act that asks**: changing the period start day asks too, because it can end the current period on the spot and cannot be undone (*A configurable period start day*, ruling 5, above). What the two share is asking before what cannot be undone. **Built the same day**: the start-day question's confirming button reads *Wijzigen*, where removing's reads *Verwijderen* (*A configurable period start day: chosen in the build*, item 4). |
 | **Recurring transaction** | An income or expense that repeats on a schedule — weekly, monthly, yearly. Not part of the first increment, and not part of the income increment either. When it arrives it stands **beside** one-off entry rather than replacing it: entering an amount by hand, including a future-dated one, stays a first-class act ([§1.1](01-introduction-and-goals.md) lists one-off and recurring together, not one as a stopgap for the other). **Settled, specified and built on 2026-09-28** (*Recurring entries*, above; [ADR 0011](../decisions/0011-recurring-entries.md)), where the increment calls it a *recurring entry*: the same thing, since an entry and a transaction are both an income or an expense in this glossary. **Weekly or monthly; yearly is deferred until missed.** Set by one drop-down on the income and expense forms (*Frequency*, below). It is a series of **occurrences** (next), each recorded by MoneyBud on its own date the first time it runs on or after that date, the same for income and expenses, said once in one notice and saved straight away. **The latest occurrence sets the next**: change it to change what follows, set it to *Eenmalig* to stop. Removing an occurrence removes only that one. A monthly one keeps the day it started on, clamped to a short month's last day and returning after; since a follow-up the same day, changing the latest occurrence's date moves that day for every later one, so in the documentation's reading it is the day it was **last set to**. Occurrences already due when it is set up in the past are recorded at once, and after MoneyBud was closed across a period's end they are recorded before that period is swept (follow-ups). It has no display term of its own. **Built as** `RecurringEntry`, state kept beside its occurrences: their ids, the frequency (none once stopped), the day a monthly one was last set to, and the next date. A stopped one stays a recurring entry, so its earlier occurrences stay locked ([§8.1](08-crosscutting-concepts.md)). |
 | **Occurrence** | One entry of a *Recurring transaction*: an **ordinary income or expense**, counted, changed and removed like any other. The first is the entry the user set to repeat; the rest MoneyBud records by itself. Each new one **copies the latest occurrence**: amount, label, category (for an expense), account and frequency, but not the date, which comes from the day and frequency the recurring transaction has (*derived*). **The latest occurrence** is, in the documentation's reading, the one recorded most recently. Its row carries a small grey *maandelijks* or *wekelijks*, and changing it changes what follows. Earlier occurrences are plain rows and are never touched by it. An occurrence is never refused; one on an archived category brings it back, announced. **Follow-ups the same day:** once the latest is removed, the most recently recorded occurrence left becomes the latest, and removing the only one ends the repeat; an earlier occurrence loaded into the form shows *Eenmalig*, locked; **changing the latest occurrence's date moves the day for every later one** (against the recommendation), while an earlier one's date changes only itself (*Recurring entries*, above). Settled 2026-09-28, specified by [`repeat-an-entry.feature`](../../features/repeat-an-entry.feature) and [`change-a-repeat.feature`](../../features/change-a-repeat.feature), and built the same day. "The one recorded most recently" is **approved** (at the scenario gate) and **built as the highest id**, not stored ([ADR 0011](../decisions/0011-recurring-entries.md)). The occurrences MoneyBud records are named in a *"Herhaald: …"* notice with their days (*Recurring entries: chosen in the build*, below). |
 | **Frequency** | What the drop-down on the income and expense forms sets: **one-off**, the default, **weekly**, every 7 days, or **monthly**, the same day each month. A monthly day a month is too short for clamps to its last day and returns where the month has it (*Recurring entries*, ruling 5). One-off is the absence of a repeat, so an entry left at it is the one-off entry of every earlier increment. Yearly is deferred until missed. On screen ***Eenmalig***, ***wekelijks*** and ***maandelijks***, in a drop-down captioned ***Herhalen***, the form's last field after *Rekening* (follow-up, 2026-09-28), all ruled 2026-09-28 and held in *Proposed display terms for recurring entries* until the build. Settled 2026-09-28, and **built the same day** as `Frequency` (`Weekly`, `Monthly`), with one-off as its absence. **The terms moved into *Dutch display terms* at the build** (rows *Frequency* and *One-off / Weekly / Monthly*); the proposals table stays as the record of where each was ruled. **The build capitalises the drop-down's items**, *Eenmalig*, *Wekelijks*, *Maandelijks*, and the row's grey label is lower-case, *wekelijks* / *maandelijks*, as ruling 6 writes it (plan reading 8, approved at the plan gate). |
 | **Remaining** | For a category in a budget period: its *Budget* minus what has been spent against it. The one figure where the plan and the actual meet. Goes negative when a category is overspent; nothing blocks that. A negative *Remaining* is the state called *Over budget*, next. |
 | **Over budget** | The state of a category whose *Remaining* is **negative** — more has been spent against it than was budgeted for it in this period. Shown, never blocked and never warned about: the expense that causes it is recorded like any other. **Exactly zero *Remaining* is not over budget** — spending a category down to nothing is the plan working, not the plan failing — and one cent past zero is. Because a category with no budget set behaves as one budgeted at zero (see *Budget*), such a category is over budget from the first cent spent against it. A property of a category **within one budget period**, so the same category can be over budget in one period and not in the next. On screen *Remaining* is shown as the negative figure itself, **with a marker** it shares with *Over-assigned*. The marker's badge reads *Over budget*. The marker is information, not a warning. This is a revision by the stakeholder on 2026-09-25 (*One marker for over budget and over-assigned*, below). Built in the UI increment. |
-| **Accumulated** | **Account-backed categories only.** Everything ever assigned to the category minus everything ever spent against it — the running sum of its *Remaining* across all periods, and so the money its backing accounts have built up on its behalf. Shown beside the period's *Budget* and *Remaining*, which reset at every boundary while *Accumulated* does not. An unbacked category has no such figure, because it is swept empty at every boundary and nothing accumulates. Related to, but not equal to, a backing account's *Balance* — see *Backed categories accumulate* above. Not in the first increment. **Revised on 2026-09-27, and built the same day:** it is **what has moved in on the category's behalf since it was last backed, minus what has been spent against it since**. It is no longer the running sum of *Remaining* over every period, although for a category backed before anything was assigned to it, and never unbacked, the two agree. It starts at €0, or at what moves when the category is backed. Money already in the account is not part of it. **It starts over when a category is backed again after being unbacked**, not when its backing is pointed at another account, and an unbacked category shows none. It is **not** what unbacking and re-pointing move: they move what is there for the category in the backing account, which counts only its expenses paid from that account, where *Accumulated* counts every one, whichever account paid (follow-up). The two differ by the category's expenses paid from other accounts. It is shown **up to and including the period on screen**, so a later period includes what is planned; in periods before the backing it follows today's backing, €0 before anything moved (follow-up). **The expenses that lower it** are those dated after the backing day, or on it and recorded after the backing, **on any account** (follow-ups). **Revised on 2026-09-28:** every expense dated in the period of backing or later, whenever entered, with the part of that period's *Budget* that did not move at backing added back, so that in that period it reads what *Remaining* reads, overspent included; an expense dated before that period does not count. **Below zero it carries the one marker, badge *Rood*** (follow-up). An archived backed category keeps and shows it (follow-up). Counts a later period's *Budget* as planned until that period is settled (*Backing: chosen in the build*, above). On screen ***Opgebouwd*** (ruled, *Backing and Accumulated*, above; in *Dutch display terms* since the build). **Since the sweep's rulings** (2026-09-27, built 2026-09-28): the sweep destination's includes **swept money from the day it moves**, and the one-click difference moves it up or down; swept money is not a *Budget*, so a later period's view does not count a sweep still to come (*derived* and the documentation's reading, *The sweep and Restant*, above). |
+| **Accumulated** | **Account-backed categories only.** Everything ever assigned to the category minus everything ever spent against it — the running sum of its *Remaining* across all periods, and so the money its backing accounts have built up on its behalf. Shown beside the period's *Budget* and *Remaining*, which reset at every boundary while *Accumulated* does not. An unbacked category has no such figure, because it is swept empty at every boundary and nothing accumulates. Related to, but not equal to, a backing account's *Balance* — see *Backed categories accumulate* above. Not in the first increment. **Revised on 2026-09-27, and built the same day:** it is **what has moved in on the category's behalf since it was last backed, minus what has been spent against it since**. It is no longer the running sum of *Remaining* over every period, although for a category backed before anything was assigned to it, and never unbacked, the two agree. It starts at €0, or at what moves when the category is backed. Money already in the account is not part of it. **It starts over when a category is backed again after being unbacked**, not when its backing is pointed at another account, and an unbacked category shows none. It is **not** what unbacking and re-pointing move: they move what is there for the category in the backing account, which counts only its expenses paid from that account, where *Accumulated* counts every one, whichever account paid (follow-up). The two differ by the category's expenses paid from other accounts. It is shown **up to and including the period on screen**, so a later period includes what is planned; in periods before the backing it follows today's backing, €0 before anything moved (follow-up). **The expenses that lower it** are those dated after the backing day, or on it and recorded after the backing, **on any account** (follow-ups). **Revised on 2026-09-28:** every expense dated in the period of backing or later, whenever entered, with the part of that period's *Budget* that did not move at backing added back, so that in that period it reads what *Remaining* reads, overspent included; an expense dated before that period does not count. **Below zero it carries the one marker, badge *Rood*** (follow-up). An archived backed category keeps and shows it (follow-up). Counts a later period's *Budget* as planned until that period is settled (*Backing: chosen in the build*, above). On screen ***Opgebouwd*** (ruled, *Backing and Accumulated*, above; in *Dutch display terms* since the build). **Since the sweep's rulings** (2026-09-27, built 2026-09-28): the sweep destination's includes **swept money from the day it moves**, and the one-click difference moves it up or down; swept money is not a *Budget*, so a later period's view does not count a sweep still to come (*derived* and the documentation's reading, *The sweep and Restant*, above). **A change of period start day never changes it** (settled 2026-09-29, not built; *A configurable period start day*, follow-up 5): in the stakeholder's words it is *Resterend* plus earlier *Resterend* plus what sweeps brought in, counted from the first day the period of backing had when the category was backed. **Built the same day**: the backing remembers that first day, one for each of its two marks, so neither *Opgebouwd* nor what is there for the category is worked out again under a changed calendar ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md), decision 3). |
 | **Leftover** | A category's *Remaining* when its budget period ends — money that was assigned but not spent. For an unbacked category it is *swept* rather than allowed to vanish; a backed category keeps its leftover, because that money is already in its account — see below. A leftover is computed at the end of a period; computing it does not close the period — see below. **Refined for the sweep on 2026-09-27, and built on 2026-09-28:** an unbacked category's *Leftover* is swept **netted** into the *Period leftover* (next), negatives included, so a positive one is not always moved in full, and a negative one lowers what moves. Whether the category counts as unbacked is judged by its backing at the period's end (*derived*). Round 2's *"het restant van een potje"* is this term (*Dutch source terms*, below). |
 | **Period leftover** | **The documentation's proposed English term, not ruled** (2026-09-27): a budget period's *Unassigned* plus every unbacked category's *Remaining*, **negatives included**, at its end. What the period should sweep. **Only a total above zero moves**; at zero or less nothing does, and the period shows the shortfall. Savings are never drawn on. It is worked out, and worked out again when the period's figures change later, which is how a swept period shows a difference. On screen ***Restant***, his word, ruled 2026-09-27. See *The sweep and Restant* above. Not built. **Follow-ups the same day:** exactly €0 with nothing swept shows **no line**; a shortfall shows its line in **every** ended period, before the first start included, with the one marker and a new badge, ***Tekort***. The English term stays the documentation's, open at the scenario gate. **Approved with the scenarios on 2026-09-27, and built on 2026-09-28** as `Ledger.PeriodLeftover`, worked out under the categories backed at the period's end, which settling records as it passes the end ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)). |
 | **Sweep** | What happens at the end of a budget period to money that has not landed anywhere: the *Unassigned* pool and the *Leftovers* of every unbacked category are moved together into one **sweep destination**, out of the *pool account* and into that destination's default backing account. Backed categories are not swept. Automatic, not prompted — see below. **Settled on 2026-09-27, not built** (*The sweep and Restant*, above): what moves is the *Period leftover*, **netted, and only when above zero**. It is a stored *Movement*, written at **settling**, dated the next period's first day, from the pool account to the destination's backing account of that moment (*derived*). **With no destination, nothing moves**, and the ended period says its money was not swept. **Only periods that end after the first start are swept automatically**; earlier ones can be swept by the button. The ended period's own figures are unchanged, plus one line: *"Restant € 120,00 naar Sparen"*. **When a swept period's figures change later**, it shows the difference, and **one click moves exactly that**, never MoneyBud by itself: still to sweep, to today's destination; swept too much, back from the category it went into. An automatic sweep is not announced by a notice (the documentation's reading). **Follow-ups the same day:** an automatic sweep that moved money **is announced once**, an exception to "nothing is announced when a period begins"; the one button is ***Restant bijwerken***; an over-sweep comes back from the category's **current** backing account, at most what is there for it, nothing if it is no longer backed, and **latest first** where two categories received a period's money. **Built on 2026-09-28** ([ADR 0010](../decisions/0010-sweeps-and-period-ends.md)): a sweep is a *Movement* with reason `Swept` that names the period it was for, and a sweep that moved money is saved straight away. **Ruled at the build the same day:** "latest first" is **per move**, whichever category it went to, and the difference is measured against what really moved, so an amount let go absorbs a later rise first (*Sweep: ruled at the build*, above). |
@@ -1535,6 +1535,19 @@ start days 30 and 31 including a leap year, alongside the tiling property for ev
 [`features/record-expense.feature`](../../features/record-expense.feature) is written in terms of
 "the previous", "the current" and "the next budget period", so nothing already approved depended on
 which way this went, and nothing has to change now that it has gone this way.
+
+**Reachable once the start day can be changed** (settled 2026-09-29, *A configurable period start
+day*, below). This ruling stands unchanged there, and applies to the day a new start day first comes
+round as well as to every period after.
+
+**Reached and built on 2026-09-29.** "No approved scenario configures a start day" stopped being true:
+`change-the-period-start-day.feature` configures one, and an approved Scenario Outline there asserts the
+clamp through February and back. **Two of its cells had the clamp wrong**, 30 April where the period
+from 31 March, under the 31st, ends on 29 April, and were corrected at the build with the stakeholder's
+approval, by this ruling rather than against it (*A configurable period start day: chosen in the
+build*, ruling (a)). **The clamp met a change once more**: a new start day whose clamp falls on the
+current period's own first day does not come round inside that period, so a change can lengthen it
+(ruling (b), same subsection). The ruling above is unchanged by either.
 
 ## Ending versus closing a budget period
 
@@ -3104,6 +3117,18 @@ do."* Checked against the code, it is not ready:
 **What it would take** is a decision, not only code: what happens to existing budgets when the start
 day changes. That question goes to the stakeholder when this comes back. The code half is carried in
 [§11](11-risks-and-technical-debt.md).
+
+**Superseded on 2026-09-29** by *A configurable period start day* (below), which the stakeholder
+settled as the thirteenth increment: the start day can be changed at any time, from the current period
+on. The decision this section asked for is ruling 4 there: a plan made ahead for a period that no
+longer exists goes into the period its old first day falls in, and the current period's plan stays
+with it when it is cut short. The code half is still to build ([§11](11-risks-and-technical-debt.md)).
+This section is left as it was written, and still describes the UI as built.
+
+**Built on 2026-09-29**, so this section no longer describes the UI as built: the drop-down *Periode
+begint op* stands beside the period's name, `Ledger` can change its calendar, and budgets made ahead are
+re-keyed by the change ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). The code half
+[§11](11-risks-and-technical-debt.md) carried is resolved.
 
 ### The overview, and its ring
 
@@ -5879,6 +5904,14 @@ several, as the plan chooses.
 money for periods that were over before it was ever opened, at a moment the user did not choose, and
 while he may still be entering what happened in them.
 
+**Refined on 2026-09-29, at the start-day increment's scenario stage** (*A configurable period start
+day*, *Ruled at the scenario stage, 2026-09-29*, ruling 1, below; not built): a period ended by a change
+of start day is swept by itself even when its new end falls before the first start. It was part of the
+period that was current at the first start, so it was not over before MoneyBud was opened, which is
+what this ruling's reasoning is about. The ruling above is left as written. **Built the same day**: the
+change passes the boundary itself and sweeps the period it ended without settling's first-start test
+([ADR 0012](../decisions/0012-the-calendar-is-a-history.md), decision 2).
+
 ### With no destination, nothing moves
 
 > **Ruling 2. A period that ends with no destination set moves nothing.** The ended period shows that
@@ -6678,6 +6711,9 @@ that income ahead by hand, which stays allowed, or assigning past *Niet toegewez
 with the marker (*Over-assigned*). **Until the start day is configurable**, a salary on the 27th falls
 in the period before the one it pays for, exactly as it does when typed by hand today. Recurring
 entries change nothing about that. The rejected option's second reason rests on the next increment.
+**That increment was settled on 2026-09-29** (*A configurable period start day*, below): with periods
+starting on the 27th, a salary repeated on the 27th falls on the first day of the period it pays for.
+It was built the same day.
 
 **Typing an income ahead is unchanged.** A future-dated income set to repeat is its own first
 occurrence, and the next comes one step after its date, recorded when that date arrives (*derived*).
@@ -7237,6 +7273,645 @@ on the recommendation (*Ruled at the scenario stage, 2026-09-28*, above): removi
 last occurrence leaves it stopped, with the one before changeable; the drop-down's order; and the grey
 label only in the Overview's lists. **Nothing from the scenario stage is left open for him.**
 
+## A configurable period start day
+
+The rulings for the thirteenth increment, settled with the stakeholder on 2026-09-29. Like *Recurring
+entries*, they were answers to multiple-choice questions, each put to him with a recommendation and a
+worked example, and they went straight into this glossary rather than into a new interview round.
+**He took the recommended option every time.** **The reasoning given with each ruling is the
+documentation's**, offered with the recommended option as the argument for it. A rejected option's
+reason is the one given with the question, and where none was given the section says so.
+
+**Six rulings, and a set of derivations.** The derivations were drawn up with the rulings and not put
+to him as questions. Each is marked *derived*, or *in the documentation's reading*. They stand as the
+documentation's reading and are **open to contradiction at the scenario gate**, like the derivations of
+earlier increments. What neither settles is listed under *What this section leaves open* (below), for
+him before the scenarios.
+
+**Follow-ups, the same day.** Writing the rulings up left three points open and two consequences worth
+putting to him rather than leaving to the scenario gate. **All five were put back to him on
+2026-09-29**, each as a multiple-choice question with a recommendation and an example. **He took the
+recommendation four times.** The fifth, what a change does to *Opgebouwd*, confused him as it was put,
+and **he answered it in his own words**, which agree with the recommendation and drop the cost it came
+with (*follow-up 5*). Each follow-up sits in the subsection it belongs to, marked *follow-up*, with the
+rejected options and the reasons they were put with. The derivations they settle are revised where
+they stand. **Nothing is left open for him before the scenarios.** **Three more were ruled at the
+scenario stage** the same day, each on the recommendation (*Ruled at the scenario stage, 2026-09-29*,
+below).
+
+**Where it comes from.** *Budget period* has said from the first increment that the day a period
+starts on is configurable. The UI increment kept it at the 1st, deferred and not rejected, because
+budgets are stored against their period's first day and nobody had decided what happens to them when
+the day changes (*The period start day stays at the 1st, for now*, above). On 2026-09-28 he chose it
+as the increment after recurring entries: **his salary comes on the 27th, so he wants periods to run
+from payday.** **This section supersedes *The period start day stays at the 1st, for now***, and
+answers the question that section left for this increment: what happens to existing budgets (ruling 4,
+which covers the current period's own plan too). **The clamp stands unchanged** (*A start day the
+month is too short for clamps to its last day*, above): a start day a month is too short for falls on
+that month's last day.
+
+**Settled, not specified or built.** There is no feature file, plan or code yet. **Since then specified
+and built**, on 2026-09-29: three feature files, `change-the-period-start-day`,
+`carry-plans-and-money-across-a-start-day-change` and `name-a-budget-period`, with additions to
+`keep-data` and `start-moneybud`, 33 scenarios and 50 cases, approved at the scenario gate; the
+[plan](../plans/increment-13-start-day.md) and [ADR 0012](../decisions/0012-the-calendar-is-a-history.md)
+approved at the plan gate; and the build, green (*Approved at the scenario gate, 2026-09-29* and
+*A configurable period start day: chosen in the build*, below). Two rulings were taken at the build,
+one of them revising a derivation of this section, noted where it stands.
+
+> **The day a budget period starts on can be changed at any time, in a drop-down beside the period's
+> name on the Overview, *Periode begint op*, shown on the current period and later ones. MoneyBud asks
+> first. The change applies from the current period on: the current period keeps its first day and
+> ends the day before the new start day first comes round, and every period after it starts on the new
+> day. Earlier periods stay as they were. A plan made ahead for a period that no longer exists goes into
+> the period its old first day falls in. A period that is not a calendar month is named by its days:
+> *"27 sep – 26 okt 2026"*.**
+
+The worked example put to him, with synthetic figures. It is 29 September 2026. The current period is
+September, 1 to 30 September, and the salary came in on 27 September. He sets *Periode begint op* to
+27. MoneyBud asks: *"Periode laten beginnen op de 27e? Deze periode loopt dan van 27 sep t/m 26 okt
+2026."* He answers *Wijzigen*. 1 to 26 September becomes a short period, *1 – 26 sep 2026*, that has
+already ended, so its end is settled at once: its *Restant* is swept, dated 29 September, and said, or
+where there is none, the period shows why (ruling 1, *What it costs*). The Overview now shows the
+current period, *27 sep – 26 okt 2026*, with the salary of the 27th in it, ready to plan. Had he planned
+October ahead, that plan is in it too (ruling 4). August stays *augustus 2026*. From then on every
+period runs from the 27th to the 26th. The question's wording is the one put to him; the proposed copy
+has since moved to the dash form (*follow-up 3*).
+
+### When a change applies: from the current period on
+
+> **Ruling 1. The start day can be changed at any time, and applies from the current period on.**
+> Earlier periods stay as they were. **The current period keeps its first day and ends the day before
+> the new start day's first occurrence after that first day.** Every period after it starts on the new
+> day.
+
+**Why**, the reason put with the recommendation: the change is felt straight away. The salary that has
+just landed is in the period it pays for, ready to be planned, which is the point of starting periods
+on payday.
+
+| Rejected | Why |
+|---|---|
+| **From the next period**: nothing already begun changes. 1–30 September stays, then a one-off short period 1–26 October, then the 27th on | The salary that just landed would stay in September, and be swept at its end if unassigned, rather than sit in the period it pays for |
+| **Once, at the first start only**, and fixed after | Simplest to build, but changing it would mean starting over, so the current demo data would go |
+
+**How the new end falls**, in the documentation's reading, all on 29 September with the current period
+1–30 September. To the **27th**: 1–26 September ends on the spot, and 27 September – 26 October is
+current. To the **5th**: 1–4 September ends, and 5 September – 4 October is current. To the **30th**:
+the current period becomes 1–29 September and **ends today, not on the spot**; 30 September begins the
+next. **A change never lengthens the current period**, because the new day always comes round inside
+it, clamped where the month is too short for it.
+
+**Revised at the build, 2026-09-29: in one corner a change does lengthen the current period**, and the
+stakeholder ruled that ruling 1 is followed there (*A configurable period start day: chosen in the
+build*, ruling (b), below). With the 29th as start day in 2027, February's period begins on a clamped
+28 February and runs to 28 March. Changed on 10 March to the 31st, whose own February clamp is that same
+28 February, not after the first day, the 31st next comes round on 31 March, so the current period
+becomes 28 February – 30 March: two days longer. The derivation above missed that the new day's clamp
+can fall **on** the first day rather than after it. It is reachable only with a start day of the 29th
+or 30th changed to a later day in the weeks after a clamped month. **The build found a second way the
+current period grows**, not put to him, because it is ruling 1 applied to a second change: changed to
+the 30th on 29 September, September is cut to 1–29 September with the 30th still to come; changed back
+to the 1st the same day, the current period keeps its first day and ends the day before the 1st next
+comes round, so September runs to the 30th again (*chosen in the build*, item 3, below). No scenario
+reaches either. The paragraph above is left as written.
+
+**What it costs, stated plainly**, in the documentation's reading:
+
+- **The current period can end on the spot**, whenever the new day has already come round in it. It is
+  then an ended period like any other, swept straight away (*derived*, below), and it cannot be brought
+  back. That is why a change asks first (ruling 5).
+- **The period cut short keeps its plan and loses what falls after its new end.** September's
+  *Budget*s stay with 1–26 September (*follow-up 4*, next), while
+  everything dated 27 to 29 September moves into the new current period, the salary included. So in
+  the example, where the salary is September's only income, 1–26 September has its whole plan and no
+  income: it reads *Te veel toegewezen* by the size of the plan, its *Restant* is at most zero, so
+  nothing is swept, and below zero it shows *Tekort*. **For good**, since a past period cannot be re-planned ("past is
+  past", *Assigning happens in the current budget period and later ones*, above). And an expense of 28
+  September on *Boodschappen* now sits in a period where *Boodschappen* has no *Budget* yet, so it is
+  marked *Over budget* until the new period is planned. Both are true of the calendar as changed, and
+  neither is warned about.
+
+> ***Follow-up 4*, 2026-09-29: the period cut short keeps its plan.** 1–26 September keeps
+> September's *Budget*s, although it loses the salary dated after its new end. It shows *Te veel
+> toegewezen* and, below zero, *Tekort*, for good. The expenses of 27 to 29 September show *Over budget*
+> in the new current period until it is planned, and while it has no plan the take-over offer is
+> there to plan it (*Opening a period*, above).
+
+It was put to him with that cost, as stated above, and he took the recommendation. **Why**, the reason
+put with it: past is past; the plan belongs to the period it was made for, and that period's figures
+then tell the truth about it; and planning the new period is one click, by taking the plan over.
+
+| Rejected | Why |
+|---|---|
+| **The current period's plan moves along into the new current period** | It leaves the expenses of 1–26 September with no *Budget* in the period they fall in, so every one of them would read *Over budget* there |
+
+### Where it is set, and where it shows
+
+> **Ruling 2. A small drop-down beside the period's name on the Overview, next to stepping between
+> periods, captioned *Periode begint op*, offering 1 to 31.**
+
+**Why**, the reason put with the recommendation: it sits where its effect shows, and needs no new panel.
+
+| Rejected | Why |
+|---|---|
+| **A separate *Instellingen* panel** | It keeps the everyday screen clear, but it is a panel with one setting |
+
+> **Ruling 6. The drop-down shows on the current period and later ones only**, where the setting
+> applies. It is hidden on a past period.
+
+**Why**, the reason put with the recommendation: August must not seem to say "begins on the 27th" when
+it began on the 1st.
+
+| Rejected | Why |
+|---|---|
+| **Always visible** | No reason against it was put beyond the recommendation's |
+
+***Derived*:** the drop-down shows the day now set, the same on every period where it shows. On the
+period cut short by a change it is gone, because that period is past.
+
+### How a period is named
+
+> **Ruling 3. A period that is not a calendar month is named by its days, short: *"27 sep – 26 okt
+> 2026"***, with short month names and the year once, at the end. Across a new year: *"27 dec 2026 – 26
+> jan 2027"*. **A calendar month is still named by its month**, *"september 2026"*.
+
+**Why**, the reason put with the recommendation: short enough for the header and for notices, and it
+says exactly which days, so a short one-off period or a clamped February one is never mistaken for an
+ordinary month.
+
+| Rejected | Why |
+|---|---|
+| **The long form**, *"27 september 2026 t/m 26 oktober 2026"* | Too long for the header and notices. **It is the form the UI increment built** into `Tekst.PeriodName`, unreachable until now ([§8.4](08-crosscutting-concepts.md), *Decided while building*). This ruling revises it |
+| ***"oktober 2026"***, named by the month most of it falls in | A short one-off period, or a clamped February one, would be hard to tell from a normal one |
+
+**In the documentation's reading:** "a calendar month" is a period running from the 1st to its month's
+last day, so after changing back to the 1st, October is *oktober 2026* again. Every place that names a
+period uses this form: the header, the assign form's period, the take-over button, the sweep's line,
+history rows and notices. How a period inside one month is named, and a one-day period, was not
+settled by the ruling's examples, and was put to him (*follow-up 3*, next).
+
+> ***Follow-up 3*, 2026-09-29: a period inside one month names the month once, *"1 – 26 sep 2026"*;
+> a one-day period is *"27 sep 2026"*.** Across months it stays *"27 sep – 26 okt 2026"*, across a year
+> *"27 dec 2026 – 26 jan 2027"*.
+
+**Why**, the reason put with the recommendation: the month once when both days are in it, which is
+shorter and reads as the span it is. He took the recommendation.
+
+| Rejected | Why |
+|---|---|
+| ***"1 sep – 26 sep 2026"***, ruling 3's form taken literally | Names the same month twice |
+
+**In the documentation's reading**, the rule underneath all four forms is: write each day with its
+month, and leave out what the end repeats of the start, the year always and the month when it is the
+same. **The proposed question copy follows it** (ruling 5, below): the dash form, not *t/m*.
+
+### A plan made ahead for a period that no longer exists
+
+> **Ruling 4. A plan made ahead for a period that no longer exists goes into the period its old first
+> day falls in.** Assigned ahead to October, the period starting 1 October, and then the start day
+> changed to the 27th: October's plan goes to *27 sep – 26 okt 2026*, the period that is mostly
+> October. **For a backed category, its money then moves on that period's first day instead.**
+
+**Why**, the reason put with the recommendation: work done ahead is not lost, and it lands in the
+period it was mostly meant for.
+
+| Rejected | Why |
+|---|---|
+| **Giving it back to *Niet toegewezen*** | Simple, but it loses work done ahead |
+
+**In the documentation's reading:**
+
+- **The current period's own plan follows the same rule.** Its first day does not move, so when it is
+  cut short its plan stays with it: September's plan stays with 1–26 September. One rule then covers
+  every budget, the current period's and those made ahead. **Ruled by *follow-up 4*** (under ruling 1,
+  above), with its cost put to him.
+- **Past periods' plans do not move**: earlier periods keep their boundaries (ruling 1).
+- **If two plans for one category ever land in one period, they add up.** The documentation finds no
+  single change that does it, since each period's old first day falls in a different new one, but the
+  rule should not have a gap. Adding whole cents divides nothing, so [§8.2](08-crosscutting-concepts.md)
+  is not reopened. **Found at the build, 2026-09-29: two changes in one period do it**, so the rule is
+  not only a gap closed (*chosen in the build*, item 3, below). On 29 September, changed to the 30th,
+  September is cut to 1–29 September; a plan is made ahead for 30 September – 29 October; changed
+  back to the 1st the same day, that period no longer exists, and its plan lands in the current period
+  and adds to September's own. Because that period has begun, a backed category's money for the plan
+  moves at once, dated the day of the change (*follow-up 2*). A unit test holds it. "Finds no single
+  change" stays true; it was the pair that was missed.
+- **A plan landing in the new current period means it has a plan**, so it is not offered one (*Opening
+  a period*, above). With nothing planned ahead, the new current period has every *Budget* at zero,
+  and is offered the plan of the latest earlier period that has one: in the example, 1–26 September's.
+- **"On that period's first day"** is plain when that day is still to come: the money moves then, like
+  any planned money (*Planned money follows the backing on the day it moves*, above). **When that day
+  has already passed**, as 27 September has when the change is made on the 29th, the money moves
+  because of the change, and *follow-up 2* (next) dates it.
+
+> ***Follow-up 2*, 2026-09-29: money a change makes MoneyBud move is dated the day of the change.**
+> That is the sweep of a period the change ended, and a backed category's plan made ahead for a period
+> that has already begun under the new calendar. In the example both are dated 29 September.
+
+**Why**, the reason put with the recommendation: as assigning to a backed category moves money on the
+day of assigning once its period has begun (*Assign*, terms table). He took the recommendation.
+
+| Rejected | Why |
+|---|---|
+| **The new period's first day**, 27 September, as if the period had always started then | A balance correction dated 28 September would take the move in, so the balance would not rise although MoneyBud says the money moved (*A typed balance is what the bank said that day*, above) |
+
+**In the documentation's reading:** a plan made ahead for a period that begins **after** the change
+still moves on that period's first day, as ruling 4 says: nothing moves it early. And a sweep made by a
+change is the one sweep not dated the next period's first day. It is still a sweep of the period it
+ended, and says so.
+
+### Changing it asks first, then says what changed
+
+> **Ruling 5. Changing the start day asks first**, in the message bar, answered *Wijzigen* or
+> *Annuleren*. Proposed copy: *"Periode laten beginnen op de 27e? Deze periode loopt dan van 27 sep t/m
+> 26 okt 2026."* **Cancelling puts the list back.** Once confirmed, MoneyBud **says what changed**.
+
+**Why**, the reason put with the recommendation: it is the one change that can end a period on the spot
+and cannot be undone. The period it ends is swept straight away, and changing back does not bring it
+back: on 29 September, changing from the 27th back to the 1st gives 27–30 September as a short current
+period, then October. It is the reason removing an entry asks (*Removing an entry asks first*, above).
+
+| Rejected | Why |
+|---|---|
+| **Doing it and saying so afterwards**, as archiving does | Quicker, but one slip in the list ends the current period |
+
+**In the documentation's reading:**
+
+- **It is the second kind of act that asks.** *Remove* in the terms table says removing is "the only
+  kind of act" that asks, because it destroys a record. That no longer holds as written. What the two
+  share is the principle behind it: MoneyBud asks before what cannot be undone.
+- **Every change asks**, including one that ends nothing, such as the 30th on 29 September. The ruling
+  does not tell them apart.
+- **It is the one question**, as removing's is: asking it drops a waiting removal question, anything
+  said next drops it, and stepping away drops it and puts the list back ([§8.4](08-crosscutting-concepts.md)).
+- **What the notice says is copy.** When the change ended the current period, the sweep of that period
+  is said in the same notice, after the change, in the order things happened (*Recurring entries:
+  chosen in the build*, above).
+- ***Wijzigen*** is already the display term for changing an entry, and *Annuleren* is a control, so
+  the question adds no term. The copy put to him wrote the period with *t/m*, where ruling 3's name
+  uses a dash. **Aligned with the dash form after *follow-up 3***, still proposed copy: *"Periode laten
+  beginnen op de 27e? Deze periode wordt dan 27 sep – 26 okt 2026."*
+
+### The period shown after a change
+
+A change can make the period on screen stop existing: 1–30 September does not exist once the day is the
+27th, and neither does November, 1–30 November, shown when the change is made from there, as ruling 6
+allows. The screen holds its period as a period ([§8.4](08-crosscutting-concepts.md)), so it has to
+move somewhere.
+
+> ***Follow-up 1*, 2026-09-29: the Overview shows the period nearest to where it was.** A change made
+> on the current period shows the **new current period**. A change made on a later period shows **the
+> period that period's plan went to** under ruling 4: from November, 1–30 November, *27 okt – 26 nov
+> 2026*.
+
+**Why**, the reason put with the recommendation: it keeps "the Overview stays where it was" (*Defaults,
+and entering while another period is shown*, above) as far as the new calendar allows, and on the
+current period it shows the change's effect, the salary in the period it pays for. He took the
+recommendation.
+
+| Rejected | Why |
+|---|---|
+| **Always the new current period** | From a later period it takes the user away from the period he was looking at |
+| **The period that now holds the shown period's first day** | From the current period that is *1 – 26 sep 2026*, the period that has just ended |
+
+**In the documentation's reading:** "the period that period's plan went to" is the period its old first
+day falls in, whether or not it had a plan. The assign form's own period, which follows the screen,
+moves with it. A change that leaves the period on screen as it was, such as the 30th with 1–30 September
+shown, which becomes 1–29 September, shows that period as it now is. **The assign form's period, when
+it has been set apart from the screen, was ruled at the scenario stage**: it goes nearest to where it
+was by this same rule, rather than following the screen (*Ruled at the scenario stage, 2026-09-29*,
+ruling 3, below).
+
+### A change never changes *Opgebouwd*
+
+The documentation's derivation, put to him as a question, was that a change moves no money and changes
+no *Opgebouwd*, with the cost that in the new current period *Opgebouwd* would no longer move with
+*Resterend*. The question confused him, and he answered in English:
+
+> *"I dont understand this one. Just keep them the same. WHy do they need to be diffrent? Opgebouwd is
+> just resterend + earlier resterend + any money form sweeps if relevant"*
+
+> ***Follow-up 5*, 2026-09-29: a change never changes *Opgebouwd*.** *Opgebouwd* is *Resterend* summed
+> over every period since the backing, plus what sweeps brought in. A change only moves expenses between
+> the two halves of a period it cuts, and moves no budget between periods since the backing, so that
+> sum is unchanged. It is counted **from the first day the period of backing had when the category was
+> backed**, the period cut short included.
+
+In the example, a category backed on 28 September is counted from 1 September: *1 – 26 sep 2026*'s
+*Resterend* plus *27 sep – 26 okt 2026*'s, which together, before anything is planned for the new
+period, are what 1–30 September's was.
+
+**The cost stated with the question is dropped**, in his terms: *Opgebouwd* was never meant to equal
+one period's *Resterend*; it is the running sum. The ruling of 2026-09-28 made it read what *Resterend*
+reads in the period of backing because, there, the running sum has only that one period in it. After a
+cut it has two, and it still reads their sum.
+
+***Derived*:** **what is there for the category**, which unbacking returns and re-pointing takes along,
+**follows the same rule**, as the ruling of 2026-09-28 says it does (*Backing a category that already
+has money*, above): a change never changes it either. A plan made ahead that ruling 4 moves stays inside
+the running sum, since it moves from one period after the backing to another.
+
+**Built on 2026-09-29** as two remembered first days on a backing, one for each figure, since each counts
+from the period its own mark was set in (*A configurable period start day: chosen in the build*, item 2;
+[ADR 0012](../decisions/0012-the-calendar-is-a-history.md), decision 3). A unit test holds that a change
+moves neither figure, and a deliberate mutation that worked either out from the calendar again was
+caught.
+
+### What else a change meets
+
+***Derived*, all of this subsection:**
+
+- **Kept data from before this increment, and a first start, begin on the 1st.** That is the default,
+  and what every period has been so far, so nothing moves until the user changes it.
+- **The calendar becomes a history.** A changed start day is part of what MoneyBud keeps, since it
+  must survive a restart, and earlier periods keep their old boundaries. So the calendar is no longer
+  one start day but the start days in force from given periods on. How that is kept is the plan's
+  (*For the plan*, below). **Built as a list of changes**, each naming the period it cut, the day the new
+  start day took effect and the day ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)).
+- **Choosing the day already set is a complete no-op**: no question, no notice, no save. The drop-down
+  writes back what it shows on every redraw, like *Staat op*, *Restant naar* and *Herhalen*.
+- **A change that ends the current period ends it like any period's end.** Settling records its end
+  and sweeps it, the sweep announced once and saved straight away, before anything else is done
+  (*When the sweep runs*, under *The sweep and Restant*, above), and dated the day of the change
+  (*follow-up 2*). The categories it counts as unbacked
+  are those unbacked when the end is recorded, which is at the change. That is right: a category backed
+  on 28 September had its September *Remaining* moved at backing, and sweeping it as unbacked would
+  move it twice.
+- **Changing it more than once leaves each short period in place**, and there is no undo beyond
+  changing it again (ruling 5).
+- **A short period can be very short.** From the 27th to the 28th on 29 September makes 27 September a
+  one-day period. True, and not guarded.
+- **Entries follow their dates.** Expenses dated 27 to 29 September move into the new current period.
+  An income dated in the future counts in the period its date falls in under the calendar as it is
+  now, so a change can move it too.
+- **Recurring entries are unaffected.** A repeat keeps a day of the month and a next date, not a period
+  ([§11](11-risks-and-technical-debt.md), the start-day row).
+- **Backing is unaffected: a change moves no money**, apart from ruling 4's planned money and the sweep
+  of a period it ends, **and changes no *Opgebouwd*** (*follow-up 5*, above). Read afresh under the new
+  calendar, a category backed on 28 September would be counted from 27 September, and its *Opgebouwd*
+  would rise by everything spent from 1 to 26 September, money that never moved. The cost first stated
+  here, that *Opgebouwd* would no longer move with *Resterend* in the new current period, is dropped by
+  that follow-up.
+- **Every place that names or finds a period uses the ledger's own calendar.** Today `Tekst` names a
+  sweep's period with a new default `BudgetPeriodCalendar` ([§8.4](08-crosscutting-concepts.md), *The
+  sweep on screen*; [§11](11-risks-and-technical-debt.md)), which would name the wrong period silently.
+  **Built so** (2026-09-29): the default calendar in `Tekst` is gone, and a sweep's history row names
+  its period through the ledger's calendar (§11's row, now resolved).
+- **The period cut short is past**: assigning in it is refused, a take-over is not offered there, and
+  the drop-down is hidden there.
+
+### Ruled at the scenario stage, 2026-09-29
+
+`scenario-writer` raised three points while writing the start-day feature files. **All three were put to
+the stakeholder on 2026-09-29**, each with a recommendation and an example, and **he took the
+recommendation every time**. They are rulings of the scenario stage, not approvals of the scenarios:
+the files still go to the scenario gate, and the documentation's readings in this section stay readings
+until then.
+
+> **1. A period ended by a change is swept by itself even when its new end falls before MoneyBud's
+> first start.**
+
+An example, with synthetic figures. The first start is on 28 September, with *Restant naar* set to
+*Sparen*, and an income of €1.000 dated 10 September is recorded. On 29 September the start day is set
+to the 27th, which ends *1 – 26 sep 2026*. Its €1.000 is swept to *Sparen*, dated 29 September (*follow-up
+2*), and said.
+
+**Why**, the reason put with the recommendation: that period was part of the period that was current
+at the first start, and a change ends it like any period's end (*What else a change meets*, above).
+
+| Rejected | Why |
+|---|---|
+| **Not swept by itself**: the period shows *"€ 1.000,00 nog niet weggezet"*, with *Restant bijwerken* | It would treat a period that was current when MoneyBud was first started as one that was over before it was ever opened |
+
+**This refines ruling 7 of *The sweep and Restant*** (*Only periods that end after the first start are
+swept by themselves*, above), and a note there says so. In the documentation's reading, the test is no
+longer only the day a period ends but whether it had ended before the first start: a period whose end
+was moved back past the first start by a change had not.
+
+> **2. Month names in a period's name are abbreviated *jan feb mrt apr mei jun jul aug sep okt nov
+> dec*, without dots.**
+
+**Why**, the reason put with the recommendation: they match the ruled examples, *"27 sep – 26 okt
+2026"* and *"27 dec 2026 – 26 jan 2027"*, which have no dots.
+
+| Rejected | Why |
+|---|---|
+| **With dots**, *"mrt."*, as Dutch Windows formatting writes them | The ruled examples have none |
+| **The first three letters**, *"maa"* | No reason was recorded beyond the recommendation's. In the documentation's reading, *mrt* is how Dutch abbreviates *maart*, and *maa* is not |
+
+**In the documentation's reading**, the abbreviations are MoneyBud's own list, not taken from the
+machine's culture, for the reason display formatting already ignores it ([§8.2](08-crosscutting-concepts.md)):
+a Dutch Windows would write the rejected form. A calendar month is still named in full, *"september
+2026"* (ruling 3).
+
+> **3. The assign form's own period, when it has been set apart from the screen, goes nearest to where
+> it was, by the same rule as the screen** (*follow-up 1*).
+
+An example. The screen shows September and the assign form is set to November. The start day is set to
+the 27th. The screen goes to the new current period, *27 sep – 26 okt 2026*, and the form's period to
+*27 okt – 26 nov 2026*, the period November's plan went to.
+
+**Why**, the reason put with the recommendation: one rule for both, and a period picked on purpose is
+kept as close as possible.
+
+| Rejected | Why |
+|---|---|
+| **The form's period follows the screen to its new period** | It would drop a period the user picked on purpose |
+
+**In the documentation's reading:** a form's period that was on the screen's period is not "set apart",
+so it follows the screen, and the two rules give the same answer.
+
+### Approved at the scenario gate, 2026-09-29
+
+**The stakeholder approved the scenarios** on 2026-09-29: `change-the-period-start-day.feature`,
+`carry-plans-and-money-across-a-start-day-change.feature`, `name-a-budget-period.feature`, and the
+scenarios added to `keep-data.feature` and `start-moneybud.feature`, 33 scenarios and 50 cases in all.
+**With them he approved every documentation's reading their headers list as open to contradiction at
+the gate**, since the scenarios assert them. Among them: every change asks, including one that ends
+nothing; it is the one question, and declining says nothing; what is there for a category follows
+*follow-up 5*; a change that ends the current period sweeps it as at any period's end, counting as
+unbacked the categories unbacked at the change; a plan made ahead for a period that begins after the
+change still moves on that period's first day; "a calendar month" runs from the 1st to its month's last
+day; every place that names a period uses the ruled form; and the feature files naming days as calendar
+dates, periods still relative to today. Where this section still says "in the documentation's reading"
+about one of these, it now stands as approved.
+
+**One derivation the headers list was revised at the build**: that a change never lengthens the
+current period (*When a change applies*, above, and *chosen in the build*, ruling (b), below). **And two
+cells of an approved Scenario Outline were corrected at the build**, with his approval, to follow the
+clamp as ruled (ruling (a), below).
+
+### Proposed display terms for the period start day
+
+Ruled on 2026-09-29. Held here until the build, by the precedent of the earlier proposals tables:
+`TekstTests` reads *Dutch display terms* (below) and holds `Tekst` to every row, so a row added before
+`Tekst` has the constant fails the suite.
+
+| English (this project) | Proposed Dutch | Status |
+|---|---|---|
+| Period start day (the drop-down's caption) | Periode begint op | **Ruled** 2026-09-29 (ruling 2). **Moved into *Dutch display terms*** at the build, 2026-09-29 |
+
+The drop-down's items are the numbers 1 to 31. How they are written, and the question and notice
+sentences, are copy. The question's answers reuse *Wijzigen* and the *Annuleren* control.
+
+### For the plan
+
+What the rulings leave to the plan, and do not ask of the stakeholder.
+
+**Answered by [the plan](../plans/increment-13-start-day.md), approved by the stakeholder at the plan
+gate on 2026-09-29, and built.** D1 and D2 were approved as recommended, and all seven of the plan's
+readings as written. The list below is kept as it was written. Where each point went:
+
+| Point | Answer |
+|---|---|
+| How the calendar's history is kept | **A list of changes**, each with the first day of the period it was made in, the first day the new start day came round after it, and the day ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md), decision 1). The plan's change had two fields; the build added the first (*chosen in the build*, item 1, below) |
+| The file format | **Version 7**, with a `calendar` list and a backing's two first days. **Version 6 is read** as a calendar never changed, and 5 and 4 through it (plan D2, approved on the recommendation); versions 1 to 3 stay refused |
+| Everything keyed by a period's first day | Budgets, sweeps and period-end records stay keyed so, and loading checks them against the history. A backing **remembers the first day of the period each of its marks was set in**, so *Opgebouwd* and what is there for a category never move (ADR 0012, decision 3). The plan named one such day; the build has two (item 2, below) |
+| The screen's period and the assign form's | Moved on confirming, each to the new current period if it was on the current period, otherwise to the period its first day now falls in (plan reading 5) |
+| Planned money for a period that has already begun | Moved at once by the change, dated that day, whether the plan landed in a new current period or back in the current one (ADR 0012, decision 2) |
+| Settling at the change | **The change passes the boundary itself**, through settling's own steps, dated the day of the change, so a period it ends is swept even when its new end falls before the first start (ADR 0012, decision 2) |
+| `Tekst.PeriodName` | Five forms: a calendar month, one day, inside one month, across months, across years; MoneyBud's own short months; every period named through the ledger's calendar (plan reading 6) |
+| A record | **ADR 0012**, written with the build |
+
+- **How the calendar's history is kept.** It changes the file format, to version 7. Whether version 6
+  is read, as data whose every period starts on the 1st, is a question for the stakeholder at the plan
+  gate, as it was for the last four increments.
+- **Everything keyed by a period's first day.** Budgets are stored against it, and so are a sweep's
+  `sweptFor`, each period-end record and settling's settled-through day. `Ledger.AccumulatedFor`
+  works out the period of backing from the calendar on every call, and so does `ThereFor` by the same
+  rule. Under a changed calendar that gives the wrong first day, which *follow-up 5* forbids: the first
+  day of the period of backing must not be worked out again under the new calendar, whether it is
+  looked up in the calendar's history or kept on the backing's marks. The screen holds `ShownPeriod`,
+  and the assign form its own period, as periods, and `Assign` and `TakeOverPlan` throw for a period
+  that is not one of the calendar's ([§8.1](08-crosscutting-concepts.md)); *follow-up 1* and ruling 3
+  of the scenario stage say where both go. Loading refuses a budget, a
+  sweep or a period-end record on a day that starts no period ([§8.3](08-crosscutting-concepts.md)),
+  so that check must read the history. Ruling 4 moves plans; everything else must stay true of the
+  periods that existed when it was written.
+- **Planned money for a period that has already begun when the change is made.** Settling moves a
+  later period's money on its first day, and counts a period as settled once that day has passed.
+  October's plan landing in a period that began on 27 September, changed on the 29th, would be passed
+  over by a check that reads dates only. It must move, dated the day of the change (*follow-up 2*).
+- **Settling at the change.** A change that ends the current period must settle before anything else,
+  so the ended period is recorded and swept, and its sweep said and saved. The sweep is dated the day of
+  the change, not the next period's first day as settling dates every other sweep (*follow-up 2*).
+  **It is swept by itself even when its new end falls before the first start** (ruled at the scenario
+  stage, ruling 1), so settling's first-start test must not read the ended period's last day alone.
+- **`Tekst.PeriodName`** takes ruling 3's forms with *follow-up 3*'s, four in all, with the month
+  abbreviations of the scenario stage's ruling 2 from a list of its own, and every period is named
+  through the ledger's calendar.
+
+**A record is likely**, in the documentation's judgement: the calendar's shape and the file format are
+architecture, costly to change once data is real, and the same kind of choice ADR 0009 to 0011
+recorded. **None is written now.** These rulings are requirements. The record belongs with the plan
+that makes the choice, as the last three did. **It is [ADR 0012](../decisions/0012-the-calendar-is-a-history.md)**,
+from the plan's decision D1.
+
+### A configurable period start day: chosen in the build
+
+**Two rulings the stakeholder took at the build**, **six choices the build made without putting
+them to him**, and **two fixes from `spec-reviewer`**, listed so that they can be contradicted. Everything else the user can see is the plan's,
+approved at the plan gate with its seven readings. Choices inside the code are in
+[§8.1](08-crosscutting-concepts.md).
+
+#### Ruled at the build, 2026-09-29
+
+Both were put to him as multiple-choice questions with a recommendation and the reasoning below, and
+**he took the recommendation both times**. No reason was recorded beyond the option's own.
+
+> **(a) For the 31st, the period from 31 March ends on 29 April, not 30 April.** Two cells of the
+> approved Scenario Outline *"A start day February is too short for comes round on its last day, and
+> the periods after it are back on the day chosen"* (`change-the-period-start-day.feature`), the 31st
+> rows for 2027 and 2028, said 30 April, and were corrected to 29 April.
+
+**Why**, the reason put with the recommendation: that is the clamp as ruled on 2026-09-24 (*A start day
+the month is too short for clamps to its last day*, above). April has no 31st, so April's period starts
+on its last day, 30 April, and the period before it ends on the 29th. In the documentation's reading
+the cells were a slip in the scenario, not a rule anyone had meant.
+
+| Rejected | Why |
+|---|---|
+| **Keeping 30 April** | It would change the clamp itself: April's period would start on 1 May, the next month's first day, where every other short month's starts on its own last day |
+
+The feature file carries a dated note beside the corrected rows.
+
+> **(b) Where ruling 1 makes the current period longer, ruling 1 is followed.** With the 29th as start
+> day in 2027, February's period begins on a clamped 28 February and runs to 28 March. Changed on
+> 10 March to the 31st, whose own February clamp is 28 February itself, not after the first day, the
+> 31st next comes round on 31 March, and the current period becomes **28 February – 30 March**, two
+> days longer.
+
+**Why**, the reason put with the recommendation: the period that results is exactly the one the 31st
+gives anyway, so the calendar looks as if it had always been on the 31st from there, and there is one
+rule, with no special case.
+
+| Rejected | Why |
+|---|---|
+| **Never lengthen**: keep the end on 28 March and add a two-day period, 29–30 March | A special case in the rule, for a tiny extra period that no one chose |
+
+**This revises the derivation "a change never lengthens the current period"** (*When a change applies*,
+*How the new end falls*, above), where a dated note says so. It is reachable only with a start day of
+the 29th or 30th changed to a later day in the weeks after a clamped month. No scenario reaches it, a
+unit test holds it, and the feature file's header carries a dated note. **It is also why a change keeps
+which period it was made in** (item 1, next).
+
+#### Chosen in the build, not put to the stakeholder
+
+| Choice | Why |
+|---|---|
+| **1. A change remembers which period it was made in**, as well as the day the new start day took effect and the day, so a kept calendar entry has three fields, `periodFrom`, `from` and `startDay`, where the plan's had two | The day a change takes effect cannot say which period it cut. Under the 29th, a change to the 31st made in the period from the clamped 28 February and one made in the period from 29 March both take effect on 31 March, and they give different periods: 28 February – 30 March, and 29–30 March. It came out of ruling (b) ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md), decision 1) |
+| **2. A backing remembers two first days, one for each of its marks**, where the plan named one | A backing has two marks, *Opgebouwd*'s and what is there for the category, and re-pointing resets only the second, so each counts expenses from its own period. *Opgebouwd* counts from one day, what is there from the other, and a change moves neither, as *follow-up 5* and its derivation say |
+| **3. Two changes in one period make two plans for one category land in one period, and they add up** | This section had found no change that does it (ruling 4's reading, *A plan made ahead for a period that no longer exists*, above, where a dated note now says so). On 29 September, changed to the 30th, September is cut to 1–29 September and still current; a plan is made ahead for 30 September – 29 October; changed back to the 1st the same day, the change still to come is dropped, September runs to the 30th again, and the plan made ahead lands in the current period and adds to its own. **Because that period has begun, a backed category's money for the plan moves at once, dated the day of the change** (*follow-up 2*): settling would never move it, since the current period's first day is already settled. The same path covers ruling (b)'s corner. It is the plan's reading 7 applied, with the money *follow-up 2* asks for. A unit test holds it |
+| **4. The question's confirming button reads *Wijzigen***, and the removal question's still reads *Verwijderen* | Ruling 5 and plan reading 1 said so. How: the question carries the word of its own confirming button, so one message bar serves both kinds of question |
+| **5. Choosing, while the start-day question waits, the day already set is declining it**: the question goes, nothing is said, and the list shows the day set | The list shows the day asked about while the question waits, so picking the day already set is picking "not that". Treating it as a no-op would leave the question waiting over a list that no longer shows its day |
+| **6. The minute's tick drops a waiting start-day question when the day has changed, but not a removal question** | Plan reading 4 is about the start-day question: *Wijzigen* must never act on a current period the question did not name. A removal question names an entry, which the day does not change, so it waits as before |
+
+**What `spec-reviewer` found.** No faked or vacuous scenario, and no money defect in normal use. Two low
+defects, both fixed, each with a unit test that fails without the fix. They are fixes, not rulings: each
+makes the build do what a ruling or plan reading already said.
+
+| Fix | Why |
+|---|---|
+| **7. A change never moves money for a plan whose old first day settling has already passed** | Reachable only with the clock once set ahead and then turned back. Settling had then already moved a backed plan made ahead, dated its old first day, and the change re-keyed that plan and moved its money a second time. Now the plan is still re-keyed, since kept data needs every budget on a period's first day, but the change moves none of its money: it had its chance to move when settling passed it. The same clock is a risk of settling's already ([§11](11-risks-and-technical-debt.md), the balance-writing row) |
+| **8. *Wijzigen* on a start-day question asked on an earlier day changes nothing** | Plan reading 4 was held only by the minute's tick, so *Wijzigen* pressed after midnight but before the tick could act on a current period the question did not name. Now confirming treats such a question as dropped: nothing changes, nothing is said, and the list goes back, as if the tick had come first |
+
+**A headless run of the real window** (a scratch Avalonia.Headless harness outside the repository, over
+the real `MainWindow` with synthetic data) passed 28 checks: the list writing back on first show, after
+declining, on stepping and on a tick asked, said and saved nothing; choosing asked, with a *Wijzigen*
+button, and nothing changed while it waited; *Annuleren* put the list back; *Wijzigen* changed the day,
+saved once, named the header *"27 sep – 26 okt 2026"* and said the sweep of *"1 – 26 sep 2026"*; the
+list was hidden on the period cut short and on August, which kept their names; midnight dropped the
+question; and the caption lined up with its list, measured. **It also showed an older blemish, not from
+this increment**: while a plan is offered, the grey *"plan: € 400,00"* on a row runs into that row's
+*Staat op* list ([§11](11-risks-and-technical-debt.md), the Desktop row).
+
+### What this section leaves open
+
+**Nothing is open for the stakeholder before the scenarios.** Three points stood here, found while the
+rulings were written up, with two consequences stated for him to contradict. **All five were put to
+him on 2026-09-29** and ruled the same day: four on the recommendation, and one in his own words that
+agree with it. The list is kept as a record of where each went.
+
+| Point raised | Where it went |
+|---|---|
+| 1. Which period the Overview shows after a change | ***Follow-up 1***, on the recommendation: the period nearest to where it was, the new current period from the current one, the period its plan went to from a later one (*The period shown after a change*) |
+| 2. Which day money moved because of a change is dated | ***Follow-up 2***, on the recommendation: the day of the change (under ruling 4) |
+| 3. How a period inside one month, and a one-day period, are named | ***Follow-up 3***, on the recommendation: *"1 – 26 sep 2026"* and *"27 sep 2026"* (*How a period is named*) |
+| Stated: the period cut short keeps its plan, without the salary after its new end | ***Follow-up 4***, on the recommendation, with the cost put to him: it keeps its plan (under ruling 1) |
+| Stated: a change changes no *Opgebouwd*, at a cost | ***Follow-up 5***, in his own words: a change never changes *Opgebouwd*, the running sum of *Resterend* since the backing; the cost is dropped (*A change never changes Opgebouwd*) |
+
+**Still open, and only at the scenario gate:** the documentation's readings and derivations in this
+section, among them that every change asks, including one that ends nothing (ruling 5), and that what
+is there for a category follows *follow-up 5* too. **Approved with the scenarios on 2026-09-29**
+(*Approved at the scenario gate, 2026-09-29*, above), except the derivation that a change never
+lengthens the current period, revised at the build.
+
+**Three more points came from the scenario stage**, 2026-09-29, and all three were ruled the same day
+on the recommendation (*Ruled at the scenario stage, 2026-09-29*, above): a period ended by a change is
+swept by itself even when its new end falls before the first start; the month abbreviations; and the
+assign form's own period going nearest to where it was. **Nothing from the scenario stage is left open
+for him.**
+
 ## Dutch source terms
 
 The stakeholder material is in Dutch. This table fixes the mapping, so that reading the interviews
@@ -7339,6 +8014,7 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | A shortfall (the marker's badge) | Tekort |
 | Frequency (the list on the income and expense forms that sets it) | Herhalen |
 | One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label) | Eenmalig / wekelijks / maandelijks |
+| Period start day (the list beside the period's name that sets it) | Periode begint op |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -7369,7 +8045,12 @@ they waited in *Proposed display terms for recurring entries*, under *Recurring 
 which is kept as the record. The table writes the frequencies as the grey row label does, lower-case
 after *Eenmalig*; the drop-down shows them capitalised, *Wekelijks* and *Maandelijks*, and `TekstTests`
 compares without case, as for every row. *Recurring transaction* and *Occurrence* have no display term:
-the notice that names occurrences, *"Herhaald: …"*, is copy.
+the notice that names occurrences, *"Herhaald: …"*, is copy. **The last row, *Periode begint op*, was
+ruled on 2026-09-29** and came into the table with the start-day increment's build the same day, as
+`Tekst.PeriodStartDay`, by the same precedent. Until then it waited in *Proposed display terms for the
+period start day*, under *A configurable period start day* (above), which is kept as the record. The
+drop-down's items, *1* to *31*, the question, the notice and a period's name are copy; the question's
+answers reuse *Wijzigen* and the *Annuleren* control.
 
 **The accounts increment's twelve rows came with its build** (2026-09-27). They were proposed and
 approved in *Proposed display terms*, under *Accounts and net worth* (above), and held there until
@@ -7427,6 +8108,9 @@ points the sweep's rulings leave unsettled are listed where they arise, under *T
 (*What this section leaves open*), not filed here, as backing's were. **So were the six points the
 recurring rulings of 2026-09-28 left**, under *Recurring entries* (*What this section leaves open*).
 All six were ruled in follow-ups the same day, one against the recommendation, so none is open.
+**So are the three points the start-day rulings of 2026-09-29 left**, under *A configurable period
+start day* (*What this section leaves open*). All three were ruled in follow-ups the same day, with two
+consequences put to him besides, so none is open.
 
 **As it read until then:** **One**, below. It is recorded so that it is not rediscovered late, and it is **not** waiting on an
 answer from anyone: there is nothing yet for either answer to be true of (*Why it cannot be answered
@@ -7598,7 +8282,23 @@ recommendation, and one against it, changing the latest occurrence's date moving
 later one. *What this section leaves open*, in that section, says where each went. **Three more were
 ruled at the scenario stage** the same day, each on the recommendation: removing a stopped repeat's
 last occurrence, the drop-down's order, and where the grey label shows. None of it is specified or
-built.
+built. **Since then it is both**: specified at the scenario gate and built on 2026-09-28
+([ADR 0011](../decisions/0011-recurring-entries.md)).
+
+Six more were answered on 2026-09-29 for **a configurable period start day** (*A configurable period
+start day*, above), each on the recommendation: when a change applies, where it is set, how a period
+that is not a calendar month is named, what happens to a plan made ahead for a period that no longer
+exists, whether a change asks first, and on which periods the drop-down shows. The fourth answers the
+question *The period start day stays at the 1st, for now* left for this increment, and that section is
+superseded. Writing them up left **three points open**, and two consequences worth putting to him.
+**Five follow-ups were ruled the same day**: four on the recommendation, and the fifth, what a change
+does to *Opgebouwd*, in his own words. *What this section leaves open*, in that section, says where each
+went. **Three more were ruled at the scenario stage** the same day, each on the recommendation: a period
+ended by a change is swept by itself even when its new end falls before the first start, refining the
+sweep's ruling 7; the month abbreviations; and where the assign form's own period goes. None of it is
+specified or built. **Since then it is both**: specified at the scenario gate and built on 2026-09-29
+([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)), with **two more answers ruled at the
+build** (rows at the end of the table below).
 
 ### What happens to an income back-dated into a period that has already been swept?
 
@@ -7732,7 +8432,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Is the category box a pick-list or free text? | *Category entry is free text with suggestions* — **free text**, suggesting the offered categories and accepting any name. Chosen over a pick-list alone, which would put two routes back and the unknown-name refusal out of reach. "Not offered" means not suggested. Settled 2026-09-25; built in the UI increment |
 | What does the ring show when there is nothing to draw? | *The overview, and its ring* — an **empty grey outline with a hint**, only when the period has neither income nor any *Budget*. The hint's wording is copy. Settled 2026-09-25; built in the UI increment |
 | Does the UI show periods other than the current one? | *Stepping between periods* — **yes**, back and forward, because entries land in past and future periods and a current-only UI would accept entries it could never show. This is where the display rule got built, as `Ledger.CategoriesShownIn`. Settled 2026-09-25; built in the UI increment |
-| Can the UI change the period start day? | *The period start day stays at the 1st, for now* — **not in this increment**. The stakeholder's ruling was "if the backend is ready, yes"; it is not, because budgets are stored against their period's first day. Deferred, not rejected; the configurable-start-day rule stands. Settled 2026-09-25 |
+| Can the UI change the period start day? | *The period start day stays at the 1st, for now* — **not in this increment**. The stakeholder's ruling was "if the backend is ready, yes"; it is not, because budgets are stored against their period's first day. Deferred, not rejected; the configurable-start-day rule stands. Settled 2026-09-25. **Superseded on 2026-09-29**: yes, at any time, from the current period on (rows at the end of this table) |
 | What does the start screen show, and how is the ring drawn? | *The overview, and its ring* — the Overview, headed by a ring with one slice per category, sized to its *Budget* and filled as far as spent, plus a slice for *Unassigned*. Chosen over a ring of spending only and a ring of budgets only. Settled 2026-09-25; built in the UI increment |
 | How does the ring show an overspent category, spending with no budget, and an over-assigned period? | Same section — an overspent slice stays budget-sized, filled and marked; spending with no budget gets no slice and is listed with the marker; an over-assigned ring shows budgets only, with *Unassigned* marked. One marker for all of them, beside the **negative figure itself**, not a positive "over by". The marker is a **revision** by the stakeholder of the earlier "plain negative figure, unremarked", for *Over budget* and *Over-assigned* only; how *Overdrawn* is shown is not settled. The over-assigned answer was chosen over a ring at income size with an overflowing segment. Settled 2026-09-25; built in the UI increment. "The same marker" was confirmed after the review to mean the same look, with each badge naming its own state (next rows) |
 | What data does the UI start with, and is it kept? | *What the UI starts with, and what it keeps* — the six default categories and nothing else, and nothing is kept on close. Chosen over synthetic demo data and over saving to a file. [§8.3](08-crosscutting-concepts.md) stands. Settled 2026-09-25; built in the UI increment. **Its second half is superseded on 2026-09-26** (*What MoneyBud keeps*): MoneyBud keeps its data, by the stakeholder's choice rather than §8.3's trigger. Built the same day. The starting state stands |
@@ -7891,7 +8591,7 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | Can a past sweep be redirected to another category? | *Redirecting a past sweep is deferred*, ruling 4 — **deferred until missed**. The destination for future sweeps can change at any time. **Narrows** "redirectable afterwards" in *The sweep*. Settled 2026-09-27 |
 | Where does the one-click difference move money to or from? | *A swept period that changes*, ruling 5 — still to sweep: **to today's destination**; swept too much: **back from the category it was actually swept into**, so a category that never received the money never loses any. Chosen over today's destination both ways. Settled 2026-09-27 |
 | What happens when the destination loses its backing or is archived? | *The destination is one list*, ruling 6 — **the setting is cleared, and the notice says so**; the next period end has no destination. Chosen over unbacking clearing it and archiving keeping it. Settled 2026-09-27 |
-| Which ended periods can show their money and be swept? | *Only periods that end after the first start are swept by themselves*, ruling 7 — **every ended period** with money left over can show it and offer the button, including one that ended before the first start; **only periods ending after the first start are swept automatically**. Chosen over only periods since the first start. Settled 2026-09-27 |
+| Which ended periods can show their money and be swept? | *Only periods that end after the first start are swept by themselves*, ruling 7 — **every ended period** with money left over can show it and offer the button, including one that ended before the first start; **only periods ending after the first start are swept automatically**. Chosen over only periods since the first start. Settled 2026-09-27. **Refined on 2026-09-29**: a period ended by a change of start day is swept by itself even when its new end falls before the first start (row at the end of this table) |
 | What is the swept money called on screen? | *What an ended period shows*, ruling 8 — ***Restant***, his word from round 2: *"Restant naar: Sparen"*, *"Restant € 120,00 naar Sparen"*. Chosen over *Overschot* and *Overblijfsel*. The English *Period leftover* is the documentation's proposal. Settled 2026-09-27 |
 | Where is the destination chosen? | *The destination is one list*, ruling 9 — **one list near *Niet toegewezen***, *"Restant naar: [backed category / geen]"*, in the current and later periods; in an ended period, replaced by what happened, or *"niet weggezet"* with the button. Chosen over a toggle on a category row. Settled 2026-09-27 |
 | Does the current period preview how much will be swept? | Same section, ruling 10 — **no, only where it goes**. *Niet toegewezen* and each *Resterend* already show it. Chosen over a running amount. Settled 2026-09-27 |
@@ -7931,6 +8631,22 @@ Each answer is written up in the section it belongs to rather than kept in a lis
 | What does removing a stopped repeat's last occurrence do? | *Ruled at the scenario stage, 2026-09-28*, under *Recurring entries*, ruling 1 — **the repeat stays stopped**: the occurrence before becomes its last, shows *Eenmalig* and is changeable, so it can be restarted from there; nothing is recorded by itself. Chosen over the one before running the repeat again and recording what is overdue, and over every remaining occurrence locked. Ruled at the scenario stage, 2026-09-28 |
 | In what order does the *Herhalen* drop-down list its choices? | Same section, ruling 2 — ***Eenmalig*, *wekelijks*, *maandelijks***. Chosen over most-used first. Ruled at the scenario stage, 2026-09-28 |
 | Where is the grey *maandelijks* / *wekelijks* label shown? | Same section, ruling 3 — **only in the Overview's income and expense lists**, not in an account's history. Chosen over the history's row too. Ruled at the scenario stage, 2026-09-28 |
+| When does a changed period start day apply? | *A configurable period start day*, ruling 1 — **at any time, from the current period on**: the current period keeps its first day and ends the day before the new day first comes round after it, which can end it on the spot; earlier periods stay as they were. Chosen over from the next period, which would leave a salary just received in the period before the one it pays for, and over once at the first start, which would mean starting over to change it. Settled 2026-09-29 |
+| Where is the start day set? | Same section, ruling 2 — **a small drop-down beside the period's name on the Overview**, captioned ***Periode begint op***, 1 to 31. Chosen over a separate *Instellingen* panel with one setting. Settled 2026-09-29 |
+| How is a period that is not a calendar month named? | Same section, ruling 3 — **by its days, short**: *"27 sep – 26 okt 2026"*, *"27 dec 2026 – 26 jan 2027"*; a calendar month stays *"september 2026"*. **Revises** the long form built but never reachable, *"27 september 2026 t/m 26 oktober 2026"*. Chosen over that form and over naming it by the month most of it falls in. Settled 2026-09-29 |
+| What happens to a plan made ahead for a period that no longer exists? | Same section, ruling 4 — **it goes into the period its old first day falls in**, and a backed category's money moves on that period's first day instead. Answers the question *The period start day stays at the 1st, for now* left open. Chosen over giving it back to *Niet toegewezen*, which loses work done ahead. Settled 2026-09-29 |
+| Is changing the start day confirmed? | Same section, ruling 5 — **yes, it asks first**, in the message bar, *Wijzigen* / *Annuleren*, cancelling puts the list back, and it says what changed afterwards: it can end a period on the spot, which is swept and cannot be brought back. Chosen over doing it and saying so afterwards, like archiving. Settled 2026-09-29 |
+| On which periods is the start-day drop-down shown? | Same section, ruling 6 — **the current period and later ones only**, where it applies. Chosen over always visible, which would make a past period seem to start on a day it did not. Settled 2026-09-29 |
+| Which period does the Overview show after a change? | *The period shown after a change*, follow-up 1 — **the one nearest to where it was**: from the current period, the new current period; from a later one, the period its plan went to under ruling 4. Chosen over always the new current period, and over the period holding the shown period's old first day, which from the current period is the one just ended. Follow-up, 2026-09-29 |
+| Which day is money a change makes MoneyBud move dated? | *A plan made ahead for a period that no longer exists*, follow-up 2 — **the day of the change**, for the sweep of a period it ended and for a backed plan whose new period has already begun, as assigning does. Chosen over the new period's first day, which a balance correction dated in between would take in. Follow-up, 2026-09-29 |
+| How are a period inside one month and a one-day period named? | *How a period is named*, follow-up 3 — ***"1 – 26 sep 2026"***, the month once, and ***"27 sep 2026"***. Chosen over *"1 sep – 26 sep 2026"*. The proposed question copy moves to the dash form. Follow-up, 2026-09-29 |
+| Does the period cut short keep its plan? | *When a change applies*, follow-up 4 — **yes**, although it loses the salary after its new end and shows *Te veel toegewezen* and *Tekort* for good; the new period is planned by taking the plan over. Chosen over moving the plan along, which leaves the cut period's expenses with no budget. Follow-up, 2026-09-29 |
+| Does a change alter *Opgebouwd*? | *A change never changes Opgebouwd*, follow-up 5 — **never**, in his words: *Opgebouwd* is *Resterend* plus earlier *Resterend* plus what sweeps brought in, counted from the first day the period of backing had when the category was backed. The cost first stated with the question is dropped. Follow-up, 2026-09-29 |
+| Is a period ended by a change swept by itself when its new end falls before the first start? | *A configurable period start day*, *Ruled at the scenario stage, 2026-09-29*, ruling 1 — **yes**: it was part of the period current at the first start, and a change ends it like any period's end. **Refines** ruling 7 of *The sweep and Restant*. Chosen over leaving it *"nog niet weggezet"* with *Restant bijwerken*. Ruled at the scenario stage, 2026-09-29 |
+| How are months abbreviated in a period's name? | Same section, ruling 2 — ***jan feb mrt apr mei jun jul aug sep okt nov dec*, without dots**, as in the ruled examples. Chosen over dots, as Dutch Windows writes them, and over the first three letters (*maa*). Ruled at the scenario stage, 2026-09-29 |
+| Where does the assign form's own period go after a change, when set apart from the screen? | Same section, ruling 3 — **nearest to where it was, by the screen's rule** (follow-up 1): November becomes *27 okt – 26 nov 2026*. Chosen over following the screen to its new period. Ruled at the scenario stage, 2026-09-29 |
+| Under the 31st, when does the period from 31 March end? | *A configurable period start day: chosen in the build*, ruling (a) — **on 29 April**, by the clamp: April's period starts on its last day, 30 April. Two cells of an approved Scenario Outline that said 30 April were corrected. Chosen over keeping 30 April, which would change the clamp. Ruled at the build, 2026-09-29 |
+| Can a change make the current period longer? | Same subsection, ruling (b) — **yes, where ruling 1 gives it**: a period begun on a clamped 28 February under the 29th, changed to the 31st, runs to 30 March. **Revises** the derivation that a change never lengthens the current period. Chosen over never lengthening, which needs a special case and a two-day extra period. Ruled at the build, 2026-09-29 |
 
 **Eight** of these answers were taken with their drawbacks visible rather than resolved: the
 expense default is wrong for cash and nothing outside MoneyBud will say so; an overdrawn account is
@@ -7972,6 +8688,12 @@ without a purpose*; and a sweep that went to the wrong category cannot be redire
 sweep and Restant*, above). **A follow-up the same day adds a third**: a past period's row may show
 *Opgebouwd* under today's backing while that period's *Resterend* was swept, because it was unbacked
 then. Both are true, and the *Restant* line is what explains it.
+
+**The start-day rulings add one more** (2026-09-29, built the same day), taken with it visible: a change can end
+the current period on the spot, and that cannot be undone, which is why it asks first (ruling 5). The
+period cut short keeps its plan and loses what falls after its new end, so where that is the salary it
+shows *Te veel toegewezen* and *Tekort* for good. First the documentation's reading, then **ruled with
+that cost in view** (*A configurable period start day*, follow-up 4, above).
 
 **Nothing here blocks the first increment.** It has no accounts at all
 ([§11](11-risks-and-technical-debt.md)), so it reaches none of the account-related answers above,
@@ -8146,3 +8868,26 @@ recommendation), whether a repeat set up in the past records what is already due
 occurrences and a period's sweep after MoneyBud was closed across its end, and where the drop-down
 sits. Three more were ruled at the scenario stage, each on the recommendation. What is left is the
 documentation's readings, for the scenario gate.
+
+**A configurable period start day is settled, not specified** (2026-09-29). The six rulings are in *A
+configurable period start day* (above). They answer the question *Can the UI change the period start
+day?* above had deferred, and keep the clamp exactly as answered. **Nothing here blocks its
+scenarios.** The three points the write-up left, which period the Overview shows after a change, which
+day money moved because of a change is dated, and how a period inside one month and a one-day period
+are named, were ruled in follow-ups the same day, with two consequences besides: the period cut short
+keeps its plan, and a change never changes *Opgebouwd* (*What this section leaves open*, in that
+section).
+
+**Nothing here blocked the start-day increment, and it is built** (2026-09-29). The paragraph above is
+kept as it read before the scenarios. **Its three feature files, and additions to two existing ones,
+were approved at the scenario gate on 2026-09-29**, 33 scenarios and 50 cases, with three scenario-stage
+rulings and every documentation's reading in their headers. The plan was approved at the plan gate the
+same day, with [ADR 0012](../decisions/0012-the-calendar-is-a-history.md): the calendar is a history of
+changes, a change passes the boundary it makes itself, dated that day, and a backing remembers the first
+day of its periods. Version 6 is read. The increment was built to it and is green. Two points were ruled
+at the build, one revising the derivation that a change never lengthens the current period, and what
+the build chose beyond the rulings is in *A configurable period start day: chosen in the build*.
+`spec-reviewer` found no faked or vacuous scenario and no money defect in normal use, and two low
+defects, both fixed and listed there. It
+reaches the clamp, which stands, and meets it in two places the scenarios had not: the corrected cells
+and the lengthening corner.

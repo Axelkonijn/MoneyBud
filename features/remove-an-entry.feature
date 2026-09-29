@@ -8,6 +8,9 @@
 #     act in MoneyBud that asks anything before it acts. The principle is "confirm only where a
 #     record is lost": a removed entry is gone, and MoneyBud keeps no copy to undo it from. So
 #     archiving, deleting a category, assigning and changing an entry do not ask, and this does.
+#     SINCE 2026-09-29 it is no longer the only one: changing the period start day asks too, since it
+#     can end the current period on the spot and cannot be undone (change-the-period-start-day.feature).
+#     What the two share is asking before what cannot be undone.
 #   - Being asked is not being warned. The question is about the act, not about the state of my
 #     money. What the question says ("Weet je het zeker?") is copy, not a term, and not asserted.
 #   - Afterwards, I am told the entry was removed. The glossary records this as a derivation from

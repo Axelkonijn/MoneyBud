@@ -231,16 +231,22 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 6, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 7, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 6", "\"version\": 7") },
-        { "version 4 with repeats, which version 4 never wrote", Valid().Replace("\"version\": 6", "\"version\": 4") },
-        { "version 3, from before the sweep", Valid().Replace("\"version\": 6", "\"version\": 3") },
-        { "version 2, from before backing", Valid().Replace("\"version\": 6", "\"version\": 2") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 6", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 6", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 6,", "") },
+        { "a newer version", Valid().Replace("\"version\": 7", "\"version\": 8") },
+        { "version 6 with a calendar, which version 6 never wrote", Valid().Replace("\"version\": 7", "\"version\": 6") },
+        { "version 5 with a calendar", Valid().Replace("\"version\": 7", "\"version\": 5") },
+        { "version 4 with repeats, which version 4 never wrote", WithoutCalendar(Valid()).Replace("\"version\": 7", "\"version\": 4") },
+        { "version 3, from before the sweep", Valid().Replace("\"version\": 7", "\"version\": 3") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 7", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 7", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 7", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 7,", "") },
+        { "no calendar", Valid().Replace("\"calendar\"", "\"kalender\"") },
+        { "a start day change without its day", Valid().Replace("\"startDay\"", "\"begindag\"") },
+        { "a start day written as text", Valid().Replace("\"startDay\": 27", "\"startDay\": \"27\"") },
+        { "a backing without the first day of its period", Valid().Replace("\"accumulatingFrom\"", "\"opbouwVanaf\"") },
         { "no repeats", Valid().Replace("\"repeats\"", "\"herhalingen\"") },
         { "a repeat without its next date", Valid().Replace("\"next\"", "\"volgende\"") },
         { "a frequency this version does not know", Valid().Replace("\"frequency\": \"monthly\"", "\"frequency\": \"jaarlijks\"") },
@@ -270,7 +276,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_6_document_or_a_version_5_or_4_one_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_7_document_or_a_version_6_5_or_4_one_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -289,14 +295,23 @@ public sealed class StorageTests : IDisposable
         ledger.AddCategory("Savings");
         ledger.Assign(100m, "Savings", ledger.CurrentPeriod);
         ledger.SetBacking("Savings", ledger.AccountNamed("Deposit"));
+        ledger.ChangeStartDay(27);
         var text = LedgerJson.Write(ledger.ToSnapshot());
         Assert.NotNull(LedgerJson.Read(text));
+        Assert.Contains("\"startDay\": 27", text);
         Assert.Contains("\"backing\": null", text);
         Assert.Contains("\"reason\": \"backed\"", text);
         Assert.Contains("\"direction\": \"in\"", text);
         Assert.Contains("\"frequency\": \"monthly\"", text);
         return text;
     }
+
+    private static string WithoutCalendar(string text) => Regex.Replace(text, @",\s*""calendar"": \[[^\]]*\]", "");
+
+    // What version 7 added, taken out again: the calendar, and a backing's two first days.
+    private static string AsVersion6(string text) =>
+        Regex.Replace(WithoutCalendar(text), @",\s*""accumulatingFrom"": ""[^""]*"",\s*""hereFrom"": ""[^""]*""", "")
+            .Replace("\"version\": 7", "\"version\": 6");
 
     // ------------------------------------------------------------------ repeats (ADR 0011)
 
@@ -340,7 +355,7 @@ public sealed class StorageTests : IDisposable
         ledger.AddCategory("Groceries");
         ledger.RecordExpense(32.15m, "Groceries", Today, "Albert Heijn");
         var written = LedgerJson.Write(ledger.ToSnapshot());
-        var version4 = Regex.Replace(written, @",\s*""repeats"": \[\]", "").Replace("\"version\": 6", "\"version\": 4");
+        var version4 = Regex.Replace(AsVersion6(written), @",\s*""repeats"": \[\]", "").Replace("\"version\": 6", "\"version\": 4");
         Assert.DoesNotContain("repeats", version4);
 
         var read = LedgerJson.Read(version4);
@@ -349,7 +364,7 @@ public sealed class StorageTests : IDisposable
         Assert.Empty(read.Repeats);
         var restored = Ledger.FromSnapshot(read, clock);
         Assert.Null(restored.FrequencyOf(restored.ExpensesIn(restored.CurrentPeriod)[0]));
-        Assert.Contains("\"version\": 6", LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Contains("\"version\": 7", LedgerJson.Write(restored.ToSnapshot()));
     }
 
     // Version 5 did not remember a backing's two figures, so they are worked out again on loading
@@ -371,7 +386,7 @@ public sealed class StorageTests : IDisposable
         ledger.RecordExpense(30m, "Savings", Today, "Kado");
         ledger.SetBacking("Savings", deposit);
         var written = LedgerJson.Write(ledger.ToSnapshot());
-        var version5 = Regex.Replace(written, @",\s*""notMovedCents"": \d+,\s*""paidHereBeforeCents"": \d+", "")
+        var version5 = Regex.Replace(AsVersion6(written), @",\s*""notMovedCents"": \d+,\s*""paidHereBeforeCents"": \d+", "")
             .Replace("\"version\": 6", "\"version\": 5");
         Assert.DoesNotContain("notMovedCents", version5);
 
@@ -382,6 +397,64 @@ public sealed class StorageTests : IDisposable
         Assert.Equal(written, LedgerJson.Write(restored.ToSnapshot()));
         Assert.Equal(Money.FromEuros(250m), restored.AccumulatedFor("Groceries", restored.CurrentPeriod));
         Assert.Equal(Money.FromEuros(-10m), restored.AccumulatedFor("Savings", restored.CurrentPeriod));
+    }
+
+    // Version 6 had no start day, and every period in it began on the 1st, which is what an empty
+    // history says; a backing's period is its mark's calendar month (plan for increment 13, D2).
+    [Fact]
+    public void A_version_6_document_is_read_as_periods_that_have_always_started_on_the_first()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        ledger.RecordIncome(1000m, "Salaris", Today);
+        ledger.AddCategory("Groceries");
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(100m, "Groceries", Today, "Markt");
+        ledger.SetBacking("Groceries", deposit);
+        var written = LedgerJson.Write(ledger.ToSnapshot());
+        var version6 = AsVersion6(written);
+        Assert.DoesNotContain("calendar", version6);
+        Assert.DoesNotContain("accumulatingFrom", version6);
+
+        var read = LedgerJson.Read(version6);
+
+        Assert.NotNull(read);
+        var restored = Ledger.FromSnapshot(read, clock);
+        Assert.Equal(written, LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Equal(1, restored.Calendar.StartDay);
+        Assert.Equal(new BudgetPeriod(new(2026, 3, 1), new(2026, 3, 31)), restored.CurrentPeriod);
+        Assert.Equal(Money.FromEuros(200m), restored.AccumulatedFor("Groceries", restored.CurrentPeriod));
+    }
+
+    // Two changes, the second leaving a short period of its own, and a backing made in the period the
+    // first cut short: every period, and Opgebouwd, come back as they were.
+    [Fact]
+    public void A_changed_start_day_comes_back_from_the_format_with_every_period_it_left_behind()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        ledger.RecordIncome(1000m, "Salaris", Today);
+        ledger.AddCategory("Savings");
+        ledger.Assign(300m, "Savings", ledger.CurrentPeriod);
+        ledger.RecordExpense(50m, "Savings", Today, "Cadeau");
+        ledger.SetBacking("Savings", deposit);
+        ledger.ChangeStartDay(10);
+        clock.Now = clock.Now.AddDays(1);
+        ledger.ChangeStartDay(16);
+
+        var text = LedgerJson.Write(ledger.ToSnapshot());
+        Assert.Contains("\"from\": \"2026-03-10\"", text);
+        Assert.Contains("\"from\": \"2026-03-16\"", text);
+        Assert.Contains("\"accumulatingFrom\": \"2026-03-01\"", text);
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(text)!, clock);
+
+        Assert.Equal(text, LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Equal(16, restored.Calendar.StartDay);
+        Assert.Equal(new BudgetPeriod(new(2026, 3, 16), new(2026, 4, 15)), restored.CurrentPeriod);
+        var cut = restored.Calendar.Previous(restored.CurrentPeriod);
+        Assert.Equal(new BudgetPeriod(new(2026, 3, 10), new(2026, 3, 15)), cut);
+        Assert.Equal(new BudgetPeriod(new(2026, 3, 1), new(2026, 3, 9)), restored.Calendar.Previous(cut));
+        Assert.Equal(Money.FromEuros(250m), restored.AccumulatedFor("Savings", restored.CurrentPeriod));
     }
 
     // ------------------------------------------------------------------ the rules kept data is read against
@@ -405,10 +478,10 @@ public sealed class StorageTests : IDisposable
                 IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null,
                 IReadOnlyList<MovementSnapshot>? movements = null, int? destination = null,
                 IReadOnlyList<PeriodEndSnapshot>? periodEnds = null, IReadOnlyList<LetGoSnapshot>? letGo = null,
-                IReadOnlyList<RepeatSnapshot>? repeats = null) =>
+                IReadOnlyList<RepeatSnapshot>? repeats = null, IReadOnlyList<StartDayChange>? calendar = null) =>
                 new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
                     accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today,
-                    destination, periodEnds ?? [], letGo ?? [], repeats ?? []);
+                    destination, periodEnds ?? [], letGo ?? [], repeats ?? [], calendar ?? []);
 
             MovementSnapshot movement = new(1, Today, 1, 1, 2, Money.FromCents(100), MovementReason.Assigned, MovementDirection.In);
             BackingSnapshot backing = new(2, new EntryMark(Today, 1), new EntryMark(Today, 1));
@@ -489,6 +562,15 @@ public sealed class StorageTests : IDisposable
                 { "a weekly repeat with a day", With(expenses: [expense], repeats: [monthly with { Frequency = Frequency.Weekly }]) },
                 { "a stopped repeat with a day", With(expenses: [expense], repeats: [new([1], null, 15, null)]) },
                 { "a frequency MoneyBud does not know", With(expenses: [expense], repeats: [monthly with { Frequency = (Frequency)7 }]) },
+                { "start day changes out of order", With(calendar: [new(march, new(2026, 3, 27), 27), new(march, new(2026, 3, 10), 10)]) },
+                { "a change to the start day already in force", With(calendar: [new(march, new(2026, 4, 1), 1)]) },
+                { "a change taking effect on a day that is not its start day", With(calendar: [new(march, new(2026, 3, 20), 27)]) },
+                { "a change taking effect later than the start day first came round", With(calendar: [new(march, new(2026, 4, 27), 27)]) },
+                { "a change made in a period that never was", With(calendar: [new(new(2026, 3, 5), new(2026, 3, 27), 27)]) },
+                { "a start day of the 32nd", With(calendar: [new(march, new(2026, 3, 20), 32)]) },
+                { "a budget on a day a changed start day starts no period on", With(budgets: [new(1, new(2026, 4, 1), Money.FromCents(100))], calendar: [new(march, new(2026, 3, 27), 27)]) },
+                { "a backing counting from a day that starts no period", With(categories: [groceries with { Backing = backing with { AccumulatingFrom = march.AddDays(3), HereFrom = march } }], last: 1) },
+                { "a backing counting from after its mark", With(categories: [groceries with { Backing = backing with { AccumulatingFrom = new DateOnly(2026, 4, 1), HereFrom = march } }], last: 1) },
             };
         }
     }

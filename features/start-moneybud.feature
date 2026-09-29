@@ -18,7 +18,9 @@
 #     derived, 2026-09-27). And ONLY PERIODS THAT END AFTER THE FIRST START ARE SWEPT BY THEMSELVES:
 #     last month's salary, entered back-dated on the first day, is never swept by itself, and the
 #     button sweeps it once there is a destination (ruling 7 of the sweep, settled by the stakeholder
-#     on 2026-09-27). "No data yet" covers the very first start and
+#     on 2026-09-27). BUDGET PERIODS BEGIN ON THE 1ST until I change the day they start on (glossary:
+#     "A configurable period start day", derived, 2026-09-29; change-the-period-start-day.feature).
+#     "No data yet" covers the very first start and
 #     a start after I have deleted what MoneyBud kept. Deleting it myself is the only way to start
 #     over: MoneyBud has no act for it.
 #   - KEPT DATA. MoneyBud opens it as it was left, and does NOT add the default categories back, nor
@@ -211,6 +213,17 @@ Feature: Start MoneyBud
       | account        | balance |
       | Betaalrekening | 0.00    |
       | Spaarrekening  | 4900.00 |
+
+  # Derived for the period start day, 2026-09-29: the default is the 1st, what every period has been so
+  # far, so a first start's periods are calendar months until I change it. The steps are
+  # change-the-period-start-day.feature's. "today is 29 September 2026" names the day of this first
+  # start, and does not itself start MoneyBud.
+  Scenario: A first start begins its budget periods on the 1st
+    Given today is 29 September 2026
+    And I have never used MoneyBud
+    When I start MoneyBud
+    Then the period start day shown in the current budget period should be the 1st
+    And the current budget period should run from 1 September 2026 to 30 September 2026
 
   # ----------------------------------------------------------------------------------
   # Kept data: opened as it was left, and the defaults are not added back

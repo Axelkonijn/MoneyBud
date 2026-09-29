@@ -16,11 +16,12 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), by dated notes | 2026-09-26 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), **version 7 since 0012**, by dated notes. Dated note, 2026-09-29: **the start day is stored**, as the calendar's history, and version 6, from the change to *Opgebouwd*, had no record | 2026-09-26 |
 | [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
 | [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated notes, 2026-09-28: **its saving gap narrowed for sweeps by 0010, and for occurrences by 0011**; settling event by event and no longer at most once a day, by 0011 | 2026-09-27 |
-| [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011 | 2026-09-28 |
+| [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011. Dated note, 2026-09-29: a sweep's period named through the ledger's calendar, and a sweep made by a change of start day dated that day, by 0012 | 2026-09-28 |
 | [0011](../decisions/0011-recurring-entries.md) | A recurring entry is state beside its occurrences, and settling works event by event | Accepted; takes 0007's format to version 5 and reads version 4 | 2026-09-28 |
+| [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4 | 2026-09-29 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -205,3 +206,34 @@ changed in 0010 is where its boundary sits among other events. Those are dated n
 so is version 5 on 0007. **Version 4 is read, not refused** (decision D2, approved as recommended),
 the first time any MoneyBud reads an older version: version 4 has no repeats because nothing could
 repeat, so reading it guesses nothing. That is in the record's consequences, not a record of its own.
+
+**The change to *Opgebouwd* of 2026-09-28 added none**, and took the file to version 6. It was built
+on a lean route, without subagents, and it added two remembered amounts to a backing, reading version 5
+by working them out again ([§12](12-glossary.md), *Backing a category that already has money*). That is
+how one figure is held, not a new shape, so no record was owed. What it left undone was the dated note
+on ADR 0007 that every earlier change of version got; ADR 0012's note on 0007 now names version 6 too.
+
+**The start-day increment added one: ADR 0012**, approved at its plan gate on 2026-09-29 (decision D1
+of the plan) and built the same day. The rulings (§12, *A configurable period start day*) keep every
+earlier period's boundaries, move plans made ahead, date money a change moves the day of the change,
+and never change *Opgebouwd*. One start day could no longer describe the periods, and two places worked
+a period out again that must not be worked out again. The answer is that **the calendar is a history of
+changes**, each saying which period it cut, from when the new day applied and the day; that **one act,
+`Ledger.ChangeStartDay`, re-keys plans made ahead and, when it ends the current period, passes the
+boundary itself, dated today**; that **a backing remembers the first day of the period each of its two
+marks was set in**; and file format version 7. The rejected alternatives were the current day with every
+period's first day beside it, every period's boundaries stored, the backing's period worked out from the
+calendar as it was, the plan's own two-field change, and leaving the boundary to settling. It passes
+this section's test as 0009 to 0011 did: it touches the file format, and a change that holds which
+period it was made in, beside the day it applies from, would draw a "why on earth" without its
+reasoning. **The build changed two details of D1**, a third field on a change and a second first day on
+a backing, and the record says why, rather than leaving the plan's wording to be contradicted by the
+code.
+
+**It extends ADR 0007 and 0010 rather than superseding either.** 0007's consequence that the start day
+is not in the file no longer holds, and 0010's that a sweep's period is named with the default
+calendar holds only in its first half. Both were consequences written about a start day fixed at the
+1st, which the rulings ended, not decisions reversed, so each carries a dated note. **Version 6 is
+read, not refused** (decision D2, approved as recommended): it has no start day because every period in
+it began on the 1st, so reading it guesses nothing. That is in the record's consequences, as version 4
+was in 0011's.

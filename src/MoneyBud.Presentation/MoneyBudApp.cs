@@ -16,12 +16,14 @@ public sealed record Notice(string Text, bool IsRefusal, BudgetPeriod? WentInto 
 }
 
 /// <summary>
-/// A question MoneyBud is waiting on an answer to. There is only ever one kind — whether to remove
-/// something recorded: an entry, a transfer, a balance correction or a starting balance — because
-/// removing a record is the one act that asks before it acts (arc42 §12, *Removing an entry asks
-/// first*). It is shown where a <see cref="Notice"/> would be, in its place.
+/// A question MoneyBud is waiting on an answer to. There are two kinds, since two acts ask before
+/// they act, because neither can be undone: removing something recorded — an entry, a transfer, a
+/// balance correction or a starting balance (arc42 §12, *Removing an entry asks first*) — and
+/// changing the period start day (§12, ruling 5). It is shown where a <see cref="Notice"/> would be,
+/// in its place, and <see cref="ConfirmText"/> is the button that says yes: <i>Verwijderen</i> or
+/// <i>Wijzigen</i>. The other is always <i>Annuleren</i>.
 /// </summary>
-public sealed record Question(string Text);
+public sealed record Question(string Text, string ConfirmText = Tekst.Remove);
 
 /// <summary>
 /// The whole screen, without a toolkit: the period on screen and stepping between periods, the
@@ -39,7 +41,8 @@ public sealed record Question(string Text);
 /// is and says which period the entry went into.</item>
 /// <item>Amounts arrive as typed text, read by <see cref="AmountInput"/>.</item>
 /// <item>Removing an entry asks first, and waits on the answer (<see cref="Question"/>). Declining
-/// says nothing.</item>
+/// says nothing. So does changing the period start day, which then moves the screen, and the assign
+/// form's own period, to the period nearest to where each was (<see cref="ChooseStartDay"/>).</item>
 /// <item>An entry saved unchanged, or a category renamed to exactly its own name, goes through
 /// quietly: nothing is said, and whatever was said before is gone.</item>
 /// <item>Stepping to another period drops whatever was picked from the period on screen — an entry
@@ -128,6 +131,87 @@ public sealed partial class MoneyBudApp : ObservableObject
     public string? PeriodLabel => ShowsCurrentPeriod ? Tekst.CurrentPeriod : null;
 
     public PeriodOverview Overview => OverviewFor(ShownPeriod);
+
+    // ------------------------------------------------------------------ the period start day
+
+    // The start day a waiting question asks about, and the day it was asked on; null when none waits.
+    private int? askedStartDay;
+    private DateOnly askedOn;
+
+    /// <summary>What the <i>Periode begint op</i> list offers: every day from 1 to 31, in order (ruling 2).</summary>
+    public IReadOnlyList<int> StartDayChoices { get; } = Enumerable.Range(1, 31).ToList();
+
+    /// <summary>
+    /// What the <i>Periode begint op</i> list shows while <paramref name="period"/> is on screen, or
+    /// null where it is not shown (arc42 §12, ruling 6): on the current period and later ones only,
+    /// since an earlier one keeps the day it began on. It shows the day now set, the same on every
+    /// period — or, while the question waits, the day being asked about (plan for increment 13,
+    /// reading 3).
+    /// </summary>
+    public int? StartDayShownIn(BudgetPeriod period) =>
+        period.FirstDay >= Ledger.CurrentPeriod.FirstDay ? askedStartDay ?? Ledger.Calendar.StartDay : null;
+
+    /// <summary>Whether the <i>Periode begint op</i> list is shown beside the period on screen.</summary>
+    public bool ShowsStartDay => StartDayShownIn(ShownPeriod) is not null;
+
+    /// <summary>
+    /// The <i>Periode begint op</i> list's choice. Choosing a day asks first (<see cref="ChooseStartDay"/>);
+    /// null, which a list writes while its items are replaced, is ignored.
+    /// </summary>
+    public int? StartDayChoice
+    {
+        get => askedStartDay ?? Ledger.Calendar.StartDay;
+        set
+        {
+            if (value is { } day) ChooseStartDay(day);
+        }
+    }
+
+    /// <summary>
+    /// A day chosen in the <i>Periode begint op</i> list (arc42 §12, <i>A configurable period start
+    /// day</i>). A change asks first, in the message bar, since it can end the current period on the
+    /// spot and cannot be undone (ruling 5); <see cref="Confirm"/> makes it, and says what changed.
+    /// It is the one question: asking it drops any other waiting.
+    ///
+    /// <para><b>Choosing the day already set does nothing at all</b>: no question, nothing said,
+    /// nothing kept, nothing redrawn. The list writes back what it shows on every redraw, as the
+    /// <i>Staat op</i> lists do. While the question waits, the list shows the day asked about, and
+    /// writing that back does nothing either; choosing the day already set then is declining.</para>
+    /// </summary>
+    public void ChooseStartDay(int day)
+    {
+        if (askedStartDay == day) return;
+
+        if (day == Ledger.Calendar.StartDay)
+        {
+            if (askedStartDay is not null) Decline();
+            return;
+        }
+
+        Ask(Tekst.AskToChangeStartDay(Ledger.PreviewStartDay(day)), () => ChangeStartDay(day),
+            confirmText: Tekst.Change, startDay: day);
+    }
+
+    // Confirmed. The screen, and the assign form's own period, go to the period nearest to where each
+    // was (§12, follow-up 1; ruled at the scenario stage, 3): from the current period the new current
+    // period, from any other the period its first day now falls in.
+    private void ChangeStartDay(int day)
+    {
+        SettleBeforeActing();
+        var current = Ledger.CurrentPeriod;
+        var shown = ShownPeriod;
+        var assignIn = AssignForm.Period;
+
+        var result = Ledger.ChangeStartDay(day);
+
+        ShownPeriod = NearestTo(shown);
+        AssignForm.Period = NearestTo(assignIn);
+        pointedAt = null;
+        Tell(Tekst.StartDayChanged(result), landedIn: null);
+
+        BudgetPeriod NearestTo(BudgetPeriod period) =>
+            period == current ? Ledger.CurrentPeriod : Ledger.Calendar.PeriodContaining(period.FirstDay);
+    }
 
     /// <summary>The Overview any period would show if it were on screen.</summary>
     public PeriodOverview OverviewFor(BudgetPeriod period) =>
@@ -248,7 +332,8 @@ public sealed partial class MoneyBudApp : ObservableObject
         OnPropertyChanged(string.Empty);
         RefreshFormAccounts();
         foreach (var name in (string[])[nameof(ShownPeriod), nameof(ShowsCurrentPeriod), nameof(PeriodTitle),
-                                        nameof(PeriodLabel), nameof(Overview), nameof(CategorySuggestions),
+                                        nameof(PeriodLabel), nameof(ShowsStartDay), nameof(StartDayChoice),
+                                        nameof(Overview), nameof(CategorySuggestions),
                                         nameof(IsUnsaved), nameof(SaveLine), ..PointingNames])
             OnPropertyChanged(name);
     }
@@ -294,6 +379,10 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     public void Tick()
     {
+        // A start-day question names the current period it would give, which a new day can change,
+        // so it is dropped and the list put back (plan for increment 13, reading 4).
+        if (askedStartDay is not null && Ledger.Today != askedOn) DropQuestion();
+
         var changed = Ledger.Settle();
         if (TakeWhatSettlingDid() is { Said: { } said } settled)
         {
@@ -582,6 +671,16 @@ public sealed partial class MoneyBudApp : ObservableObject
     public void Confirm()
     {
         var act = onConfirm ?? throw new InvalidOperationException("Nothing is waiting to be confirmed.");
+
+        // A start-day question asked before midnight names a current period that may be gone; the
+        // tick drops it, and until the tick has run, answering it is answering nothing (plan for
+        // increment 13, reading 4).
+        if (askedStartDay is not null && Ledger.Today != askedOn)
+        {
+            SayNothing();
+            return;
+        }
+
         DropQuestion();
         act();
     }
@@ -599,19 +698,23 @@ public sealed partial class MoneyBudApp : ObservableObject
         SayNothing();
     }
 
-    private void Ask(string text, Action act)
+    private void Ask(string text, Action act, string confirmText = Tekst.Remove, int? startDay = null)
     {
         Notice = null;
         savedAgain = false;
-        Question = new Question(text);
+        Question = new Question(text, confirmText);
         onConfirm = act;
+        askedStartDay = startDay;
+        askedOn = Ledger.Today;
         Refresh();
     }
 
+    // The list shows the day set again once no start-day question waits; every caller redraws.
     private void DropQuestion()
     {
         Question = null;
         onConfirm = null;
+        askedStartDay = null;
     }
 
     // ------------------------------------------------------------------ renaming and deleting
@@ -1076,7 +1179,9 @@ public sealed partial class MoneyBudApp : ObservableObject
     public IReadOnlyList<HistoryLine> History =>
         HistoryAccount is { } account
             ? Ledger.HistoryOf(account)
-                .Select(e => new HistoryLine(e, account, e is BalanceCorrection c ? Ledger.DifferenceOf(c) : null))
+                .Select(e => new HistoryLine(
+                    e, account, e is BalanceCorrection c ? Ledger.DifferenceOf(c) : null,
+                    e is Movement { SweptFor: { } sweptFor } ? Ledger.Calendar.PeriodContaining(sweptFor) : null))
                 .ToList()
             : [];
 

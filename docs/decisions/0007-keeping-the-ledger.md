@@ -31,6 +31,19 @@ points here.
 > version any MoneyBud reads. A version-4 document carrying `repeats` is refused, and versions 1 to 3
 > still are. "Until real use an older file is simply unreadable" is so far true of every version but
 > this one; reading it was free, and promises nothing for the next.
+>
+> **Note, 2026-09-29.** The file format is **version 7** since the period start day became changeable,
+> [ADR 0012](0012-the-calendar-is-a-history.md). **"The period start day is not stored" (decision 5,
+> and the consequence "The start day is not in the file") no longer holds**: the file keeps the
+> calendar as a history of changes, a `calendar` list of `periodFrom`, `from` and `startDay`, empty for
+> periods that have always started on the 1st, and on each backing the first day of the period each of
+> its marks was set in. `FromSnapshot` builds the calendar first and checks budgets, sweeps and
+> period-end records against it, so the refusal of a budget on a day that starts no period stands, read
+> against the history. **Versions 6, 5 and 4 are read**, approved by the stakeholder at the plan gate;
+> versions 1 to 3 still are not. Version 6 came from the change to *Opgebouwd* on 2026-09-28, which
+> added two remembered amounts to a backing and read version 5; it had no record of its own and no
+> note here until this one ([§12](../arc42/12-glossary.md), *Backing a category that already has
+> money*). The body is unchanged.
 
 ## Context
 

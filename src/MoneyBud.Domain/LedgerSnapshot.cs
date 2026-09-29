@@ -2,7 +2,8 @@ namespace MoneyBud.Domain;
 
 /// <summary>
 /// Everything a <see cref="Ledger"/> holds, as plain data: what is kept between runs (arc42 §8.3,
-/// ADR 0007). Nothing else is kept — not the clock, not the calendar, and nothing of the screen.
+/// ADR 0007). Nothing else is kept — not the clock, and nothing of the screen. The calendar is kept
+/// since the period start day could be changed (<see cref="StartDayChanges"/>).
 ///
 /// <para><b>Categories are referred to by <see cref="CategorySnapshot.Key"/></b>, never by name.
 /// Since renaming, a name is not an identity: a renamed category keeps its history, and its old
@@ -27,6 +28,10 @@ namespace MoneyBud.Domain;
 ///
 /// <para><b>Since recurring entries</b> (ADR 0011): <see cref="Repeats"/>, every recurring entry with
 /// the ids of its occurrences, how often it repeats, the day it was last set to and its next date.</para>
+///
+/// <para><b>Since the period start day</b> (ADR 0012): <see cref="StartDayChanges"/>, the calendar
+/// as a history of changes, empty for periods that have always started on the 1st; and on each
+/// backing the first day of the period of each mark.</para>
 /// </summary>
 public sealed record LedgerSnapshot(
     IReadOnlyList<CategorySnapshot> Categories,
@@ -43,7 +48,8 @@ public sealed record LedgerSnapshot(
     int? SweepDestination,
     IReadOnlyList<PeriodEndSnapshot> PeriodEnds,
     IReadOnlyList<LetGoSnapshot> LetGo,
-    IReadOnlyList<RepeatSnapshot> Repeats);
+    IReadOnlyList<RepeatSnapshot> Repeats,
+    IReadOnlyList<StartDayChange>? StartDayChanges = null);
 
 public sealed record AccountSnapshot(int Key, string Name);
 
@@ -52,10 +58,12 @@ public sealed record CategorySnapshot(int Key, string Name, bool IsArchived, Bac
 /// <summary>
 /// A category's backing: the account's key, the two marks and the figure remembered with each
 /// (<see cref="Domain.Backing"/>). The figures are null in data from before version 6, which did not
-/// keep them, and are then worked out again on loading.
+/// keep them, and are then worked out again on loading. So are the first days of the marks' periods
+/// in data from before version 7, when every period started on the 1st.
 /// </summary>
 public sealed record BackingSnapshot(
-    int Account, EntryMark AccumulatingSince, EntryMark HereSince, Money? NotMoved = null, Money? PaidHereBefore = null);
+    int Account, EntryMark AccumulatingSince, EntryMark HereSince, Money? NotMoved = null, Money? PaidHereBefore = null,
+    DateOnly? AccumulatingFrom = null, DateOnly? HereFrom = null);
 
 /// <summary>
 /// A category's <i>Budget</i> in the period that starts on <see cref="PeriodStart"/>. A budget of

@@ -109,6 +109,16 @@ mobile front-end. Its rulings are settled, not yet specified or built ([§12](12
 defaults to *Eenmalig*, so one-off entry stays the default and stays first-class, as the table above
 says. Each occurrence is an ordinary entry that MoneyBud records on its own date, and the latest one
 sets the next, so a changed price is adjusted without starting a new series, as round 1 asked.
+**Recurring entries are built** (specified and built on 2026-09-28, [ADR 0011](../decisions/0011-recurring-entries.md)).
+**A configurable period start day is next**, the thirteenth increment, settled with the stakeholder on
+2026-09-29 and not yet specified or built ([§12](12-glossary.md), *A configurable period start day*).
+His salary comes on the 27th, so he wants periods to run from payday. The start day can be changed at
+any time, beside the period's name, and applies from the current period on, so a salary that has just
+landed is in the period it pays for. That serves the first question above, "where does my money go?",
+for the span he actually lives by, rather than for a calendar month his pay does not follow.
+**A configurable period start day is built** (specified and built on 2026-09-29,
+[ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). A mobile front-end is the last of the
+three.
 
 ## 1.2 Quality Goals
 
