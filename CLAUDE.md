@@ -90,7 +90,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1592 passing: 951 scenario cases, 641 developer unit tests
+dotnet test  MoneyBud.slnx     # 1868 passing: 1001 scenario cases, 867 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -98,11 +98,11 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-29, after the Opgebouwd rule change was built and merged into `main`. **Start here in a new conversation: the configurable period start day** (item 2 under *Next, in order*), at stage 1. Update this when a stage completes._
+_Last updated 2026-09-29, after the start day was tried by Axel and merged. **Start here in a new conversation: the mobile front-end** (item 3 under *Next, in order*), at stage 1 — a conversation with Axel, whose big question is where the data lives with two devices. Update this when a stage completes._
 
-**Done: all five stages, twelve times — for `record-expense`, `record-income`, categories,
+**Done: all five stages, thirteen times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
-the sweep, and recurring entries.** All twelve are built and green, tried by Axel and merged into `main`.
+the sweep, recurring entries, and the period start day.** All thirteen are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -154,7 +154,10 @@ row's `Accumulated`/`ChosenBacking` in Presentation; file format version 3 (ADR 
 `SweepLine`, `SweptPart`, `BringUpToDateResult`, `SweepMade`); `Ledger.SetSweepDestination`,
 `PeriodLeftover`, `SweepLineFor`, `BringUpToDate`, `TakeSweepsMade`, and `Settle` recording each
 period's end and sweeping it; `SweepChoice` and the Overview's sweep list and line in Presentation;
-file format version 4 (ADR 0010).
+file format version 4 (ADR 0010). Since increment 13: `BudgetPeriodCalendar` as a history of
+`StartDayChange`s, `ChangeStartDayResult`, `Ledger.ChangeStartDay`/`PreviewStartDay`, a `Backing`'s
+`AccumulatingFrom`/`HereFrom`; `MoneyBudApp`'s *Periode begint op* list (`StartDayChoice`,
+`StartDayShownIn`) and `Question.ConfirmText`; file format version 7 (ADR 0012).
 
 **Increment 2 — recording income — is done and green.** All five stages, settled with Axel on
 2026-09-24 and 2026-09-25. `features/record-income.feature` holds 16 scenarios, approved at the
@@ -573,9 +576,34 @@ small change put in front of them the same day:
      from an old occurrence, and switching the latest from monthly to weekly, can do it too (a dated
      note in §12). Within what settling did, the notice lists all occurrences, then all sweeps: after
      a long absence that is not strictly chronological (plan reading 7).
-2. **A configurable period start day.** His salary comes on the 27th. Deferred since increment 5
-   because budgets are stored by their period's first day (§12, *The period start day stays at the
-   1st*); the clamping rule for short months stands.
+2. **A configurable period start day** — increment 13, **done**: built on branch `increment-13-start-day`, tried by Axel ("looks good") and merged into `main` on 2026-09-29. His salary
+   comes on the 27th. **Stages 1–3 done** (2026-09-29): sixteen rulings, all on the recommendation
+   except follow-up 5, which he answered in his own words, in §12 *A configurable period start day*.
+   Read it first. In one line: changeable any time, **from the current period on** (it keeps its
+   first day and ends the day before the new day first comes round, possibly on the spot); earlier
+   periods keep their boundaries; a plan made ahead goes to the period its old first day falls in;
+   money a change moves is dated the day of the change; **a change never changes Opgebouwd** ("just
+   resterend + earlier resterend + any money from sweeps"); a drop-down *Periode begint op* beside the
+   period name, current and later periods only, **asking first**; names "27 sep – 26 okt 2026",
+   "1 – 26 sep 2026", "27 sep 2026". Three feature files plus additions to `keep-data` and
+   `start-moneybud`, 33 scenarios, 50 cases, **approved at the first gate**. **Stage 4 written:**
+   [the plan](docs/plans/increment-13-start-day.md), D1 the calendar as a history of changes (ADR
+   0012, version 7), D2 read version 6. **Approved by Axel at the second gate on 2026-09-29**, D1, D2 and all seven readings on the recommendation.
+   **Stage 5 done** (2026-09-29), tried by Axel and merged. Built as planned
+   ([ADR 0012](docs/decisions/0012-the-calendar-is-a-history.md), file format version 7, version 6 read), with these differences:
+   - A `StartDayChange` keeps the first day of the period it was made in, as well as `From`, since
+     `From` alone cannot tell which period was cut. A `Backing` keeps two first days, one per mark.
+   - **Ruled at the build**, each on the recommendation: two cells of the approved February/31st
+     outline corrected from 30 to 29 April (the clamp as ruled); and in the one corner where ruling 1
+     makes the current period longer (begun on a clamped 28 Feb under the 29th, changed to the 31st:
+     28 Feb – 30 Mar), ruling 1 is followed.
+   - Found at the build: two changes in one period (to the 30th, plan ahead, back to the 1st) land a
+     plan made ahead in the current period. It adds up, and its backed money moves at once.
+   - `spec-reviewer` found no faked scenario and two low defects, both fixed with a test: a clock turned
+     back could move a settled plan twice; Wijzigen after midnight before the tick could act on another
+     period. Eleven mutations caught; a headless run of the real window passed 28 checks.
+   - **For Axel, not urgent:** while a plan is offered, the grey "plan: € 400,00" runs into the
+     *Staat op* list in the same row. Older than this increment, seen in the rendered frame.
 3. **A mobile front-end** — "the biggest and last for now", and what makes him actually use it. Wanted
    with **no double work** between desktop and mobile: that is what the toolkit-free
    `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. The big stage-1
