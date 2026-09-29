@@ -76,6 +76,25 @@ public sealed class BackingTests
         Assert.Equal(Euros(-50m), ledger.ThereFor("Savings"));
     }
 
+    // The ruling of 2026-09-28: expenses are counted by period, and what the account had already paid
+    // in the period when it became the backing account is remembered, so what is there starts at what
+    // moved. After re-pointing, the new account's own earlier expenses are remembered the same way.
+    [Fact]
+    public void What_the_backing_account_paid_in_the_period_before_it_backed_is_not_taken_off_again()
+    {
+        ledger.Assign(300m, "Savings", March);
+        ledger.RecordExpense(100m, "Savings", Today, account: deposit);
+        ledger.RecordExpense(40m, "Savings", Today, account: broker);
+        ledger.SetBacking("Savings", deposit);
+
+        Assert.Equal(Euros(160m), ledger.ThereFor("Savings"));
+
+        ledger.SetBacking("Savings", broker);
+
+        Assert.Equal(Euros(160m), ledger.ThereFor("Savings"));
+        Assert.Equal(Euros(160m), ledger.AccumulatedFor("Savings", March));
+    }
+
     // Counted by direction: money moved from the pool to the pool is there for the category, so
     // pointing the backing elsewhere takes it along.
     [Fact]

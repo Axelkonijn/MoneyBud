@@ -177,7 +177,8 @@ public sealed class Ledger
             categoriesInOrderAdded.Select(c => new CategorySnapshot(
                 keys[c], c.Name, archived.Contains(c),
                 backings.TryGetValue(c, out var b)
-                    ? new BackingSnapshot(accountKeys[b.Account], b.AccumulatingSince, b.HereSince)
+                    ? new BackingSnapshot(
+                        accountKeys[b.Account], b.AccumulatingSince, b.HereSince, b.NotMoved, b.PaidHereBefore)
                     : null)).ToList(),
             budgets.Select(b => new BudgetSnapshot(keys[b.Key.Category], b.Key.PeriodStart, b.Value)).ToList(),
             expenses.Select(e => new ExpenseSnapshot(
@@ -348,8 +349,14 @@ public sealed class Ledger
             var backing = kept.Backing!;
             CheckMark(backing.AccumulatingSince);
             CheckMark(backing.HereSince);
-            ledger.backings.Add(
-                byKey[kept.Key], new Backing(AccountFor(backing.Account), backing.AccumulatingSince, backing.HereSince));
+            if (backing.NotMoved is { Cents: < 0 } || backing.PaidHereBefore is { Cents: < 0 })
+                throw Invalid($"the backing of \"{byKey[kept.Key].Name}\" remembers less than nothing");
+            var category = byKey[kept.Key];
+            var account = AccountFor(backing.Account);
+            ledger.backings.Add(category, new Backing(
+                account, backing.AccumulatingSince, backing.HereSince,
+                backing.NotMoved ?? ledger.NotMovedBefore(category, backing.AccumulatingSince),
+                backing.PaidHereBefore ?? ledger.PaidBefore(category, account, backing.HereSince)));
         }
 
         if (snapshot.SweepDestination is { } destinationKey)
@@ -1687,10 +1694,14 @@ public sealed class Ledger
         if (current is null)
         {
             var remaining = RemainingFor(category.Name, CurrentPeriod);
+            var moving = remaining.Cents > 0 ? remaining : Money.Zero;
             var mark = NewMark();
-            backings[category] = new Backing(account!, mark, mark);
-            if (remaining.Cents > 0)
-                moved = Move(category, pool, account!, remaining, MovementReason.Backed, MovementDirection.In);
+            backings[category] = new Backing(
+                account!, mark, mark,
+                NotMoved: BudgetFor(category.Name, CurrentPeriod) - moving,
+                PaidHereBefore: PaidFrom(category, account!, CurrentPeriod));
+            if (moving.Cents > 0)
+                moved = Move(category, pool, account!, moving, MovementReason.Backed, MovementDirection.In);
             return new SetBackingResult(category, BackingOutcome.Backed, null, account, moved);
         }
 
@@ -1707,7 +1718,10 @@ public sealed class Ledger
             return new SetBackingResult(category, BackingOutcome.Unbacked, current.Account, null, moved);
         }
 
-        backings[category] = current with { Account = account, HereSince = NewMark() };
+        backings[category] = current with
+        {
+            Account = account, HereSince = NewMark(), PaidHereBefore = PaidFrom(category, account, CurrentPeriod),
+        };
         if (there.Cents > 0)
             moved = Move(category, current.Account, account, there, MovementReason.Repointed, MovementDirection.Along);
         return new SetBackingResult(category, BackingOutcome.Repointed, current.Account, account, moved);
@@ -1717,8 +1731,13 @@ public sealed class Ledger
     /// What is there for a backed category in its backing account (arc42 §12, <i>follow-up</i> to
     /// <i>Backing can be set, changed or removed at any time</i>): what MoneyBud moved into that
     /// account on its behalf since the account became its backing account, minus what it moved back
-    /// out, minus the category's expenses paid <b>from that account</b> after that moment. Null for
-    /// a category that is not backed.
+    /// out, minus the category's expenses paid <b>from that account</b> since. Null for a category
+    /// that is not backed.
+    ///
+    /// <para>"Since" counts expenses by period, as <see cref="AccumulatedFor"/> does (§12, <i>ruling of
+    /// 2026-09-28</i>): every expense from that account dated in the period the account became the
+    /// backing account, or later, whenever it was entered, less what the account had already paid for
+    /// the category in that period by then (<see cref="Backing.PaidHereBefore"/>).</para>
     ///
     /// <para>It is what unbacking returns, what re-pointing takes along, and the most a negative
     /// assignment moves back. It is <b>not</b> <i>Accumulated</i>, which counts the category's expenses
@@ -1739,10 +1758,45 @@ public sealed class Ledger
         var moved = Money.Sum(movements
             .Where(m => m.Category == category && backing.HereSince.IsBefore(m))
             .Select(m => m.Direction == MovementDirection.Out ? -m.Amount : m.Amount));
+        var from = Calendar.PeriodContaining(backing.HereSince.Date).FirstDay;
         var spent = Money.Sum(expenses
-            .Where(e => e.Category == category && e.Account == backing.Account && backing.HereSince.IsBefore(e))
+            .Where(e => e.Category == category && e.Account == backing.Account && e.Date >= from)
             .Select(e => e.Amount));
-        return moved - spent;
+        return moved - spent + backing.PaidHereBefore;
+    }
+
+    // What an account has paid for a category in a period, entered when it may be.
+    private Money PaidFrom(Category category, Account account, BudgetPeriod period) =>
+        Money.Sum(expenses
+            .Where(e => e.Category == category && e.Account == account && period.Contains(e.Date))
+            .Select(e => e.Amount));
+
+    // For data from before version 6, which did not remember the two figures (Backing): worked out
+    // again on loading. What the account had paid before the mark is taken from the order entries
+    // were recorded in, so it is exact unless such an expense was changed afterwards.
+    private Money PaidBefore(Category category, Account account, EntryMark mark) =>
+        Money.Sum(expenses
+            .Where(e => e.Category == category && e.Account == account && e.Id < mark.Id
+                        && Calendar.PeriodContaining(mark.Date).Contains(e.Date))
+            .Select(e => e.Amount));
+
+    // What did not move at backing is the period's Budget then, less what moved. The Budget then is
+    // today's, less what was assigned to the period since: an assignment to a backed category moves
+    // money on its day, which in the period of backing is a day in it. What moved at backing is the
+    // movement drawn right after the mark.
+    private Money NotMovedBefore(Category category, EntryMark mark)
+    {
+        var period = Calendar.PeriodContaining(mark.Date);
+        var assignedSince = Money.Sum(movements
+            .Where(m => m.Category == category && m.Reason == MovementReason.Assigned && m.Id > mark.Id
+                        && period.Contains(m.Date))
+            .Select(m => m.Direction == MovementDirection.Out ? -m.Amount : m.Amount));
+        var moved = movements
+            .FirstOrDefault(m => m.Category == category && m.Reason == MovementReason.Backed && m.Id == mark.Id + 1)
+            ?.Amount ?? Money.Zero;
+        var budget = budgets.GetValueOrDefault((category, period.FirstDay));
+        var notMoved = budget - assignedSince - moved;
+        return notMoved.Cents > 0 ? notMoved : Money.Zero;
     }
 
     /// <summary>
@@ -1754,9 +1808,12 @@ public sealed class Ledger
     /// periods' first days. <b>Null</b> for a category that is not backed now, in every period: the
     /// backing is today's, whichever period is shown.
     ///
-    /// <para>"Since it was last backed" is <see cref="Backing.AccumulatingSince"/>, and an expense is
-    /// after it when it is dated later, or on that day and recorded later. So an expense from before
-    /// the backing never counts, even one recorded afterwards. Below zero is allowed and shown.</para>
+    /// <para>"Since it was last backed" is <see cref="Backing.AccumulatingSince"/> for movements. For
+    /// expenses it is the <b>period</b> of backing (§12, <i>ruling of 2026-09-28</i>): every expense
+    /// dated in it or later counts, whenever it was entered, and <see cref="Backing.NotMoved"/> is
+    /// added back, so in that period <i>Opgebouwd</i> moves with <i>Resterend</i>, a change to an
+    /// earlier expense included. An expense dated before that period does not count: it is for the
+    /// sweep. Below zero is allowed and shown.</para>
     /// </summary>
     public Money? AccumulatedFor(string categoryName, BudgetPeriod period)
     {
@@ -1772,15 +1829,17 @@ public sealed class Ledger
                 MovementDirection.Out => -m.Amount,
                 _ => Money.Zero,
             }));
+        var from = Calendar.PeriodContaining(since.Date).FirstDay;
         var spent = Money.Sum(expenses
-            .Where(e => e.Category == category && since.IsBefore(e) && e.Date <= period.LastDay)
+            .Where(e => e.Category == category && e.Date >= from && e.Date <= period.LastDay)
             .Select(e => e.Amount));
+        var notMoved = from <= period.LastDay ? backing.NotMoved : Money.Zero;
         var planned = Money.Sum(budgets
             .Where(b => b.Key.Category == category && b.Key.PeriodStart > settledThrough
                         && b.Key.PeriodStart <= period.FirstDay)
             .Select(b => b.Value));
 
-        return moved - spent + planned;
+        return moved - spent + notMoved + planned;
     }
 
     /// <summary>

@@ -49,8 +49,13 @@ public sealed record AccountSnapshot(int Key, string Name);
 
 public sealed record CategorySnapshot(int Key, string Name, bool IsArchived, BackingSnapshot? Backing = null);
 
-/// <summary>A category's backing: the account's key and the two marks (<see cref="Domain.Backing"/>).</summary>
-public sealed record BackingSnapshot(int Account, EntryMark AccumulatingSince, EntryMark HereSince);
+/// <summary>
+/// A category's backing: the account's key, the two marks and the figure remembered with each
+/// (<see cref="Domain.Backing"/>). The figures are null in data from before version 6, which did not
+/// keep them, and are then worked out again on loading.
+/// </summary>
+public sealed record BackingSnapshot(
+    int Account, EntryMark AccumulatingSince, EntryMark HereSince, Money? NotMoved = null, Money? PaidHereBefore = null);
 
 /// <summary>
 /// A category's <i>Budget</i> in the period that starts on <see cref="PeriodStart"/>. A budget of

@@ -90,7 +90,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1587 passing: 949 scenario cases, 638 developer unit tests
+dotnet test  MoneyBud.slnx     # 1592 passing: 951 scenario cases, 641 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
 ```
 
@@ -98,7 +98,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-28, after increment 12 (recurring entries) was built, tried by Axel and merged into `main`. **Start here in a new conversation: the Opgebouwd rule change** (first item under *Next, in order*), then the configurable period start day. Update this when a stage completes._
+_Last updated 2026-09-29, after the Opgebouwd rule change was built and merged into `main`. **Start here in a new conversation: the configurable period start day** (item 2 under *Next, in order*), at stage 1. Update this when a stage completes._
 
 **Done: all five stages, twelve times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -501,24 +501,23 @@ lost ones (a unit test holds it); he may want it rewritten (§12, *A note for th
 **Next, in order** — agreed with Axel on 2026-09-28, "the three still important to me", with one
 small change put in front of them the same day:
 
-0. **Opgebouwd counts every expense entered after the backing, whatever its date — do this first.**
-   Found by Axel while trying increment 12 (2026-09-28): Boodschappen, Budget 300, backed; then a
-   weekly *broodje kip* of € 4 set up from 14 September, so MoneyBud recorded the 14th, 21st and 28th
-   at once. Resterend 288, but **Opgebouwd 296**. That is the increment-10 rule working as ruled: an
-   expense counts against *Accumulated* only if it is **dated** after the backing day, or on it and
-   recorded after (`spend-against-a-backed-category.feature` header, a follow-up with its cost
-   accepted), so the 14th and 21st did not count. A repeat set up in the past makes that common.
-   **Axel wants it changed**, on the lean route he chose to save tokens: no subagents, the suite and
-   a mutation check instead of `spec-reviewer`. **Confirm the rule with him first**, as proposed:
-   *"Opgebouwd counts every expense entered after the category was backed, whatever its date"* (so
-   a late receipt from before the backing lowers it too; his test would show 288). The work:
-   - the expense filter in `Ledger.AccumulatedFor` goes from `since.IsBefore(e)` to recorded after
-     the mark (id only);
-   - decide with him whether `ThereFor` (what unbacking returns and re-pointing takes) follows;
-   - the `yesterday` example of *An expense dated before the day of backing does not lower
-     Accumulated…* goes from 300.00 to 250.00, with the scenario's name and the file header's rule;
-   - the unit tests asserting the old rule;
-   - a dated ruling note in §12 *Backing and Accumulated*, and this file.
+0. **Opgebouwd follows Resterend — done**, merged into `main` (2026-09-29, lean route: no
+   subagents; the suite and a mutation check instead of `spec-reviewer`). Found by Axel trying
+   increment 12: a weekly *broodje kip* of € 4 set up from 14 September after backing Boodschappen
+   (Budget 300) gave Resterend 288 but Opgebouwd 296, because only expenses dated after the backing day
+   counted. **Ruled with him** (§12, *Backing a category that already has money*, ruling of
+   2026-09-28), each on the recommendation after he reshaped the first proposal: **in the period of
+   backing, Opgebouwd moves with Resterend** — every expense dated in that period or later counts,
+   whenever entered, and a change to an older one moves it too; an expense dated before that period
+   does not (it is for *Restant bijwerken*); an **overspent** category starts **below zero, at its
+   Resterend** (−50, not 0); **ThereFor follows the same rule** on its account. Built as one
+   remembered figure per mark on `Backing`: `NotMoved` (the backing period's Budget not moved at
+   backing = min(Budget, spent)) and `PaidHereBefore` (what the backing account had paid in that
+   period). **File format version 6**; version 5 is read, the figures worked out again from record
+   order (`Ledger.NotMovedBefore`, `PaidBefore`). Scenarios revised in `spend-against-a-backed-category`
+   (two new, his case among them), `back-a-category` and `show-accumulated`. Six mutations, all caught
+   (one only after a unit test was added for `PaidHereBefore`). Built on branch
+   `opgebouwd-follows-resterend`, full solution build clean, merged into `main` on Axel's word.
 
 1. **Recurring entries** on income and expenses — increment 12, **done**: built, tried by Axel and
    merged into `main` on 2026-09-28 (below: stages 1–4 as they ran, then *Stage 5*). His shape:

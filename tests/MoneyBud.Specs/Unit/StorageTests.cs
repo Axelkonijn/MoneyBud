@@ -231,16 +231,16 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 5, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 6, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 5", "\"version\": 6") },
-        { "version 4 with repeats, which version 4 never wrote", Valid().Replace("\"version\": 5", "\"version\": 4") },
-        { "version 3, from before the sweep", Valid().Replace("\"version\": 5", "\"version\": 3") },
-        { "version 2, from before backing", Valid().Replace("\"version\": 5", "\"version\": 2") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 5", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 5", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 5,", "") },
+        { "a newer version", Valid().Replace("\"version\": 6", "\"version\": 7") },
+        { "version 4 with repeats, which version 4 never wrote", Valid().Replace("\"version\": 6", "\"version\": 4") },
+        { "version 3, from before the sweep", Valid().Replace("\"version\": 6", "\"version\": 3") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 6", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 6", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 6", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 6,", "") },
         { "no repeats", Valid().Replace("\"repeats\"", "\"herhalingen\"") },
         { "a repeat without its next date", Valid().Replace("\"next\"", "\"volgende\"") },
         { "a frequency this version does not know", Valid().Replace("\"frequency\": \"monthly\"", "\"frequency\": \"jaarlijks\"") },
@@ -252,6 +252,7 @@ public sealed class StorageTests : IDisposable
         { "no day settled through", Valid().Replace("\"settledThrough\"", "\"verrekendTot\"") },
         { "a category without its backing", Valid().Replace("\"backing\": null", "\"steun\": null") },
         { "a backing without its marks", Valid().Replace("\"hereSince\"", "\"hierSinds\"") },
+        { "a backing without what it remembers", Valid().Replace("\"notMovedCents\"", "\"nietVerplaatst\"") },
         { "a movement for a reason this version does not know", Valid().Replace("\"reason\": \"backed\"", "\"reason\": \"geveegd\"") },
         { "a movement in a direction written as a number", Valid().Replace("\"direction\": \"in\"", "\"direction\": 0") },
         { "no accounts", Valid().Replace("\"accounts\"", "\"rekeningen\"") },
@@ -269,7 +270,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_5_document_or_a_version_4_one_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_6_document_or_a_version_5_or_4_one_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -339,7 +340,7 @@ public sealed class StorageTests : IDisposable
         ledger.AddCategory("Groceries");
         ledger.RecordExpense(32.15m, "Groceries", Today, "Albert Heijn");
         var written = LedgerJson.Write(ledger.ToSnapshot());
-        var version4 = Regex.Replace(written, @",\s*""repeats"": \[\]", "").Replace("\"version\": 5", "\"version\": 4");
+        var version4 = Regex.Replace(written, @",\s*""repeats"": \[\]", "").Replace("\"version\": 6", "\"version\": 4");
         Assert.DoesNotContain("repeats", version4);
 
         var read = LedgerJson.Read(version4);
@@ -348,7 +349,39 @@ public sealed class StorageTests : IDisposable
         Assert.Empty(read.Repeats);
         var restored = Ledger.FromSnapshot(read, clock);
         Assert.Null(restored.FrequencyOf(restored.ExpensesIn(restored.CurrentPeriod)[0]));
-        Assert.Contains("\"version\": 5", LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Contains("\"version\": 6", LedgerJson.Write(restored.ToSnapshot()));
+    }
+
+    // Version 5 did not remember a backing's two figures, so they are worked out again on loading
+    // (§12, ruling of 2026-09-28). Groceries: 300 budgeted, 100 spent on Deposit, backed by Deposit,
+    // 50 assigned after. Savings: overspent when backed, so nothing moved and the whole budget did not.
+    [Fact]
+    public void A_version_5_document_is_read_with_the_backings_figures_worked_out_again()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        ledger.RecordIncome(1000m, "Salaris", Today);
+        ledger.AddCategory("Groceries");
+        ledger.AddCategory("Savings");
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(100m, "Groceries", Today, "Markt", deposit);
+        ledger.SetBacking("Groceries", deposit);
+        ledger.Assign(50m, "Groceries", ledger.CurrentPeriod);
+        ledger.Assign(20m, "Savings", ledger.CurrentPeriod);
+        ledger.RecordExpense(30m, "Savings", Today, "Kado");
+        ledger.SetBacking("Savings", deposit);
+        var written = LedgerJson.Write(ledger.ToSnapshot());
+        var version5 = Regex.Replace(written, @",\s*""notMovedCents"": \d+,\s*""paidHereBeforeCents"": \d+", "")
+            .Replace("\"version\": 6", "\"version\": 5");
+        Assert.DoesNotContain("notMovedCents", version5);
+
+        var read = LedgerJson.Read(version5);
+
+        Assert.NotNull(read);
+        var restored = Ledger.FromSnapshot(read, clock);
+        Assert.Equal(written, LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Equal(Money.FromEuros(250m), restored.AccumulatedFor("Groceries", restored.CurrentPeriod));
+        Assert.Equal(Money.FromEuros(-10m), restored.AccumulatedFor("Savings", restored.CurrentPeriod));
     }
 
     // ------------------------------------------------------------------ the rules kept data is read against
