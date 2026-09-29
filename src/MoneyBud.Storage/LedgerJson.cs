@@ -12,13 +12,14 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 5,
+///   "version": 6,
 ///   "lastEntryId": 7,
 ///   "settledThrough": "2026-03-15",
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
 ///                  { "key": 2, "name": "Sparen", "archived": false,
 ///                    "backing": { "account": 2, "accumulatingSince": { "date": "2026-03-15", "id": 5 },
-///                                 "hereSince": { "date": "2026-03-15", "id": 5 } } } ],
+///                                 "hereSince": { "date": "2026-03-15", "id": 5 },
+///                                 "notMovedCents": 0, "paidHereBeforeCents": 0 } } ],
 ///   "budgets":    [ { "category": 1, "periodStart": "2026-03-01", "cents": 40000 } ],
 ///   "accounts":   [ { "key": 1, "name": "Betaalrekening" }, { "key": 2, "name": "Contant" } ],
 ///   "poolAccount": 1,
@@ -60,7 +61,11 @@ namespace MoneyBud.Storage;
 /// the month a monthly one was last set to, and <c>next</c>, the date of the next occurrence. A stopped
 /// repeat has all three null, and a weekly one has no day.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-5 document is not read at all.
+/// <para><b>Since version 6</b>, the change to <i>Opgebouwd</i> of 2026-09-28: a backing's
+/// <c>notMovedCents</c> and <c>paidHereBeforeCents</c>, the figure remembered with each mark
+/// (<see cref="Backing"/>).</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-6 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
@@ -73,13 +78,18 @@ namespace MoneyBud.Storage;
 /// say must not be guessed (plan for increment 11, D2). <b>Version 4</b>, the form with the sweep and
 /// without recurring entries, <b>is read</b>, as data with no repeats: nothing could repeat when it was
 /// written, so reading it guesses nothing (plan for increment 12, D2). One with a <c>repeats</c> list is
-/// not what version 4 wrote, and is not read. Properties this version does not know are ignored.</para>
+/// not what version 4 wrote, and is not read. <b>Version 5</b>, the form without the two remembered
+/// figures, <b>is read</b> too, and so is version 4 through it: the figures are worked out again from
+/// the order entries were recorded in, exact unless an expense from before a backing was changed after
+/// it (§12, ruling of 2026-09-28). Properties this version does not know are ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 5;
+    public const int Version = 6;
 
-    // The one older version still read: the sweep's, which differs only by having no repeats.
+    // The older versions still read. Recurring entries', which differs only by not remembering a
+    // backing's two figures, and the sweep's, which also has no repeats.
+    private const int VersionWithoutFigures = 5;
     private const int VersionWithoutRepeats = 4;
     private const string Format = "MoneyBud";
 
@@ -111,6 +121,8 @@ public static class LedgerJson
                     json.WriteNumber("account", backing.Account);
                     WriteMark(json, "accumulatingSince", backing.AccumulatingSince);
                     WriteMark(json, "hereSince", backing.HereSince);
+                    json.WriteNumber("notMovedCents", backing.NotMoved!.Value.Cents);
+                    json.WriteNumber("paidHereBeforeCents", backing.PaidHereBefore!.Value.Cents);
                     json.WriteEndObject();
                 }
                 else
@@ -278,12 +290,13 @@ public static class LedgerJson
 
             var version = Int(root, "version");
             var hasRepeats = root.TryGetProperty("repeats", out _);
-            if (!(version == Version || (version == VersionWithoutRepeats && !hasRepeats)))
+            if (!(version is Version or VersionWithoutFigures || (version == VersionWithoutRepeats && !hasRepeats)))
                 return null;
+            var hasFigures = version == Version;
 
             return new LedgerSnapshot(
                 Array(root, "categories", c => new CategorySnapshot(
-                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c))),
+                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c, hasFigures))),
                 Array(root, "budgets", b => new BudgetSnapshot(Int(b, "category"), DateOf(b, "periodStart"), Cents(b))),
                 Array(root, "expenses", e => new ExpenseSnapshot(
                     Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"), Int(e, "account"))),
@@ -328,12 +341,15 @@ public static class LedgerJson
         json.WriteEndObject();
     }
 
-    private static BackingSnapshot? BackingOf(JsonElement category)
+    private static BackingSnapshot? BackingOf(JsonElement category, bool hasFigures)
     {
         var backing = category.GetProperty("backing");
         if (backing.ValueKind == JsonValueKind.Null) return null;
 
-        return new BackingSnapshot(Int(backing, "account"), MarkOf(backing, "accumulatingSince"), MarkOf(backing, "hereSince"));
+        return new BackingSnapshot(
+            Int(backing, "account"), MarkOf(backing, "accumulatingSince"), MarkOf(backing, "hereSince"),
+            hasFigures ? Cents(backing, "notMovedCents") : null,
+            hasFigures ? Cents(backing, "paidHereBeforeCents") : null);
     }
 
     private static EntryMark MarkOf(JsonElement parent, string name)
@@ -372,7 +388,8 @@ public static class LedgerJson
     private static int? IntOrNull(JsonElement parent, string name) =>
         parent.GetProperty(name) is { ValueKind: JsonValueKind.Null } ? null : Int(parent, name);
 
-    private static Money Cents(JsonElement parent) => Money.FromCents(parent.GetProperty("cents").GetInt64());
+    private static Money Cents(JsonElement parent, string name = "cents") =>
+        Money.FromCents(parent.GetProperty(name).GetInt64());
 
     private static bool Bool(JsonElement parent, string name) => parent.GetProperty(name).GetBoolean();
 

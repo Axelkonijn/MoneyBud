@@ -912,7 +912,10 @@ is stored as cents like every other entry's. The sweep increment changed it to v
 its plan gate; an amount let go is stored as cents too. The recurring-entries increment's version 5
 stores no new amount: an occurrence is an ordinary expense or income, and a repeat holds ids, a
 frequency, a day and a date, but no money. An occurrence copies its latest's `Money` as it is, so
-nothing is computed either.
+nothing is computed either. Version 6, from the change to *Opgebouwd* on 2026-09-28, stores two
+amounts with each backing, as cents like every other: what did not move at backing, and what the
+backing account had already paid. Read from version 5 they are sums of stored cents, so nothing
+rounds there either.
 
 **The sweep moves a worked-out amount without reopening whole cents.** The *Restant* is *Unassigned*
 plus a set of *Remaining* figures, and the difference a swept period shows is that minus what moved:

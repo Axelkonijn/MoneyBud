@@ -151,20 +151,20 @@ Feature: See what has been built up for a backed category
       | 100.00 | 0.00      | no   | 0.00        | no     |
       | 100.01 | -0.01     | yes  | -0.01       | yes    |
 
-  # The glossary's example: 350 spent of 300, so nothing moves at the backing and Accumulated starts
-  # at zero. 30 more spent takes it below zero. 100 assigned moves 100 and brings it back to 70, while
-  # the budget's Remaining is 20.
-  Scenario: Backing an overspent category and spending against it takes Accumulated below zero, and assigning brings it back
+  # The glossary's example: 350 spent of 300, so nothing moves at the backing, and Accumulated starts
+  # at the period's Remaining, -50 (ruling of 2026-09-28). 30 more spent takes it to -80. 100 assigned
+  # moves 100 and brings it back to 20, the budget's Remaining.
+  Scenario: Backing an overspent category starts Accumulated below zero, and assigning brings it back
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 0 euro
     And I have a budget of 300 euro for "Savings" in the current budget period
     And I have already spent 350 euro on "Savings" in the current budget period
     And I have set the backing account of "Savings" to "Deposit"
     When I record an expense of 30 euro for "Savings" labelled "Kado" on the account "Bank"
-    Then Accumulated for "Savings" in the current budget period should be -30 euro
+    Then Accumulated for "Savings" in the current budget period should be -80 euro
     And Accumulated for "Savings" in the current budget period should be marked below zero, with the marker a category over budget has and the badge "Rood"
     When I assign 100 euro to "Savings" in the current budget period
-    Then Accumulated for "Savings" in the current budget period should be 70 euro
+    Then Accumulated for "Savings" in the current budget period should be 20 euro
     And Accumulated for "Savings" in the current budget period should not be marked below zero
     And the remaining "Savings" budget in the current budget period should be 20 euro
 

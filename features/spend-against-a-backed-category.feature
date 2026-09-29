@@ -16,17 +16,17 @@
 #   - An expense against a backed category PUT ON ANOTHER ACCOUNT STILL LOWERS ACCUMULATED: the money
 #     for that purpose was spent, whichever account paid. The backing account's balance and
 #     Accumulated then differ by that amount, which is visible and true (follow-up).
-#   - THE EXPENSES THAT LOWER ACCUMULATED are those DATED AFTER THE BACKING DAY, OR ON IT AND RECORDED
-#     AFTER THE BACKING: the test a balance correction applies. A forgotten expense dated before the
-#     backing, recorded later, does not touch Accumulated, and THE AMOUNT MOVED AT BACKING STAYS WHAT
-#     IT WAS. The same holds for an expense from before the backing that is changed or removed
-#     (follow-up). THE ACCEPTED COST: the period's Remaining and what moved then disagree, and nothing
-#     on screen says so.
+#   - IN THE PERIOD OF BACKING, ACCUMULATED MOVES WITH REMAINING (ruling of 2026-09-28, which replaced
+#     the follow-up of 2026-09-27): EVERY EXPENSE DATED IN THAT PERIOD OR LATER LOWERS IT, WHENEVER IT
+#     WAS ENTERED, and changing or removing an expense from before the backing moves it just as it
+#     moves Remaining. THE AMOUNT MOVED AT BACKING STAYS WHAT IT WAS. An expense dated in a period
+#     before the backing's does not count: a late one there is for the sweep. What is there for the
+#     category, which unbacking returns, follows the same rule for the expenses its backing account
+#     paid. Found by the stakeholder: a weekly expense set up in the past, after the backing, recorded
+#     three weeks at once and only the last lowered Accumulated.
 #
 # DERIVED, NOT ASKED: the category typed is recognised as the glossary compares category names,
-# ignoring case. And a changed expense keeps the moment it was first recorded
-# (correct-a-balance.feature), so whether it counts against Accumulated never depends on when it was
-# changed.
+# ignoring case.
 #
 # DERIVED, NOT ASKED, at the scenario gate: while what is typed is not yet, or not at all, the name of
 # a category, the form shows the POOL ACCOUNT. There is no category to have an opinion, and the pool
@@ -188,13 +188,12 @@ Feature: Spend against a backed category
   # ----------------------------------------------------------------------------------
   # Which expenses lower Accumulated
   #
-  # Those dated after the backing day, or on it and recorded after the backing. Savings was backed
-  # today, with its whole 300 moved. A receipt from yesterday, entered now, still counts against the
-  # budget, but not against Accumulated: it was paid before the money moved. Bank pays in both rows,
-  # so the balances are the same.
+  # Every one dated in the period of backing or later, whenever it was entered. Savings was backed
+  # today, with its whole 300 moved. A receipt from yesterday, entered now, counts against Accumulated
+  # as it does against the budget. Bank pays in both rows, so the balances are the same.
   # ----------------------------------------------------------------------------------
 
-  Scenario Outline: An expense dated before the day of backing does not lower Accumulated, and one after the backing does
+  Scenario Outline: An expense dated in the period of backing lowers Accumulated, dated before the backing or after it
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
@@ -210,13 +209,43 @@ Feature: Spend against a backed category
 
     Examples:
       | day       | accumulated |
-      | yesterday | 300.00      |
+      | yesterday | 250.00      |
       | today     | 250.00      |
 
+  # A late receipt from a period before the backing's is for the sweep, not for Accumulated. It still
+  # counts against that period's budget.
+  Scenario: An expense dated in a period before the backing's does not lower Accumulated
+    Given I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have a budget of 300 euro for "Savings" in the current budget period
+    And I have set the backing account of "Savings" to "Deposit"
+    When I record an expense of 50 euro for "Savings" labelled "Bon" dated on the last day of the previous budget period on the account "Bank"
+    Then the expense should be recorded
+    And Accumulated for "Savings" in the current budget period should still be 300 euro
+    And the remaining "Savings" budget in the current budget period should still be 300 euro
+    And the balance of "Deposit" should still be 300 euro
+
+  # The stakeholder's own case, 2026-09-28, which changed the rule. A weekly expense set up in the
+  # past, after the backing, records three weeks at once, two of them dated before the day of backing.
+  # All three lower Accumulated, as they lower Remaining, and unbacking returns what is left.
+  Scenario: A weekly expense set up in the past after the backing lowers Accumulated by every week in the period
+    Given my budget periods are one month long
+    And today is 28 September 2026
+    And I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have a budget of 300 euro for "Groceries" in the current budget period
+    And I have set the backing account of "Groceries" to "Deposit"
+    When I record an expense of 4 euro for "Groceries" labelled "Broodje kip" dated 14 September 2026, repeating weekly
+    Then the expense should be recorded
+    And the remaining "Groceries" budget in the current budget period should be 288 euro
+    And Accumulated for "Groceries" in the current budget period should be 288 euro
+    When I remove the backing of "Groceries"
+    Then I should be told that "Groceries" is no longer backed, and that 288 euro moved from "Deposit" to "Bank"
+
   # Voorschot was recorded before the backing, so 200 moved, not 300. Removing or lowering it
-  # afterwards changes the budget's Remaining and Bank, and leaves Accumulated and what moved as they
-  # were. That is the accepted cost: Remaining and what moved now disagree, and nothing says so.
-  Scenario Outline: Changing or removing an expense from before the backing leaves Accumulated, and the money moved, as they were
+  # afterwards changes the budget's Remaining and Bank, and Accumulated with Remaining. What moved stays
+  # what it was, so Deposit does not change.
+  Scenario Outline: Changing or removing an expense from before the backing moves Accumulated with Remaining, and moves no money
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 0 euro
     And I have a budget of 300 euro for "Savings" in the current budget period
@@ -224,7 +253,7 @@ Feature: Spend against a backed category
     And I have set the backing account of "Savings" to "Deposit"
     And Accumulated for "Savings" in the current budget period is 200 euro
     When <act>
-    Then Accumulated for "Savings" in the current budget period should still be 200 euro
+    Then Accumulated for "Savings" in the current budget period should be <remaining> euro
     And the balance of "Deposit" should still be 200 euro
     And the balance of "Bank" should be <bank> euro
     And the remaining "Savings" budget in the current budget period should be <remaining> euro

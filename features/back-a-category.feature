@@ -195,8 +195,8 @@ Feature: Back a category with an account
     And Unassigned in the current budget period should still be 1700 euro
 
   # What was spent has already left the pool account, so only what remains moves. Spent down to
-  # exactly nothing, or overspent, nothing moves, and Accumulated starts at zero: the expenses were
-  # recorded before the backing, so they do not count against it (spend-against-a-backed-category.feature).
+  # exactly nothing, or overspent, nothing moves. Accumulated starts at the period's Remaining, below
+  # zero when overspent (ruling of 2026-09-28; spend-against-a-backed-category.feature).
   Scenario Outline: Only what remains of the current period's budget moves, and nothing when it is all spent or overspent
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 5000 euro
@@ -209,15 +209,15 @@ Feature: Back a category with an account
       | account | balance   |
       | Bank    | <bank>    |
       | Deposit | <deposit> |
-    And Accumulated for "Savings" in the current budget period should be <moved> euro
+    And Accumulated for "Savings" in the current budget period should be <remaining> euro
     And the remaining "Savings" budget in the current budget period should still be <remaining> euro
 
     Examples:
-      | budget | spent  | remaining | moved  | bank    | deposit |
-      | 300.00 | 100.00 | 200.00    | 200.00 | 1700.00 | 5200.00 |
-      | 300.00 | 299.99 | 0.01      | 0.01   | 1700.00 | 5000.01 |
-      | 300.00 | 300.00 | 0.00      | 0.00   | 1700.00 | 5000.00 |
-      | 300.00 | 350.00 | -50.00    | 0.00   | 1650.00 | 5000.00 |
+      | budget | spent  | remaining | bank    | deposit |
+      | 300.00 | 100.00 | 200.00    | 1700.00 | 5200.00 |
+      | 300.00 | 299.99 | 0.01      | 1700.00 | 5000.01 |
+      | 300.00 | 300.00 | 0.00      | 1700.00 | 5000.00 |
+      | 300.00 | 350.00 | -50.00    | 1650.00 | 5000.00 |
 
   # "The current period" is the ruling's own wording: the period on screen does not change what moves.
   Scenario: Backing moves the current period's unspent budget, whichever period is on screen

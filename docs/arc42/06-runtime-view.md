@@ -386,7 +386,7 @@ sequenceDiagram
             Start->>Ledger: StartNew (the six defaults, nothing saved yet)
         else moneybud.json is there
             Store->>Json: Read(text)
-            alt not a whole version-5 document, nor a version-4 one without repeats
+            alt not a whole version-6 or version-5 document, nor a version-4 one without repeats
                 Json-->>Store: null
                 Store-->>Start: Unreadable
                 Start->>Store: Dispose()
@@ -425,9 +425,10 @@ What the diagram shows that the static view does not:
   either.
 - **The version in the diagram is the current one**: version 1 when this was drawn, version 2 since
   the accounts increment, version 3 since the backing increment, version 4 since the sweep
-  increment, and version 5 since the recurring-entries increment. **Version 4 is the first older
-  version that is read**, as data with no repeats, unless it carries a `repeats` list. Versions 1 to 3
-  are met as unreadable ([ADR 0011](../decisions/0011-recurring-entries.md)).
+  increment, version 5 since the recurring-entries increment, and version 6 since the change to
+  *Opgebouwd* on 2026-09-28. **Version 4 is the first older version that is read**, as data with no
+  repeats, unless it carries a `repeats` list; version 5 is read with a backing's two remembered figures
+  worked out again. Versions 1 to 3 are met as unreadable ([ADR 0011](../decisions/0011-recurring-entries.md)).
 - **Loaded data may be saved at once.** Since the backing increment, a start on or after the first
   day of a period that has not been settled moves that period's planned money and saves it before
   the user does anything (*Settling*, above). Since the sweep increment it may also sweep the periods

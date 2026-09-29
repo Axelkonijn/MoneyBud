@@ -12,9 +12,20 @@ namespace MoneyBud.Domain;
 /// in it counts from there (<see cref="Ledger.ThereFor"/>).</para>
 ///
 /// <para>A mark is drawn from the entries' counter without being an entry, so it orders against an
-/// expense recorded the same day.</para>
+/// expense recorded the same day. It orders movements; expenses are counted by <b>period</b>: every
+/// expense dated in the mark's period or later counts, whenever it was entered (§12, <i>ruling of
+/// 2026-09-28</i>, under <i>Backing a category that already has money</i>). So a figure is remembered
+/// with each mark, for what that period had already done before it.</para>
+///
+/// <para><see cref="NotMoved"/> goes with <see cref="AccumulatingSince"/>: the part of that period's
+/// <i>Budget</i> that did not move at backing, which is what had been spent by then, at most the
+/// <i>Budget</i>. Added back, it makes <i>Opgebouwd</i> in the period of backing read what
+/// <i>Resterend</i> reads, overspent included. <see cref="PaidHereBefore"/> goes with
+/// <see cref="HereSince"/>: what the account had paid for the category in that period before it became
+/// the backing account, so what is there for it starts at what moved there.</para>
 /// </summary>
-public sealed record Backing(Account Account, EntryMark AccumulatingSince, EntryMark HereSince);
+public sealed record Backing(
+    Account Account, EntryMark AccumulatingSince, EntryMark HereSince, Money NotMoved, Money PaidHereBefore);
 
 /// <summary>What setting a category's backing did.</summary>
 public enum BackingOutcome
