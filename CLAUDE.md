@@ -98,7 +98,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-29, after the Opgebouwd rule change was built and went green. **Start here in a new conversation: Axel's try of the Opgebouwd change** (item 0 under *Next, in order*), then the configurable period start day. Update this when a stage completes._
+_Last updated 2026-09-29, after the Opgebouwd rule change was built and merged into `main`. **Start here in a new conversation: the configurable period start day** (item 2 under *Next, in order*), at stage 1. Update this when a stage completes._
 
 **Done: all five stages, twelve times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
@@ -501,7 +501,7 @@ lost ones (a unit test holds it); he may want it rewritten (§12, *A note for th
 **Next, in order** — agreed with Axel on 2026-09-28, "the three still important to me", with one
 small change put in front of them the same day:
 
-0. **Opgebouwd follows Resterend — built and green, awaiting Axel's try** (2026-09-29, lean route: no
+0. **Opgebouwd follows Resterend — done**, merged into `main` (2026-09-29, lean route: no
    subagents; the suite and a mutation check instead of `spec-reviewer`). Found by Axel trying
    increment 12: a weekly *broodje kip* of € 4 set up from 14 September after backing Boodschappen
    (Budget 300) gave Resterend 288 but Opgebouwd 296, because only expenses dated after the backing day
@@ -516,9 +516,8 @@ small change put in front of them the same day:
    period). **File format version 6**; version 5 is read, the figures worked out again from record
    order (`Ledger.NotMovedBefore`, `PaidBefore`). Scenarios revised in `spend-against-a-backed-category`
    (two new, his case among them), `back-a-category` and `show-accumulated`. Six mutations, all caught
-   (one only after a unit test was added for `PaidHereBefore`). Committed on branch
-   `opgebouwd-follows-resterend`, full solution build clean. **Not yet:** Axel's try, then the merge
-   into `main`.
+   (one only after a unit test was added for `PaidHereBefore`). Built on branch
+   `opgebouwd-follows-resterend`, full solution build clean, merged into `main` on Axel's word.
 
 1. **Recurring entries** on income and expenses — increment 12, **done**: built, tried by Axel and
    merged into `main` on 2026-09-28 (below: stages 1–4 as they ran, then *Stage 5*). His shape:
