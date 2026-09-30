@@ -43,6 +43,18 @@
 #   - MONEYBUD IS ALREADY OPEN. The second start says MoneyBud is already open, and closes. Two
 #     MoneyBuds saving one set of data would overwrite each other's changes.
 #
+# On the phone (note added 2026-09-30, increment 14; ruled by the stakeholder on 2026-09-29, glossary:
+# "Android's lifecycle"). Two of the situations above are met differently there, and neither
+# changes what the scenarios below check:
+#   - "MoneyBud is already open" CANNOT BE REACHED on Android, which only ever runs one instance of an
+#     app. The rule stays, for the desktop, and so do its scenarios: one process holding the data.
+#   - For kept data it cannot read, "say so, touch nothing, and close" becomes: THE MESSAGE SHOWS, AND
+#     MONEYBUD CLOSES WHEN IT IS TAPPED AWAY. The refusal itself, which is what the scenarios check,
+#     is unchanged: the same message, nothing touched, and no Overview.
+# The phone's first start is an ordinary first start (ADR 0014): the six defaults, Betaalrekening,
+# nothing else. The phone's own settings, kept apart from the data, are in
+# choose-how-moneybud-looks.feature.
+#
 # Not specified here, and deliberately so: where the data is kept (a fixed place in my profile,
 # never chosen by me, and written down in the README only), and data kept by an OLDER version of
 # MoneyBud in general. Until the switch to real use, a new version may be unable to read an older

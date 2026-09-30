@@ -120,6 +120,22 @@ for the span he actually lives by, rather than for a calendar month his pay does
 [ADR 0012](../decisions/0012-the-calendar-is-a-history.md)). A mobile front-end is the last of the
 three.
 
+**A mobile front-end is next, and with it the demo ends**, the fourteenth increment, settled with the
+stakeholder on 2026-09-29 and not yet specified or built ([§12](12-glossary.md), *MoneyBud on the
+phone*). It is the one he named as what would make him actually use MoneyBud. **An Android app for his
+own phone**, phone only, with everything the desktop does, laid out for a phone: the Overview becomes
+the ring alone, a still home screen that income, expenses, the budget and the accounts are pulled over
+by swiping. The desktop stays, for development, and the two builds stay the same, except that only the
+phone has themes. **Real use starts with it**: from the version he accepts at the end review, every later
+version reads the data it saved, and it starts fresh with the six default categories
+([ADR 0013](../decisions/0013-an-android-phone-app.md), [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)).
+That ends "a working demo, not an MVP" above, as the stakeholder chose, and it serves effortless entry,
+quality goal 2, on the device where entry happens. **This increment is run without its two approval
+gates**, by his ruling: he reviews the scenarios, the plan and the app together at the end. **It is
+built** (specified, planned and built on 2026-09-30), as a signed Android app that has **not yet run on
+his phone**, which was not connected. So the demo ends, and real use starts, not with the build but
+with the version he accepts at that review.
+
 ## 1.2 Quality Goals
 
 Ranked. These are what architectural decisions get judged against.
@@ -129,7 +145,7 @@ Ranked. These are what architectural decisions get judged against.
 | 1 | **Legibility** — the state of your money is clear at a glance | The stakeholder raised this himself at the end of the interview, saying it mattered more than he had made it sound. It is also the mechanism by which the app is meant to motivate: seeing clearly where you stand is what makes you act on it. |
 | 2 | **Effortless entry** — recording something takes almost no work | Repeated for income, categories and expenses alike ("geen gedoe"). Since everything is entered by hand, friction here is what would make the app get abandoned, and that failure would make every other quality irrelevant. |
 | 3 | **Adaptability** — both the data and the software are easy to change | Stated as "heel belangrijk". Two distinct things: amounts and recurring entries must be adjustable without starting over, and the application must be easy to extend as the stakeholder discovers what he wants while using it. |
-| 4 | **Local operation** — it runs on your own machine and your data stays there | Preferred explicitly over a web application, even though a web app would more easily serve both desktop and mobile. |
+| 4 | **Local operation** — it runs on your own machine and your data stays there | Preferred explicitly over a web application, even though a web app would more easily serve both desktop and mobile. Since 2026-09-29 "your own machine" is his own phone, with no sync to the desktop ([§12](12-glossary.md), *MoneyBud on the phone*). |
 
 Goal 2 is in tension with the net-worth half of goal 1: an accurate net worth requires every
 transaction to be entered, and requiring that is itself friction. See

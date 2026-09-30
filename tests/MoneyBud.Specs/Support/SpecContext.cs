@@ -59,6 +59,8 @@ public sealed class SpecContext : IDisposable
         if (closed)
             throw new InvalidOperationException("MoneyBud was closed; a step has to start it again.");
 
+        settings ??= OpenSettings();
+        settings.HomeScreenOpened();
         store = new SpecStore(new FileLedgerStore(Folder));
         Assert.Equal(Claim.Claimed, store.TryClaim());
         Assert.True(store.TrySave(Ledger.ToSnapshot()), "Keeping what the Givens set up failed.");
@@ -121,15 +123,59 @@ public sealed class SpecContext : IDisposable
         (app ?? throw new InvalidOperationException("MoneyBud is not open.")).Close();
         app = null;
         store = null;
+        settings = null;
         closed = true;
     }
 
     /// <summary>
+    /// On the phone: Android ends MoneyBud while it is in the background, without warning. No last
+    /// try at saving — that was made on going to the background — and the hold on the data let go as
+    /// the operating system lets go of a process that has stopped.
+    /// </summary>
+    public void EndInBackground()
+    {
+        (store ?? throw new InvalidOperationException("MoneyBud is not open.")).Dispose();
+        app = null;
+        store = null;
+        settings = null;
+        closed = true;
+    }
+
+    // ------------------------------------------------------------------ the phone's settings
+
+    private PhoneSettings? settings;
+
+    /// <summary>
+    /// The scenario's own folder for the phone's settings: apart from the data's, as on the phone,
+    /// where they are in the app's private folder and the data in the one copied over USB (plan for
+    /// increment 14, D3). So nothing done to the data folder — saving blocked, the data deleted —
+    /// reaches them.
+    /// </summary>
+    public string SettingsFolder { get; } = Path.Combine(Path.GetTempPath(), "MoneyBud.Specs", Guid.NewGuid().ToString("N") + "-settings");
+
+    public string SettingsPath => Path.Combine(SettingsFolder, SettingsFile.FileName);
+
+    /// <summary>
+    /// The phone's settings as MoneyBud read them when it started, through the same doors the phone
+    /// uses: the real <see cref="SettingsFile"/> in the scenario's settings folder.
+    /// </summary>
+    public PhoneSettings Settings => settings ??= OpenSettings();
+
+    /// <summary>Settings as another MoneyBud would open them, around this one: for describing an earlier use.</summary>
+    public PhoneSettings OpenSettings()
+    {
+        var file = new SettingsFile(SettingsFolder);
+        return PhoneSettings.Open(file.Read, file.TryWrite);
+    }
+
+    /// <summary>
     /// Starts MoneyBud as the Desktop does, on this scenario's folder. When it opens, it becomes
-    /// the screen every later step uses, over the ledger it loaded.
+    /// the screen every later step uses, over the ledger it loaded. On the phone the settings are
+    /// read at every start, whatever becomes of the data.
     /// </summary>
     public StartResult Start()
     {
+        settings = OpenSettings();
         var started = MoneyBudStart.Start(new SpecStore(new FileLedgerStore(Folder)), clock);
         LastStart = started;
 
@@ -141,6 +187,7 @@ public sealed class SpecContext : IDisposable
             app = opened.App;
             Ledger = app.Ledger;
             closed = false;
+            settings.HomeScreenOpened();
         }
 
         return started;
@@ -202,6 +249,7 @@ public sealed class SpecContext : IDisposable
         try
         {
             if (Directory.Exists(Folder)) Directory.Delete(Folder, recursive: true);
+            if (Directory.Exists(SettingsFolder)) Directory.Delete(SettingsFolder, recursive: true);
         }
         catch (IOException)
         {

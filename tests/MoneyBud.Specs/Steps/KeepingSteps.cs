@@ -31,8 +31,13 @@ public sealed class KeepingSteps(SpecContext context)
 
     // ------------------------------------------------------------------ Given: what is kept
 
+    // Nothing kept: no data, and — on the phone — no settings either.
     [Given(@"^I have never used MoneyBud$")]
-    public void GivenIHaveNeverUsedMoneyBud() => Assert.False(File.Exists(context.DataFile));
+    public void GivenIHaveNeverUsedMoneyBud()
+    {
+        Assert.False(File.Exists(context.DataFile));
+        Assert.False(File.Exists(context.SettingsPath));
+    }
 
     [Given(@"^I used MoneyBud, recorded an income of (\S+) euro labelled ""([^""]*)"" in it, and have since deleted the data it kept$")]
     public void GivenIUsedMoneyBudAndDeletedItsData(string amount, string label)

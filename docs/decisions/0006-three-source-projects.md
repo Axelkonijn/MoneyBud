@@ -1,7 +1,8 @@
 # 0006 — Three source projects: domain, presentation, desktop
 
 **Status:** Accepted; **amended by [ADR 0007](0007-keeping-the-ledger.md)** (2026-09-26), which adds a
-fourth source project, `MoneyBud.Storage`. See the note at the end.
+fourth source project, `MoneyBud.Storage`. **Extended by [ADR 0013](0013-an-android-phone-app.md)**
+(2026-09-29): a second head, the phone. See the notes at the end.
 **Date:** 2026-09-25
 **Supersedes:** decision 1 of [ADR 0004](0004-solution-layout.md), "two projects". ADR 0004's other
 three decisions stand: xUnit as the runner, the feature files linked in from `features/`, and
@@ -163,3 +164,20 @@ why this is a note and not a superseding record. No decision above was reversed.
 the save line is a sibling of the notice and the question. It was approved at the plan gate as part
 of the same small departure described in the note above. The §8.4 subsection the note above names
 is now called *Tests that read the window's markup*.
+
+## Note, 2026-09-29: a second head, the phone
+
+This note adds to the record and rewrites nothing above. *Why* above says a mobile head "could sit on
+`MoneyBud.Presentation` as the Desktop does. Whether it should is for the ADR that reopens mobile."
+**[ADR 0013](0013-an-android-phone-app.md) is that record, and it says it should**: the Android phone
+app is a second Avalonia head over the domain, the presentation layer and storage, with every feature
+on both heads and one file format.
+
+**What it extends here.** The Desktop's rule, "deliberately thin", now binds two heads: the phone head
+decides nothing either, and a decision found in it moves into the presentation layer. The one thing
+the phone has that the Desktop has not is **themes**, which change only how MoneyBud looks, and so
+belong with drawing, not with what the screen decides.
+
+**What it does not decide.** Which projects the phone head needs, and what they are called, are left to
+that increment's plan. The split this record made, domain, presentation, and a thin toolkit head,
+stands, and is the reason the phone costs no second implementation of any rule.

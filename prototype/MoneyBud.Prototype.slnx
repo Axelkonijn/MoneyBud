@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="MoneyBud.Prototype/MoneyBud.Prototype.csproj" />
+  <Project Path="MoneyBud.Prototype.Android/MoneyBud.Prototype.Android.csproj" />
+  <Project Path="MoneyBud.Prototype.Desktop/MoneyBud.Prototype.Desktop.csproj" />
+</Solution>

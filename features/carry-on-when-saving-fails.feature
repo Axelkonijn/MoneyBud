@@ -23,7 +23,8 @@
 #   - CLOSING MAKES ONE LAST ATTEMPT TO SAVE. If it succeeds, nothing is lost. If it fails, the
 #     changes that were not saved are lost: accepted, with that consequence in front of the
 #     stakeholder. Either way CLOSING JUST CLOSES: there is no question first. The lasting notice is
-#     the warning.
+#     the warning. ON THE PHONE the last attempt is made WHEN MONEYBUD GOES TO THE BACKGROUND (ruled
+#     2026-09-29; the last section, added 2026-09-30).
 #   - A SAVE THAT IS INTERRUPTED (MoneyBud or the computer stopping in the middle of it) NEVER
 #     DAMAGES WHAT WAS SAVED BEFORE. At worst the change that was being saved is lost. The next
 #     start opens as usual and SAYS NOTHING about it.
@@ -62,9 +63,25 @@
 #     keep-data.feature.
 #   - Every Given describes something done in MoneyBud earlier, and whatever the Givens set up
 #     BEFORE "saving is not possible" has been kept.
-#   - Every other step is reused unchanged from the file that introduced it.
+#   - Added 2026-09-30, for the phone's last section:
+#       "MoneyBud goes to the background" is leaving it for another app or the phone's home screen,
+#         without closing it. It is the last moment MoneyBud can count on.
+#       "I come back to MoneyBud" brings it back on screen, BEFORE its minute's timer has ticked, so
+#         whatever happens then is coming back's own doing, not the minute's.
+#       "the phone ends MoneyBud while it is in the background" is Android stopping it there without
+#         warning: no closing, and no attempt to save of any kind, so only what was saved by then is
+#         kept. "I start MoneyBud" after it is the next start, as usual.
+#       "the next budget period begins while MoneyBud is in the background" is
+#         step-between-periods.feature's "... while MoneyBud is open", with MoneyBud in the
+#         background: today moves on to the first day of the next period. Whatever the phone lets run
+#         in the background, MoneyBud does nothing by itself there, so nothing it does waits for me
+#         unseen. After it, periods are named relative to the new today.
+#   - Every other step is reused unchanged from the file that introduced it. In the last section the
+#     repeat steps are repeat-an-entry.feature's, the sweep and account steps
+#     sweep-at-a-period-end.feature's and show-accounts.feature's.
 #
-# Every scenario starts from an empty ledger and names the categories it needs. The names, labels
+# Every scenario starts from an empty ledger and names the categories it needs; since the accounts
+# increment its one account is "Bank", the pool account (show-accounts.feature). The names, labels
 # and amounts are synthetic test data.
 
 @keeping
@@ -265,3 +282,194 @@ Feature: Carry on when saving fails
       | today | Groceries | Bakker | 18.00  |
     And the budget for "Groceries" in the current budget period should be 400 euro
     And the remaining "Groceries" budget in the current budget period should be 382 euro
+
+  # ----------------------------------------------------------------------------------
+  # On the phone: going to the background (added 2026-09-30, increment 14)
+  #
+  # RULED by the stakeholder on 2026-09-29 (glossary: "Android's lifecycle"): on the phone, "closing
+  # makes one last attempt to save" becomes THE LAST ATTEMPT IS MADE WHEN MONEYBUD GOES TO THE
+  # BACKGROUND. Android does not close apps as Windows does. It stops them in the background, and may
+  # end them there without warning, so going to the background is the last moment MoneyBud can count
+  # on. What the ruling protects is what closing protects: one last attempt before changes could be
+  # lost unsaved. So when that attempt fails and the phone then ends MoneyBud, the changes that were
+  # not saved are lost, as when closing fails: the cost accepted for closing, carried over (derived).
+  #
+  # CHOSEN IN THE BUILD, NOT RULED. This increment's gates are waived, and these are listed for the
+  # stakeholder's review at its end:
+  #   - GOING TO THE BACKGROUND IS NOT CLOSING. MoneyBud stays open and holds what it holds, and
+  #     carries on when I come back, with the period I was looking at still on screen. (A start opens
+  #     on the current period, so the first scenario below can tell the two apart.)
+  #   - IT ASKS NOTHING, as closing asks nothing.
+  #   - WITH EVERYTHING ALREADY SAVED, IT WRITES NOTHING. So saving having become impossible in the
+  #     meantime is not reported: there was nothing to save.
+  #   - COMING BACK LOOKS AGAIN AT ONCE, exactly as the once-a-minute look does, rather than waiting up
+  #     to a minute: it retries a failed save, moves the current-period label, records repeat
+  #     occurrences now due and sweeps a period that has ended, and says so, as that look does.
+  #   - IN THE BACKGROUND MONEYBUD DOES NOTHING BY ITSELF, whatever the phone lets run there. The
+  #     phone's notices slide away after a few seconds, so a sweep or an occurrence said while no one
+  #     is looking would never be seen; and a sweep is said only once (sweep-at-a-period-end.feature).
+  #     So all of it waits for coming back.
+  #
+  # Every scenario here is the phone's alone: the desktop has no background, and its closing is above.
+  # ----------------------------------------------------------------------------------
+
+  @phone
+  Scenario: Going to the background is not closing: coming back finds MoneyBud as I left it
+    Given my budget periods are one month long
+    And I have a category "Groceries"
+    And the Overview shows the previous budget period
+    When MoneyBud goes to the background
+    Then MoneyBud should not be asking me anything
+    When I come back to MoneyBud
+    Then the Overview should show the previous budget period
+    And I should not have been told anything
+
+  # Nothing has tried to save since saving became possible again, so the attempt on going to the
+  # background is the one that works. The phone then ends MoneyBud with no attempt of its own, so
+  # everything found at the next start was kept by that attempt.
+  @phone
+  Scenario: Going to the background once saving is possible again keeps everything, asks nothing, and nothing is lost when the phone ends MoneyBud there
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 18 euro for "Groceries" labelled "Bakker" dated today
+    And saving is not possible
+    When I record an expense of 32.15 euro for "Groceries" labelled "Albert Heijn"
+    Then MoneyBud should show that my changes are not saved
+    When saving is possible again
+    And MoneyBud goes to the background
+    Then MoneyBud should not be asking me anything
+    When the phone ends MoneyBud while it is in the background
+    And I start MoneyBud
+    Then MoneyBud should not show that my changes are not saved
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date  | category  | label        | amount |
+      | today | Groceries | Albert Heijn | 32.15  |
+      | today | Groceries | Bakker       | 18.00  |
+    And the remaining "Groceries" budget in the current budget period should be 349.85 euro
+
+  # The counterpart of closing while saving is still not possible. Bakker was kept before saving
+  # stopped working, so it is there.
+  @phone
+  Scenario: When the phone ends MoneyBud in the background while saving is still not possible, the changes that were not saved are lost
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 18 euro for "Groceries" labelled "Bakker" dated today
+    And saving is not possible
+    When I record an expense of 32.15 euro for "Groceries" labelled "Albert Heijn"
+    And MoneyBud goes to the background
+    Then MoneyBud should not be asking me anything
+    When the phone ends MoneyBud while it is in the background
+    And saving is possible again
+    And I start MoneyBud
+    Then MoneyBud should not show that my changes are not saved
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date  | category  | label  | amount |
+      | today | Groceries | Bakker | 18.00  |
+    And the remaining "Groceries" budget in the current budget period should be 382 euro
+
+  # The attempt on going to the background fails, and MoneyBud is still open when I come back: it
+  # still shows the lasting notice, which a new start would know nothing about, and still holds
+  # Albert Heijn, which the next save keeps.
+  @phone
+  Scenario: Going to the background while saving is still not possible leaves MoneyBud open and still showing that my changes are not saved, and the next change that saves keeps them
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 18 euro for "Groceries" labelled "Bakker" dated today
+    And saving is not possible
+    When I record an expense of 32.15 euro for "Groceries" labelled "Albert Heijn"
+    And MoneyBud goes to the background
+    And I come back to MoneyBud
+    Then MoneyBud should still show that my changes are not saved
+    When saving is possible again
+    And I record an income of 1832.45 euro labelled "Salaris"
+    Then MoneyBud should no longer show that my changes are not saved
+    And I should be told that everything is saved again
+    When I close MoneyBud and start it again
+    Then the expenses listed in the current budget period should be exactly these, in this order:
+      | date  | category  | label        | amount |
+      | today | Groceries | Albert Heijn | 32.15  |
+      | today | Groceries | Bakker       | 18.00  |
+    And the incomes listed in the current budget period should be exactly these, in this order:
+      | date  | label   | amount  |
+      | today | Salaris | 1832.45 |
+    And the remaining "Groceries" budget in the current budget period should be 349.85 euro
+
+  # Saving became possible while MoneyBud was in the background. No change is made and no minute
+  # passes: coming back is what tries again, and it works.
+  @phone
+  Scenario: Coming back once saving is possible again saves at once, keeps everything, and says so once
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 18 euro for "Groceries" labelled "Bakker" dated today
+    And saving is not possible
+    When I record an expense of 32.15 euro for "Groceries" labelled "Albert Heijn"
+    And MoneyBud goes to the background
+    And saving is possible again
+    And I come back to MoneyBud
+    Then MoneyBud should no longer show that my changes are not saved
+    And I should be told that everything is saved again
+    When I close MoneyBud and start it again
+    Then the expenses listed in the current budget period should be exactly these, in this order:
+      | date  | category  | label        | amount |
+      | today | Groceries | Albert Heijn | 32.15  |
+      | today | Groceries | Bakker       | 18.00  |
+    And the remaining "Groceries" budget in the current budget period should be 349.85 euro
+
+  # Everything was kept before saving stopped working, so going to the background has nothing to save
+  # and tries nothing, and coming back has no failed save to try again. Were anything attempted, it
+  # would fail, and MoneyBud would wrongly say that my changes are not saved.
+  @phone
+  Scenario: With everything already saved, going to the background writes nothing, so saving having become impossible meanwhile is not reported
+    Given I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 18 euro for "Groceries" labelled "Bakker" dated today
+    And saving is not possible
+    When MoneyBud goes to the background
+    And I come back to MoneyBud
+    Then MoneyBud should not show that my changes are not saved
+    And nothing should have been said about saving
+
+  # Coming back does at once what the minute's look would have done: the period on screen loses its
+  # current-period label, as in step-between-periods.feature, and the monthly repeat due on the new
+  # period's first day is recorded and said, as in repeat-an-entry.feature. Neither happened while
+  # MoneyBud was in the background.
+  @phone
+  Scenario: When a new period begins while MoneyBud is in the background, coming back does at once what the minute's look would do
+    Given my budget periods are one month long
+    And today is 1 September 2026
+    And I have a category "Rent"
+    When I record an expense of 900 euro for "Rent" labelled "Huur", repeating monthly
+    And MoneyBud goes to the background
+    And the next budget period begins while MoneyBud is in the background
+    Then MoneyBud should not have recorded any repeating entry
+    And no expenses should be listed in the current budget period
+    When I come back to MoneyBud
+    Then I should be told, in one notice, that these repeating entries were recorded:
+      | entry   | category | label | amount |
+      | expense | Rent     | Huur  | 900.00 |
+    And the Overview should show the previous budget period
+    And the period on screen should no longer be labelled as the current budget period
+    And the expenses listed in the current budget period should be exactly these, in this order:
+      | date           | category | label | amount | repeats |
+      | 1 October 2026 | Rent     | Huur  | 900.00 | monthly |
+
+  # sweep-at-a-period-end.feature's second example, reached by coming back. Unassigned 600 plus
+  # Groceries' unspent 220 is 820, exactly what is left on Bank. Nothing moves, and nothing is said,
+  # until I come back.
+  @phone
+  Scenario: A period that ended while MoneyBud was in the background is swept when I come back, and I am told
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have recorded an income of 1000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have set the sweep destination to "Savings"
+    And I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have already spent 180 euro on "Groceries" in the current budget period
+    When MoneyBud goes to the background
+    And the next budget period begins while MoneyBud is in the background
+    Then I should not have been told anything
+    And the balance of "Deposit" should still be 0.00 euro
+    When I come back to MoneyBud
+    Then I should be told that the period leftover of the previous budget period, 820 euro, was swept into "Savings"
+    And the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 0.00    |
+      | Deposit | 820.00  |
+    And the previous budget period should show that 820 euro was swept into "Savings"

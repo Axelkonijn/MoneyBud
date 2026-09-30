@@ -49,8 +49,9 @@ quietly.
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `docs/plans/` | An increment's implementation plan, when it is too long to keep here. Written at stage 4, approved at the second gate |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
-| `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)). `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)) |
+| `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`); since increment 14 also the phone's own rules (`PhoneScreen`, `PhoneSettings`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)), and the phone's settings file. `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)). `MoneyBud.Phone` — the phone's screens, themes and motion, as thin and as untested ([ADR 0013](docs/decisions/0013-an-android-phone-app.md)); `MoneyBud.Phone.Android` — the Android host, **not in `MoneyBud.slnx`**; `MoneyBud.Phone.Desktop` — the phone's screens in a PC window, and headless pictures of them |
 | `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
+| `prototype/` | The **mobile prototype**, a stage-1 aid: how MoneyBud looks and feels on a phone, on invented data, not connected to `src/`. Its own solution, `MoneyBud.Prototype.slnx`, outside `MoneyBud.slnx` and its tests. See its README |
 
 The stakeholder material is Dutch and the documentation is English. `docs/arc42/12-glossary.md`
 holds the agreed translation of the domain terms — use it rather than translating afresh.
@@ -90,19 +91,70 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1868 passing: 1001 scenario cases, 867 developer unit tests
-dotnet run --project src/MoneyBud.Desktop    # the app itself; keeps its data in %LOCALAPPDATA%\MoneyBud
+dotnet test  MoneyBud.slnx     # 1943 passing: 1030 scenario cases, 913 developer unit tests
+dotnet run --project src/MoneyBud.Desktop    # the desktop app; keeps its data in %LOCALAPPDATA%\MoneyBud
+dotnet run --project src/MoneyBud.Phone.Desktop                     # the phone's screens in a window
+dotnet run --project src/MoneyBud.Phone.Desktop -- snapshot <folder> dark light kintsugi-dark kintsugi-light
+dotnet publish src/MoneyBud.Phone.Android -c Release   # the signed APK; needs the key in %USERPROFILE%\MoneyBud-signing
 ```
+
+The Android build wants the `android` workload and JDK 21; it refuses a Release build without Axel's
+key rather than sign with another (plan D5). **Never put the key or its password in the repository.**
 
 The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default format.
 
 ## Where we are
 
-_Last updated 2026-09-29, after the start day was tried by Axel and merged. **Start here in a new conversation: the mobile front-end** (item 3 under *Next, in order*), at stage 1 — a conversation with Axel, whose big question is where the data lives with two devices. Update this when a stage completes._
+_Last updated 2026-09-30, after increment 14 was accepted. Update this when a stage completes._
 
-**Done: all five stages, thirteen times — for `record-expense`, `record-income`, categories,
+**Start here in a new conversation: MoneyBud is in real use, on Axel's phone.** Increment 14, the
+phone app, was built on 2026-09-30 (stages 3–5 without stopping, as he asked), installed on his phone,
+used for a few hours, changed once at his review (the ring's centre no longer flickers; the budget opens
+in one pull) and **accepted the same day**, then merged into `main` and pushed.
+
+- **The data promise has started** ([ADR 0014](docs/decisions/0014-real-use-and-the-phone-data.md)):
+  file format **version 7 is the first promised version**. Every later MoneyBud must read it; a change
+  of format costs a reading path, kept for good, with a test that reads version 7. "Cannot read" is no
+  longer an allowed answer for an older promised version.
+- **Updates to the phone** must be Release builds signed with the key in
+  `%USERPROFILE%\MoneyBud-signing\` (SHA-256 `62:1D:10:6D…`), installed with `adb install -r`, which
+  keeps the data. Never uninstall `app.moneybud`: that deletes his data. His data is in
+  `Android/data/app.moneybud/files/moneybud.json`.
+- **Owed, at a later moment (his ruling):** the phone shows three things the desktop does not — the
+  period's income and expense totals, "van € … inkomen" under the ring, and a category's expenses on
+  its own page (plan B8, B12). They go onto the desktop too; until then that is a known gap in
+  parity, not an exception. They are already worked out in `PeriodOverview`.
+- **Every decision taken without him** is numbered in [the plan](docs/plans/increment-14-phone.md)
+  (D1–D10, B1–B16) and stands as built. Nothing else is scheduled: the phone was "the biggest and last
+  for now". Ask him what is next.
+
+What follows is the brief the increment was built from, kept as the record. Stages 1 and 2 were done: the mobile prototype is approved and closed, and arc42 is updated (§12 *MoneyBud
+on the phone*, §8.5 *Drawing on the phone*, ADRs 0013 and 0014). Axel's instructions for this
+increment ([na het prototype](docs/stakeholder/2026-09-29-mobiel-na-het-prototype.md)):
+
+- **Run stages 3–5 without stopping.** Both gates are **waived for this increment only**: write the
+  scenarios (`scenario-writer`) and the plan (`docs/plans/increment-14-phone.md`) as usual, but do
+  not wait for approval — build to green, run `spec-reviewer`, then present scenarios, plan and app
+  together for Axel's review, with **every decision taken without him listed**.
+- **No phone is connected.** Nothing can be installed or measured on the device; the build must still
+  produce the signed APK for Axel to install. **Stop only if something makes continuing impossible**,
+  and say what.
+- **Theming is phone-only.** Everything else is identical on desktop and phone: every feature, one
+  file format.
+- Work on a new branch, `increment-14-phone`, from `mobile-prototype` (the prototype's layout,
+  styling, animations and theme files are meant to carry over; its `Sample/` data is not).
+- **Signing: one fixed key of Axel's, outside the repository.** If none exists, create one outside the
+  repo (never commit the key or its password) and tell Axel exactly where it is: losing it means an
+  update cannot install over the app, and uninstalling deletes the phone's data.
+- The data promise starts with **the version Axel accepts at the review**, not the first build.
+
+Read first: §12 *MoneyBud on the phone* and §8.5, ADRs 0013 and 0014,
+[`prototype/README.md`](prototype/README.md) (its Avalonia traps bind the build), then the
+`docs/stakeholder/2026-09-29-mobiel*.md` rounds.
+
+**Done: all five stages, fourteen times — for `record-expense`, `record-income`, categories,
 assigning, the desktop UI, correcting things, keeping data, opening a period, accounts, backing,
-the sweep, recurring entries, and the period start day.** All thirteen are built and green, tried by Axel and merged into `main`.
+the sweep, recurring entries, the period start day, and the phone app.** All fourteen are built and green, tried by Axel and merged into `main`.
 
 - Stakeholder wishes gathered over three rounds in `docs/stakeholder/`, plus a long round of
   follow-up decisions taken on 2026-09-24 and recorded straight into arc42 rather than into a new
@@ -606,11 +658,40 @@ small change put in front of them the same day:
      *Staat op* list in the same row. Older than this increment, seen in the rendered frame.
 3. **A mobile front-end** — "the biggest and last for now", and what makes him actually use it. Wanted
    with **no double work** between desktop and mobile: that is what the toolkit-free
-   `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. The big stage-1
-   question will be **where the data lives** with two devices.
+   `MoneyBud.Presentation` is for (ADR 0006), and Avalonia runs on Android and iOS. **Stage 1 in
+   progress** (2026-09-29), on branch `mobile-prototype`. Settled so far, all in
+   [`2026-09-29-mobiel.md`](docs/stakeholder/2026-09-29-mobiel.md):
+   - **Android only, phone only.** No sync: the data lives on the phone, and the desktop stays for
+     development. Axel moves a file between them by cable, by hand; nothing is built for it. The
+     builds stay in step: one codebase, every feature on both, one file format.
+   - **Everything the desktop does**, laid out for a phone. **Real use starts with this increment**:
+     from the first phone version, later versions must keep reading its data (reopens ADR 0002, as
+     that ADR says). The phone **starts fresh**, with the six defaults; the desktop's demo data stays
+     behind.
+   - **Look before technique:** a separate **prototype** (`prototype/`), invented data, in two
+     rounds — round 1 layout, navigation and feel (**approved**, with the changes in
+     [ronde 1](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-1.md)), round 2 a second theme,
+     kintsugi, and switching themes. The first version was **not what he meant**: a theme is a
+     different world, not a palette — for kintsugi a table as the home screen, panels as mended
+     porcelain slabs, and a ring that looks like real porcelain with veins through every piece
+     ([ronde 2](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-2.md),
+     [its feedback](docs/stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback.md)). Ring and
+     table rebuilt (a Skia shader plate on CC0 wood), the panels porcelain slabs;
+     **approved** on 2026-09-29, after a performance fix (Avalonia's GPU budget, see the README). A third choice with
+     kintsugi's own motions throughout was his idea, then **dropped** after round 2.
+     What it teaches goes back through stage 2 onwards; the prototype itself is not the app.
+     **Stage 2 done** (2026-09-30): ADRs 0013 and 0014, §8.5, §12 *MoneyBud on the phone*. Stages 3–5
+     run next, autonomously — see *Start here* above.
+   - **The shape:** the ring is a static home screen; panels are pulled over it — income from the
+     left, expenses from the right, the budget from below (half or full), the accounts from above.
+     Income, expenses and accounts have two steps (list, then form or history). The ring is held and
+     slid over, a pizza-shaped hit area; a selected slice opens the budget on that category. Premium
+     through responsiveness and animation; dark and light follow the phone; themes change more than
+     colours.
 
-Not chosen for now: switching to real use (a migration promise for the data file), the month in
-review, importing bank transactions, and the items deferred until missed.
+Not chosen for now: the month in review, importing bank transactions, and the items deferred until
+missed. Switching to real use (a migration promise for the data file) was chosen on 2026-09-29, with
+the mobile front-end.
 
 **The model, as Axel settled it** — all in [§12](docs/arc42/12-glossary.md), which is long but is
 the thing to read. In outline:

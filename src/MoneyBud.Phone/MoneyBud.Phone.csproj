@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The phone's screens: layout, drawing, the two themes and motion, and nothing that decides
+       anything — that is in MoneyBud.Presentation (ADR 0013, decision 4), where the scenarios are
+       run. Everything but Android itself, so it runs on the PC too (MoneyBud.Phone.Desktop). The
+       Android host is MoneyBud.Phone.Android (plan for increment 14, D1). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- AVLN3001: a view without a parameterless constructor cannot be loaded by Avalonia's runtime
+         loader. MainView is only ever made in code, with the screen it shows, never by the loader
+         or a designer; a constructor that handed it nothing would only be a way to break it. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);AVLN3001</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+    <!-- The kintsugi ring is drawn by a Skia shader, through Avalonia's lease on the Skia canvas. -->
+    <PackageReference Include="Avalonia.Skia" Version="12.1.3" />
+  </ItemGroup>
+
+  <!-- Kintsugi's heading face, Cormorant Garamond, under the SIL Open Font License (Theme/Fonts/OFL.txt),
+       and its tables, graded from CC0 wood textures (Theme/Kintsugi/README.md). -->
+  <ItemGroup>
+    <AvaloniaResource Include="Theme/Fonts/*.ttf" />
+    <AvaloniaResource Include="Theme/Kintsugi/*.jpg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyBud.Presentation\MoneyBud.Presentation.csproj" />
+    <ProjectReference Include="..\MoneyBud.Storage\MoneyBud.Storage.csproj" />
+  </ItemGroup>
+
+</Project>

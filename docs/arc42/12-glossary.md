@@ -1486,8 +1486,10 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Transfer** | Money moved by the user **from one account to another**, on a date: an ATM withdrawal from Betaalrekening to Contant. It moves both balances and changes **neither net worth nor any budget figure**, except that net worth **may** change where a *Balance correction* dated after the transfer has already counted one side; that is true, not a flaw (follow-up, 2026-09-27). Not an income or an expense, and not a *Transaction* in this glossary's sense. **May not be dated in the future**, like an expense. Needs two different accounts and an amount above zero, never finer than a cent (*derived*). Changed or removed from an account's history, like an entry, removing asking first (*derived*). That history is the only place a transfer is changed; an income or expense, by contrast, is changed only from the Overview's lists (follow-up, 2026-09-27). It carries **no label**, and a transfer breaking several rules reports the first of: two different accounts, more than 0, whole cents, not in the future (approved at the scenario gate, 2026-09-27). The same kind of movement MoneyBud will make itself once backing and the sweep exist, in the stakeholder's own framing. Settled 2026-09-27, and built the same day (*Transfers*, *Accounts and net worth*, above). On screen *Overboeking*, the act *Overboeken*, with *Van* and *Naar* (approved 2026-09-27). Since the backing increment MoneyBud makes its own counterpart, a *Movement* (next). |
 | **Movement** | Money **MoneyBud** moves on a category's behalf, from one account to another: the user's own counterpart is a *Transfer*. Made by assigning to a backed category, by backing, unbacking and re-pointing, and by money planned for a later period moving on that period's first day. It moves two balances and no budget figure, and it is neither income nor an expense, so it is in neither of the Overview's lists. It shows as a row in **both accounts' histories**, read-only: it is changed by assigning again, never from the history. **A movement from an account to itself**, when the pool account backs the category, changes no balance and has no row, but *Opgebouwd* counts it. Written on the day the money moves and never changed, so the amounts fixed on their day stay fixed. Money for a later period is written by **settling**: the first time MoneyBud runs on or after that period's first day, before anything else is done, with the backing and the pool account of that moment. An account with a movement between two different accounts on it counts as used and cannot be deleted; movements from it to itself do not count. A category cannot be deleted while a movement between two different accounts stands for it; one from the pool account to itself does not block, and goes with the category (ruled 2026-09-27). The feature files say *movement* for a history row of this kind. Settled and built 2026-09-27 (*Moved money in the account's history*, *Backing and Accumulated*, above; [ADR 0009](../decisions/0009-movements-are-entries.md)). No display term: the row's words are copy. **Settled for the sweep on 2026-09-27, and built on 2026-09-28** (*The sweep and Restant*, above; [ADR 0010](../decisions/0010-sweeps-and-period-ends.md)): **the sweep is a movement too**, written at settling and dated the next period's first day, and so is **what the one-click difference moves**, dated the day it is pressed. A sweep is never changed afterwards; a difference is a new movement beside it (the documentation's reading). A sweep between two different accounts makes the destination category and both accounts used (*derived*). To hold ruling 5, a sweep movement must say which period it was for (for the plan). **Built so**: reason `Swept`, with the period it was for; a sweep makes its category and its account used whichever accounts it went between, a sweep from an account to itself included (*Sweep: chosen in the build*, above). |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day:** shown with **the same marker** as *Over budget* and *Over-assigned*, with its own badge, ***Rood*** (ruled in a follow-up the same day). Never blocked or warned about. In that increment it is reached by an expense, a transfer out, or a negative starting balance or balance correction, and not by assigning, which moves no money until backing. **Since the backing increment** (built 2026-09-27) it is also reached by assigning to a backed category, by backing a category, and by unbacking or re-pointing one, each of which may overdraw the account the money leaves. |
-| **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). |
-| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and built:** every slice, *Unassigned* included, is drawn at least **2% of the ring**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. The fill stays exact. Pointing at a slice shows its figures in the ring's hole, which otherwise shows *Unassigned*, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). |
+| **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). **On the phone** (settled 2026-09-29, built 2026-09-30, not yet reviewed): the Overview is **the ring alone**, with the period under it, a still home screen that every other part is pulled over as a *Panel* (*MoneyBud on the phone*, above). What it shows for a period does not change, **with one exception chosen in the build**: the ring's hole also shows the period's income total under *Niet toegewezen*, which the desktop does not (B8, under *MoneyBud on the phone: chosen without the stakeholder*). |
+| **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and built:** every slice, *Unassigned* included, is drawn at least **2% of the ring**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. The fill stays exact. Pointing at a slice shows its figures in the ring's hole, which otherwise shows *Unassigned*, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). **On the phone** (settled 2026-09-29, built 2026-09-30, not yet reviewed; the shared `Ring` drawn, with a slice's colour by its place, plan D6): pointing is **holding and sliding** over the ring, with a **pizza-shaped** hit area, or **tapping** a slice; a slice stays chosen when the finger lifts, and tapping it again or elsewhere goes back to *Unassigned* (*Touching the ring*, under *MoneyBud on the phone*, above). In the *Kintsugi* theme it is drawn as a mended porcelain plate; what it shows is the same. |
+| **Panel** | On the phone, a screen **pulled over the Overview** by a swipe: income from the left, expenses from the right, the budget from below, the accounts from above. Income, expenses and accounts have two steps each, a list and then a form or an account's history. The Overview under it stays still. A layout term, with no counterpart on the desktop, where the same parts are columns and a history panel. Settled 2026-09-29, built 2026-09-30 as `PhonePanel` and `PanelStep` in `PhoneScreen` ([§8.4](08-crosscutting-concepts.md)), not yet reviewed (*Panels pulled over it*, under *MoneyBud on the phone*, above). The stakeholder's word is *paneel* (*Dutch source terms*, below). |
+| **Theme** | **How MoneyBud looks on the phone, as a whole world rather than a palette**: colours, surfaces, type, how the ring and the panels are drawn, and one moment of animation. It never changes what is shown or what an act does. Two exist, ***Standaard*** and ***Kintsugi***, each with a dark and a light form. Chosen in *Instellingen* and remembered in the app's settings, **never in the data file**. **Phone only**: the desktop has one look. Settled 2026-09-29, built 2026-09-30 (`PhoneTheme` in `PhoneSettings`, the looks in `MoneyBud.Phone`), not yet reviewed (*Themes*, under *MoneyBud on the phone*, above; [ADR 0013](../decisions/0013-an-android-phone-app.md), decision 5). |
 
 ## A start day the month is too short for clamps to its last day
 
@@ -3644,6 +3646,12 @@ and his data stays throwaway at least up to and including the accounts increment
 above still wait for the demo to stop being a demo. Nothing about them is due in the meantime
 ([§11](11-risks-and-technical-debt.md)).
 
+**By the time the demo ended, all three had been dealt with** (2026-09-29). The sweep gave left-over
+money somewhere to go (2026-09-28), and the start day became changeable (2026-09-29), each built ahead
+of real use. **Desktop-first was reopened by the switch itself**: the stakeholder ruled that real use
+starts with a phone app, and [ADR 0013](../decisions/0013-an-android-phone-app.md) supersedes
+[ADR 0002](../decisions/0002-desktop-application-first.md) (*MoneyBud on the phone*, below).
+
 ### Everything is kept, for good
 
 > **MoneyBud keeps everything, as one continuous history, for as long as the user has it.** There
@@ -3752,6 +3760,10 @@ this text was wrong. The ruling itself, said once, is unchanged.
 window calls `MoneyBudApp.Close`, which tries once if something is unsaved, and then lets go of the
 data.
 
+**On the phone the last attempt is made when MoneyBud goes to the background** (ruled 2026-09-29, built
+2026-09-30 as `MoneyBudApp.GoToBackground`, not yet tried on the phone), since Android stops an app there
+without closing it (*MoneyBud on the phone*, *Android's lifecycle*, below; [§6](06-runtime-view.md)).
+
 > **Saving that works says nothing.** Only a failure is announced, and the recovery after one.
 
 **Rejected:** a brief confirmation for every save. **Why**, in the documentation's reading: saving
@@ -3793,6 +3805,12 @@ Which folder in the profile was a plan question. **Built:** the user's **local**
 `%LOCALAPPDATA%\MoneyBud` on Windows, found through the profile and never relative to the working
 directory. Local rather than roaming, because a file rewritten after every change should not be
 copied between machines ([ADR 0007](../decisions/0007-keeping-the-ledger.md), [§7](07-deployment-view.md)).
+
+**On the phone** (ruled 2026-09-29, built 2026-09-30, not yet tried on the phone): the app's own folder,
+`Android/data/app.moneybud/files` (plan D5),
+reachable over USB, under a signing key that never changes (*MoneyBud on the phone*, *Where the data
+lives on the phone*, below; [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). Still a fixed
+place the user never chooses, and never in the repository.
 
 ### When the data cannot be read, MoneyBud says so and touches nothing
 
@@ -3902,6 +3920,10 @@ geopend."* and closes. The first holds a lock on the data from before it reads i
 and a crash lets go of it, so a crash never blocks the next start
 ([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
 
+**Not needed on the phone** (ruled 2026-09-29, built 2026-09-30): Android only ever runs one instance of an
+app, so there is no second start to refuse (*MoneyBud on the phone*, *Android's lifecycle*, below). The
+lock is still claimed there, since the store is the desktop's code and claiming costs nothing (plan D4).
+
 ### The login is the protection
 
 > **No password and no encryption. The Windows login is enough.**
@@ -3909,6 +3931,10 @@ and a crash lets go of it, so a crash never blocks the next start
 **Why:** the data is local (quality goal 4, [§1.2](01-introduction-and-goals.md)), and a forgotten
 password would lock the user out of his own data for good. The ruling names **Windows** because that
 is the only system MoneyBud has run on ([§7](07-deployment-view.md)).
+
+**On the phone, the phone's own lock** (ruled 2026-09-29, built 2026-09-30: nothing to build). MoneyBud asks for nothing itself.
+Rejected: a PIN or fingerprint in MoneyBud. It is this ruling's counterpart on the device where the data
+now lives (*MoneyBud on the phone*, *Where the data lives on the phone*, below).
 
 ### Demo data may not survive a new version
 
@@ -3947,6 +3973,14 @@ cannot read it, touches nothing and closes, and the user deletes the file
 ([ADR 0009](../decisions/0009-movements-are-entries.md)). **The ruling above still stands as
 written**: carrying data across versions becomes a requirement at the switch to real use, and not
 before.
+
+**Ended by the switch to real use, ruled 2026-09-29** (*MoneyBud on the phone*, *Real use starts
+here*, below). From the phone version he accepts at that increment's end review, a new version must
+keep reading the data the phone saved, and "cannot read" is no longer an allowed answer to an older version of it
+([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). **This ruling still describes everything
+saved before**: the desktop's demo data is not carried forward, and the phone does not start from it.
+The section is kept as written, because it is why seven format versions came and went without a
+migration.
 
 ### Real use before accounts
 
@@ -7912,6 +7946,522 @@ swept by itself even when its new end falls before the first start; the month ab
 assign form's own period going nearest to where it was. **Nothing from the scenario stage is left open
 for him.**
 
+## MoneyBud on the phone
+
+The rulings for the fourteenth increment, a mobile front-end, settled with the stakeholder on
+2026-09-29. **Unlike the last few increments, they are in interview rounds**, because stage 1 included a
+prototype he tried on his phone, and each round of it is a source file of its own: the wishes
+([2026-09-29-mobiel.md](../stakeholder/2026-09-29-mobiel.md)), round 1's feedback
+([…-ronde-1.md](../stakeholder/2026-09-29-mobiel-prototype-ronde-1.md)), round 2 and its three rounds
+of feedback ([…-ronde-2.md](../stakeholder/2026-09-29-mobiel-prototype-ronde-2.md),
+[…-feedback.md](../stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback.md),
+[…-feedback-2.md](../stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback-2.md),
+[…-feedback-3.md](../stakeholder/2026-09-29-mobiel-prototype-ronde-2-feedback-3.md)), and the round
+after the prototype ([…-na-het-prototype.md](../stakeholder/2026-09-29-mobiel-na-het-prototype.md)).
+All were given in English and are kept translated into Dutch. This section is the English reading of
+them.
+
+**Three kinds of statement below, marked.** A **ruling** is something he said or chose. ***Approved
+with the prototype*** marks what the prototype did and he approved as a whole ("dat is perfect" for
+round 1, "dit is geweldig" for round 2) without ruling on it item by item. The prototype's own README
+says nothing in it is a ruling, so these stand as the prototype's reading, open to his review at the
+end of the increment. ***Derived*** marks the documentation's own reading, as in earlier sections.
+
+**How this increment is run.** Asked whether the two approval gates apply, he waived both: *"Beide
+vervallen; ik beoordeel achteraf."* **The scenarios and the plan are written as always, but nothing
+waits for approval**: the build proceeds, and he reviews the scenarios, the plan and the app together at
+the end, **with every decision taken without him listed for him**. Rejected: stopping at both gates, and
+stopping at the scenario gate only. **The build is done without his phone connected**, and may stop if
+it meets something that makes going on impossible. Nothing in this section is approved at a gate, and
+none of it will be: the review at the end takes the gates' place.
+
+**Settled 2026-09-29; specified, planned and built 2026-09-30, and not yet reviewed.** The architecture it
+needs is [ADR 0013](../decisions/0013-an-android-phone-app.md) (the phone as a second head, superseding
+[ADR 0002](../decisions/0002-desktop-application-first.md)) and [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)
+(real use, and the data on the phone). What the prototype taught about drawing on the phone is in
+[§8.5](08-crosscutting-concepts.md). The scenarios are `choose-how-moneybud-looks.feature` and the last
+section of `carry-on-when-saving-fails.feature`, the plan is [increment-14-phone.md](../plans/increment-14-phone.md),
+and everything the two chose without the stakeholder is listed under *MoneyBud on the phone: chosen
+without the stakeholder*, below. **The app has never run on the phone**, which was not connected. Until
+the build this paragraph read "Settled, not specified or built."
+
+> **MoneyBud becomes an Android app for Axel's phone, phone only, with everything the desktop does,
+> laid out for a phone. The desktop stays, for development, and the two builds stay the same in every
+> feature and in their file, except that only the phone has themes. There is no sync: the file is moved
+> by hand, over USB. Real use starts here: from the version he accepts at the end review, every later
+> version reads its data. The phone starts fresh, with the six default categories. On the phone the Overview is the ring
+> alone, a still home screen that everything else is pulled over, and the ring is touched by holding and
+> sliding.**
+
+### What this increment covers, and what waits
+
+> **An Android app for one phone**, a Red Magic 11 Pro running Android 16, **phone only and in
+> portrait**, that does **everything the desktop does**, laid out for a small screen.
+
+Ruled. Rejected: an iPhone, and both platforms; entry and the Overview only, and entry only. "Phone
+only" is the documentation's word for what the stakeholder said: "Het wordt alleen de telefoon." No
+tablet layout is asked for (*derived*).
+
+**Waits, or is not taken up:**
+
+- **Sync between phone and desktop: not built**, by ruling (next).
+- **A third theme with kintsugi's own motions throughout**, the plate breaking into shards when
+  stepping periods and so on: **dropped, not deferred.** *"Laat het idee vallen. Ik breng het zelf weer
+  ter sprake als ik het echt wil."* Rejected: a motion round before closing the prototype, and keeping
+  the idea for later. It was his own idea in round 2, first set for "later, after round 2".
+- **The ensō** as a theme was set aside before round 2: he liked it but thought it hard, "alleen
+  zwart-wit met een beetje rood", and the prototype's README records that black and white cannot tell
+  the slices apart. **Ukiyo-e**, his third idea, was not taken up; the prototype's README keeps it for later, as it
+  needs illustration.
+
+### Only the phone, and no sync
+
+> **Only the phone is used. The desktop is for development**, and perhaps one day for opening a copy
+> of the phone's file. **Moving the file is done by hand, probably with a cable, and nothing is built
+> for it.**
+
+Ruled: *"Het wordt alleen de telefoon. De desktop is voor de ontwikkeling … Daar hoeft niets voor
+gemaakt te worden."* Rejected: both kept in step, and the desktop as the main place with the phone for
+quick entry. So each device has its **own data file**, and they are never merged (*derived*). The
+desktop's demo data stays where it is ([ADR 0013](../decisions/0013-an-android-phone-app.md), decision
+2).
+
+### The builds stay the same, except for themes
+
+> ***"De builds moeten natuurlijk wel gelijk blijven."*** **One codebase, every feature on both, one
+> file format.** **Themes are the exception**: the phone has them, the desktop does not.
+
+The first half is ruled with the wishes; the exception came after the prototype: *"thema's vallen
+daarbuiten. Die zijn voor de desktopversie niet nodig."* In the documentation's reading, "the same"
+means the same **acts, rules, figures and words**, while **layout** differs by design: panels on the
+phone, three columns on the desktop; a tap on the phone where the desktop hovers. A theme changes only
+how MoneyBud looks and moves, never what it shows or does, which is what lets it be the one exception
+([ADR 0013](../decisions/0013-an-android-phone-app.md), decision 5).
+
+### Real use starts here
+
+> **Real use starts with this increment. From the phone version he accepts at the end review, a new
+> version must keep reading the data it saved.** **The phone starts empty, with real data only**: the
+> six default categories and nothing else. The desktop's demo data stays behind.
+
+Ruled. Rejected: a demo first; moving the desktop's file over. **This is the switch to real use** that
+*Demo data may not survive a new version* (above) has pointed at since 2026-09-26, and it ends that
+ruling from the accepted phone version. It is also the moment [ADR 0002](../decisions/0002-desktop-application-first.md)
+named for its own expiry. How the promise is kept is [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md):
+the format the accepted version writes is the first promised one, and nothing written before it is
+(*derived*).
+
+> **The promise starts at the version he accepts at the end review, not at the first one installed.**
+> The review may still change the file format, and what he entered before accepting may have to be
+> entered again.
+
+Ruled 2026-09-29, while the documentation was written up, on the recommendation. Rejected: the first
+version installed. The question arose because the gates are waived, so the first build he installs is
+the one he reviews.
+
+The phone's first start is an ordinary first start (*A first start is unchanged*, above): the six
+default categories, *Betaalrekening* as the pool account, *Sparen* unbacked, and the start day on the
+1st until he changes it (*derived*).
+
+### Where the data lives on the phone
+
+> **In the app's own folder** (Android/data/…/files), **copyable over USB.** **The app is always signed
+> with one key of Axel's, kept outside the public repository**, so every update installs over the one
+> before and nothing is ever deleted. **His own copies over the cable are the safety net**, as agreed
+> for the desktop.
+
+Ruled after the prototype, with the danger put to him: the app's own folder is deleted if the app is
+ever uninstalled, for example when a changed signing key stops an update installing over it. Rejected: a
+shared folder such as Documents/MoneyBud, which survives uninstalling, with a one-time permission for
+file access. **Derived from it:** the app's **package name** must stay fixed too, since Android treats a
+new name as a new app with a new, empty folder; the folder's location goes in the root README, by
+*Where the data is, is written in the README* (above); and MoneyBud still makes no copies (*Backing up
+is the user's business*, above). What the fixed key leaves exposed is in [§11](11-risks-and-technical-debt.md).
+
+> **The chosen theme, and light, dark or the phone's own setting, are remembered between starts, in the
+> app's settings, not in the data file**, so the file stays the same for desktop and phone.
+
+Ruled after the prototype. Rejected: always starting in *Standaard*. The prototype forgot the theme at
+every start, which he allowed for the prototype only.
+
+> **The data stays on the phone: the app opts out of Android's automatic backup.** Axel's own copies
+> over the cable are the backup. **The phone's own lock protects it**: MoneyBud asks for nothing itself.
+
+Both ruled 2026-09-29, while the documentation was written up, on the recommendation. Android can back
+an app's folder up to the user's Google account unless the app opts out. Rejected: allowing it, as an
+automatic safety net; and a PIN or fingerprint in MoneyBud. They are the phone's counterparts of
+*Backing up is the user's business* and *The login is the protection* (above)
+([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md), decisions 5 and 6).
+
+### The home screen is the ring
+
+> **On the phone the Overview is the ring alone**, with all the information it already carries. **It
+> is the fixed home screen, and all navigation is pulling something over it.** It stays as empty as
+> possible; everything else is on the screen it belongs to.
+
+Ruled, in the wishes: *"Het overzicht moet zo leeg mogelijk blijven."* The ring is the Overview's ring
+as ruled for the desktop (*The overview, and its ring*, above): nothing about what it shows changes.
+
+> **The period is under the ring, with ‹ › to step**, and the ring is centred in the room above. **Every
+> panel shows the same period.** **Tapping the period's name opens a window for *Periode begint op***.
+
+The ‹ › are ruled because swiping is taken for navigation. The period was first ruled **above** the
+ring; **round 1 moved it under**, on his own idea: the ring's size was "net op de grens", and he
+sometimes missed. *Periode begint op* behind a tap on the date is his own proposal.
+
+> **Notices are a bar that slides up from the bottom for a few seconds. A question stays until it is
+> answered.**
+
+Ruled.
+
+> **The lasting "not saved" line is a small line under the period's name on the home screen, in the
+> warning colour, until a save works again. With a panel over the home screen, it shows in that panel's
+> header too.**
+
+Ruled 2026-09-29, while the documentation was written up, on the recommendation. Rejected: a notice bar
+that stays. It is the phone's place for the desktop's save line (*When a save fails, MoneyBud says so
+and keeps going*, above): a lasting state, beside any notice and the question, and never hidden by
+them. That the recovery, *"Alles is weer opgeslagen."*, is said once on the same line follows from that
+ruling (*derived*).
+
+> **The home screen stays exactly still under a panel.**
+
+Round 1: under the income, expense and account panels it had moved a little, which "haalt de illusie
+wat weg". *Approved with the prototype*: it now only dims, and in *Standaard* blurs; the half-open budget
+sheet was the one panel that moved it, shrinking it to fit above, which he did not object to. **Ruled
+at the review, 2026-09-30** ([beoordeling ronde 1](../stakeholder/2026-09-30-telefoon-beoordeling-1.md)):
+with the half-open sheet gone (next section), **nothing shrinks the ring any more**; it stays still
+under every panel. In the same round he found the ring's centre flickering and shrinking slightly at
+every pull: a defect, fixed, since it was redrawn and its settle played whenever a panel came to rest.
+
+### Panels pulled over it
+
+> **Swiping brings the main parts in: income from the left, expenses from the right, the budget from
+> below, the accounts from above.**
+
+Ruled, "afhankelijk van wat mogelijk is", which the prototype showed it is. Income comes from the left
+as on the desktop, so the finger moves right. *Approved with the prototype*: the budget came up
+half-way or in full. **Ruled at the review, 2026-09-30: one pull, all the way**, like the other three
+sides. "Het idee was dat je de ring tegelijk kon zien, maar zo zou ik het nooit gebruiken." Rejected: the
+half-way stop.
+
+- **A swipe starts on the screen, not at its edge**, which Android keeps for back, home and
+  notifications (ruled). *Approved with the prototype*: anywhere but on the ring.
+- **Faint hints on the home screen at opening, gone after about ten seconds, the first time only.**
+  Tapping them is not needed: "ik ben de enige gebruiker" (ruled). That "the first time" must be
+  remembered across starts, and in the app's settings like the theme (*derived*).
+- **A list in a panel scrolls first; only at its top does pulling further close the panel** (ruled).
+- **Android's back button closes the open panel**, back to the ring (ruled), and **first lets go of a
+  chosen category**, if one is chosen (round 1).
+- **Income, expenses and accounts have two steps.** One swipe shows the period's income or expenses; a
+  second opens a form to add one. **Tapping an entry opens the same form filled in, to change it.** The
+  accounts panel lists the accounts, and **tapping one opens its history** as the second step.
+  *Overboeken* is on the accounts panel. Ruled, as his wish; "whether two swipes for an expense is a
+  problem, the prototype will show". **Round 1: it is not**, "it reacts so quickly".
+- **Settings sit on the accounts panel**: he asked for the settings "somewhere at the top", with the
+  place left to the developer, and ruled the theme switch onto the accounts panel, which comes from above
+  like Android's quick settings. *Approved with the prototype*: a gear on that panel opens
+  *Instellingen*.
+- **Round 1**, his suggestions for text that did not fit: **a round ＋ (new) and ✓ (save) replace the
+  words *Toevoegen* and *Opslaan*** on the forms, and **a small house marks the pool account** in place
+  of the word *Hoofdrekening*. The display terms do not change: they are what the buttons mean
+  (*derived*).
+
+### The budget panel
+
+> **With no slice chosen, the budget shows assigning and, under it, the category list. With a slice
+> chosen, it opens on that category, to see and change its budget. Renaming, archiving and deleting sit
+> together under a three-dot menu.**
+
+Ruled, in the wishes, "natuurlijk geoptimaliseerd voor mobiel". **Round 1 added a *＋ Categorie
+toevoegen* row at the end of the list**: he could not find how to add a category. Everything a category
+row does on the desktop, *Staat op* and *Opgebouwd* included, is on the phone too, by parity (*derived*).
+
+### Touching the ring
+
+> **The ring and its hole are one zone where the finger is held and slid over the slices, to see them
+> all quickly. Navigation swipes do not reach it.** **Its hit area is pizza-shaped**: the slice in the
+> direction of the finger from the centre, so slices on the far side are easy to reach.
+
+Ruled: *"Het raakgebied van de stukken moet als een pizza zijn … ik heb een behoorlijk groot scherm."*
+
+> **Tapping a slice shows its details in the hole, as hovering does on the desktop. Tapping it again,
+> or anywhere else, goes back to *Niet toegewezen*. A slice stays chosen when the finger lifts**, and the
+> budget then opens on it.
+
+Ruled, except the last clause, *approved with the prototype*, which follows from *The budget panel*
+(above). Rejected: tapping jumps to the category's row. What a slice shows is ruled already (*Hovering a
+slice shows its figures*, above), and does not change. **In the scenarios' words this is pointing at a
+slice** (*derived*): the desktop's hover and the phone's tap and hold are two ways of pointing. What the
+phone adds, a slice that stays chosen and a second tap that releases it, has no desktop counterpart.
+
+> **A light tick in the hand when the finger passes to the next slice. It follows the phone's own
+> setting for touch feedback.**
+
+The tick was proposed and accepted with the other animations (next). **Round 1**: he felt nothing,
+because touch feedback is off on his phone, and Android drops every app's ticks then. Ruled: **follow
+the phone**, change nothing. Rejected: always vibrating on the ring, and a switch of MoneyBud's own.
+
+### Premium: responsiveness and animation
+
+> **The app should feel premium, and that comes mostly from how quickly it responds and from beautiful
+> animation.**
+
+Ruled, in his words. Revolut is "heel modern en strak, maar er gebeurt niets"; even Apple's glass style
+is more interesting. His example: stepping periods could drain the Overview and let a new one appear,
+and the same on opening.
+
+> **Panels follow the finger and spring open or back; the home screen fades under a panel; the ring
+> draws itself on opening, drains and fills on another period, and a slice grows after a change; a
+> light tick in the hand between slices.**
+
+Proposed to him and accepted: *"Klinkt allemaal heel mooi."* **Round 1**: the panels' speed was fine,
+and the fading "ziet er geweldig uit". **No measure is agreed** ([§10](10-quality-requirements.md)).
+
+### Themes
+
+> **A theme changes how MoneyBud looks, not only its colours**: "bijvoorbeeld een Japanse stijl". **A
+> theme is a world, not a palette.** **Two themes: *Standaard* and *Kintsugi*.** Each has a dark and a
+> light form, following the phone unless set otherwise.
+
+The wish is his. Of light and dark he said dark would be enough, "maar als de systeeminstelling volgen
+evenveel werk is, doe dat dan", dark and light with an accent colour. **"A world, not a palette" is his
+correction** to round 2's first version, which had new colours, gold seams and a serif and "voelt niet
+echt als een compleet ander thema": for kintsugi, the Overview's background a table, and each panel a
+piece of kintsugi porcelain.
+
+**Standaard** is round 1's look, *approved with the prototype*: dark and light with an accent colour,
+panels of frosted glass that blur the home screen.
+
+**Kintsugi**, as ruled in round 2 and its feedback:
+
+- **Dark: black porcelain on a dark walnut table. Light: white porcelain on a pale hinoki table.** Real
+  wood, from free (CC0) photo textures. Rejected: always white porcelain; a black lacquered table.
+- **The ring is a mended porcelain plate** lying on the table. It need not be any particular object, but
+  must have real veins and look like what it is. It was a **bowl** first, which he wanted to try; it read
+  better as a **plate**, with its rim and a soft shadow (feedback 3).
+- **Each shard is glazed as far as it has been spent, bare porcelain beyond**; *Niet toegewezen* is raw
+  clay. Rejected: glossy against matte, and spreading gold.
+- **Gold-mended breaks run between the shards, and veins run through every piece**, "zoals bij echte
+  kintsugi". **The gold runs right across the plate**, its middle included, and the figures stay
+  readable by a soft shadow **on the text itself**, not on the porcelain (feedback 2). Rejected: every
+  break ending in a point before the middle, and a mix. In dark mode he asked for the *van … inkomen*
+  line to read better, by its colour and/or a small oval haze behind it (feedback 3).
+- **An overspent shard is marked by red lacquer**, the red urushi under real kintsugi's gold. Rejected: a
+  gold-filled crack; the default theme's red edge.
+- **Every panel is a mended porcelain slab**, a little smaller than the screen so the table shows around
+  it, with a soft shadow, uneven broken edges, and **two or three real breaks** mended in gold, with fine
+  branches, thin enough to read across. Rejected: a whole dish with a gold rim; edge to edge as before;
+  breaks only along the edges; as many as the ring.
+- **The table stays sharp under a slab**, which casts a shadow and darkens it a little, where
+  *Standaard* blurs. Rejected: blurring, as round 1 did.
+- **A serif for headings; amounts in a clear face.**
+- **One moment of its own**: after the ring draws in, gold runs along the breaks, as if the plate is
+  being mended. Otherwise it moves as *Standaard* does. Rejected: the same motions; its own motions
+  throughout (the idea later dropped, above).
+
+*Approved with the prototype*, beyond those: pointing at a shard fades the others toward bare porcelain;
+the plate is lit from the top left with a warm lamp over it; where the phone cannot draw the plate, the
+plain ring is drawn instead. In the documentation's reading, the textures being CC0 is what lets them sit
+in a public repository that has no licence of its own.
+
+> **Themes are switched in *Instellingen*. Switching cross-fades the screen to the new theme, and the ring
+> draws itself again.**
+
+Ruled in round 2. Rejected: switching at once, with no transition. *Approved with the prototype*:
+*Instellingen* holds **Weergave** (*Systeem*, *Donker*, *Licht*), **Thema** (*Standaard*, *Kintsugi*),
+**Aanwijzingen opnieuw tonen**, which shows the home screen's hints again, and **Klaar**.
+
+> ***Weergave* is one setting for all themes**, as in the prototype, and each theme has a dark and a
+> light form.
+
+Ruled 2026-09-29, while the documentation was written up, on the recommendation. Rejected: one per
+theme. That the hints are remembered as shown in the app's settings, like the theme, stays *derived*
+(*Panels pulled over it*, above).
+
+### Android's lifecycle
+
+> **Three rulings written for a desktop window are met on the phone as follows.** *Closing makes one
+> last attempt to save* becomes: **the last attempt is made when MoneyBud goes to the background.** *A
+> second start says MoneyBud is already open* is **not needed**: Android only ever runs one instance of
+> an app. *Unreadable data: say so, touch nothing, and close* becomes: **the message shows, and the app
+> closes when it is tapped away.**
+
+Ruled 2026-09-29, while the documentation was written up, as proposed: *"Akkoord."* **Why**, the
+reasoning put with the proposal: Android does not close apps as Windows does. In the documentation's
+reading, it stops them in the background and may end them there without warning, so going to the
+background is the last moment MoneyBud can count on. What each desktop ruling protects stays the same: a last attempt before the data
+could be lost unsaved, one process holding the data, and nothing written over data that cannot be read.
+The notes under *Closing makes one last attempt to save*, *Only one MoneyBud at a time* (above) point
+here.
+
+### Proposed display terms for the phone
+
+Seen in the approved prototype and needed by the app. **Held here until the build, by the precedent of
+the earlier proposals tables**: `TekstTests` reads *Dutch display terms* (below) and holds `Tekst` to
+every row, so a row added before `Tekst` had the constant would have failed the suite. **The first six
+rows moved into *Dutch display terms* with the phone's build** (2026-09-30), which gave `Tekst` their
+constants, and this table is kept as the record. **None was ruled word by word**; they came with the
+prototype he approved, and are for his review with the rest. *Instellingen* and *Thema* are his own words
+from the wishes.
+
+| English (this project) | Proposed Dutch | Status |
+|---|---|---|
+| Settings (the panel the gear opens) | Instellingen | His word ("het menu met instellingen"); in the approved prototype. **Moved into *Dutch display terms*** at the build, 2026-09-30 |
+| Appearance: light or dark (the setting) | Weergave | In the approved prototype. **Moved** at the build |
+| Follow the phone / Dark / Light (its choices) | Systeem / Donker / Licht | In the approved prototype. **Moved** at the build |
+| Theme (the setting) | Thema | His word; in the approved prototype. **Moved** at the build |
+| The two themes | Standaard / Kintsugi | In the approved prototype; *Kintsugi* is his word. **Moved** at the build |
+| Show the hints again (the button) | Aanwijzingen opnieuw tonen | In the approved prototype. **Moved** at the build |
+| Done (closes the settings) | Klaar | In the approved prototype. **A control word**, like *Opslaan*, *Annuleren* and *Sluiten*, so **not moved**: `Tekst` has it, and the table does not hold it (plan D7) |
+
+Every row is phone-only, by the themes exception. **They are in `Tekst` with the rest of the Dutch**,
+which both heads share (plan D7): keeping all the Dutch in one place mattered more than keeping the
+phone's words out of a class the desktop also uses. Until the build this paragraph said that was for the
+plan.
+
+### For the plan
+
+What the rulings leave to the plan, and do not ask of the stakeholder.
+
+**Answered by [the plan](../plans/increment-14-phone.md) on 2026-09-30, and built the same day. Not
+approved at a gate**, since he waived both: every answer is for his review, listed with the rest under
+*MoneyBud on the phone: chosen without the stakeholder* (below). The list is kept as it was written.
+Where each point went:
+
+| Point | Answer |
+|---|---|
+| The project layout | **Three new projects** (D1): `MoneyBud.Phone`, the screens, themes and motion, which also runs on the PC; `MoneyBud.Phone.Android`, the host, **outside `MoneyBud.slnx`**; and `MoneyBud.Phone.Desktop`, the phone on the PC and its headless pictures. The theme mechanism is in `MoneyBud.Phone`, as in the prototype ([§5](05-building-block-view.md)). No record: [§9](09-architecture-decisions.md) says why |
+| Which interaction rules are decisions | **All the ruled ones** (D2), held by `PhoneScreen` in `MoneyBud.Presentation`, with unit tests: which panel is open and how far, the chosen slice, the budget's subject, the back button, and where an act leaves a panel ([§8.4](08-crosscutting-concepts.md), *The phone on the presentation layer*) |
+| Where the phone-only Dutch lives | **In `Tekst`** (D7), and six rows in *Dutch display terms*; *Klaar* a control word (*Proposed display terms for the phone*, above) |
+| How the phone meets *Android's lifecycle* | **`MoneyBudApp.GoToBackground`** makes the last attempt and keeps MoneyBud open; **`ComeBack`** looks at once, as the minute's tick does; **the timer runs only in the foreground**, and nothing happens by itself in the background; **the lock is still claimed** (D4, B1); Android's hooks are `onPause` and `onResume` (B5); unreadable data's *OK* or back ends the whole app (B6) ([§6](06-runtime-view.md)) |
+| The data folder on the phone | **`Android/data/app.moneybud/files/moneybud.json`**, from `GetExternalFilesDir(null)`, with the desktop's `FileLedgerStore`; package **`app.moneybud`**, Debug builds **`app.moneybud.debug`**; the key in `%USERPROFILE%\MoneyBud-signing\`, imported by the build, which **refuses to build without it**; backup and device transfer both **opted out** (D5, B11). Whether the temporary file and the rename behave there as on the desktop is **not yet tried** ([§11](11-risks-and-technical-debt.md)) |
+| Which file format version the phone writes | **Version 7, unchanged** (D5); the first promised version if he accepts this build |
+| Avalonia's own text in Dutch | **nl-NL fixed at start** (D10), as the Desktop's `Program` does |
+| The prototype's lessons | **Carried over with the drawing code**, all four traps' fixes included; **none proven on the device** ([§8.5](08-crosscutting-concepts.md)) |
+
+- **The project layout** for the phone head: which new projects, their names, and where the theme
+  mechanism lives ([ADR 0013](../decisions/0013-an-android-phone-app.md), decision 6).
+- **Which of the phone's interaction rules are decisions**, to be held in `MoneyBud.Presentation` where the
+  tests reach them, rather than in the phone head: a slice staying chosen and a second tap releasing it,
+  the budget opening on the chosen category, the back button releasing a chosen category before it
+  closes a panel, and which panel is open (ADR 0013, decision 4).
+- **Where the phone-only Dutch lives.** All the Dutch is in `Tekst`, which both heads share, and the
+  settings' words are the phone's alone.
+- **How the phone meets *Android's lifecycle*** (above), which is ruled: what calls the last save
+  attempt on going to the background, how the minute's timer (the retry, settling and the *Huidige
+  periode* label) runs while MoneyBud is in the foreground and what happens on coming back, and whether
+  the lock is still claimed when Android runs one instance anyway.
+- **The data folder on the phone**: how `FileLedgerStore` finds `Android/data/<package>/files`, whether the
+  temporary file and the rename behave there as on the desktop, the package name, how the build reaches
+  Axel's signing key without the repository holding it, and the opt-out of Android's automatic backup
+  ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)).
+- **Which file format version the phone build writes.** The one he accepts at the review is the first
+  promised one; until then the format may change.
+- **Avalonia's own text in Dutch.** The Desktop fixes the thread culture to nl-NL so that the toolkit's
+  own words agree with MoneyBud's ([ADR 0005](../decisions/0005-avalonia-ui-toolkit.md)); the phone head
+  needs the same.
+- **The prototype's lessons** in [§8.5](08-crosscutting-concepts.md), which bind the build.
+
+### MoneyBud on the phone: chosen without the stakeholder
+
+**Everything the scenarios, the plan and the build chose without him**, one line each, so that each
+can be answered at the review by its number. **None was approved at a gate**: he waived both for this
+increment ("Beide vervallen; ik beoordeel achteraf"), so, unlike earlier increments' *chosen in the
+build* lists, this one holds the plan's decisions too. The reasoning for each is in
+[the plan](../plans/increment-14-phone.md) under the same number; the scenarios' own choices are in the
+headers of `choose-how-moneybud-looks.feature` and `carry-on-when-saving-fails.feature`. None changes a
+ruling. **Two change what the desktop and the phone show** (B8, B12), which the documentation's reading
+of *The builds stay the same, except for themes* (above), "the same acts, rules, figures and words", does
+not allow; they are flagged here rather than hidden.
+
+> **Accepted on 2026-09-30.** After a few hours on the phone and one round of two changes (the ring's
+> centre no longer flickers; the budget opens in one pull), he closed the review: *"Ik denk dat we dan
+> kunnen zeggen dat hij uit de beoordelingsfase is"*
+> ([beoordeling ronde 1](../stakeholder/2026-09-30-telefoon-beoordeling-1.md)). **Everything below stands
+> as built.** So **real use has started, and file format version 7 is the first promised version**
+> ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md), decision 1): every later MoneyBud reads
+> it. **B8 and B12 are to be added to the desktop at a later moment**, his ruling; rejected: keeping them
+> as a phone-only exception, and removing them from the phone. Until then the desktop lacks them, a known
+> gap in parity, not an exception.
+
+**The plan's decisions:**
+
+| # | Chosen |
+|---|---|
+| D1 | Three new projects: the phone's screens (`MoneyBud.Phone`), the Android host (not in `MoneyBud.slnx`, for build time) and the phone on the PC (`MoneyBud.Phone.Desktop`) |
+| D2 | Every ruled interaction rule is a decision, held by `PhoneScreen` in the presentation layer with unit tests: panels and steps, the chosen slice, the budget's subject, the back button, and where an act leaves a panel (a new entry closes its panel; a change or removal goes back to the list; a refusal stays) |
+| D3 | The settings are a small file of their own, `settings.json`, in the app's private folder, never the USB folder; unreadable settings are passed over without a word; written on every change |
+| D4 | Going to the background makes one save attempt if something is unsaved and keeps MoneyBud open; coming back looks at once; the minute's timer runs only in the foreground; the lock is still claimed; unreadable data's *OK* or back closes the app |
+| D5 | Data in `Android/data/app.moneybud/files/moneybud.json`; package `app.moneybud`, Debug builds `app.moneybud.debug`; a key made in `%USERPROFILE%\MoneyBud-signing\`, and a Release build refusing to build without it; backup and device transfer opted out; file format version 7 |
+| D6 | The phone draws the shared ring, 2% minimum included, and colours a slice by its place, as the desktop does, where the prototype gave each category a fixed colour |
+| D7 | The phone's Dutch is in `Tekst`; six rows in *Dutch display terms*; *Klaar* a control word; headings and hints copy |
+| D8 | How the desktop's acts look on the phone, where the prototype lacked or faked them: date chips (*Vandaag*, *Gisteren*, *Andere datum…*); accounts and *Herhalen* as chips; the category box with suggestion chips; assigning with its own ‹ › period; a category's acts under ⋯, with "—" for none; an account's acts under ⋯ in its history; what a tap does in a history; the notice, the question and the save line; *Periode begint op* behind the period's name; the ended period's line in the budget panel |
+| D9 | No automated test of the phone head; the headless picture run and the Android Release build are the check |
+| D10 | The toolkit's own text in Dutch, nl-NL fixed at start |
+
+**Chosen in the scenarios and the build:**
+
+| # | Chosen |
+|---|---|
+| B1 | Nothing happens by itself in the background; the minute's look waits for coming back, so nothing is said unseen |
+| B2 | The phone ending MoneyBud after a failed background attempt loses what was not saved, as closing does on the desktop |
+| B3 | The hints count as shown the moment they are shown; *Aanwijzingen opnieuw tonen* shows them now, not again at the next start; settings missing while the data exists count as unreadable |
+| B4 | Choosing a theme or *Weergave* says nothing; the screen itself changes |
+| B5 | Android's "background" is `onPause`, "back" is `onResume` |
+| B6 | Unreadable data's *OK* ends the whole app, so the next start reads the file afresh |
+| B7 | Leaving an entry's form lets go of an entry being changed; a new one being typed stays |
+| B8 | **The phone shows the period's income and expense totals**, at the head of its lists and under *Niet toegewezen* in the ring; **the desktop shows neither** |
+| B9 | The desktop's badges with their words where there is room; the prototype's small "!" in the dense category rows |
+| B10 | No app icon of MoneyBud's own yet |
+| B11 | The key: `%USERPROFILE%\MoneyBud-signing\moneybud.keystore`, alias `moneybud`, RSA 4096, valid until 2126, its password in a file beside it ([§7](07-deployment-view.md)) |
+| B12 | **A category's page lists its expenses in the period**, each opening to be changed; **the desktop has no such list** |
+| B13 | Words the desktop never shows, all copy in `Tekst`: *Gisteren*, *Saldo vandaag*, *Deze periode*, *Toewijzen aan …*, *Aan het eind van de periode*, the hints, the panels' headings |
+
+**Found in the build and not in the plan's list**, recorded so that they too can be answered:
+
+| Choice | Why |
+|---|---|
+| **Android's back button says no to a waiting question first**, before letting go of the budget's category | D2 named the other three steps. No reason is recorded in the build; in the documentation's reading, a question waiting over a panel must be answered or dropped before anything behind it moves, and back is Android's way of saying "not this" |
+| **The app asks for Android 12 or later, and is built for 64-bit ARM only** | As the prototype was; his phone is both. No reason is recorded beyond that |
+
+**What `spec-reviewer` found**, all fixed, each with a test that a mutation showed fails without the fix.
+They are fixes, not choices: each makes the build do what a ruling or the plan already said.
+
+| Fix | What it was |
+|---|---|
+| **R1. The phone's totals and headings are held by a test** | They were held by nothing; now `PhoneOverviewTests` |
+| **R2. The hints are counted as shown when the home screen opens** | They were counted when the settings were read, so a first start on unreadable data used them up. A scenario was added to `choose-how-moneybud-looks.feature` after review |
+| **R3. A rebuilt budget page no longer stays alive** | Every field listened to the shared form for good; a field now listens only while it is on screen |
+| **R4. Rules and words that had crept into the phone head moved out or were dropped** | The category page's expense filter (now `PeriodOverview.ExpensesOn`), "Staat op …" and the ring centre's figures (now `Tekst`); and three rules the desktop does not have, dropped: hiding the suggestion that matches what is typed exactly, dimming a row with nothing planned or spent, and heading the budget *Te veel toegewezen* where the desktop keeps *Niet toegewezen* and adds the badge |
+
+**Left as they are, and noted by the review**: three scenarios in `choose-how-moneybud-looks.feature` hold
+by construction, since the settings have no way to the data, so they record the design rather than test
+it; and the settings' folder being apart from the USB folder is head code, checked by reading
+([§8.4](08-crosscutting-concepts.md)).
+
+### What this section leaves open
+
+**Nothing is open for the stakeholder.** Five points were found while this section was written, and
+two the plan would have had to settle were put to him with them. **All seven were ruled on 2026-09-29**,
+each on the recommendation, and are in the source round's last table (*Vragen die bij het bijwerken van
+de documentatie opkwamen*). The list is kept as a record of where each went.
+
+| Point raised | Where it went |
+|---|---|
+| 1. Which build starts the promise: the first installed, or the one accepted at the review | **The one he accepts at the review**; data entered before may have to be re-entered (*Real use starts here*) |
+| 2. What protects the data on the phone | **The phone's own lock**; MoneyBud asks for nothing (*Where the data lives on the phone*) |
+| 3. Android's own automatic backup | **Opted out**; the data stays on the phone, his cable copies are the backup (*Where the data lives on the phone*) |
+| 4. One *Weergave* for all themes, or one per theme | **One for all themes** (*Themes*) |
+| 5. Hints remembered as shown | **Stays *derived***: kept in the app's settings, like the theme; not put to him as a question of its own (*Panels pulled over it*) |
+| 6. Where the lasting "not saved" line goes on the phone (was *For the plan*) | **Under the period's name on the home screen**, in the warning colour, and in an open panel's header too (*The home screen is the ring*) |
+| 7. The rulings written for a desktop window, on Android (was *For the plan*) | **Ruled as proposed** (*Android's lifecycle*) |
+
+**Still open, and only at the review**: everything marked *approved with the prototype* or *derived* in
+this section, and every choice the scenarios, the plan and the build make without him, which are listed
+for him there. **Those choices are now made, and listed** (*MoneyBud on the phone: chosen without the
+stakeholder*, above), B8 and B12 among them, the two that make the heads show different figures.
+
 ## Dutch source terms
 
 The stakeholder material is in Dutch. This table fixes the mapping, so that reading the interviews
@@ -7944,6 +8494,11 @@ rather than terms this project reasons in (*The default categories* above).
 | Reeks | A *Recurring transaction*: round 1's *"een hele nieuwe reeks"*, which ruling 3 of *Recurring entries* spares him when a price changes |
 | Startscherm | The **Overview**, the screen MoneyBud opens on (*The overview, and its ring* above). In the interviews "overzicht" is also the everyday word for insight in general, which is not a screen |
 | Radiaal diagram | The **Ring** at the head of the Overview |
+| Thuisscherm | The **Overview** on the phone, which is the ring alone (*MoneyBud on the phone*, above) |
+| Stuk (van de ring) | A **slice** of the Ring |
+| Paneel, iets overheen trekken | A **Panel**, pulled over the Overview on the phone |
+| Vegen | **Swiping**, the phone's way between the Overview and its panels |
+| Thema | **Theme**: "niet alleen de kleuren", a whole look, on the phone only |
 
 ## Dutch display terms
 
@@ -8015,6 +8570,12 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Frequency (the list on the income and expense forms that sets it) | Herhalen |
 | One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label) | Eenmalig / wekelijks / maandelijks |
 | Period start day (the list beside the period's name that sets it) | Periode begint op |
+| Settings (the panel the gear opens, on the phone) | Instellingen |
+| Appearance, light or dark (the setting, on the phone) | Weergave |
+| Follow the phone / Dark / Light (the appearance's choices) | Systeem / Donker / Licht |
+| Theme (the setting, on the phone) | Thema |
+| The two themes | Standaard / Kintsugi |
+| Show the hints again (the button, on the phone) | Aanwijzingen opnieuw tonen |
 
 **"Nog toe te wijzen" is deliberately absent.** It is the literal Dutch for *Left to assign*, which
 is retired: it was merged into *Unassigned* (*One figure, not two*, above). **The retirement holds
@@ -8050,7 +8611,12 @@ ruled on 2026-09-29** and came into the table with the start-day increment's bui
 `Tekst.PeriodStartDay`, by the same precedent. Until then it waited in *Proposed display terms for the
 period start day*, under *A configurable period start day* (above), which is kept as the record. The
 drop-down's items, *1* to *31*, the question, the notice and a period's name are copy; the question's
-answers reuse *Wijzigen* and the *Annuleren* control.
+answers reuse *Wijzigen* and the *Annuleren* control. **The phone's settings words** (*Instellingen*,
+*Weergave*, *Thema* and their choices), seen in the approved prototype of 2026-09-29, waited in *Proposed
+display terms for the phone*, under *MoneyBud on the phone* (above), by the same precedent, and **came
+into the table with the phone's build** (2026-09-30), as the last six rows. They are phone-only, by the
+themes exception. *Klaar*, which closes *Instellingen*, is a control word like *Sluiten*, and is not in
+the table.
 
 **The accounts increment's twelve rows came with its build** (2026-09-27). They were proposed and
 approved in *Proposed display terms*, under *Accounts and net worth* (above), and held there until
@@ -8110,7 +8676,9 @@ recurring rulings of 2026-09-28 left**, under *Recurring entries* (*What this se
 All six were ruled in follow-ups the same day, one against the recommendation, so none is open.
 **So are the three points the start-day rulings of 2026-09-29 left**, under *A configurable period
 start day* (*What this section leaves open*). All three were ruled in follow-ups the same day, with two
-consequences put to him besides, so none is open.
+consequences put to him besides, so none is open. **So are the phone's seven points of 2026-09-29**,
+under *MoneyBud on the phone* (*What this section leaves open*), all ruled the same day, so none is
+open.
 
 **As it read until then:** **One**, below. It is recorded so that it is not rediscovered late, and it is **not** waiting on an
 answer from anyone: there is nothing yet for either answer to be true of (*Why it cannot be answered

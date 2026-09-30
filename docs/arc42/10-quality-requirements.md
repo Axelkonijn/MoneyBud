@@ -22,6 +22,21 @@ which is the harm an invented one does. The demo exists to get his reaction
 ([§1.1](01-introduction-and-goals.md)), and that reaction is where a measure should come from.
 [§4](04-solution-strategy.md) says which goals have something built for them. None is measured._
 
+_**The phone (settled 2026-09-29, not built) brings the nearest thing yet to a measure, and it is still
+not one.** The stakeholder wants the app to feel premium, "mostly through how quickly it responds", and
+the mobile prototype was measured on his phone: a panel dragged at the phone's full 120 frames a second
+once Avalonia's GPU budget was raised, against about 24 before, read with `dumpsys SurfaceFlinger
+--latency` ([§8.5](08-crosscutting-concepts.md)). He found the speed fine and two swipes to an expense
+not too slow ([§12](12-glossary.md), *MoneyBud on the phone*). That is a measurement and a reaction, not
+an agreed threshold. "A drag runs at the phone's full frame rate, measured on the device" is the obvious
+candidate for the first scenario here, and it waits for him to agree it. Writing it now would be the
+invented threshold this note warns against._
+
+_**Still empty after the phone was built (2026-09-30).** Nothing was measured on the phone in that
+increment, which was built without it, so there is not even a measurement of the real app to offer him
+([§8.5](08-crosscutting-concepts.md)). The review, where he first runs it, is the moment to measure the
+candidate above on the app and ask whether it is his threshold._
+
 ## 10.1 Quality Tree
 
 _Empty._

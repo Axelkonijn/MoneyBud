@@ -187,6 +187,24 @@ public sealed record PeriodOverview(
 
     public string UnassignedText => Tekst.Euro(Unassigned);
 
+    /// <summary>
+    /// Every income the period lists, summed, future-dated ones included: the phone shows it at the
+    /// head of its income list and under <i>Niet toegewezen</i> in the ring (plan for increment 14,
+    /// D8). Worked out here, so the phone adds up nothing itself.
+    /// </summary>
+    public Money IncomeTotal => Money.Sum(Incomes.Select(i => i.Amount));
+
+    /// <summary>Every expense the period lists, summed: the head of the phone's expense list.</summary>
+    public Money ExpenseTotal => Money.Sum(Expenses.Select(e => e.Amount));
+
+    /// <summary>
+    /// The period's expenses on one category, newest first, as the expense list has them: the phone
+    /// lists them on the category's own page, where the approved prototype had them (plan for
+    /// increment 14, B12). The desktop has no such list.
+    /// </summary>
+    public IReadOnlyList<ExpenseLine> ExpensesOn(string category) =>
+        Expenses.Where(e => e.Category == category).ToList();
+
     // ------------------------------------------------------------------ the sweep (§12, *The sweep and Restant*)
 
     /// <summary>

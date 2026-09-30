@@ -61,9 +61,22 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-**Thirty-seven feature files exist. All thirty-seven are approved and bound, and every scenario in
-them passes**: 949 scenario cases, beside 638 developer unit tests, 1587 in all (2026-09-28). The
-latest, the recurring-entries increment's two, were built with that increment.
+**Forty-one feature files exist, all bound, and every scenario in them passes**: 1030 scenario cases,
+beside 913 developer unit tests, 1943 in all (2026-09-30). Forty are approved at a gate. **The phone
+increment's scenarios are not**: the stakeholder waived both gates for increment 14 only, and reviews
+its scenarios, plan and app together at the end. They are `choose-how-moneybud-looks.feature` (14
+scenarios, 21 cases, new, one added after review) and a last section of `carry-on-when-saving-fails.feature` about going to the
+background and coming back (8 scenarios), bound in `PhoneSteps.cs`, with header notes in
+`point-at-a-slice.feature` and `start-moneybud.feature`. Every scenario for the phone alone is tagged
+`@phone`. "I have never used MoneyBud" now also means no phone settings are kept; the settings live
+in a folder of the scenario's own, apart from its data. One figure in the new carry-on section was
+corrected during the build (400 − 18 − 32.15 is 349.85, not 367.85). The phone's navigation rules
+(a slice that stays chosen, the back button, where an act leaves a panel) are unit tests of
+`PhoneScreen`, not scenarios, as window behaviour always has been.
+
+Before them, forty feature files existed: thirty-seven at the close of the recurring-entries
+increment, 949 scenario cases beside 638 developer unit tests (2026-09-28), and the start-day
+increment's three.
 
 The recurring-entries increment's files — `repeat-an-entry.feature` (22 scenarios, 29 cases) and
 `change-a-repeat.feature` (25 scenarios, 28 cases), with a "Repeats are kept" section of 4 scenarios
@@ -152,5 +165,6 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | Backing | `back-a-category.feature`, `assign-to-a-backed-category.feature`, `spend-against-a-backed-category.feature`, `show-accumulated.feature`, `show-moved-money.feature` — approved and bound 2026-09-27 |
 | The sweep | `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`, `bring-a-swept-period-up-to-date.feature`, `choose-a-sweep-destination.feature` — approved 2026-09-27, bound 2026-09-28 |
 | Recurring entries | `repeat-an-entry.feature`, `change-a-repeat.feature` — approved and bound 2026-09-28 |
-| Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` |
+| Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` (its last section, the phone's background, written 2026-09-30, not gated) |
+| The phone's own settings | `choose-how-moneybud-looks.feature` — written and bound 2026-09-30, not gated (increment 14) |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

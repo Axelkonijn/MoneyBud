@@ -9,7 +9,10 @@ know regardless of which part of the system they're touching.
 _§8.1 to §8.4 are filled in. §8.4 arrived with the UI. §8.3 records persistence as settled and
 built, since 2026-09-26. Opening a period, accounts, backing and the sweep are built, and appear in
 §8.1, §8.3 and §8.4. So, since 2026-09-28 and 2026-09-29, are recurring entries and a configurable
-period start day._
+period start day. **§8.5 is for the phone**: what the mobile prototype taught about drawing with
+Avalonia on Android, and, since the phone was built (2026-09-30), how its screens were checked without
+the phone. §8.3 records that real use starts with the phone. §8.4 has *The phone on the presentation
+layer*._
 
 ## 8.1 Domain Model
 
@@ -1081,6 +1084,39 @@ records against it, and that a backing's two days are period starts on or before
 ([§8.1](#81-domain-model), *The period start day*). **A change of start day saves once**, through
 `Tell`, with any sweep it made.
 
+**Real use starts with the phone** (ruled 2026-09-29, not built;
+[ADR 0014](../decisions/0014-real-use-and-the-phone-data.md), [§12](12-glossary.md), *MoneyBud on the
+phone*). **From the phone version the stakeholder accepts at the increment's end review, every later
+version reads the data it wrote**, on both heads: a change of format is still a new version number, but
+"cannot read" is no longer an allowed answer to an older promised version. It stays the answer to
+damaged, blank and newer data. The row *Until real use starts* below ends there. **Until he accepts a
+version, the review may still change the format**, and data entered on an earlier build may have to be
+entered again, by his ruling. Nothing saved before the accepted version is promised: the phone starts
+fresh, and the desktop's demo data stays behind. **On the phone the file lives in the app's own
+folder**, `Android/data/<package>/files`, reachable over USB, under a signing key and package name that
+never change, so an update never uninstalls it. The desktop keeps `%LOCALAPPDATA%\MoneyBud`. **The app
+opts out of Android's automatic backup**, so the file stays on the phone, and **the phone's own lock is
+its protection**. **The phone's theme and light or dark setting are kept in the app's settings, not in
+the file**, so the file is the same on both heads, and nothing about it changes for themes. How the
+store finds the phone's folder, and how the lock and the rename behave there, are for the plan. **The
+rulings about closing and starting meet Android as ruled in [§12](12-glossary.md), *Android's
+lifecycle***: the last attempt is made on going to the background, there is no second start, and the
+unreadable-data message closes the app when it is tapped away.
+
+**Built on 2026-09-30, and accepted by the stakeholder the same day** (the phone increment's plan, D3 to
+D5). **The file format stays at version 7**: nothing new is kept in the data file, since the phone's
+settings are not in it, so the phone writes what a desktop built from the same code reads. **Version 7
+is the first promised version** ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md), decision
+1): every later MoneyBud reads it, and a change of format costs a reading path, kept for good. **The store is the desktop's `FileLedgerStore`, handed
+the folder Android gives** (`GetExternalFilesDir(null)`, so `Android/data/app.moneybud/files`), with the
+lock file and, during a save, the temporary file beside the data file, as on the desktop. Whether the
+exclusive lock and the rename over the data file behave on the phone's shared storage as they do on
+Windows is **not yet tried** ([§11](11-risks-and-technical-debt.md)). The settings are a small file of
+their own, `settings.json`, in the app's private folder, written the same way, and far more forgiving
+than the data: what cannot be read is passed over ([§8.4](#84-the-presentation-layer), *The phone on the
+presentation layer*). The last attempt is `MoneyBudApp.GoToBackground`, which keeps the store and leaves
+MoneyBud open ([§6](06-runtime-view.md)).
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.
@@ -1132,7 +1168,7 @@ the code at the close of the increment:
 | **Kept data that is there but blank is unreadable**: say so, touch nothing, close. **A saved empty budget is valid** | MoneyBud never writes a blank save, so blank kept data is a failure, not a first start. A save of a budget with no categories and nothing recorded is written, loads, and shows no categories (next row). Confirmed by the stakeholder, 2026-09-26. **Built:** `LedgerJson.Read` returns nothing for blank or whitespace-only text, which is unreadable. An empty ledger is written as a whole document with four empty lists and reads back as one |
 | **One set of data, no in-app reset.** Starting over means deleting the file. **The defaults come only with a first start**, when there is no kept data at all | No act to start over, and no second set of data beside the first. A missing file is a first start, and nothing else is. A ledger saved with no categories loads with no categories. **Built:** only `LoadResult.NoData`, no `moneybud.json`, leads to `Ledger.StartNew`. A first start saves nothing until the first change |
 | **No password, no encryption.** The Windows login is enough | Nothing to build. Security is the operating system's user account. **Built:** nothing, as ruled. The file is plain JSON |
-| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused. **Not exercised by version 6 or 7 either**: version 6 reads 5 and 4 (2026-09-28), and version 7 reads 6, 5 and 4 (2026-09-29, approved at the plan gate on the recommendation, ADR 0012) |
+| **Until real use starts, a new version may be unable to read an older one's demo data.** It then says so and touches nothing, and the user starts fresh. **Extended the same day: at least up to and including the accounts increment** | The stored form may change between versions without anything carrying old data across, the version that adds accounts included. Carrying data across versions becomes a requirement only at the switch to real use, which no increment before accounts plans around. **Built:** the file says `"format": "MoneyBud"` and `"version": 1`, and any other format or version is unreadable. There is no older version to read. **Exercised on 2026-09-27**: the accounts increment writes `"version": 2` and refuses version 1, so data saved before accounts is not read, and the user deletes the file (ADR 0008). **Exercised again the same day**, past the extension's end, with the stakeholder's leave ("I dont mind starting over"): the backing increment writes `"version": 3` and refuses versions 1 and 2 (ADR 0009). **And again on 2026-09-28**, approved at the plan gate: the sweep increment writes `"version": 4` and refuses versions 1 to 3 (ADR 0010). **Not exercised on 2026-09-28** by the recurring-entries increment: it writes `"version": 5` and **reads version 4**, since nothing in version 4 has to be guessed, approved at the plan gate on the recommendation (ADR 0011). The ruling still stands for any later version, and versions 1 to 3 stay refused. **Not exercised by version 6 or 7 either**: version 6 reads 5 and 4 (2026-09-28), and version 7 reads 6, 5 and 4 (2026-09-29, approved at the plan gate on the recommendation, ADR 0012). **Ended by the switch to real use** (ruled 2026-09-29, not built): from the phone version accepted at the end review, every later version must read it ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)) |
 | **The location is documented in the README only.** MoneyBud does not show it, on screen or in the unreadable-data message | Nothing in the screen names a path. **Built:** the root README lists the file for Windows, macOS and Linux. No text in `Tekst` names a folder or a file, and a scenario checks the unreadable-data message for paths, file names and the README |
 
 **Carried over unchanged, not newly ruled:** with no data yet, MoneyBud starts as it does today,
@@ -1360,7 +1396,9 @@ to the stakeholder*, beside the rulings each one fills in. **Opening a period's 
 accounts increment's (*Accounts: chosen in the build*), the backing increment's (*Backing: chosen
 in the build, not put to the stakeholder*) and the sweep increment's (*Sweep: chosen in the build, not
 put to the stakeholder*). So are the recurring-entries increment's (*Recurring entries: chosen in the
-build*) and the start-day increment's (*A configurable period start day: chosen in the build*).
+build*) and the start-day increment's (*A configurable period start day: chosen in the build*). So are
+the phone increment's, the plan's and the build's alike, since no gate approved either (*MoneyBud on
+the phone: chosen without the stakeholder*).
 
 ### All the Dutch is in `Tekst`, and a test holds it to §12
 
@@ -1380,7 +1418,8 @@ have silenced exactly the case that matters.
 
 **The toolkit's own text follows the thread culture**, which the Desktop's `Program` fixes to nl-NL.
 That covers the date picker's month and day names, for example. MoneyBud's own text does not depend
-on it.
+on it. **The phone fixes it the same way**, in `App.Start`, for its calendar's months and days (plan
+D10).
 
 ### Correcting: a second state for the forms, and the one question
 
@@ -1724,6 +1763,133 @@ The rendered frame also showed an older blemish, not from this increment: while 
 grey *"plan: € 400,00"* runs into the row's *Staat op* list ([§11](11-risks-and-technical-debt.md), the
 Desktop row).
 
+### The phone on the presentation layer
+
+Since the phone increment (built 2026-09-30; [§12](12-glossary.md), *MoneyBud on the phone*;
+[the plan](../plans/increment-14-phone.md), D2 to D4, D6 to D8, B1 to B13). **None of it is approved
+at a gate**: the stakeholder waived both for this increment and reviews it with the app. What the
+build chose is listed in §12, *MoneyBud on the phone: chosen without the stakeholder*. How the layer
+holds it:
+
+**Every act and figure is the desktop's.** A panel's form is the same `ExpenseForm`, `IncomeForm`,
+`AssignForm`, `AccountForm` or `TransferForm`, bound the same way, and every act goes through
+`MoneyBudApp`. The ring is `PeriodOverview.Ring`, its shares, 2% minimum, fills and markers included,
+and a slice's colour follows its place (`CategoryRow.SliceIndex`), as on the desktop, so a category's
+colour can change when budgets reorder it; the prototype's fixed colour per category did not carry
+over (plan D6). So the phone head adds up nothing and decides no figure.
+
+**`PhoneScreen` holds the phone's own navigation**, because ADR 0013 (decision 4) keeps the head free
+of decisions and the plan ruled that **every one of the phone's ruled interaction rules is one** (D2).
+It is toolkit-free, over `MoneyBudApp`, and held by developer unit tests rather than scenarios, on the
+precedent of the field order and the emptying category box: they are how a screen behaves, not what
+MoneyBud does.
+
+- **Which panel is open, and how far.** `Open` is a `PhonePanel` (none, income, expenses, budget,
+  accounts) and `Step` a `PanelStep`: the list, then the form or an account's history; the budget in
+  full, in one step (it stopped half-way first until Axel's review, 2026-09-30). **The finger and the model meet in two calls**: `Pull` when a drag starts,
+  and `Settled` when a spring comes to rest, so a swipe and a tap end in the same state, and a panel
+  pulled and let go at once counts as closed from where it started. An act, a row tapped or the back
+  button moves a panel by itself and raises `Moved`, and the view animates to it.
+- **Leaving a panel lets go of what belonged to it** (B7): an entry being changed is dropped when its
+  form is left, a new entry being typed stays for next time, as stepping does on the desktop; leaving
+  an account's history closes it; closing the budget lets go of a row it was opened on, but not of a
+  slice still chosen on the ring. So a second swipe on a list always opens a form for a new entry.
+- **The chosen slice is held as its category, not as a share.** The finger goes down, slides and
+  lifts (`TouchRing`, `SlideOnRing`, `LiftFromRing(share, slid)`); the slice in the finger's direction
+  is chosen as it passes; it **stays chosen when the finger lifts**; a tap with no slide on the centre,
+  or on the slice already chosen when the finger went down, lets go, and so does a tap anywhere else
+  on the home screen (`TapHome`) or stepping. **Why the category**: the desktop holds a share because
+  the pointer is always there to point again, while the phone's choice outlives the finger, and a share
+  held across an act that reorders the slices, or a rename, would silently land on another category.
+  After every refresh `PhoneScreen` points again where that category's slice is now; if it has gone,
+  the slice is let go, and the budget stays on the category while it is still listed, so its page does
+  not vanish when its budget is taken back to zero.
+- **Pointing still goes through `MoneyBudApp.PointAt`**, as the desktop's hover does, so what the
+  ring's centre shows is `PointedRow` on both heads, and `point-at-a-slice.feature` covers both (its
+  header says so).
+- **The budget panel's subject** (`BudgetCategory`) is the chosen category, or a row tapped in the
+  list (`OpenCategory`, which also chooses its slice when it has one); with nothing chosen, or
+  *Niet toegewezen*, the whole list.
+- **Android's back button** (`Back`) says no to a waiting question first, then lets go of the budget's
+  category, then goes back one step, then closes the panel. On the home screen with nothing open it
+  returns false, and Android does what it does. The question comes first in the build; D2 named only
+  the other three.
+- **Where an act leaves a panel.** A new entry that goes through closes its panel, so the slice is seen
+  to grow (the prototype's behaviour, approved with it); a change that goes through, saved unchanged
+  included, goes back to the list; a refusal stays on the form; an entry removed from its form goes
+  back to the list once the question is confirmed; deleting the account whose history is open goes
+  back to the accounts. Adding an account and a transfer are small windows over the accounts panel,
+  closed when their form reports itself closed (`IsOpen`), so that too is the form's state.
+- **Three events, for three speeds.** `Changed` says everything may have changed: after every act,
+  tick and panel come to rest. `ChoiceChanged` says only the chosen slice changed, and so what the
+  ring's centre and the budget are about, **kept apart because it comes at every slice a finger
+  slides across**, where redrawing everything would not keep up. `Moved` says a panel was moved by
+  something other than the finger.
+
+**`PhoneSettings` holds what the phone remembers about itself** (D3, B3, B4): the theme
+(`PhoneTheme`: *Standaard*, *Kintsugi*), *Weergave* (`Appearance`: follow the phone, dark, light) and
+whether the first-time hints are due (`ShowsHints`).
+
+- **It is handed the file as two functions**, `Open(read, write)`, and the head passes
+  `SettingsFile.Read` and `TryWrite`. **Why two functions and not a port**: `MoneyBud.Presentation`
+  does not reference `MoneyBud.Storage`, and the data's port, `ILedgerStore`, is in the domain. A port
+  for the settings would put a phone-only concern that has nothing to do with money into the domain;
+  a reference would break the rule that only a head puts the two together. Two functions keep both
+  projects free of each other, and let the unit tests hand in whatever they like.
+- **Never in the way.** Settings that cannot be read, damaged, blank, an unknown theme name, a number
+  where a name should be, or none at all, are passed over without a word, each setting on its own, so
+  one bad value keeps its default and the rest still count. A first start is *Standaard*, *Systeem*
+  and the hints shown. Settings missing while the data exists, as when a file is copied onto a fresh
+  install, count as unreadable (B3). A failed write says nothing and is tried again with the next
+  choice; the worst it costs is the theme at the next start. **Why not as strict as the data**: the
+  settings are about the phone in the hand, and there is nothing in them worth protecting from being
+  written over.
+- **Written on every choice**, and choosing what is already chosen writes nothing. Choosing says
+  nothing (B4): the screen itself changes. **Never the data file**, so a choice saves nothing of the
+  ledger, and says nothing about saving even while saving the data is impossible.
+- **The hints count as shown when the home screen opens** (`HomeScreenOpened`, B3), which the head
+  calls only when `MoneyBudStart` opened the screen. As first built they were counted when the settings
+  were opened, and `spec-reviewer` found that a first start on unreadable data then used them up.
+  *Aanwijzingen opnieuw tonen* (`ShowHintsAgain`) shows them now, and not again at the next start.
+- **Written by hand**, with `Utf8JsonWriter` and `JsonDocument`, as `LedgerJson` writes the data,
+  because Android's trimmed build may take away what reflection-based serialisation needs.
+- **Rejected** (plan D3): Android's `SharedPreferences`, which the tests could not reach and the PC
+  runner would need a second way for; and the data file, which the ruling rules out.
+
+**`MoneyBudApp` knows when it is in the background** (D4, B1). `GoToBackground` makes one save attempt
+if something is unsaved, keeps the store and marks the screen as in the background; `Tick` does nothing
+until `ComeBack`, which looks at once through the same private `Look` the tick uses. The runtime is in
+[§6](06-runtime-view.md), *Going to the background and coming back, on the phone*. On the desktop
+neither is ever called, and `Tick` behaves as it always has.
+
+**Two figures only the phone shows** (B8, B12), both worked out in `PeriodOverview` so the head adds up
+nothing: **`IncomeTotal`**, every income the period lists, future-dated ones included, at the head of the
+income list and under *Niet toegewezen* in the ring (*"van € 2.570,00 inkomen"*); **`ExpenseTotal`**, at
+the head of the expense list; and **`ExpensesOn(category)`**, the list of a category's own expenses in
+the period, newest first, on its budget page, each opening to be changed. The approved prototype had all
+three. **The desktop shows none of them**, so the two heads differ in figures, not only in layout. That is
+flagged in §12 for the stakeholder rather than hidden, because §12 reads "the builds stay the same" as the
+same acts, rules, figures and words.
+
+**The Dutch the phone adds is in `Tekst`** (D7, B13), with the rest. Six rows of §12's display-terms
+table (*Instellingen*, *Weergave*, *Systeem* / *Donker* / *Licht*, *Thema*, *Standaard* / *Kintsugi*,
+*Aanwijzingen opnieuw tonen*) came into the table with the build and `TekstTests` holds them. *Klaar*
+is a control word, like *Sluiten*. The panels' headings, the hints, the date chips' *Gisteren*, *Saldo
+vandaag*, *Deze periode*, *Toewijzen aan …*, *Aan het eind van de periode*, *"Staat op …"* and the
+ring centre's figures are copy; `spec-reviewer` found the last two written in the head, and they moved
+into `Tekst`.
+
+**The phone head only lays out, draws, animates and binds**, and has no automated tests (plan D9;
+[§11](11-risks-and-technical-debt.md), the phone head's row). `spec-reviewer` found rules that had crept
+into it, and they were moved out or dropped: the category page's expense filter (now `ExpensesOn`);
+hiding the suggestion that matches what is typed exactly, dimming a row with nothing planned or spent,
+and heading the budget *Te veel toegewezen* where the desktop keeps *Niet toegewezen* and adds the badge,
+all three rules the desktop does not have. **One piece of a rule is still echoed in the head, knowingly**:
+the date chips (D8.1) work out which day *Gisteren* is from the ledger's today, and end an expense's and a
+transfer's calendar at today. The domain still refuses a future expense or transfer whatever the calendar
+offers, so the echo can hide a refusal, never make a wrong entry. The check the head has instead of tests
+is the headless picture run ([§8.5](#85-drawing-on-the-phone)).
+
 ### Pointing at the ring: the Desktop hands over a share, and nothing more
 
 `RingControl` turns the pointer's position into a share of the ring, read clockwise from the top.
@@ -1733,7 +1899,9 @@ that is all it does. `Ring.SliceAt` decides which slice is at that share. `Point
 highlighted is the slice `PointedSlice` names. The app holds the **share**, not the slice, so the
 slice is looked up afresh on every read. So a pointed slice can never show a figure that has since
 changed ("Nothing is cached", above). Stepping clears the share. The rulings are in
-[§12](12-glossary.md), *Hovering a slice shows its figures*.
+[§12](12-glossary.md), *Hovering a slice shows its figures*. **The phone points through the same
+`PointAt`**, but holds its chosen slice as a category and points again after every refresh, because its
+choice outlives the finger (*The phone on the presentation layer*, above).
 
 ### Tests that read the window's markup
 
@@ -1907,6 +2075,29 @@ feature file's header explains the steps the three files share:
 - **"Today is 29 September 2026" coming before "I have never used MoneyBud"** sets only the day, so a
   first start can be made on a chosen day (the note in `start-moneybud`).
 
+**How the phone's scenarios reach the screen** (`PhoneSteps`, with additions to `KeepingSteps` and
+`SpecContext`). Every one is tagged `@phone`, and none reaches the phone head, which has no tests by plan:
+
+- **Going to the background and coming back call `MoneyBudApp.GoToBackground` and `ComeBack`**, the
+  doors the head calls from Android's `onPause` and `onResume`. "I come back to MoneyBud" comes before
+  the minute's timer, so what follows is coming back's own doing. **"The phone ends MoneyBud while it
+  is in the background" drops MoneyBud without `Close`** (`SpecContext.EndInBackground`): no last
+  attempt, and the lock let go as the operating system lets go of a stopped process, so only what was
+  saved by then is found at the next start. "The next budget period begins while MoneyBud is in the
+  background" calls `Tick` on purpose, since the phone's timer might still fire there, and the steps
+  after it check that it did nothing.
+- **The settings are the real `SettingsFile`**, in a folder of the scenario's own apart from its data
+  folder, as on the phone, so nothing done to the data folder reaches them. They are opened through
+  `PhoneSettings.Open` at every start, whatever becomes of the data, as the head opens them. "Damaged",
+  "blank" and "gone" are done to that file while MoneyBud is closed, as the persistence steps do to the
+  data.
+- **"The home screen should show the hints" reads `ShowsHints`**. A start calls `HomeScreenOpened` only
+  when `MoneyBudStart` opened the screen, as the head does.
+- **Three scenarios in `choose-how-moneybud-looks.feature` hold by construction**, those that check a
+  choice leaves the data file alone: `PhoneSettings` has no way to the ledger or its store. They record
+  the design rather than test it, and `spec-reviewer` left them as they are, noted. **That the settings
+  are not in the USB folder is head code**, the Android host's choice of `FilesDir`, checked by reading.
+
 **What the unit tests cover** (`tests/MoneyBud.Specs/Unit/`): reading typed amounts, the Dutch
 wording against §12, money formatting, the ring's shares and its minimum width, the forms,
 narrowing the suggestions, pointing at the ring (`PointingTests`), and the order of the window's
@@ -2054,6 +2245,30 @@ It added `StartDayTests`, below what the scenarios see:
 hold, and refuses broken histories and backings. `TekstTests` holds the five name forms, the twelve short
 months, the question's and the notice's copy, and the new row.
 
+The phone increment added `PhoneScreenTests`, for the navigation D2 made decisions:
+
+- the ring: a slice touched stays chosen when the finger lifts; sliding chooses each slice passed and
+  keeps the last, and sliding back onto the one already chosen does not let go; a tap on the chosen
+  slice, on the centre or elsewhere on the home screen lets go, and a tap on another chooses it; the
+  choice staying on its category when the slices reorder and through a rename; a slice that goes away
+  let go while the budget stays on its category; stepping letting go; choosing told apart from a change;
+- the budget: opening on the category chosen, the whole list with *Niet toegewezen* chosen, a row
+  tapped choosing its slice, a row with no slice choosing nothing on the ring, and closing it letting go
+  of a row but not of a slice still chosen;
+- the back button, in its order, and left to Android on the home screen;
+- panels: pulling one closes another, pulled and let go at once is closed, leaving a form drops an
+  entry being changed and keeps a new one, a new expense closes its panel, a refusal stays, a change
+  saved and an entry removed go back to the list, an account's history opens and closes, and deleting
+  its account goes back to the accounts.
+
+`PhoneSettingsTests` covers each setting read on its own, names never numbers, text that is not an
+object, a failed write retried at the next choice, the same choice writing nothing, nothing written until
+the home screen opens, the hints fading and not shown again until asked for, and `SettingsFile` keeping
+text whole and failing without throwing. `PhoneOverviewTests`, added after `spec-reviewer` found the
+phone's figures and headings held by nothing, covers the two totals, a future-dated income included, an
+empty period, a category's own expenses newest first, a day headed *Vandaag*, *Gisteren* or by its date,
+and the headings worded from the terms. `TekstTests` holds the six new rows.
+
 **A ruling made after the scenario gate got its scenario: a data folder that cannot be reached.** It
 was ruled during review (2026-09-26), after `start-moneybud.feature` was approved, and for a moment
 it was held only by `StorageTests`. That test checks that the store reports such a folder as
@@ -2174,3 +2389,110 @@ current period, the tick keeping the question, the day already set asking, the s
 old first day, and a pending change never replaced. A headless run of the real window passed 28 checks
 (*The period start day on screen*, above). Two rulings were taken at the build (§12, *A configurable
 period start day: chosen in the build*).
+
+**At the close of the phone increment** (2026-09-30): **1943 tests passing** with zero warnings, 75 more
+than the 1868 above, from `choose-how-moneybud-looks.feature`, the phone's section of
+`carry-on-when-saving-fails.feature`, and `PhoneScreenTests`, `PhoneSettingsTests`, `PhoneOverviewTests`
+and the new `TekstTests` rows. The Android host is outside that count and outside `MoneyBud.slnx`; its
+Release build, signed with the stakeholder's key, succeeded. **`spec-reviewer` found no faked or vacuous
+step, no money defect, and a phone counterpart for every act and figure of the desktop**, and four
+findings, each fixed with a test that a mutation showed fails without the fix: the phone's totals and
+headings held by no test; the hints used up by a start that refused to open; a rebuilt budget page kept
+alive by fields that listened to the shared form for good, which now listen only while on screen; and
+rules and words that had crept into the phone head (*The phone on the presentation layer*, above).
+**Nothing was measured on the phone**, which was not connected ([§8.5](#85-drawing-on-the-phone)).
+
+## 8.5 Drawing on the phone
+
+**Built 2026-09-30, and never yet run on the phone.** The phone app is a second Avalonia head over the
+same projects ([ADR 0013](../decisions/0013-an-android-phone-app.md)), in `MoneyBud.Phone` with a thin
+Android host ([§5](05-building-block-view.md)). Before it, a **prototype** in `prototype/`, on invented
+data and connected to nothing in `src/`, was built and run on the stakeholder's phone in two approved
+rounds ([`prototype/README.md`](../../prototype/README.md); [§12](12-glossary.md), *MoneyBud on the
+phone*). **Its drawing code is what the app is made of**: the motion, the ring view and both painters,
+the slab painter, `Surface`, the grain, both themes, the controls' styles, the font, the wood and the
+shell's layers, springs and gestures were carried over into `MoneyBud.Phone` unchanged in look. What
+changed on the way is that the ring draws the shared `Ring`'s shares and colours a slice by its place
+(plan D6), that the ring reports where the finger is and `PhoneScreen` decides what a touch means
+([§8.4](#84-the-presentation-layer), *The phone on the presentation layer*), and that every panel reads
+and acts through `MoneyBudApp`. The prototype's `Sample/` data did not carry over. **What the prototype
+found about drawing on Android** stays below, because every item is invisible on the desktop and in a
+headless run. These are rules for whoever touches the phone head, whatever part of it.
+
+Until the build this section said "Settled 2026-09-29, not built", and that the prototype's fixes would
+carry over with its drawing code.
+
+### Four traps that show only on the phone
+
+| Trap | What happened in the prototype | The rule |
+|---|---|---|
+| **Avalonia's GPU resource budget is small for screen-sized pictures** | The kintsugi theme keeps several screen-sized pictures on the GPU: the table, the slabs, the plate's textures. Past Avalonia's default budget they were pushed out and sent again every frame, which held a drag to about 24 frames a second | **Raise the budget on Android.** The prototype sets `SkiaOptions.MaxGpuResourceSizeBytes` to 256 MB in its `MainActivity`, and a drag then runs at the phone's full 120 |
+| **A custom draw operation's `Render` runs on the render thread on Android** | On the desktop and in a headless run it runs on the UI thread, so a mistake there shows only on the phone. The first shader ring read a theme colour inside `Render`, which throws off the UI thread; every frame threw, and the screen froze and flickered. The stakeholder met it as two builds that hung | **Read everything a drawing needs before handing it over**, in `Paint` on the UI thread. `Render` touches no theme resource and no other UI object |
+| **A frame request alone may never get its frame** | `TopLevel.RequestAnimationFrame` waited for ever just after opening, when nothing else had changed, so the opening animation hung until the first touch | **Invalidate the visual with every frame request** (the prototype's `FrameLoop` does) |
+| **A control can be touched only where it draws** | The ring's hole and its margin ignored touches, so the pizza-shaped hit area ([§12](12-glossary.md), *Touching the ring*) did not work there | **Give the ring its own hit test** (`ICustomHitTest` in the prototype's `RingView`), covering the whole zone the finger is held in |
+
+**All four fixes are in the app, carried over with the code that needed them**, and none is proven on
+the device yet: `MoneyBudApplication` in the Android host raises the GPU budget to 256 MB; the kintsugi
+ring painter reads everything its shader's draw operation needs in `Paint`, on the UI thread; `Motion`'s frame loop invalidates the visual with every
+frame request; and `MoneyBud.Phone`'s `RingView` implements `ICustomHitTest`. The one part of this
+table the carrying over could not bring is the proof: in the prototype each was seen fixed on the phone,
+in the app each is only the same code.
+
+### Pictures drawn once, at 96 dpi
+
+**A surface that never changes is drawn once into a picture and reused.** Each kintsugi slab, with its
+chipped edges and gold breaks, was far too slow drawn as shapes every frame. So is the plate: what never
+changes for a plate of a given size, its light, its veins and how the breaks wander, is worked out once,
+in the background, about half a second on the phone, and a light shader combines it with the slices each
+frame.
+
+**Such a picture is made at 96 dpi and scaled by hand.** Made at the screen's own dpi, the slab came out
+magnified on the phone and right on the desktop, where the two are the same, so the desktop could not
+show the mistake.
+
+**Where the phone cannot compile the plate's shader, the plain ring is drawn instead**, so a device
+without the GPU feature still shows every figure. That is the prototype's choice, *approved with the
+prototype*.
+
+### Measured on the phone, and nowhere else
+
+**Frames are measured on the device**, with `dumpsys SurfaceFlinger --latency` on the app's layer, which
+gives the frames that really reached the screen, not a counter inside the app. **Feel is judged on a
+Release build**, which is compiled ahead of time. A headless run is too slow to trust for anything under
+about a second: a picture taken 0.1 seconds into a half-second fade showed the fade already over.
+
+**What that means while the phone is not connected.** None of these can be checked during the build.
+The traps above are known, and the prototype's fixes carried over with its drawing code, but whether the
+real app meets them is first seen when the stakeholder installs it, at the review that replaces this
+increment's gates ([§11](11-risks-and-technical-debt.md)). **Nothing was measured on the device in the
+phone increment**: no frame rate, no opening time, no touch. The prototype's 120 frames a second was
+measured on the prototype, which drew invented data and did not save; the app redraws from
+`MoneyBudApp`'s Overview and saves after every act, and whether that costs frames is unknown.
+
+### The check without a phone: pictures from a headless run
+
+**The phone increment's check of its screens is a headless run of the real ones** (plan D9):
+`dotnet run --project src/MoneyBud.Phone.Desktop -- snapshot <folder> dark light kintsugi-dark
+kintsugi-light` (the root README gives it). It starts the real `App` on Avalonia's headless platform with
+Skia drawing, over a real `MoneyBudApp` on synthetic data in a temporary folder, on a fixed day, and
+drives each screen with a pretend finger, mouse drags and taps, as a user would: opening, the home
+screen, a slice chosen, the income and expense panels and their forms, an entry being changed, a
+refusal, and on through every panel, saving a picture of each, in each theme and appearance asked for.
+`SLOW=` stretches the waits, since kintsugi's plate draws slowly without a GPU.
+
+**What it shows**: that every screen is laid out, bound and reachable by the gestures, in both themes,
+dark and light, over real figures, and that an act done by the finger reaches `MoneyBudApp`. **What it
+cannot show**: everything in the two sections above. Its `Render` runs on the UI thread, it has no GPU
+budget, its frames are not the phone's, and it is too slow to judge motion under a second. So it is a
+check of layout and wiring, not of the phone, and it is **for looking, not testing**: nothing in it
+asserts, and it is not part of `dotnet test`. `MoneyBud.Phone.Desktop` without `snapshot` shows the same
+screens in a phone-sized window on the PC, the mouse standing in for a finger, on data of its own.
+
+### Building for Android
+
+The Android build needs the `android` .NET workload and **JDK 17 or 21**; the `java` on the development
+machine's path is 25, too new, so the prototype's project, and now `MoneyBud.Phone.Android`, points at
+JDK 21 where it finds it. `adb` is in `%LOCALAPPDATA%\Android\Sdk\platform-tools`. These are facts of the
+development machine, recorded because the next build will meet them ([§7](07-deployment-view.md)).
+**A Release build also needs the signing key** in `%USERPROFILE%\MoneyBud-signing\`, and refuses to build
+without it ([§7](07-deployment-view.md), *Identity of the app*).

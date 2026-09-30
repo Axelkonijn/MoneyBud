@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- A stage-1 prototype of the mobile front-end: how it looks and feels, on invented data.
+       It decides nothing about the real MoneyBud and is not connected to it. See ../README.md. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
+    <!-- The kintsugi ring is drawn by a Skia shader, through Avalonia's lease on the Skia canvas. -->
+    <PackageReference Include="Avalonia.Skia" Version="12.1.3" />
+  </ItemGroup>
+
+  <!-- Kintsugi's heading face, Cormorant Garamond, under the SIL Open Font License (Theme/Fonts/OFL.txt),
+       and its tables, graded from CC0 wood textures (Theme/Kintsugi/README.md). -->
+  <ItemGroup>
+    <AvaloniaResource Include="Theme/Fonts/*.ttf" />
+    <AvaloniaResource Include="Theme/Kintsugi/*.jpg" />
+  </ItemGroup>
+
+</Project>

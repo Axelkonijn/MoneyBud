@@ -79,6 +79,18 @@ public static class Tekst
     public const string Monthly = "Maandelijks";
     public const string PeriodStartDay = "Periode begint op";
 
+    // The phone's settings (§12, *MoneyBud on the phone*): phone-only, by the themes exception, and
+    // in the table since increment 14's build.
+    public const string Settings = "Instellingen";
+    public const string Appearance = "Weergave";
+    public const string FollowThePhone = "Systeem";
+    public const string Dark = "Donker";
+    public const string Light = "Licht";
+    public const string Theme = "Thema";
+    public const string StandardTheme = "Standaard";
+    public const string KintsugiTheme = "Kintsugi";
+    public const string ShowHintsAgain = "Aanwijzingen opnieuw tonen";
+
     // One Dutch word for two English terms, chosen rather than fallen into (§12): removing acts on
     // an entry and deleting on a category, so the word is never ambiguous where it is shown.
     public const string Delete = "Verwijderen";
@@ -88,6 +100,7 @@ public static class Tekst
     public const string Save = "Opslaan";
     public const string Cancel = "Annuleren";
     public const string Close = "Sluiten";
+    public const string Done = "Klaar";
     public const string AreYouSure = "Weet je het zeker?";
 
     // The Staat op list's choice for no backing: a symbol, not a term (§12, *Proposed display terms
@@ -105,6 +118,62 @@ public static class Tekst
     public const string EmptyRing = "Nog geen inkomsten in deze periode";
     public const string NoExpenses = "Geen uitgaven in deze periode";
     public const string NoIncomes = "Geen inkomsten in deze periode";
+
+    // ------------------------------------------------------------------ the phone's headings and hints
+    //
+    // Copy, not terms: the phone lays the same acts out in panels, and these name the panels and
+    // point the way (plan for increment 14, D7). Most came with the approved prototype.
+
+    public const string Categories = "Categorieën";
+    public const string NewExpense = "Nieuwe uitgave";
+    public const string NewIncome = "Nieuwe inkomst";
+    public const string ChangeExpense = "Uitgave wijzigen";
+    public const string ChangeIncome = "Inkomst wijzigen";
+    public const string ChangeTransfer = "Overboeking wijzigen";
+    public const string NewCategory = "Nieuwe categorie";
+    public const string NewAccount = "Nieuwe rekening";
+    public const string RenameCategoryTitle = "Categorie hernoemen";
+    public const string RenameAccountTitle = "Rekening hernoemen";
+    public const string Yesterday = "Gisteren";
+    public const string OtherDate = "Andere datum…";
+    public const string ExampleIncome = "Bijvoorbeeld Salaris";
+    public const string ExampleExpense = "Bijvoorbeeld Albert Heijn";
+    public const string ExampleCategory = "Bijvoorbeeld Uit eten";
+    public const string ExampleAccount = "Bijvoorbeeld Spaarrekening";
+    public const string ChooseOrTypeCategory = "Kies of typ een categorie";
+    public const string StartingBalanceHint = "Leeg laten mag";
+    public const string IncomeTotalCaption = "binnengekomen of verwacht";
+    public const string ExpenseTotalCaption = "uitgegeven";
+    public const string SwipeForNewIncome = "Veeg nog eens naar rechts voor een nieuwe inkomst  ›";
+    public const string SwipeForNewExpense = "‹  Veeg nog eens naar links voor een nieuwe uitgave";
+    public const string BalanceToday = "Saldo vandaag";
+    public const string ThisPeriod = "Deze periode";
+    public const string AtPeriodEnd = "Aan het eind van de periode";
+    public const string HoldTheRing = "Houd je vinger op de ring";
+    public const string StartDayExplained = "De dag waarop elke nieuwe periode begint.";
+    public const string NoHistory = "Nog niets op deze rekening";
+
+    /// <summary>A day's heading in the phone's lists: "Vandaag", "Gisteren", or the day, "14 maart 2026".</summary>
+    public static string DayHeading(DateOnly day, DateOnly today) =>
+        day == today ? Today : day == today.AddDays(-1) ? Yesterday : DayName(day);
+
+    /// <summary>Under <i>Niet toegewezen</i> in the phone's ring: "van € 2.500,00 inkomen".</summary>
+    public static string OfIncome(Money income) => $"van {Euro(income)} inkomen";
+
+    /// <summary>Under a category's bar in the phone's budget list: "€ 150,00 van € 400,00".</summary>
+    public static string SpentOf(Money spent, Money budget) => $"{Euro(spent)} van {Euro(budget)}";
+
+    /// <summary>The heading over assigning, on a category's own page: "Toewijzen aan Boodschappen".</summary>
+    public static string AssignTo(string category) => $"{Assign} aan {category}";
+
+    /// <summary>Under a backed category's name in the phone's budget list: "Staat op Spaarrekening".</summary>
+    public static string BackedBy(string account) => $"{BackingAccount} {account}";
+
+    /// <summary>A term and its figure on one line, as the phone's ring centre shows them: "Budget € 400,00".</summary>
+    public static string Figure(string term, Money amount) => $"{term} {Euro(amount)}";
+
+    /// <summary>The heading of a category's <i>Staat op</i> list: "Boodschappen staat op".</summary>
+    public static string BackingOf(string category) => $"{category} {BackingAccount.ToLowerInvariant()}";
 
     // ------------------------------------------------------------------ keeping (§12, *What MoneyBud keeps*)
 

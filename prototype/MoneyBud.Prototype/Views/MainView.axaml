@@ -1,0 +1,89 @@
+<!--
+  The whole prototype is one view in layers. The home screen — the ring — never moves on its own;
+  everything else is pulled over it: income from the left, expenses from the right, the budget
+  from below, the accounts from above. Messages and pop-ups lie on top of all of it.
+-->
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ring="using:MoneyBud.Prototype.Ring"
+             xmlns:views="using:MoneyBud.Prototype.Views"
+             x:Class="MoneyBud.Prototype.Views.MainView"
+             Background="{DynamicResource Bg}"
+             Foreground="{DynamicResource Text}"
+             FontFamily="fonts:Inter#Inter, $Default"
+             ClipToBounds="True">
+  <Panel x:Name="Root">
+
+    <!-- A soft light behind the ring. It stays put while the home screen moves. -->
+    <Border x:Name="Glow" IsHitTestVisible="False" />
+
+    <!-- Home: the ring and the period. Blurred under a panel, shrunk under a half-open sheet. -->
+    <Panel x:Name="Home" RenderTransformOrigin="50%,0%">
+      <!-- The ring on top, centred in the room above; the period under it, where the thumb is;
+           under that a band left free, where swipes start. -->
+      <Grid x:Name="HomeGrid" RowDefinitions="*,Auto,112">
+        <Panel x:Name="RingArea" Margin="14,40,14,4">
+          <ring:RingView x:Name="Ring" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <!-- What the hole says, over a soft oval where a theme wants one behind the figures. -->
+          <Panel HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+            <Border x:Name="HoleBackdrop" Margin="-34,-22" Background="{DynamicResource HoleBackdrop}" />
+            <StackPanel x:Name="Hole" Spacing="3" />
+          </Panel>
+        </Panel>
+        <Grid x:Name="PeriodBar" Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="8,0">
+          <Button x:Name="PreviousPeriod" Theme="{StaticResource Icon}" />
+          <Button x:Name="PeriodButton" Grid.Column="1" Theme="{StaticResource Plain}"
+                  HorizontalAlignment="Center" Padding="16,4">
+            <StackPanel x:Name="PeriodText" HorizontalAlignment="Center">
+              <TextBlock x:Name="PeriodTitle" Classes="h2" HorizontalAlignment="Center" />
+              <TextBlock x:Name="PeriodSubtitle" Classes="muted" HorizontalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="NextPeriod" Grid.Column="2" Theme="{StaticResource Icon}" />
+        </Grid>
+      </Grid>
+    </Panel>
+
+    <Border x:Name="Scrim" Background="#000000" Opacity="0" IsHitTestVisible="False" />
+
+    <!-- Below: the budget, a sheet that stops halfway or opens fully. -->
+    <views:Surface x:Name="BudgetSheet" Side="Bottom" VerticalAlignment="Bottom" IsVisible="False"
+            Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
+            BorderThickness="0,1,0,0" CornerRadius="28,28,0,0" />
+
+    <!-- Left: income. The list first, the form one more swipe further. -->
+    <Panel x:Name="IncomeSide" IsVisible="False">
+      <views:Surface x:Name="IncomeList" Side="Left" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="0,0,1,0" />
+      <views:Surface x:Name="IncomeForm" Side="Left" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="0,0,1,0" />
+    </Panel>
+
+    <!-- Right: expenses, the same two steps. -->
+    <Panel x:Name="ExpenseSide" IsVisible="False">
+      <views:Surface x:Name="ExpenseList" Side="Right" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="1,0,0,0" />
+      <views:Surface x:Name="ExpenseForm" Side="Right" Background="{DynamicResource Glass}"
+              BorderBrush="{DynamicResource PanelEdge}" BorderThickness="1,0,0,0" />
+    </Panel>
+
+    <!-- Above: the accounts, and an account's history under a tap. -->
+    <Panel x:Name="AccountsSide" IsVisible="False" VerticalAlignment="Top">
+      <views:Surface x:Name="AccountsList" Side="Top" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
+              BorderThickness="0,0,0,1" CornerRadius="0,0,28,28" />
+      <views:Surface x:Name="AccountHistory" Side="Top" Background="{DynamicResource Glass}" BorderBrush="{DynamicResource GlassEdge}"
+              BorderThickness="0,0,0,1" CornerRadius="0,0,28,28" />
+    </Panel>
+
+    <Panel x:Name="Hints" IsHitTestVisible="False" IsVisible="False" />
+
+    <Border x:Name="Toast" VerticalAlignment="Bottom" IsVisible="False" Background="{DynamicResource Toast}"
+            CornerRadius="18" Padding="18,14" Margin="14,0" />
+
+    <Panel x:Name="ModalLayer" IsVisible="False" />
+
+    <!-- A theme's texture — kintsugi's ceramic grain — over everything, touching nothing. -->
+    <Border x:Name="Texture" IsHitTestVisible="False" />
+
+  </Panel>
+</UserControl>
