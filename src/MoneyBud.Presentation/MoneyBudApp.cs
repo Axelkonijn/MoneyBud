@@ -379,6 +379,15 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// </summary>
     public void Tick()
     {
+        // On the phone, in the background, nothing is done by itself: a notice said while nobody is
+        // looking would never be seen, and a sweep is said only once. Coming back does it instead.
+        if (inBackground) return;
+
+        Look();
+    }
+
+    private void Look()
+    {
         // A start-day question names the current period it would give, which a new day can change,
         // so it is dropped and the list put back (plan for increment 13, reading 4).
         if (askedStartDay is not null && Ledger.Today != askedOn) DropQuestion();
@@ -404,6 +413,35 @@ public sealed partial class MoneyBudApp : ObservableObject
     {
         if (IsUnsaved) store?.TrySave(Ledger.ToSnapshot());
         store?.Dispose();
+    }
+
+    // On the phone, between going to the background and coming back.
+    private bool inBackground;
+
+    /// <summary>
+    /// MoneyBud going to the background, on the phone: the last moment it can count on, since
+    /// Android may end it there without warning (arc42 §12, <i>Android's lifecycle</i>). Changes not
+    /// yet kept get one more try, as closing gives them on the desktop; with everything kept,
+    /// nothing is written. Nothing is asked, and — unlike <see cref="Close"/> — MoneyBud stays open,
+    /// holding its data, to carry on when it comes back. Until then <see cref="Tick"/> does nothing
+    /// (plan for increment 14, D4; carry-on-when-saving-fails.feature).
+    /// </summary>
+    public void GoToBackground()
+    {
+        inBackground = true;
+        if (IsUnsaved) Keep();
+    }
+
+    /// <summary>
+    /// MoneyBud back in the foreground, on the phone: it looks again at once, exactly as the minute's
+    /// <see cref="Tick"/> does, so that a screen left overnight is right the moment it is seen rather
+    /// than up to a minute later — and whatever came due in the background is done and said now,
+    /// where it can be seen (plan for increment 14, D4).
+    /// </summary>
+    public void ComeBack()
+    {
+        inBackground = false;
+        Look();
     }
 
     /// <summary>Saves the whole ledger, and notes whether that worked for the line to say.</summary>

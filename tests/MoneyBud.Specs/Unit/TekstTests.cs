@@ -66,6 +66,12 @@ public sealed partial class TekstTests
         ["Frequency (the list on the income and expense forms that sets it)"] = [Tekst.Frequency],
         ["One-off / Weekly / Monthly (the frequencies, and a latest occurrence's label)"] = [Tekst.OneOff, Tekst.Weekly, Tekst.Monthly],
         ["Period start day (the list beside the period's name that sets it)"] = [Tekst.PeriodStartDay],
+        ["Settings (the panel the gear opens, on the phone)"] = [Tekst.Settings],
+        ["Appearance, light or dark (the setting, on the phone)"] = [Tekst.Appearance],
+        ["Follow the phone / Dark / Light (the appearance's choices)"] = [Tekst.FollowThePhone, Tekst.Dark, Tekst.Light],
+        ["Theme (the setting, on the phone)"] = [Tekst.Theme],
+        ["The two themes"] = [Tekst.StandardTheme, Tekst.KintsugiTheme],
+        ["Show the hints again (the button, on the phone)"] = [Tekst.ShowHintsAgain],
     };
 
     [Fact]

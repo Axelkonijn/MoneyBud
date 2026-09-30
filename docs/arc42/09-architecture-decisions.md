@@ -22,7 +22,7 @@ later ask "why on earth is it like this?".
 | [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011. Dated note, 2026-09-29: a sweep's period named through the ledger's calendar, and a sweep made by a change of start day dated that day, by 0012 | 2026-09-28 |
 | [0011](../decisions/0011-recurring-entries.md) | A recurring entry is state beside its occurrences, and settling works event by event | Accepted; takes 0007's format to version 5 and reads version 4 | 2026-09-28 |
 | [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4 | 2026-09-29 |
-| [0013](../decisions/0013-an-android-phone-app.md) | MoneyBud is used on an Android phone, as a second head over the same projects | Accepted; **supersedes 0002**; extends 0005 and 0006 by dated notes | 2026-09-29 |
+| [0013](../decisions/0013-an-android-phone-app.md) | MoneyBud is used on an Android phone, as a second head over the same projects | Accepted; **supersedes 0002**; extends 0005 and 0006 by dated notes. Built 2026-09-30, its decision 6 answered by the phone plan's D1 without a record of its own | 2026-09-29 |
 | [0014](../decisions/0014-real-use-and-the-phone-data.md) | Real use: every later version reads the data, which on the phone lives in the app's own folder under one fixed signing key | Accepted; **supersedes 0007 in part** | 2026-09-29 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
@@ -273,3 +273,21 @@ each would only repeat 0014.
 a note** (2026-09-29): the promise runs from the version he accepts at the review, not the first
 installed; the phone's own lock is the protection; and the app opts out of Android's automatic backup.
 0014 was written the same day and nothing had been built on it, so there was no earlier belief to keep.
+
+**The phone increment's build added no record** (2026-09-30), and that is this section's judgement, not
+an oversight. The choices that pass this section's test were already recorded: the second head, its
+toolkit, the rule that it decides nothing, and themes as the one difference are ADR 0013's; where the
+data lives, the fixed key and package name, the backup opt-out and the promise are ADR 0014's. **What
+0013 left to the plan, the project layout (its decision 6), is recorded in the plan**, as decision D1
+([the plan](../plans/increment-14-phone.md)): three new projects, with the Android host
+outside `MoneyBud.slnx` because it needs the `android` workload and slows every build, and the phone's
+screens in a project of their own that runs on the PC, with the reasons and the rejected alternatives
+beside it. That is the kind of detail 0013 chose to leave out of a record, and [§5](05-building-block-view.md)
+now carries it. **It is cheap to reverse**: moving the screens or the host between projects changes no
+data and no rule, which is the other half of this section's test. The plan's other decisions carry out
+0013 and 0014 rather than choosing between architectures: `PhoneScreen` is 0013 decision 4 applied, the
+settings file is §12's ruling built, the package name and key's place are what 0014 left to the plan,
+and **the file format stays at version 7**, so 0007 needs no dated note either. Had the build changed the
+format, or put the phone's navigation in the head, a record or a note would have been owed. **None of it
+was approved at a gate**, since the stakeholder waived both; if his review at the end overturns a plan
+decision that a record would have held, that is the moment to write one.

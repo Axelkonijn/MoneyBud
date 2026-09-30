@@ -131,7 +131,10 @@ version reads the data it saved, and it starts fresh with the six default catego
 ([ADR 0013](../decisions/0013-an-android-phone-app.md), [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)).
 That ends "a working demo, not an MVP" above, as the stakeholder chose, and it serves effortless entry,
 quality goal 2, on the device where entry happens. **This increment is run without its two approval
-gates**, by his ruling: he reviews the scenarios, the plan and the app together at the end.
+gates**, by his ruling: he reviews the scenarios, the plan and the app together at the end. **It is
+built** (specified, planned and built on 2026-09-30), as a signed Android app that has **not yet run on
+his phone**, which was not connected. So the demo ends, and real use starts, not with the build but
+with the version he accepts at that review.
 
 ## 1.2 Quality Goals
 

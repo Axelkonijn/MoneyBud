@@ -1,0 +1,59 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- MoneyBud on Axel's Android phone (ADR 0013). Only what Android needs lives here: the activity,
+       where the data and the settings are kept, the tick in the hand, the backup opt-out, and the
+       signing. The screens are MoneyBud.Phone's. Not in MoneyBud.slnx: building it needs the android
+       workload and JDK 21 and takes minutes (plan for increment 14, D1). Built with
+         dotnet publish src/MoneyBud.Phone.Android -c Release -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>31</SupportedOSPlatformVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <ApplicationTitle>MoneyBud</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <!-- The package name is fixed for good: Android treats another name as another app, with another,
+       empty folder (ADR 0014, decision 4). A Debug build is a different app on purpose, so a build
+       signed with Android's debug key can never be installed over the real one, nor its data taken
+       for the real data (plan D5). -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <ApplicationId>app.moneybud</ApplicationId>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' != 'Release'">
+    <ApplicationId>app.moneybud.debug</ApplicationId>
+    <ApplicationTitle>MoneyBud (debug)</ApplicationTitle>
+  </PropertyGroup>
+
+  <!-- The Android build wants JDK 17 or 21; the newest Java on the PATH may be too new. -->
+  <PropertyGroup Condition="'$(JavaSdkDirectory)' == '' and Exists('C:\Program Files\Java\jdk-21.0.10')">
+    <JavaSdkDirectory>C:\Program Files\Java\jdk-21.0.10</JavaSdkDirectory>
+  </PropertyGroup>
+
+  <!-- Signed with Axel's one fixed key, which is kept outside this public repository together with
+       its password: every update then installs over the one before, and nothing is ever deleted
+       (ADR 0014, decision 4). The repository holds only where the key is looked for. A Release build
+       without the key refuses to build rather than sign with any other, since a build signed with
+       another key installs only after uninstalling, which deletes the data (plan D5). -->
+  <PropertyGroup>
+    <MoneyBudSigning Condition="'$(MoneyBudSigning)' == ''">$(USERPROFILE)\MoneyBud-signing\signing.props</MoneyBudSigning>
+  </PropertyGroup>
+  <Import Project="$(MoneyBudSigning)" Condition="'$(Configuration)' == 'Release' and Exists('$(MoneyBudSigning)')" />
+  <Target Name="RequireMoneyBudKey" BeforeTargets="PrepareForBuild" Condition="'$(Configuration)' == 'Release' and !Exists('$(MoneyBudSigning)')">
+    <Error Text="MoneyBud's signing key was not found at $(MoneyBudSigning). A Release build is only ever signed with that key: see the README, 'MoneyBud on the phone'." />
+  </Target>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Android" Version="12.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MoneyBud.Phone\MoneyBud.Phone.csproj" />
+  </ItemGroup>
+
+</Project>

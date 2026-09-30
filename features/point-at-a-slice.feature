@@ -34,6 +34,14 @@
 # How an amount is written on screen ("€ 350,00") is held by the developer unit tests, as it is
 # everywhere else, so the steps below compare amounts, not text.
 #
+# On the phone (note added 2026-09-30, increment 14): POINTING COVERS THE PHONE'S TAP, AND ITS HOLD AND
+# SLIDE OVER THE RING, as well as the desktop's hover (glossary: "Touching the ring"; ADR 0013,
+# Consequences). What a slice shows does not change, so every scenario here holds on both. What the
+# phone adds on top has no desktop counterpart and is held by developer unit tests, not by scenarios:
+# a slice that stays chosen when the finger lifts, a second tap (or a tap elsewhere) that lets it go,
+# the budget panel opening on the chosen category, and Android's back button letting go of a chosen
+# category before it closes a panel. So is the ring's pizza-shaped reach, which is drawing.
+#
 # Reading the steps:
 #   - "I point at the "X" slice in the ring for the ... budget period" and "I point at the
 #     Unassigned slice in the ring for the ... budget period" point at one slice of the ring that

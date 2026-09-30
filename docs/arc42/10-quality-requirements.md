@@ -32,6 +32,11 @@ an agreed threshold. "A drag runs at the phone's full frame rate, measured on th
 candidate for the first scenario here, and it waits for him to agree it. Writing it now would be the
 invented threshold this note warns against._
 
+_**Still empty after the phone was built (2026-09-30).** Nothing was measured on the phone in that
+increment, which was built without it, so there is not even a measurement of the real app to offer him
+([§8.5](08-crosscutting-concepts.md)). The review, where he first runs it, is the moment to measure the
+candidate above on the app and ask whether it is his threshold._
+
 ## 10.1 Quality Tree
 
 _Empty._

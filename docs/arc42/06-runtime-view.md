@@ -45,14 +45,18 @@ describing.
   and, when it ends the current period, passes the boundary itself, dated today, because settling
   cannot ([ADR 0012](../decisions/0012-the-calendar-is-a-history.md)).
 
-**The scenarios below were drawn for the desktop.** The phone app, settled on 2026-09-29 and not built
-([ADR 0013](../decisions/0013-an-android-phone-app.md)), runs the same collaboration behind every act.
-Where it will differ is at the edges this section draws for the desktop: *Starting*, *Saving* and
-*Closing* rest on a window that opens and closes and a timer once a minute, and Android stops an app in
-the background without closing it. **What the user meets there is ruled** (2026-09-29; [§12](12-glossary.md),
-*Android's lifecycle*): the last save attempt is made when MoneyBud goes to the background, there is no
-second start to refuse, and unreadable data shows its message and closes the app when it is tapped away.
-How the calls run is for the plan, and is drawn here once it is built.
+- **Going to the background and coming back, on the phone**, since the phone increment (built
+  2026-09-30), in words: the phone's counterpart of *Closing* and of the minute's timer, where Android
+  stops an app without closing it.
+
+**The scenarios below were drawn for the desktop, and the phone runs the same collaboration behind
+every act** ([ADR 0013](../decisions/0013-an-android-phone-app.md)): a panel's form calls the same
+`MoneyBudApp` members as a desktop form, `MoneyBudStart` opens it the same way, and a save is the same
+`Tell` and `Keep`. Where the phone differs is at the edges: *Starting* ends differently when the data
+cannot be read, and *Closing* hardly happens, because Android stops an app in the background rather
+than closing it. What the user meets there is ruled ([§12](12-glossary.md), *Android's lifecycle*).
+How the calls run was the plan's (D4) and the build's (B1, B5, B6), and is the last section below.
+Until the build this paragraph said it would be drawn here once built.
 
 ## Recording an expense through the screen
 
@@ -598,3 +602,59 @@ process dies instead of closing, the operating system closes the lock file for i
 leaves the data held. A save cut off by that crash leaves `moneybud.json` as it was and at most a
 `moneybud.json.tmp`, which the next start never reads, and which the next save writes over
 ([ADR 0007](../decisions/0007-keeping-the-ledger.md)).
+
+## Going to the background and coming back, on the phone
+
+Since the phone increment (built 2026-09-30; [the plan](../plans/increment-14-phone.md), D4, B1, B5,
+B6). None of it has run on the phone yet ([§11](11-risks-and-technical-debt.md)). The rulings it
+carries out are [§12](12-glossary.md), *Android's lifecycle*: the last attempt to save is made when
+MoneyBud goes to the background, there is no second start, and unreadable data shows its message and
+closes the app. What the static view cannot show is that going to the background is **not** closing,
+and that the minute's work waits for coming back.
+
+**Going to the background.** Android calls the activity's `onPause`. `MainActivity` raises
+`PhoneHost.GoToBackground`, and the phone's `MainView`, listening, does three things in order: stops
+the minute's timer, lets go of the keyboard's focus, and calls `MoneyBudApp.GoToBackground`. That
+marks the screen as in the background and, **only if something is unsaved**, calls `Keep` once: the
+whole ledger, through the temporary file and the rename, as after an act. With everything saved it
+writes nothing. It settles nothing, says nothing, asks nothing and redraws nothing, and **it keeps the
+store**, so the lock stays claimed and MoneyBud stays open with its data, ready to carry on. That is
+the difference from `Close`, which disposes the store.
+
+**In the background nothing happens by itself** (B1, chosen in the scenarios). Two things hold that,
+one in each layer: the head stops the timer, and `MoneyBudApp.Tick` returns at once between
+`GoToBackground` and `ComeBack`, so a tick that still arrives does nothing. **Why**: a notice said while
+nobody is looking would never be seen, and a sweep or an occurrence is said exactly once (*The sweep at
+settling*, *Settling day by day*, above). So nothing is settled, swept or recorded there, and no
+failed save is retried.
+
+**Coming back.** Android calls `onResume`. `PhoneHost.ComeBack` reaches `MainView`, which calls
+`MoneyBudApp.ComeBack` and then starts the timer again. `ComeBack` clears the background mark and
+**looks at once, exactly as the minute's `Tick` does**, through the one private `Look` both share: it
+drops a start-day question asked on an earlier day, settles, takes the occurrences and sweeps settling
+made and shows them in a notice (dropping a waiting question, as the tick does), keeps the ledger if
+settling changed it or a save had failed, and refreshes. So after a night in the background, a period
+that began meanwhile is settled and swept, an occurrence that came due is recorded, and *Huidige
+periode* has moved, **the moment the screen is seen**, not up to a minute later, and each is said where
+it can be seen. At a start Android also calls `onResume`; a look then finds nothing new, since opening
+has just settled.
+
+**Why `onPause` and `onResume`** (B5, chosen in the build): they are the earliest moments Android
+gives, before `onStop` and after `onStart`. A pause that is not really leaving, such as a system
+dialog over MoneyBud, costs one save attempt only when something was unsaved, and one look on return.
+
+**The phone ending MoneyBud in the background** calls nothing in MoneyBud: no `Close`, no last attempt.
+The operating system lets go of the lock, as it does for a crashed desktop. So what was saved by the
+time MoneyBud went to the background is what the next start finds, and changes a failed attempt left
+unsaved are lost (B2, derived in the scenarios), as they are when closing's last attempt fails on the
+desktop. The phone's settings are not involved: they are written on every choice, not on leaving
+([§8.4](08-crosscutting-concepts.md), *The phone on the presentation layer*).
+
+**The lock is still claimed on the phone** (D4). Android runs one instance of an app, so *MoneyBud is
+al geopend* cannot be reached there, but the store is the desktop's code, and claiming costs nothing.
+
+**Unreadable data ends the app.** `App.Start` hands a `FileLedgerStore` on the app's own folder to
+`MoneyBudStart.Start`, as the Desktop does (*Starting MoneyBud*, above). Refused, it shows a
+`MessageView` with the refusal's text and *OK*; *OK*, or the back button, calls `PhoneHost.Quit`, which
+finishes the activity and ends the process (B6), so the next start reads the file afresh, after the
+stakeholder has fixed or replaced it over USB. No `MoneyBudApp` was made, so nothing can save.

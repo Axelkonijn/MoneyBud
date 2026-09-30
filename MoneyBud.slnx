@@ -2,6 +2,8 @@
   <Folder Name="/src/">
     <Project Path="src/MoneyBud.Desktop/MoneyBud.Desktop.csproj" />
     <Project Path="src/MoneyBud.Domain/MoneyBud.Domain.csproj" />
+    <Project Path="src/MoneyBud.Phone.Desktop/MoneyBud.Phone.Desktop.csproj" />
+    <Project Path="src/MoneyBud.Phone/MoneyBud.Phone.csproj" />
     <Project Path="src/MoneyBud.Presentation/MoneyBud.Presentation.csproj" />
     <Project Path="src/MoneyBud.Storage/MoneyBud.Storage.csproj" />
   </Folder>

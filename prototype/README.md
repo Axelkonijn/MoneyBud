@@ -101,6 +101,15 @@ round 2 he dropped it — he will bring it up again if he wants it
 §8.5 *Drawing on the phone*, ADRs 0013 and 0014 — and the real phone app is built from those, not
 from this code. Its layout, styling, animations and theme files are what is meant to carry over.
 
+**Carried over in increment 14** (2026-09-30) into `src/MoneyBud.Phone`: the motion (`Motion/`), the
+ring painters, the slab painter, `Surface`, the grain, both theme dictionaries, the controls' styles,
+the font and the wood, and the shell's layers, springs and gestures, all unchanged in look. What
+changed on the way: the ring draws the shared ring's shares instead of working out its own, and
+colours a slice by its place, as the desktop does; the ring reports where the finger is, and
+`PhoneScreen` in `MoneyBud.Presentation` decides what a touch means; every panel reads `MoneyBudApp`
+and acts through it and its forms, where this prototype read `Sample/`. `Sample/` and `Flags` did not
+carry over. This folder stays as it was, as the record of what was approved.
+
 How a theme is built: a `ResourceDictionary` with the same keys as `Theme/Default.axaml`, and a
 `RingPainter` of its own, named together in `Theme/Looks.cs`. Nothing else in the prototype names a
 colour. `PanelEdge`, `CardEdge`, `GrainOpacity`, `HeadingFont`, `H1Size` and `H2Size` exist for

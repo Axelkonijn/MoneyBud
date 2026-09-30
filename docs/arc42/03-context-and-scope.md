@@ -66,7 +66,7 @@ The UI toolkit, Avalonia, is now chosen ([ADR 0005](../decisions/0005-avalonia-u
 It changes nothing in this section: it sits inside the application, on the first row above, and
 adds no channel to anything outside it.
 
-**The phone (settled 2026-09-29, not built) adds no channel either** ([ADR 0013](../decisions/0013-an-android-phone-app.md),
+**The phone (settled 2026-09-29, built 2026-09-30) adds no channel either** ([ADR 0013](../decisions/0013-an-android-phone-app.md),
 [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). It is a second copy of the two rows
 above, on a second device: the user and MoneyBud through the phone's screen, and MoneyBud and its own
 file in the app's folder on the phone. **Copying that file between phone and desktop, over USB, is the
@@ -75,7 +75,10 @@ What MoneyBud reads from the phone itself, its light or dark setting and whether
 is the platform it runs on, not a party to exchange data with.
 
 **One channel is closed on purpose**: Android can copy an app's files to the user's Google account
-unless the app opts out, and **MoneyBud opts out**, by the stakeholder's ruling of 2026-09-29. The data
-stays on the phone only; his copies over the cable are the backup
+unless the app opts out, and **MoneyBud opts out**, by the stakeholder's ruling of 2026-09-29. The build
+closes a second, neighbouring one with it: Android's copy of an app to a new device, which on Android 12
+and later the backup flag alone does not stop, so the app's data extraction rules exclude every folder
+from both (plan D5, [§7](07-deployment-view.md)). The data stays on the phone only; his copies over the
+cable are the backup
 ([ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)). Had it been allowed, it would have been
 the first thing to move this boundary.
