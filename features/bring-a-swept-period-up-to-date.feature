@@ -23,7 +23,7 @@
 #     IT, like the cap on a negative assignment. IF THE CATEGORY IS NO LONGER BACKED, NOTHING MOVES,
 #     because unbacking already returned its money, and THE LINE STOPS ASKING (follow-up). Rejected:
 #     only from the account it was first swept into.
-#     (REVISED FOR INCREMENT 15, 2026-10-04, not yet approved; glossary: "Vrij, and moving Opgebouwd",
+#     (REVISED FOR INCREMENT 15, 2026-10-04, approved at the scenario gate on 2026-10-04; glossary: "Vrij, and moving Opgebouwd",
 #     follow-up 14. Setting Staat op to "—" no longer returns swept money: it stays on the account, still
 #     the category's. So AN OVER-SWEEP FROM A CATEGORY ON "—" COMES BACK OUT OF THE MONEY IT LEFT BEHIND,
 #     AT MOST THAT, from the account it is on to the pool account. Nothing moves, and the line stops

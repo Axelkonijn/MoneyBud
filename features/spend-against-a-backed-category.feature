@@ -8,7 +8,7 @@
 # REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "An expense on a backed category is on its account", a
 # follow-up ruling of the stakeholder that day, and its follow-ups 15 and 16). The scenarios marked
 # "Revised for increment 15", "Reversed for increment 15", "Replaced for increment 15" or "New in increment
-# 15" below are NOT YET APPROVED; they go to the scenario gate.
+# 15" below were APPROVED at the scenario gate on 2026-10-04.
 #   - AN EXPENSE AGAINST A CATEGORY THAT HAS AN ACCOUNT IS ALWAYS ON THAT ACCOUNT. THE FORM'S ACCOUNT LIST
 #     IS LOCKED ON IT. Categories without an account keep the list, for cash or another card. He did not
 #     see how a backed category's expense could be on another account at all: "Why can we make expenses
@@ -351,13 +351,18 @@ Feature: Spend against a backed category
   # Revised for increment 15: Deposit now pays in both rows, not Bank. The list is locked from the period
   # the category got its account, so the receipt from yesterday, before the day of backing, is on Deposit
   # too (follow-up 16, derived). The balances change; Accumulated does not.
+  #
+  # Corrected at the build, 2026-10-04, with the stakeholder: Deposit's starting balance is dated the
+  # period's first day, not today. Dated today it would already hold the receipt from yesterday (a typed
+  # balance holds every entry dated before its day, show-accounts.feature), and Deposit would stay at
+  # 300. What the scenario is about is unchanged.
   # ----------------------------------------------------------------------------------
 
   Scenario Outline: An expense dated in the period of backing lowers Accumulated, dated before the backing or after it
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
-    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have an account "Deposit" with a starting balance of 0 euro dated the first day of the current budget period
     And I have a budget of 300 euro for "Savings" in the current budget period
     And I have set the backing account of "Savings" to "Deposit"
     When I record an expense of 50 euro for "Savings" labelled "Bon" dated <day>

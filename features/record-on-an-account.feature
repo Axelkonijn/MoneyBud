@@ -12,7 +12,7 @@
 #     An expense against a BACKED category starts out on its backing account instead, once the
 #     category is typed (spend-against-a-backed-category.feature). No category below is backed, so
 #     every expense here starts out on the pool account.
-#     (Revised for increment 15, 2026-10-04, not yet approved: an expense against a backed category IS
+#     (Revised for increment 15, 2026-10-04, approved at the scenario gate on 2026-10-04: an expense against a backed category IS
 #     ALWAYS ON ITS BACKING ACCOUNT, and the list is locked, from the period the category got its account.
 #     Everything below is about categories without an account, so no scenario here changes.)
 #   - Choosing another account is FOR THAT ONE ENTRY. It changes nothing about the next.

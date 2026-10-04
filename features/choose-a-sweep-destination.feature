@@ -37,7 +37,7 @@
 #   - UNBACKING THE DESTINATION RETURNS ITS SWEPT MONEY TO THE POOL ACCOUNT TOO, like any money there
 #     for it, with no purpose. That is not a redirect. The ended period's line still says where its
 #     leftover was swept.
-#     (REVISED FOR INCREMENT 15, 2026-10-04, not yet approved: setting Staat op to "—" now returns only
+#     (REVISED FOR INCREMENT 15, 2026-10-04, approved at the scenario gate on 2026-10-04: setting Staat op to "—" now returns only
 #     this period's money, and swept money is not part of it, even a sweep dated this period's first day.
 #     SWEPT MONEY STAYS ON THE ACCOUNT, STILL THE CATEGORY'S ACCUMULATED, and its row says where
 #     (glossary: "Vrij, and moving Opgebouwd", ruling 6). The one scenario that asserted the old reading,

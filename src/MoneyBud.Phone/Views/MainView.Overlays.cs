@@ -237,10 +237,18 @@ public sealed partial class MainView
 
     // ---- A category's acts ---------------------------------------------------------------------
 
-    /// <summary>Hernoemen always; Archiveren while in use; Verwijderen only with no history anywhere (§12).</summary>
+    /// <summary>
+    /// Hernoemen always; Verplaatsen for a category with an account, or one set to "—" with money left
+    /// behind; Archiveren while in use; Verwijderen only with no history anywhere (§12).
+    /// </summary>
     private void CategoryMenu(CategoryRow row)
     {
         var options = new List<(string, bool, Action)> { (Tekst.Rename, false, () => RenameCategory(row.Name)) };
+        if (row.CanReallocate)
+        {
+            options.Add((Tekst.Reallocate, false, () => OpenReallocate(row.Name)));
+        }
+
         if (!row.IsArchived)
         {
             options.Add((Tekst.Archive, false, () => App.ArchiveCategory(row.Name)));
@@ -354,6 +362,62 @@ public sealed partial class MainView
         Refresh();
         var scroller = new ScrollViewer { Content = body, MaxHeight = Math.Max(300, H * 0.7) };
         ShowModal(Card(form.IsEditing ? Tekst.ChangeTransfer : Tekst.TransferAct, scroller), fromBottom: false,
+            onClosed: () =>
+            {
+                form.PropertyChanged -= Changed;
+                if (form.IsOpen)
+                {
+                    form.Cancel();
+                }
+            },
+            closeWhen: () => !form.IsOpen);
+    }
+
+    /// <summary>
+    /// <i>Verplaatsen</i>: Van, Naar, Bedrag (§12, follow-up 12). From the accounts panel, or from a
+    /// category's ⋯, which starts it with that category as Van.
+    /// </summary>
+    private void OpenReallocate(string? fromCategory)
+    {
+        var form = App.ReallocateForm;
+        if (fromCategory is not null)
+        {
+            form.StartFrom(fromCategory);
+        }
+        else
+        {
+            form.OpenCommand.Execute(null);
+        }
+
+        var from = new ContentControl();
+        var to = new ContentControl();
+        var amount = AmountField(form, nameof(ReallocateForm.Amount), () => form.Amount, v => form.Amount = v);
+        var submit = Ui.Pill(Tekst.Reallocate, () => Act(() => form.SubmitCommand.Execute(null)));
+        submit.HorizontalAlignment = HorizontalAlignment.Stretch;
+        var body = Ui.Stack(0,
+            Ui.Caption(Tekst.From), from, Ui.Caption(Tekst.To), to, Ui.Caption(Tekst.Amount), amount,
+            new Border { Height = 18 }, submit);
+
+        void Refresh()
+        {
+            from.Content = Ui.Chips(form.FromChoices.Select(c => c.Text), form.ChosenFrom?.Text,
+                picked => form.ChosenFrom = form.FromChoices.First(c => c.Text == picked));
+            to.Content = Ui.Chips(form.ToChoices.Select(c => c.Text), form.ChosenTo?.Text,
+                picked => form.ChosenTo = form.ToChoices.First(c => c.Text == picked));
+        }
+
+        void Changed(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(ReallocateForm.Amount))
+            {
+                Refresh();
+            }
+        }
+
+        form.PropertyChanged += Changed;
+        Refresh();
+        var scroller = new ScrollViewer { Content = body, MaxHeight = Math.Max(300, H * 0.7) };
+        ShowModal(Card(Tekst.Reallocate, scroller), fromBottom: false,
             onClosed: () =>
             {
                 form.PropertyChanged -= Changed;

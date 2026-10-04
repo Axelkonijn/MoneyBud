@@ -62,6 +62,13 @@ points here.
 > lock is for the plan. **Decision 2's folder is the desktop's.** On the
 > phone the file lives in the app's own folder, `Android/data/<package>/files`, under a fixed signing
 > key (ADR 0014). The body is unchanged.
+>
+> **Note, 2026-10-04.** The file format is **version 8** since *Vrij* and moving *Opgebouwd*,
+> [ADR 0015](0015-moves-of-purpose-and-a-backing-history.md). It adds a `reallocations` list, a
+> category's `leftBehind` and a backing's `earlier`, and the movement reasons `rebacked` and `adjusted`.
+> **Version 7 is read, and through it 6, 5 and 4**: the first format change under the promise, and the
+> first reading path owed rather than free. A version-7 document carrying anything version 8 added is
+> refused, and versions 1 to 3 still are. The body is unchanged.
 
 ## Context
 

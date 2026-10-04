@@ -22,7 +22,7 @@
 #   - Moved money is neither an income nor an expense, so it is not in the Overview's lists, which
 #     stay incomes and expenses only (show-accounts.feature).
 #
-# Noted for increment 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd"; not yet approved). No
+# Noted for increment 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd"; approved at the scenario gate on 2026-10-04). No
 # scenario here changes. Setting Staat op to "—" now moves only this period's money back to the pool
 # account (back-a-category.feature); the one scenario here that does it moves money that is all this
 # period's, so its rows stand. And every move of purpose I make with "Verplaatsen" is a read-only row of

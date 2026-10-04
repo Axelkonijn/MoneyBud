@@ -595,8 +595,11 @@ public sealed class FormTests
         Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
     }
 
+    // Since increment 15 a backed category's list is locked on its account, and a write to it is
+    // ignored. A pick made before is kept for a category without an account typed after it, and is
+    // for that one expense only (arc42 §12, *An expense on a backed category is on its account*).
     [Fact]
-    public void An_account_picked_sticks_whatever_is_typed_and_only_for_that_expense()
+    public void An_account_picked_gives_way_to_a_locked_list_comes_back_after_it_and_is_for_that_expense_only()
     {
         var savings = BackSparen();
         var cash = app.AddAccount("Contant", "")!.Account!;
@@ -604,26 +607,56 @@ public sealed class FormTests
 
         form.ChosenAccount = cash;
         form.Category = "Sparen";
-        Assert.Same(cash, form.ChosenAccount);
+        Assert.Same(savings, form.ChosenAccount);
+        Assert.True(form.IsAccountLocked);
 
-        (form.Amount, form.Label) = ("5", "Fiets");
+        form.ChosenAccount = app.Ledger.PoolAccount;
+        Assert.Same(savings, form.ChosenAccount);
+
+        form.Category = "Boodschappen";
+        Assert.Same(cash, form.ChosenAccount);
+        Assert.False(form.IsAccountLocked);
+
+        (form.Amount, form.Label) = ("5", "Markt");
         form.SubmitCommand.Execute(null);
         Assert.Same(cash, Assert.Single(app.Overview.Expenses).Entry.Account);
 
-        form.Category = "Sparen";
-        Assert.Same(savings, form.ChosenAccount);
+        form.Category = "Boodschappen";
+        Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
     }
 
+    // Reversed in increment 15 (derived): a change is judged as if recorded now, and the list is locked.
     [Fact]
-    public void An_expense_being_changed_keeps_its_account_when_its_category_becomes_a_backed_one()
+    public void An_expense_being_changed_goes_onto_the_account_of_a_backed_category_it_is_changed_to()
     {
-        BackSparen();
+        var savings = BackSparen();
         app.RecordExpense("5", "Boodschappen", "Markt");
         app.EditExpense(Assert.Single(app.Overview.Expenses));
 
         app.ExpenseForm.Category = "Sparen";
 
-        Assert.Same(app.Ledger.PoolAccount, app.ExpenseForm.ChosenAccount);
+        Assert.Same(savings, app.ExpenseForm.ChosenAccount);
+        Assert.True(app.ExpenseForm.IsAccountLocked);
+    }
+
+    // The lock follows the date as well as the category (follow-up 16).
+    [Fact]
+    public void The_list_opens_for_a_date_before_the_period_the_category_got_its_account()
+    {
+        var savings = BackSparen();
+        var form = app.ExpenseForm;
+        var told = new List<string?>();
+        form.PropertyChanged += (_, e) => told.Add(e.PropertyName);
+        form.Category = "Sparen";
+
+        form.Date = app.Ledger.Calendar.Previous(app.Ledger.CurrentPeriod).LastDay.ToDateTime(TimeOnly.MinValue);
+
+        Assert.False(form.IsAccountLocked);
+        Assert.Same(app.Ledger.PoolAccount, form.ChosenAccount);
+        Assert.Contains(nameof(ExpenseForm.IsAccountLocked), told);
+
+        form.Date = null;
+        Assert.Same(savings, form.ChosenAccount);
     }
 
     [Fact]

@@ -116,6 +116,11 @@ internal static class Snapshot
                 Wait(1.2);
             });
             Shot("19-start-day", w => ClickOn(w, v => v is Button { Name: "PeriodButton" }), settle: 0.8);
+            Shot("20-reallocate", w =>
+            {
+                Drag(w, new Point(206, 820), new Point(206, 1150));
+                ClickText(w, Tekst.Reallocate);
+            });
         }
 
         Console.WriteLine($"Saved to {Path.GetFullPath(folder)}");

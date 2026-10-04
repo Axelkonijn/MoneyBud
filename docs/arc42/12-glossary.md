@@ -8676,7 +8676,12 @@ round). **Nothing is open for him.**
 scenarios were approved at the scenario gate on 2026-10-04**: two new files,
 [`show-unclaimed.feature`](../../features/show-unclaimed.feature) and
 [`reallocate-an-amount.feature`](../../features/reallocate-an-amount.feature), and revisions to eleven
-approved ones (48 new scenarios, 72 cases; 23 revised, 1 removed). There is no plan or code yet. **These rulings revise
+approved ones (48 new scenarios, 72 cases; 23 revised, 1 removed). There is no plan or code yet.
+**Since then planned and built**, on 2026-10-04: the [plan](../plans/increment-15-vrij.md) was approved
+at the plan gate, D1 as proposed with [ADR 0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md)
+and all ten of its readings as written, and the build is green (*Vrij, and moving Opgebouwd: chosen in the
+build*, below). **So it was approved at both gates.** Two points were ruled by the stakeholder at the
+build, one of them correcting an approved scenario's Givens. **These rulings revise
 nine earlier rulings and readings, most of them under *Backing and Accumulated*, two his own of
 2026-09-27**, each
 recorded where it stands with a dated note and its old text kept (*What these rulings revise*, below).
@@ -9262,6 +9267,11 @@ expense in this window it does not.
   amount finer than a cent; money into an end that only gives (a category on "—", an archived one,
   *Niet toegewezen* as *Van*); *Niet toegewezen* outside the current period. **Zero with a wrong end is
   still refused**, as for assigning (*When an assignment is refused*, above).
+
+  > ***Extended at the build*, 2026-10-04**: *Vrij* on one account to *Vrij* on another is refused too,
+  > second, after the same end, by the stakeholder's ruling (*chosen in the build*, below, (a)). And the
+  > third reason is built as two, in the same place in the order: money out of *Niet toegewezen*, then
+  > money into an archived category or one on "—". The reading as approved is kept above.
 - **A "—" category's slice shows "op <rekening>"**, like its row (*"Opgebouwd € 5.000,00 op
   Spaarrekening"*).
 - **An account holding a "—" category's money counts as used**, even when the money got there only
@@ -9320,12 +9330,13 @@ constant fails the suite.
 
 | English (this project) | Proposed Dutch | Status |
 |---|---|---|
-| Unclaimed (the money on an account that no category claims) | Vrij | **Ruled** 2026-10-04 (ruling 1), over *Niet toegewezen* and *Zonder doel*. The English term is the documentation's, open at the scenario gate |
-| Reallocate (the act) | Verplaatsen | **Proposed**: his word in the round ("een bedrag verplaatsen"), not put to him as a name. The English term is the documentation's |
-| The act's two ends | Van / Naar | **Proposed**, reused from *Overboeken*, which already has the rows |
+| Unclaimed (the money on an account that no category claims) | Vrij | **Ruled** 2026-10-04 (ruling 1), over *Niet toegewezen* and *Zonder doel*. The English term approved with the scenarios. **Moved into *Dutch display terms*** at the build, 2026-10-04 |
+| Reallocate (the act) | Verplaatsen | **Proposed**: his word in the round ("een bedrag verplaatsen"), not put to him as a name; approved with the scenarios. **Moved** at the build |
+| The act's two ends | Van / Naar | **Proposed**, reused from *Overboeken*: its row now names both. **Moved** at the build |
 
 **A negative *Vrij* reuses *Rood*** (ruling 3), which is a row already. Its English cell would gain "a
-negative Unclaimed" at the build, as it gained "a negative Accumulated" with backing.
+negative Unclaimed" at the build, as it gained "a negative Accumulated" with backing. **It did**, at the
+build, 2026-10-04.
 
 ### For the plan
 
@@ -9346,12 +9357,112 @@ What the rulings leave to the plan, and do not ask of the stakeholder:
   a backed category's expense on another account is then a caller's mistake, not a user situation
   (*derived*).
 
+**Answered by [the plan](../plans/increment-15-vrij.md), approved by the stakeholder at the plan gate on
+2026-10-04, and built.** D1 was approved as proposed, and all ten of the plan's readings as written. The
+list above is kept as it was written. Where each point went:
+
+| Point | Answer |
+|---|---|
+| What is stored, and the format's next version | **A `Reallocation`, a sixth entry kind** on the shared counter, holding its two ends and the account each was on at that moment; **a category's backing as a history of stretches**, a "—" stretch (`LeftBehind`) holding the account its older money was left on and the amount; **version 8**, reading version 7 ([ADR 0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md), decisions 1, 2 and 4). A same-account move is kept like any other and leaves a row. **A record: ADR 0015** |
+| How *Opgebouwd* and what is there are worked out | **By the stretch a period falls in**, reallocations counted, and a `Rebacked` movement carrying the money left behind into a new stretch. Both count expenses from the first day the period of backing had, remembered, so a change of start day still changes neither (ADR 0015, decisions 2 and 3). What is there counted from the latest re-pointing as planned; the build moved it to the period of backing (*chosen in the build*, below, fix 1) |
+| How *Vrij* is worked out | **Today's balance minus each claim**: what is there for a backed category, the amount left there for a "—" one, none on the pool account. Worked out on every read, never stored (ADR 0015, decision 3) |
+| Both heads | Plan reading 5. Desktop: *Vrij* in the strip, *Verplaatsen* beside *Overboeken* and on a row. Phone: *Vrij* in the accounts panel and history, a *Verplaatsen* pill and modal, the category's ⋯ menu ([§5](05-building-block-view.md)) |
+| The locked account list | **In the domain and the form**: `Ledger.LockedAccountFor`, by category, date and the expense being changed, with another account a caller's mistake that throws; and `ExpenseForm.IsAccountLocked`. **Point 16, the lock that depends on the date, is built**: it was one comparison (the plan, *Point 16 is cheap, so it is built*) |
+
+### *Vrij*, and moving *Opgebouwd*: chosen in the build
+
+**Built as planned**, on 2026-10-04: D1 as [ADR 0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md),
+with the plan's ten readings as written. **Point 16, the lock that depends on the expense's date, was
+cheap, and was built** as ruled, so it did not go back to the stakeholder. Listed here so that they can
+be contradicted: **two points ruled by the stakeholder at the build**, **what `spec-reviewer` found**,
+**two choices the build made without putting them to him**, the checks, and two older flaws the checks
+showed. How the code holds the rulings is in ADR 0015.
+
+#### Ruled by the stakeholder at the build, 2026-10-04
+
+> **(a) *Vrij* on one account to *Vrij* on another is refused**, with *"Geld van Vrij naar Vrij
+> verplaatsen is overboeken."* Ruled on the recommendation.
+
+**How it came up**: `spec-reviewer` found it reachable. Plan reading 5 put the *Vrij* lines on both
+*Van* and *Naar*, and neither ruling 2's ends nor follow-up 8 named a move from one account's *Vrij* to
+another's. As a move between ends on two accounts, it would move money between them by follow-up 8,
+and give nothing a purpose. **Why**, as recorded with the ruling: it gives nothing a purpose, and moving
+money between accounts is *Overboeken*. One act per need. No option not chosen is recorded with it.
+
+**The refusal order, as built**, the first that applies reported: the same end on both sides; *Vrij* to
+*Vrij*; an amount finer than a cent; money out of *Niet toegewezen*; money into an end that only gives (an
+archived category, or one on "—"); *Niet toegewezen* outside the current period. It extends the
+scenario stage's reading (*Ruled at the scenario stage, 2026-10-04*, above, where a dated note says so).
+**No scenario was added**: a unit test holds it (`VrijTests`), and the header of
+[`reallocate-an-amount.feature`](../../features/reallocate-an-amount.feature) records the ruling.
+
+> **(b) One approved scenario's Givens were corrected, with his agreement.** In
+> [`spend-against-a-backed-category.feature`](../../features/spend-against-a-backed-category.feature),
+> *An expense dated in the period of backing lowers Accumulated, dated before the backing or after it*,
+> Deposit's starting balance is now dated the period's first day, not today.
+
+**Why**: dated today, the starting balance already held the receipt dated yesterday. **A typed balance
+holds every entry dated before its day**, an approved rule of the accounts increment (*A typed balance is
+what the bank said that day*, above), so Deposit stayed at €300 where the scenario expected €250. The
+scenario was about *Opgebouwd*, which it still asserts unchanged. **He confirmed the rule itself in his own words** (the round, *Vragen bij
+het bouwen*): *"if we set the saldo of an account to a specific saldo, and then add an expence on a earlier
+date, then that will not change the saldo, since it was already made clear what the saldo was at that
+specific date."* So it is the scenario that changed, not
+the rule. The feature file carries a dated note beside the corrected Given.
+
+#### What `spec-reviewer` found
+
+**No faked or vacuous scenario.** Four findings: three were defects, fixed, each with a test; the
+fourth was the gap ruled as (a), above. They are fixes, not rulings: each makes the build do what a
+ruling or plan reading already said.
+
+| Finding | What was wrong, and how it was fixed |
+|---|---|
+| **1. A late receipt after a re-pointing went missing from what the account holds** | After re-pointing, an expense dated in an earlier backed period was locked on the new account, as follow-up 16 says, and counted in *Opgebouwd*, but not in what that account holds for the category, which counted from the period of the latest re-pointing. So *Vrij* went wrong, and "—" moved the wrong amount. **What is there now counts the account's expenses from the period of backing** (`AccumulatingFrom`), as *Opgebouwd* does, and `PaidHereBefore` is remembered from there. Data from before version 8 is converted on reading, so every figure reads as before. It changes one point of [ADR 0012](../decisions/0012-the-calendar-is-a-history.md)'s decision 3, which carries a dated note |
+| **2. Deleting an unused account cut away another stretch's money** | Deleting an unused account named deep in a category's history also wiped the money another stretch had left behind. Now only the stretch naming the deleted account is cut |
+| **3. *Verplaatsen* with nothing to take from crashed** | At a first start there is no account but the pool and no backed category, so *Van* had nothing in it. **It is now offered only when there is something to take from** (`ReallocateForm.HasEnds`), and the form closes rather than failing |
+| **4. *Vrij* to *Vrij* was not refused** | Ruled by the stakeholder: (a), above |
+
+#### Chosen in the build, not put to the stakeholder
+
+| Choice | Why |
+|---|---|
+| **1. An account that only a "—" with nothing left behind names can be deleted, and deleting it forgets that stretch of the category's history** | An account that backed a category and never had money moved is unused again, and the approved scenario in [`back-a-category.feature`](../../features/back-a-category.feature) requires that it can be deleted. Plan reading 9 makes an account used while a "—" category's money is left on it; with nothing left, none is. What is forgotten is the stretch: the category's history then starts at its next backing, as a category backed again under version 7 started *Opgebouwd* over |
+| **2. On the desktop, a row's *Opgebouwd* has a line of its own**, under the row's acts | *"Opgebouwd € 5.000,00 op Spaarrekening"* made it too long to share the line with them |
+
+#### Checks
+
+- **An invariant, as a unit test**: 1500 mixed acts, among them late receipts, date changes,
+  re-pointing, "—", reallocations, balance corrections, period ends and start-day changes. After each,
+  on every account but the pool, *Vrij* plus the *Opgebouwd* of its categories equals its balance. It
+  holds for data made under today's rules; kept version-7 data with a backed category's expense on
+  another account is outside it by ruling (*Kept data: version 7 is read*, above).
+- **Six deliberate mutations**, each caught by between 2 and 19 tests.
+- **A headless run of the real desktop window** passed 25 checks, the new lists' write-back and the
+  locked list's included: none of them said or saved anything.
+- **The phone's snapshot pictures** were taken in dark and light.
+- The suite at the close: **2058 tests**, 1104 scenario cases and 954 developer unit tests, with no
+  warnings.
+
+#### Known, older than this increment
+
+Both were seen in this increment's checks and are not from it. Neither is fixed.
+
+- **The phone's snapshot run cannot open the accounts panel on the kintsugi theme** ("Nothing to
+  click"). The last commit before this increment does the same. So the accounts panel, where *Vrij* and
+  the *Verplaatsen* pill are, was pictured in dark and light only ([§11](11-risks-and-technical-debt.md),
+  the phone head's tests row).
+- **On the desktop, a row's *Staat op* list can nudge into the *Budget* column** when the row carries an
+  extra link, *Verwijderen* and now *Verplaatsen* as well ([§11](11-risks-and-technical-debt.md), the
+  Desktop row).
+
 ### What this section leaves open
 
 **Nothing is open for the stakeholder.** Two points raised by the follow-up ruling were answered the
 same day, on the recommendation (*An expense on a backed category is on its account*, follow-ups 15 and
 16, above). Point 16 is ruled but low priority for him, and may go back to him if the plan finds it
-costly. They read, as they were put:
+costly. **The plan found it cheap, and it is built** (2026-10-04, *chosen in the build*, above). They
+read, as they were put:
 
 | Point | The documentation's reading | Alternatives |
 |---|---|---|
@@ -9499,14 +9610,16 @@ is his word, and MoneyBud displays *Categorie* and *Budget* instead.
 | Pool account | Hoofdrekening |
 | Make (an account) the pool account | Maak hoofdrekening |
 | Transfer (the record) / Transfer (the act) | Overboeking / Overboeken |
-| A transfer's two accounts | Van / Naar |
+| A transfer's two accounts, and a reallocation's two ends | Van / Naar |
 | Starting balance | Startsaldo |
 | Balance correction (the record) | Correctie |
 | Correct a balance (the act) | Saldo corrigeren |
 | Add account | Rekening toevoegen |
-| Overdrawn, a negative net worth, and a negative Accumulated (the marker's badge) | Rood |
+| Overdrawn, a negative net worth, a negative Accumulated and a negative Unclaimed (the marker's badge) | Rood |
 | Backing account (the list on a category row that sets it) | Staat op |
 | Accumulated | Opgebouwd |
+| Unclaimed (the money on an account that no category claims) | Vrij |
+| Reallocate (the act) | Verplaatsen |
 | Period leftover | Restant |
 | Sweep destination (the list that sets it) | Restant naar |
 | Bring the swept amount up to date (the button) | Restant bijwerken |

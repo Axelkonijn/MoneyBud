@@ -10,8 +10,13 @@ namespace MoneyBud.Presentation;
 /// <para>An account below zero is overdrawn and carries the one marker over budget and
 /// over-assigned carry, with its own badge, <see cref="Tekst.Overdrawn"/>. Exactly zero does not.
 /// Nothing is blocked or warned about.</para>
+///
+/// <para>Since increment 15 every account but the pool account shows <see cref="Unclaimed"/>, on screen
+/// <i>Vrij</i>: the money on it no category claims (arc42 §12, ruling 1). Below zero it carries the same
+/// marker, badge <i>Rood</i>, on its own (ruling 3): an account can show a negative <i>Vrij</i> without
+/// being overdrawn. Null on the pool account, which shows none (ruling 5).</para>
 /// </summary>
-public sealed record AccountLine(Account Account, Money Balance, bool IsPool)
+public sealed record AccountLine(Account Account, Money Balance, bool IsPool, Money? Unclaimed = null)
 {
     public string Name => Account.Name;
 
@@ -20,6 +25,13 @@ public sealed record AccountLine(Account Account, Money Balance, bool IsPool)
     public Marker Marker => IsOverdrawn ? Marker.Over : Marker.None;
 
     public string BalanceText => Tekst.Euro(Balance);
+
+    public bool IsUnclaimedBelowZero => Unclaimed is { IsNegative: true };
+
+    public Marker UnclaimedMarker => IsUnclaimedBelowZero ? Marker.Over : Marker.None;
+
+    /// <summary>"Vrij € 5.000,00", or null on the pool account.</summary>
+    public string? UnclaimedText => Unclaimed is { } unclaimed ? Tekst.UnclaimedFigure(unclaimed) : null;
 
     /// <summary>Shown on the pool account only: <i>Hoofdrekening</i>.</summary>
     public string? PoolText => IsPool ? Tekst.PoolAccount : null;
@@ -37,6 +49,7 @@ public enum HistoryKind
     Income,
     Expense,
     Movement,
+    Reallocation,
 }
 
 /// <summary>
@@ -49,6 +62,10 @@ public enum HistoryKind
 /// (§12, <i>Accounts and net worth</i>). A <b>movement</b> neither: money moved for a category is
 /// changed by assigning again, not from the history (§12, <i>Moved money in the account's
 /// history</i>).</para>
+///
+/// <para>A <b>reallocation</b> neither: it is undone by moving back (§12, <i>One act moves an amount of
+/// purpose</i>). It is in the history of each account it touches, one within a single account
+/// included, though that moves no balance (follow-up 9).</para>
 ///
 /// <para>Amounts are shown without a sign: what a row is says which way the money went. A balance
 /// correction shows the balance typed and the difference, worked out afresh, so that it always says
@@ -70,6 +87,7 @@ public sealed record HistoryLine(IEntry Entry, Account Account, Money? Differenc
         Income => HistoryKind.Income,
         Expense => HistoryKind.Expense,
         Movement => HistoryKind.Movement,
+        Reallocation => HistoryKind.Reallocation,
         _ => throw new InvalidOperationException($"{Entry.GetType().Name} is not in a history."),
     };
 
@@ -87,6 +105,7 @@ public sealed record HistoryLine(IEntry Entry, Account Account, Money? Differenc
         Income i => i.Amount,
         Transfer t => t.Amount,
         Movement m => m.Amount,
+        Reallocation r => r.Amount,
         _ => null,
     };
 

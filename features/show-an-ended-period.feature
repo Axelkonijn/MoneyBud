@@ -46,8 +46,8 @@
 # NOT specified here, and left to the plan: where the list and the line sit near Niet toegewezen,
 # which is in the ring's hole, and how the line is worded beyond the phrases ruled.
 #
-# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; not yet
-# approved). One scenario, "Unbacking a category after a period ended does not make that period look as if
+# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; approved
+# at the scenario gate on 2026-10-04). One scenario, "Unbacking a category after a period ended does not make that period look as if
 # it had more to sweep", said that setting Holiday to "—" returned its money to Bank. Setting "—" now
 # returns only this period's money, and Holiday has none this period, so its 100 stays on Deposit, still
 # Holiday's. Its point, that the ended period does not look as if it had more to sweep, is unchanged.

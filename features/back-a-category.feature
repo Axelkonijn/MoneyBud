@@ -7,8 +7,8 @@
 # EXPLAINS THE STEPS THE FIVE SHARE.
 #
 # REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", settled by the stakeholder
-# that day). The scenarios marked "Revised for increment 15" or "New in increment 15" below are NOT YET
-# APPROVED; they go to the scenario gate. What changed, and why:
+# that day). The scenarios marked "Revised for increment 15" or "New in increment 15" below were
+# APPROVED at the scenario gate on 2026-10-04. What changed, and why:
 #   - SETTING STAAT OP TO "—" RETURNS ONLY THIS PERIOD'S MONEY to the pool account (ruling 6): this
 #     period's Remaining, and, if this period is overspent, the overspending comes back FROM the pool
 #     account to the account (follow-up 15). EVERYTHING OLDER STAYS ON THE ACCOUNT, STILL THE CATEGORY'S

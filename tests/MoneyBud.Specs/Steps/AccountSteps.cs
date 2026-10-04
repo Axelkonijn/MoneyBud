@@ -172,6 +172,21 @@ public sealed class AccountSteps(SpecContext context)
             Assert.Equal(table.Rows.Select(r => YesNo(r["overdrawn"])), lines.Select(l => l.IsOverdrawn));
             Assert.All(lines, l => Assert.Equal(l.IsOverdrawn ? Marker.Over : Marker.None, l.Marker));
         }
+
+        // Vrij, a blank cell being an account that shows none (show-unclaimed.feature).
+        if (table.ContainsColumn("unclaimed"))
+        {
+            Assert.Equal(
+                table.Rows.Select(r => r["unclaimed"] is "" ? (Money?)null : SpecParsing.MoneyAmount(r["unclaimed"])),
+                lines.Select(l => l.Unclaimed));
+            Assert.All(lines, l => Assert.Equal(l.Unclaimed is { } u ? Tekst.UnclaimedFigure(u) : null, l.UnclaimedText));
+        }
+
+        if (table.ContainsColumn("unclaimed marked"))
+        {
+            Assert.Equal(table.Rows.Select(r => YesNo(r["unclaimed marked"])), lines.Select(l => l.IsUnclaimedBelowZero));
+            Assert.All(lines, l => Assert.Equal(l.IsUnclaimedBelowZero ? Marker.Over : Marker.None, l.UnclaimedMarker));
+        }
     }
 
     [Then(@"^the pool account should be ""([^""]*)""$")]
@@ -255,8 +270,14 @@ public sealed class AccountSteps(SpecContext context)
             Assert.Equal(row["entry"], KindName(line.Kind));
             Check("category", line.Entry switch { Expense e => e.Category.Name, Movement m => m.Category.Name, _ => null });
             Check("label", line.Entry switch { Expense e => e.Label, Income i => i.Label, _ => null });
-            Check("from", line.Entry switch { Transfer t => t.From.Name, Movement m => m.From.Name, _ => null });
-            Check("to", line.Entry switch { Transfer t => t.To.Name, Movement m => m.To.Name, _ => null });
+            Check("from", line.Entry switch
+            {
+                Transfer t => t.From.Name, Movement m => m.From.Name, Reallocation r => EndName(r.From), _ => null,
+            });
+            Check("to", line.Entry switch
+            {
+                Transfer t => t.To.Name, Movement m => m.To.Name, Reallocation r => EndName(r.To), _ => null,
+            });
             CheckMoney("amount", line.Amount);
             CheckMoney("balance", line.Balance);
             CheckMoney("difference", line.Difference);
@@ -272,6 +293,19 @@ public sealed class AccountSteps(SpecContext context)
                     Assert.Equal(row[column] is "" ? null : SpecParsing.MoneyAmount(row[column]), actual);
             }
         }
+    }
+
+    // A reallocation's row, by its two ends as the history table writes them (reallocate-an-amount.feature).
+    [Then(@"^in the history of ""([^""]*)"" I should not be able to change or remove the reallocation of (\S+) euro from (\S+|""[^""]*"") to (\S+|""[^""]*"")$")]
+    public void ThenICannotChangeOrRemoveTheReallocation(string account, string amount, string from, string to)
+    {
+        OpenHistoryOf(account);
+        var money = SpecParsing.MoneyAmount(amount);
+        var line = Assert.Single(App.History, l =>
+            l.Entry is Reallocation r && r.Amount == money && EndName(r.From) == Name(from) && EndName(r.To) == Name(to));
+        Assert.Equal(HistoryKind.Reallocation, line.Kind);
+        Assert.False(line.CanChange);
+        Assert.False(line.CanRemove);
     }
 
     [Then(@"^nothing should be in the history of ""([^""]*)""$")]
@@ -602,7 +636,16 @@ public sealed class AccountSteps(SpecContext context)
         HistoryKind.Income => "income",
         HistoryKind.Expense => "expense",
         HistoryKind.Movement => "movement",
+        HistoryKind.Reallocation => "reallocation",
         _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
+
+    // A reallocation's end as the history table writes it: "Unclaimed", a category, or "Unassigned".
+    private static string EndName(ReallocationEnd end) => end.Kind switch
+    {
+        ReallocationEndKind.Unclaimed => "Unclaimed",
+        ReallocationEndKind.Category => end.Category!.Name,
+        _ => "Unassigned",
     };
 
     // ------------------------------------------------------------------ checking

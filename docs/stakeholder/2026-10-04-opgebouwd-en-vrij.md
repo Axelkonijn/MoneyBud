@@ -227,3 +227,38 @@ vanaf de Betaalrekening betalen.
 | Sparen, budget € 300. Op 5 oktober € 100 voor Sparen betaald vanaf de Betaalrekening (nog geen rekening). Op 10 oktober krijgt Sparen Spaarrekening, € 200 gaat erheen. Later wordt dat bonnetje van € 100 verwijderd. *Opgebouwd* wordt € 300, maar Spaarrekening houdt er € 200 voor. Wat gebeurt er? | **MoneyBud verplaatst de € 100**: het bonnetje blijft op de Betaalrekening, en € 100 gaat van de Betaalrekening naar Spaarrekening. (Niet gekozen: het bonnetje zelf verhuist; zo laten) |
 | € 200 per vergissing van *Vrij* aan Vakantie gegeven en weer teruggezet. *Opgebouwd* is € 0, maar twee regels in de geschiedenis van Spaarrekening noemen Vakantie. Kan Vakantie verwijderd worden? | **Nee, archiveren.** (Niet gekozen: ja, de regels gaan mee) |
 | Dat bonnetje van € 100 van 5 oktober, betaald vanaf de Betaalrekening voordat Sparen op 10 oktober Spaarrekening kreeg, wordt geopend om te wijzigen. Wat doet het veld *Rekening*? | **Het blijft de Betaalrekening, vast.** (Niet gekozen: een andere rekening kiezen kan) |
+
+## Vragen bij het bouwen
+
+Tijdens het bouwen, nadat het plan was goedgekeurd, kwamen nog twee punten op. Ze zijn dezelfde dag aan
+Axel voorgelegd.
+
+**Een testvoorbeeld dat botste met een eerdere regel.** In een goedgekeurd scenario kreeg een
+spaarrekening een *Startsaldo* van € 0 van vandaag, en daarna een bonnetje van gisteren. Een
+*Startsaldo* is wat de bank op die dag zei, en bevat dus alles van eerder; het saldo bleef € 300, waar
+het scenario € 250 verwachtte. De eerste uitleg, in de termen van de test, begreep hij niet: "Ik begrijp
+niet helemaal wat wat betekent. Wat bedoel je met deposit en balance en zo, ik heb het gevoel dat ik de
+situatie waar we het over hebben niet echt begrijp." Na de uitleg in MoneyBud's eigen woorden:
+
+**Verduidelijkt:**
+
+| Vraag | Antwoord |
+|---|---|
+| Hoe wordt het testvoorbeeld rechtgezet? | In zijn eigen woorden: "Wat bedoel je met de rekening eerder laten beginnen? Zoals in de test zelf? Zoals: in de test hebben we de rekening eerder laten beginnen? Zo ja, dan vind ik het goed, maakt me niet echt uit. Het lijkt erop dat je wel begrijpt dat als we het saldo van een rekening op een bepaald bedrag zetten, en dan een uitgave op een eerdere datum toevoegen, dat het saldo niet verandert, omdat al duidelijk was wat het saldo op die datum was." **Gekozen: in de test begint de rekening op de eerste dag van de periode.** (Niet gekozen: € 300 verwachten; de saldoregels uit het voorbeeld halen) |
+| In *Verplaatsen* kan *Vrij* op de ene rekening als *Van* en *Vrij* op een andere als *Naar* gekozen worden. Er krijgt dan niets een doel; het geld gaat alleen tussen de rekeningen, zoals bij *Overboeken*. Wat moet er gebeuren? | **Weigeren**, zoals aanbevolen: "Geld van Vrij naar Vrij verplaatsen is overboeken." (Niet gekozen: toestaan, als een tweede manier van overboeken die niet gewijzigd of verwijderd kan worden) |
+
+## Na het installeren op de telefoon
+
+Na het installeren van de nieuwe versie zag Axel dat de Betaalrekening geen *Vrij* heeft (regel 5 van
+deze ronde), en dat er dus geen manier is om het geld dat al op de Betaalrekening stond een doel te geven.
+Hem werd uitgelegd hoe dat erdoor kwam: *Niet toegewezen* bevat alleen geld dat als inkomen binnenkwam;
+een startsaldo of correctie op de Betaalrekening wordt nooit *Niet toegewezen*. In zijn eigen woorden:
+"Ik ben zo in de war, hoe is dit erdoor gekomen? Waarom zou ik het geld dat vrij is op de hoofdrekening
+niet naar een categorie willen verplaatsen? Of mis ik iets?"
+
+**Verduidelijkt:**
+
+| Vraag | Antwoord |
+|---|---|
+| Krijgt de Betaalrekening ook *Vrij*: het *Saldo*, min het *Niet toegewezen* en het *Resterend* van categorieën zonder rekening van deze periode, min het *Opgebouwd* van categorieën die de Betaalrekening dekt, en te kiezen in *Verplaatsen*? | "Ja natuurlijk. Op dit moment heb ik geen makkelijke manier om geld van mijn Betaalrekening toe te wijzen aan een categorie op die rekening. Ik zou het naar een andere rekening moeten overboeken en het dan van daaruit op een categorie zetten. En als ik het saldo zou corrigeren, zou ik geen makkelijke manier hebben om geld uit een categorie naar *Vrij* te verplaatsen om het daarvandaan te laten afgaan als ik het saldo verlaag." **Dit herziet regel 5.** |
+| De poorten voor deze aanpassing? | "Je mag de poorten overslaan." Scenario's, plan en werkende app worden samen voorgelegd, met elke beslissing die zonder hem genomen is. Het werk gaat door in een volgende sessie. |

@@ -12,7 +12,7 @@ namespace MoneyBud.Storage;
 /// <code>
 /// {
 ///   "format": "MoneyBud",
-///   "version": 7,
+///   "version": 8,
 ///   "lastEntryId": 7,
 ///   "settledThrough": "2026-03-15",
 ///   "categories": [ { "key": 1, "name": "Boodschappen", "archived": false, "backing": null },
@@ -20,7 +20,8 @@ namespace MoneyBud.Storage;
 ///                    "backing": { "account": 2, "accumulatingSince": { "date": "2026-03-15", "id": 5 },
 ///                                 "hereSince": { "date": "2026-03-15", "id": 5 },
 ///                                 "notMovedCents": 0, "paidHereBeforeCents": 0,
-///                                 "accumulatingFrom": "2026-03-01", "hereFrom": "2026-03-01" } } ],
+///                                 "accumulatingFrom": "2026-03-01", "hereFrom": "2026-03-01", "earlier": null },
+///                    "leftBehind": null } ],
 ///   "budgets":    [ { "category": 1, "periodStart": "2026-03-01", "cents": 40000 } ],
 ///   "accounts":   [ { "key": 1, "name": "Betaalrekening" }, { "key": 2, "name": "Contant" } ],
 ///   "poolAccount": 1,
@@ -36,7 +37,9 @@ namespace MoneyBud.Storage;
 ///   "periodEnds": [ { "periodStart": "2026-03-01", "backed": [ 2 ] } ],
 ///   "letGo":      [ ],
 ///   "repeats":    [ { "occurrences": [ 1, 9 ], "frequency": "monthly", "day": 15, "next": "2026-05-15" } ],
-///   "calendar":   [ { "periodFrom": "2026-03-01", "from": "2026-03-27", "startDay": 27 } ]
+///   "calendar":   [ { "periodFrom": "2026-03-01", "from": "2026-03-27", "startDay": 27 } ],
+///   "reallocations": [ { "id": 10, "date": "2026-03-15", "from": { "unclaimed": 2 }, "to": { "category": 2 },
+///                        "fromAccount": 2, "toAccount": 2, "cents": 300000 } ]
 /// }
 /// </code>
 ///
@@ -73,7 +76,16 @@ namespace MoneyBud.Storage;
 /// started on the 1st; and a backing's <c>accumulatingFrom</c> and
 /// <c>hereFrom</c>, the first day each mark's period had at the time.</para>
 ///
-/// <para>Reading is strict: anything that is not a whole version-7 document is not read at all.
+/// <para><b>Since version 8</b>, <i>Vrij</i> and moving <i>Opgebouwd</i> (ADR 0015):
+/// <c>reallocations</c>, each with its two ends — <c>{ "unclaimed": account }</c>,
+/// <c>{ "category": key }</c> or <c>{ "unassigned": true }</c> — and the accounts they were on; a
+/// category's <c>leftBehind</c>, for one set to "—", with the <c>account</c> its money was left on, the
+/// mark <c>since</c>, the period's first day <c>from</c>, the <c>cents</c> left and the backing it ended,
+/// <c>before</c>; and a backing's <c>earlier</c>, the "—" before it, in the same form. Movement reasons
+/// gain <c>rebacked</c> and <c>adjusted</c>, and <c>backed</c> and <c>unbacked</c> may go either
+/// way.</para>
+///
+/// <para>Reading is strict: anything that is not a whole version-8 document is not read at all.
 /// That includes a blank document — MoneyBud never writes one, so blank means something went
 /// wrong — and a newer version, since this MoneyBud cannot know what a newer one meant
 /// (§12, <i>When the data cannot be read</i>). <b>Version 1</b>, the form before accounts, is not
@@ -92,15 +104,22 @@ namespace MoneyBud.Storage;
 /// it (§12, ruling of 2026-09-28). <b>Version 6</b>, the form without the start day, <b>is read</b>,
 /// and 5 and 4 through it: every period in it began on the 1st, which is what an empty history says,
 /// and each mark's period is the calendar month of its date, so nothing is guessed (plan for increment
-/// 13, D2). Properties this version does not know are ignored.</para>
+/// 13, D2). <b>Version 7</b>, the form without <i>Vrij</i>, <b>is read</b>, and everything older
+/// that it reads through it: it is data in which nothing was given a purpose yet, nothing was moved
+/// between categories and nothing was left behind by "—", which is what having none of the three
+/// says (plan for increment 15, D1; the data promise of ADR 0014, which version 7 began). One with any
+/// of them is not what version 7 wrote, and is not read. Properties this version does not know are
+/// ignored.</para>
 /// </summary>
 public static class LedgerJson
 {
-    public const int Version = 7;
+    public const int Version = 8;
 
-    // The older versions still read. Opgebouwd's, which differs only by having no start day,
+    // The older versions still read. The start day's, the first promised version (ADR 0014), which
+    // differs only by having no reallocations and nothing left behind; Opgebouwd's, which has no start day,
     // recurring entries', which also does not remember a backing's two figures, and the sweep's,
     // which also has no repeats.
+    private const int VersionWithoutVrij = 7;
     private const int VersionWithoutStartDay = 6;
     private const int VersionWithoutFigures = 5;
     private const int VersionWithoutRepeats = 4;
@@ -128,22 +147,8 @@ public static class LedgerJson
                 json.WriteNumber("key", c.Key);
                 json.WriteString("name", c.Name);
                 json.WriteBoolean("archived", c.IsArchived);
-                if (c.Backing is { } backing)
-                {
-                    json.WriteStartObject("backing");
-                    json.WriteNumber("account", backing.Account);
-                    WriteMark(json, "accumulatingSince", backing.AccumulatingSince);
-                    WriteMark(json, "hereSince", backing.HereSince);
-                    json.WriteNumber("notMovedCents", backing.NotMoved!.Value.Cents);
-                    json.WriteNumber("paidHereBeforeCents", backing.PaidHereBefore!.Value.Cents);
-                    json.WriteString("accumulatingFrom", Date(backing.AccumulatingFrom!.Value));
-                    json.WriteString("hereFrom", Date(backing.HereFrom!.Value));
-                    json.WriteEndObject();
-                }
-                else
-                {
-                    json.WriteNull("backing");
-                }
+                WriteBacking(json, "backing", c.Backing);
+                WriteLeftBehind(json, "leftBehind", c.LeftBehind);
                 json.WriteEndObject();
             }
             json.WriteEndArray();
@@ -295,6 +300,21 @@ public static class LedgerJson
             }
             json.WriteEndArray();
 
+            json.WriteStartArray("reallocations");
+            foreach (var r in snapshot.Reallocations ?? [])
+            {
+                json.WriteStartObject();
+                json.WriteNumber("id", r.Id);
+                json.WriteString("date", Date(r.Date));
+                WriteEnd(json, "from", r.From);
+                WriteEnd(json, "to", r.To);
+                json.WriteNumber("fromAccount", r.FromAccount);
+                json.WriteNumber("toAccount", r.ToAccount);
+                json.WriteNumber("cents", r.Amount.Cents);
+                json.WriteEndObject();
+            }
+            json.WriteEndArray();
+
             json.WriteEndObject();
         }
 
@@ -317,16 +337,21 @@ public static class LedgerJson
             var version = Int(root, "version");
             var hasRepeats = root.TryGetProperty("repeats", out _);
             var hasCalendar = root.TryGetProperty("calendar", out _);
+            var hasReallocations = root.TryGetProperty("reallocations", out _);
             if (!(version == Version
-                  || ((version is VersionWithoutStartDay or VersionWithoutFigures) && !hasCalendar)
-                  || (version == VersionWithoutRepeats && !hasRepeats && !hasCalendar)))
+                  || (version == VersionWithoutVrij && !hasReallocations)
+                  || ((version is VersionWithoutStartDay or VersionWithoutFigures) && !hasCalendar && !hasReallocations)
+                  || (version == VersionWithoutRepeats && !hasRepeats && !hasCalendar && !hasReallocations)))
                 return null;
             var hasFigures = version >= VersionWithoutStartDay;
-            var hasStartDay = version == Version;
+            var hasStartDay = version >= VersionWithoutVrij;
+            var hasVrij = version == Version;
 
             return new LedgerSnapshot(
                 Array(root, "categories", c => new CategorySnapshot(
-                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"), BackingOf(c, hasFigures, hasStartDay))),
+                    Int(c, "key"), Text(c, "name"), Bool(c, "archived"),
+                    BackingOf(c, "backing", hasFigures, hasStartDay, hasVrij),
+                    hasVrij ? LeftBehindOf(c, "leftBehind") : NoneIn(c, "leftBehind"))),
                 Array(root, "budgets", b => new BudgetSnapshot(Int(b, "category"), DateOf(b, "periodStart"), Cents(b))),
                 Array(root, "expenses", e => new ExpenseSnapshot(
                     Int(e, "id"), Cents(e), DateOf(e, "date"), Int(e, "category"), TextOrNull(e, "label"), Int(e, "account"))),
@@ -355,7 +380,14 @@ public static class LedgerJson
                         WordOrNull<Frequency>(r, "frequency"), IntOrNull(r, "day"), DateOrNull(r, "next"))),
                 hasStartDay
                     ? Array(root, "calendar", c => new StartDayChange(DateOf(c, "periodFrom"), DateOf(c, "from"), Int(c, "startDay")))
-                    : []);
+                    : [],
+                // Null, not empty, for an older version: the ledger reads what came before version 8
+                // as such (Ledger.FromSnapshot).
+                hasVrij
+                    ? Array(root, "reallocations", r => new ReallocationSnapshot(
+                        Int(r, "id"), DateOf(r, "date"), EndOf(r, "from"), EndOf(r, "to"),
+                        Int(r, "fromAccount"), Int(r, "toAccount"), Cents(r)))
+                    : null);
         }
         catch (Exception e) when (e is JsonException or FormatException or InvalidOperationException
                                       or KeyNotFoundException)
@@ -374,9 +406,64 @@ public static class LedgerJson
         json.WriteEndObject();
     }
 
-    private static BackingSnapshot? BackingOf(JsonElement category, bool hasFigures, bool hasStartDay)
+    private static void WriteBacking(Utf8JsonWriter json, string name, BackingSnapshot? backing)
     {
-        var backing = category.GetProperty("backing");
+        if (backing is null)
+        {
+            json.WriteNull(name);
+            return;
+        }
+
+        json.WriteStartObject(name);
+        json.WriteNumber("account", backing.Account);
+        WriteMark(json, "accumulatingSince", backing.AccumulatingSince);
+        WriteMark(json, "hereSince", backing.HereSince);
+        json.WriteNumber("notMovedCents", backing.NotMoved!.Value.Cents);
+        json.WriteNumber("paidHereBeforeCents", backing.PaidHereBefore!.Value.Cents);
+        json.WriteString("accumulatingFrom", Date(backing.AccumulatingFrom!.Value));
+        json.WriteString("hereFrom", Date(backing.HereFrom!.Value));
+        WriteLeftBehind(json, "earlier", backing.Earlier);
+        json.WriteEndObject();
+    }
+
+    private static void WriteLeftBehind(Utf8JsonWriter json, string name, LeftBehindSnapshot? left)
+    {
+        if (left is null)
+        {
+            json.WriteNull(name);
+            return;
+        }
+
+        json.WriteStartObject(name);
+        json.WriteNumber("account", left.Account);
+        WriteMark(json, "since", left.Since);
+        json.WriteString("from", Date(left.From));
+        json.WriteNumber("cents", left.Amount.Cents);
+        WriteBacking(json, "before", left.Before);
+        json.WriteEndObject();
+    }
+
+    private static void WriteEnd(Utf8JsonWriter json, string name, ReallocationEndSnapshot end)
+    {
+        json.WriteStartObject(name);
+        switch (end.Kind)
+        {
+            case ReallocationEndKind.Unclaimed:
+                json.WriteNumber("unclaimed", end.Account!.Value);
+                break;
+            case ReallocationEndKind.Category:
+                json.WriteNumber("category", end.Category!.Value);
+                break;
+            default:
+                json.WriteBoolean("unassigned", true);
+                break;
+        }
+        json.WriteEndObject();
+    }
+
+    private static BackingSnapshot? BackingOf(JsonElement parent, string name, bool hasFigures, bool hasStartDay, bool hasVrij)
+    {
+        var backing = parent.GetProperty(name);
         if (backing.ValueKind == JsonValueKind.Null) return null;
 
         return new BackingSnapshot(
@@ -384,7 +471,39 @@ public static class LedgerJson
             hasFigures ? Cents(backing, "notMovedCents") : null,
             hasFigures ? Cents(backing, "paidHereBeforeCents") : null,
             hasStartDay ? DateOf(backing, "accumulatingFrom") : null,
-            hasStartDay ? DateOf(backing, "hereFrom") : null);
+            hasStartDay ? DateOf(backing, "hereFrom") : null,
+            hasVrij ? LeftBehindOf(backing, "earlier") : NoneIn(backing, "earlier"));
+    }
+
+    private static LeftBehindSnapshot? LeftBehindOf(JsonElement parent, string name)
+    {
+        var left = parent.GetProperty(name);
+        if (left.ValueKind == JsonValueKind.Null) return null;
+
+        return new LeftBehindSnapshot(
+            Int(left, "account"), MarkOf(left, "since"), DateOf(left, "from"), Cents(left),
+            BackingOf(left, "before", hasFigures: true, hasStartDay: true, hasVrij: true)
+                ?? throw new FormatException("A \"—\" names no backing it ended."));
+    }
+
+    // An older version cannot have written what came later: if it is there at all, the document is
+    // not what that version wrote.
+    private static LeftBehindSnapshot? NoneIn(JsonElement parent, string name) =>
+        parent.TryGetProperty(name, out _) ? throw new FormatException($"\"{name}\" is newer than this version.") : null;
+
+    private static ReallocationEndSnapshot EndOf(JsonElement parent, string name)
+    {
+        var end = parent.GetProperty(name);
+        var properties = end.EnumerateObject().ToList();
+        if (properties.Count != 1) throw new FormatException($"\"{name}\" is not one end.");
+
+        return properties[0].Name switch
+        {
+            "unclaimed" => new ReallocationEndSnapshot(ReallocationEndKind.Unclaimed, Account: properties[0].Value.GetInt32()),
+            "category" => new ReallocationEndSnapshot(ReallocationEndKind.Category, Category: properties[0].Value.GetInt32()),
+            "unassigned" when properties[0].Value.ValueKind == JsonValueKind.True => new ReallocationEndSnapshot(ReallocationEndKind.Unassigned),
+            _ => throw new FormatException($"\"{name}\" is not an end MoneyBud knows."),
+        };
     }
 
     private static EntryMark MarkOf(JsonElement parent, string name)

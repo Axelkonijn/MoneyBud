@@ -4,7 +4,7 @@
 # stakeholder on 2026-10-04). Giving that money a purpose, and moving it on, is in
 # reallocate-an-amount.feature. What the strip shows otherwise is in show-accounts.feature.
 #
-# WRITTEN FOR INCREMENT 15, 2026-10-04. NOT YET APPROVED at the scenario gate.
+# WRITTEN FOR INCREMENT 15, 2026-10-04. APPROVED at the scenario gate on 2026-10-04.
 #
 # The rules, from arc42 §12:
 #   - EVERY ACCOUNT EXCEPT THE POOL ACCOUNT SHOWS UNCLAIMED, on screen "Vrij": the money on it that no

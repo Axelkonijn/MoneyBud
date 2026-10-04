@@ -91,7 +91,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1943 passing: 1030 scenario cases, 913 developer unit tests
+dotnet test  MoneyBud.slnx     # 2058 passing: 1104 scenario cases, 954 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the desktop app; keeps its data in %LOCALAPPDATA%\MoneyBud
 dotnet run --project src/MoneyBud.Phone.Desktop                     # the phone's screens in a window
 dotnet run --project src/MoneyBud.Phone.Desktop -- snapshot <folder> dark light kintsugi-dark kintsugi-light
@@ -105,13 +105,42 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-10-04, after increment 15's scenarios were approved. Update this when a stage completes._
+_Last updated 2026-10-04, after increment 15 was built. Update this when a stage completes._
 
-**Start here in a new conversation: increment 15, *Vrij* and moving *Opgebouwd*, is at stage 4.**
+**Start here in a new conversation: increment 15 is built, committed and installed on Axel's phone, but
+NOT merged: his try found that the Betaalrekening needs *Vrij* too.** That is the next job, **gates waived by
+him** (scenarios, plan and app presented together at the end, every decision taken without him listed).
+His answers are in the round's last section, *Na het installeren op de telefoon*. In short: **ruling 5 is
+revised** — the pool account shows *Vrij* = *Saldo* − this period's *Niet toegewezen* − the *Resterend* of
+categories without an account − the *Opgebouwd* of categories it backs, and it is an end in *Verplaatsen*
+both ways (giving its old balance a purpose; covering a lower balance correction). Why ruling 5 was wrong:
+*Niet toegewezen* only holds income, so a starting balance or correction on the pool account could never
+get a purpose. Steps: §12 (revise ruling 5 with a dated note, as earlier revisions were), scenarios
+(`show-unclaimed`'s "pool account shows no Unclaimed" scenarios and `reallocate-an-amount`'s choices
+scenario assert the old rule), plan section, build, `spec-reviewer`, then a new APK (`adb` is now on his
+user PATH) and his try, then merge. Things to settle in the plan: income dated after today counts in
+*Niet toegewezen* but not yet in the *Saldo*, so it should not make the pool's *Vrij* dip; and an income
+recorded on another account (a known corner, §11).
 Work is on branch **`increment-15-vrij`** (from `main`). Stages 1–3 ran on 2026-10-04 and are committed;
-**the scenarios were approved by Axel at the first gate on 2026-10-04**. Next: write the plan in
-`docs/plans/increment-15-vrij.md` and **stop for his approval at the second gate**. Gates are *not*
-waived for this increment. Then stage 5 as usual: build to green, `spec-reviewer`, his try, merge.
+**the scenarios were approved by Axel at the first gate on 2026-10-04**. **The plan is written**
+([`docs/plans/increment-15-vrij.md`](docs/plans/increment-15-vrij.md), 2026-10-04: D1, a `Reallocation` entry
+and backing as a history of stretches, ADR 0015, format version 8 reading 7; ten readings) and was
+**approved by Axel at the second gate on 2026-10-04**, everything as written. **Stage 5 is done except his
+try** (2026-10-04): built as planned (ADR 0015, format version 8, version 7 read), 2058 tests green, 0
+warnings. Installed on his phone the same day (`adb install -r`, his version-7 data kept and read).
+
+- **Ruled at the build, with him:** *Vrij* to *Vrij* on another account is refused ("is overboeken"); one
+  scenario's Givens corrected (a starting balance dated today already holds an expense dated yesterday).
+- **`spec-reviewer`** found no faked scenario and three defects, all fixed with tests: a late receipt
+  after re-pointing missing from what the account holds (what is there now counts from the period of
+  backing; data before version 8 converted on reading); deleting an unused account wiping another
+  stretch's money left behind; *Verplaatsen* crashing with nothing to take from (now offered only when
+  there is). An invariant fuzz (*Vrij* + *Opgebouwd* = *Saldo*, 1500 mixed acts) and six mutations hold
+  it. A headless run of the window passed 25 checks. All in §12 *Vrij, and moving Opgebouwd: chosen in
+  the build*.
+- **Known, older than this increment:** the phone snapshot cannot open the accounts panel on kintsugi
+  (fails the same on the last commit); on the desktop a row's *Staat op* list can nudge into the *Budget*
+  column when the row carries an extra link.
 
 - **Read first:** the round [2026-10-04-opgebouwd-en-vrij](docs/stakeholder/2026-10-04-opgebouwd-en-vrij.md)
   (Dutch, translated), then §12 *Vrij, and moving Opgebouwd* — its *Ruled at the scenario stage*, *What
@@ -132,8 +161,7 @@ waived for this increment. Then stage 5 as usual: build to green, `spec-reviewer
   note: money already had now *can* get a purpose; unbacking no longer returns everything; re-backing
   no longer restarts *Opgebouwd*; spending a backed category from another account is gone; an overspent
   category's shortfall now moves on backing, "—" and re-pointing.
-- **Totals:** 48 new scenarios (72 cases); 23 approved scenarios revised, 1 removed. **None are bound
-  yet**, so until stage 5 the suite reports them as undefined — the 1943 below is the count before.
+- **Totals:** 48 new scenarios (72 cases); 23 approved scenarios revised, 1 removed. All bound and passing.
 - **The data promise holds** (ADR 0014): version 7 must be read, as data with nothing given a purpose.
   Axel left that choice to us and says he will likely start over anyway; we kept it because it is cheap.
   This is the first format change under the promise.

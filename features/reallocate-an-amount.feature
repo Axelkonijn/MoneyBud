@@ -4,7 +4,7 @@
 # 2026-10-04). What Unclaimed is, on screen "Vrij", is in show-unclaimed.feature. What "—" leaves behind is
 # in back-a-category.feature.
 #
-# WRITTEN FOR INCREMENT 15, 2026-10-04. NOT YET APPROVED at the scenario gate.
+# WRITTEN FOR INCREMENT 15, 2026-10-04. APPROVED at the scenario gate on 2026-10-04.
 #
 # Where it comes from, in his words, translated: he cannot change Opgebouwd, nor move it between
 # categories, and "I already have savings and shares, so Opgebouwd doesn't really match what is in there".
@@ -70,6 +70,11 @@
 #     on screen, as assigning acts on the period shown. With another period on screen, it is refused.
 #   - A negative amount's row reads as a move the other way, without a sign, as a negative assignment
 #     adds a row going the other way. A zero move leaves no row, as assigning zero does.
+#
+# RULED BY THE STAKEHOLDER AT THE BUILD, 2026-10-04, on the recommendation: Unclaimed on one account to
+# Unclaimed on another is REFUSED, second in the order above, after the same end on both sides. It gives
+# nothing a purpose; moving money between accounts is a transfer. No scenario was added; a unit test holds
+# it (VrijTests).
 #
 # Reading the steps:
 #   - The English term "Reallocate" is the documentation's proposal for "Verplaatsen", open at this gate,

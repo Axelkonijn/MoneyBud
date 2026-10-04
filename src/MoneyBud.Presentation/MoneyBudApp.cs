@@ -106,6 +106,7 @@ public sealed partial class MoneyBudApp : ObservableObject
         CategoryForm = new CategoryForm(this);
         AccountForm = new AccountForm(this);
         TransferForm = new TransferForm(this);
+        ReallocateForm = new ReallocateForm(this);
 
         if (Ledger.Settle()) Keep();
         if (TakeWhatSettlingDid() is { Said: { } said } settled)
@@ -120,6 +121,7 @@ public sealed partial class MoneyBudApp : ObservableObject
     public CategoryForm CategoryForm { get; }
     public AccountForm AccountForm { get; }
     public TransferForm TransferForm { get; }
+    public ReallocateForm ReallocateForm { get; }
 
     public BudgetPeriod ShownPeriod { get; private set; }
 
@@ -345,6 +347,7 @@ public sealed partial class MoneyBudApp : ObservableObject
         ExpenseForm?.RefreshAccount();
         IncomeForm?.RefreshAccount();
         TransferForm?.RefreshAccounts();
+        ReallocateForm?.RefreshChoices();
         ExpenseForm?.RefreshFrequency();
         IncomeForm?.RefreshFrequency();
     }
@@ -847,12 +850,14 @@ public sealed partial class MoneyBudApp : ObservableObject
 
     /// <summary>
     /// The strip across the top: every account with its balance today, the pool account first and
-    /// the rest in the order added (arc42 §12, <i>Accounts and net worth</i>). The same in every
-    /// period — a balance is about today, not the period on screen.
+    /// the rest in the order added (arc42 §12, <i>Accounts and net worth</i>), and, since increment 15,
+    /// every account but the pool account with its <i>Vrij</i>. The same in every period — a balance
+    /// is about today, not the period on screen.
     /// </summary>
     public IReadOnlyList<AccountLine> Accounts =>
         Ledger.Accounts
-            .Select(a => new AccountLine(a, Ledger.BalanceOf(a), a == Ledger.PoolAccount) { IsOpen = a == HistoryAccount })
+            .Select(a => new AccountLine(a, Ledger.BalanceOf(a), a == Ledger.PoolAccount, Ledger.UnclaimedOf(a))
+                { IsOpen = a == HistoryAccount })
             .ToList();
 
     private IReadOnlyList<Account> accountChoices = [];
@@ -1124,6 +1129,36 @@ public sealed partial class MoneyBudApp : ObservableObject
         var result = Ledger.SetBacking(categoryName, account);
         if (result.Outcome != BackingOutcome.Unchanged)
             Tell(AndIfNoLongerDestination(Tekst.BackingSet(result), destination), landedIn: null);
+
+        return result;
+    }
+
+    // ------------------------------------------------------------------ Vrij, and moving Opgebouwd
+
+    /// <summary>
+    /// <i>Verplaatsen</i>: moves the amount typed from one end to the other (arc42 §12, <i>One act moves
+    /// an amount of purpose</i>). <i>Niet toegewezen</i> is the period on screen's, which must be the
+    /// current one. Never asks first; says afterwards what moved, and which way the money went if it
+    /// went between two accounts. Zero is said and changes nothing. Kept, like every act that goes
+    /// through.
+    /// </summary>
+    /// <returns>The ledger's answer, or null when the amount could not be read as one.</returns>
+    public ReallocateResult? Reallocate(string? amount, ReallocationEnd from, ReallocationEnd to)
+    {
+        if (!AmountInput.TryRead(amount, out var euros))
+        {
+            NotAnAmount(amount);
+            return null;
+        }
+
+        var result = Ledger.Reallocate(euros, from, to, ShownPeriod);
+
+        if (result.Made is { } made)
+            Tell(Tekst.Reallocated(made), landedIn: null);
+        else if (result.Refusal is { } refusal)
+            Refuse(Tekst.Refusal(refusal, result.Into?.Name));
+        else
+            Tell(Tekst.ReallocatedNothing(from, to), landedIn: null, changed: false);
 
         return result;
     }

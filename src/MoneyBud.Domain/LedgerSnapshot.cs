@@ -32,6 +32,11 @@ namespace MoneyBud.Domain;
 /// <para><b>Since the period start day</b> (ADR 0012): <see cref="StartDayChanges"/>, the calendar
 /// as a history of changes, empty for periods that have always started on the 1st; and on each
 /// backing the first day of the period of each mark.</para>
+///
+/// <para><b>Since <i>Vrij</i></b> (ADR 0015): <see cref="Reallocations"/>, every move of purpose the user
+/// made; on a category set to "—", <see cref="CategorySnapshot.LeftBehind"/>; and on a backing, the
+/// stretch before it, <see cref="BackingSnapshot.Earlier"/>. Null in data from before version 8, which
+/// had none.</para>
 /// </summary>
 public sealed record LedgerSnapshot(
     IReadOnlyList<CategorySnapshot> Categories,
@@ -49,21 +54,41 @@ public sealed record LedgerSnapshot(
     IReadOnlyList<PeriodEndSnapshot> PeriodEnds,
     IReadOnlyList<LetGoSnapshot> LetGo,
     IReadOnlyList<RepeatSnapshot> Repeats,
-    IReadOnlyList<StartDayChange>? StartDayChanges = null);
+    IReadOnlyList<StartDayChange>? StartDayChanges = null,
+    IReadOnlyList<ReallocationSnapshot>? Reallocations = null);
 
 public sealed record AccountSnapshot(int Key, string Name);
 
-public sealed record CategorySnapshot(int Key, string Name, bool IsArchived, BackingSnapshot? Backing = null);
+public sealed record CategorySnapshot(
+    int Key, string Name, bool IsArchived, BackingSnapshot? Backing = null, LeftBehindSnapshot? LeftBehind = null);
 
 /// <summary>
 /// A category's backing: the account's key, the two marks and the figure remembered with each
 /// (<see cref="Domain.Backing"/>). The figures are null in data from before version 6, which did not
 /// keep them, and are then worked out again on loading. So are the first days of the marks' periods
-/// in data from before version 7, when every period started on the 1st.
+/// in data from before version 7, when every period started on the 1st. <see cref="Earlier"/> is the
+/// "—" before it, since version 8.
 /// </summary>
 public sealed record BackingSnapshot(
     int Account, EntryMark AccumulatingSince, EntryMark HereSince, Money? NotMoved = null, Money? PaidHereBefore = null,
-    DateOnly? AccumulatingFrom = null, DateOnly? HereFrom = null);
+    DateOnly? AccumulatingFrom = null, DateOnly? HereFrom = null, LeftBehindSnapshot? Earlier = null);
+
+/// <summary>
+/// A category set to "—" (<see cref="Domain.LeftBehind"/>): the account its older money was left on, the
+/// mark drawn then, its period's first day, the amount left, and the backing it ended.
+/// </summary>
+public sealed record LeftBehindSnapshot(int Account, EntryMark Since, DateOnly From, Money Amount, BackingSnapshot Before);
+
+/// <summary>
+/// One end of a reallocation: <see cref="Kind"/> with the key of its account, for <i>Vrij</i>, or of its
+/// category.
+/// </summary>
+public sealed record ReallocationEndSnapshot(ReallocationEndKind Kind, int? Account = null, int? Category = null);
+
+/// <summary>A reallocation (<see cref="Reallocation"/>), with the keys of the accounts its two ends were on.</summary>
+public sealed record ReallocationSnapshot(
+    int Id, DateOnly Date, ReallocationEndSnapshot From, ReallocationEndSnapshot To, int FromAccount, int ToAccount,
+    Money Amount);
 
 /// <summary>
 /// A category's <i>Budget</i> in the period that starts on <see cref="PeriodStart"/>. A budget of

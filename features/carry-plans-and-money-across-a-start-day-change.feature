@@ -30,8 +30,8 @@
 #     TOO: a change never changes it.
 #   - A change moves NO OTHER MONEY.
 #
-# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; not yet
-# approved). Setting Staat op to "—" no longer returns what is there for a category: it returns this
+# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; approved
+# at the scenario gate on 2026-10-04). Setting Staat op to "—" no longer returns what is there for a category: it returns this
 # period's Remaining, and leaves the rest on the account. So "what unbacking returns" now depends on which
 # period is the current one, which a change of start day does change. What a change still never changes is
 # Accumulated, and what is there for the category, which re-pointing takes along whole. The last scenario,

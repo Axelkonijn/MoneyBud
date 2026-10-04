@@ -353,6 +353,14 @@ public sealed class ScreenSteps(SpecContext context)
 
         if (table.ContainsColumn("accumulated marked"))
             Assert.Equal(YesNo(expected["accumulated marked"]) ? Marker.Over : Marker.None, actual.AccumulatedMarker);
+
+        // The account a category set to "—" names beside it; blank for one that names none.
+        if (table.ContainsColumn("accumulated on"))
+        {
+            Assert.Equal(expected["accumulated on"] is "" ? null : expected["accumulated on"], actual.AccumulatedOn?.Name);
+            if (actual.Accumulated is { } figure && actual.AccumulatedOn is { } on)
+                Assert.Equal(Tekst.AccumulatedFigure(figure, on), actual.AccumulatedText);
+        }
     }
 
     /// <summary>The row's grey figure, both as a figure and as what the row shows.</summary>

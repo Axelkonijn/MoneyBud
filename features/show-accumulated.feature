@@ -7,8 +7,8 @@
 # back-a-category.feature.
 #
 # REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", settled by the stakeholder
-# that day). The scenarios marked "Revised for increment 15" or "New in increment 15" below are NOT YET
-# APPROVED; they go to the scenario gate.
+# that day). The scenarios marked "Revised for increment 15" or "New in increment 15" below were
+# APPROVED at the scenario gate on 2026-10-04.
 #   - ACCUMULATED CAN NOW BE MOVED BY ME, as an amount: in from an account's Unclaimed or from another
 #     category, out to Unclaimed, to another category or to this period's Unassigned
 #     (reallocate-an-amount.feature). None of that is a budget. And IT NO LONGER STARTS OVER: setting Staat

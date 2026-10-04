@@ -43,7 +43,7 @@
 # version without them: it says so and closes, which is a row of start-moneybud.feature's outline
 # for data MoneyBud cannot read (glossary: "Saved data from before accounts").
 #
-# ADDED AND REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd"; not yet approved
+# ADDED AND REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd"; approved at the scenario gate on 2026-10-04
 # at the scenario gate):
 #   - THE DATA PROMISE IS KEPT (ruling 7, left by the stakeholder to the documentation: "Make the choice
 #     yourself, based on what is efficient"). Data kept by the version before this increment, the first

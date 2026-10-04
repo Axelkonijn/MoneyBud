@@ -30,8 +30,8 @@
 # Since backing (2026-09-27) and the sweep, history also includes money moved for the category between
 # two accounts, and any sweep into it (back-a-category.feature, choose-a-sweep-destination.feature).
 #
-# ADDED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", follow-up 10; not yet
-# approved at the scenario gate): A CATEGORY CANNOT BE DELETED WHILE ITS ACCUMULATED IS NOT ZERO, however it
+# ADDED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", follow-up 10; approved
+# at the scenario gate on 2026-10-04): A CATEGORY CANNOT BE DELETED WHILE ITS ACCUMULATED IS NOT ZERO, however it
 # got there: money given to it from an account's Unclaimed, which moves no money between accounts, and
 # money a category set to "—" left behind included. Move it out first, or archive it. Rejected: deleting
 # it, the money going back to Unclaimed. "Not zero" includes below zero (derived).

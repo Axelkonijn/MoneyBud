@@ -11,6 +11,11 @@ namespace MoneyBud.Domain;
 /// account became the backing account, by backing or by re-pointing: what is there for the category
 /// in it counts from there (<see cref="Ledger.ThereFor"/>).</para>
 ///
+/// <para>Since increment 15, <see cref="PaidHereBefore"/> is what the account had paid for the
+/// category in expenses dated from <see cref="AccumulatingFrom"/> on, by the time it became the backing
+/// account; before, only those in the period of <see cref="HereFrom"/>. Data kept before version 8 is
+/// converted on reading (<see cref="Ledger.FromSnapshot"/>).</para>
+///
 /// <para>A mark is drawn from the entries' counter without being an entry, so it orders against an
 /// expense recorded the same day. It orders movements; expenses are counted by <b>period</b>: every
 /// expense dated in the mark's period or later counts, whenever it was entered (§12, <i>ruling of
@@ -29,10 +34,41 @@ namespace MoneyBud.Domain;
 /// remembered, not worked out again from the mark's date, because a change of the period start day
 /// can cut that period short, and <i>Opgebouwd</i> must not move because of it (§12, <i>A change never
 /// changes Opgebouwd</i>, follow-up 5; ADR 0012).</para>
+///
+/// <para><see cref="NotMoved"/> is the period's <i>Budget</i> less what moved at backing, which since
+/// increment 15 may be below zero: an overspent category moves its overspending the other way (§12,
+/// follow-up 15). So it is what had been spent by then.</para>
+///
+/// <para><b>Since increment 15 a backing is one stretch of a short history</b> (ADR 0015).
+/// <see cref="Earlier"/> is the stretch before it: the "—" the category was set to, which may have left
+/// money behind, and through that the backing before. A period before <see cref="AccumulatingFrom"/> is
+/// worked out by that history, so <i>Opgebouwd</i> carries on across "—" and stepping back still shows
+/// what each period had built. Null for a category backed for the first time, or backed again under a
+/// version that started <i>Opgebouwd</i> over.</para>
 /// </summary>
 public sealed record Backing(
     Account Account, EntryMark AccumulatingSince, EntryMark HereSince, Money NotMoved, Money PaidHereBefore,
-    DateOnly AccumulatingFrom, DateOnly HereFrom);
+    DateOnly AccumulatingFrom, DateOnly HereFrom, LeftBehind? Earlier = null)
+{
+    /// <summary>The mark the whole history counts from: this stretch's, or the oldest before it.</summary>
+    public EntryMark FirstSince => Earlier?.Before.FirstSince ?? AccumulatingSince;
+}
+
+/// <summary>
+/// A category set to "—", and what it left behind (arc42 §12, <i>Setting Staat op to "—"</i>; ADR 0015).
+/// "—" sends only the current period's money back to the pool account; everything older stays on the
+/// account where it was, <see cref="Account"/>, still the category's <i>Opgebouwd</i>.
+///
+/// <para><see cref="Amount"/> is what was left there at <see cref="Since"/>, the mark drawn when it was
+/// set, in the period starting <see cref="From"/>. It is a fixed figure: the category's expenses do not
+/// lower it (§12, follow-up), and only moves out of it do — a reallocation, or <i>Restant bijwerken</i>
+/// taking an over-sweep back. It may be zero, and then nothing shows; the record is kept, so that setting
+/// an account again carries on. It may be below zero, when the older periods were overspent.</para>
+///
+/// <para><see cref="Before"/> is the backing it ended, which works out every period before
+/// <see cref="From"/>.</para>
+/// </summary>
+public sealed record LeftBehind(Account Account, EntryMark Since, DateOnly From, Money Amount, Backing Before);
 
 /// <summary>What setting a category's backing did.</summary>
 public enum BackingOutcome
@@ -52,15 +88,21 @@ public enum BackingOutcome
 
 /// <summary>
 /// What came of setting a category's backing: what it did, the account it was backed by before, and
-/// the money that moved, if any. Never refused: backing is chosen from a list, and every choice in
-/// it is allowed, including one that overdraws an account (§12).
+/// the movements made, in the order made. Never refused: backing is chosen from a list, and every
+/// choice in it is allowed, including one that overdraws an account (§12).
+///
+/// <para>Since increment 15 an act can make two: backing a category again after "—" takes the money it
+/// left behind along, and moves this period's <i>Resterend</i> off the pool account as well.</para>
 /// </summary>
 public sealed record SetBackingResult(
-    Category Category, BackingOutcome Outcome, Account? Before, Account? After, Movement? Moved)
+    Category Category, BackingOutcome Outcome, Account? Before, Account? After, IReadOnlyList<Movement> Moves)
 {
     /// <summary>
-    /// Whether money visibly moved: a movement between two accounts. A movement from the pool account
-    /// to itself changes no balance, so there is nothing to say about it.
+    /// The movements between two accounts, which are what is said. A movement from an account to itself
+    /// changes no balance, so there is nothing to say about it.
     /// </summary>
-    public bool MovedMoney => Moved is { } m && m.From != m.To;
+    public IReadOnlyList<Movement> MovedBetweenAccounts => Moves.Where(m => m.From != m.To).ToList();
+
+    /// <summary>Whether money visibly moved.</summary>
+    public bool MovedMoney => MovedBetweenAccounts.Count > 0;
 }

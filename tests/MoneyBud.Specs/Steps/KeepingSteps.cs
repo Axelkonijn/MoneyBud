@@ -289,7 +289,8 @@ public sealed class KeepingSteps(SpecContext context)
     // starts over: the forms' Submit records or saves an entry, Remove asks to remove one, and
     // TakeOver takes a plan over, which only assigns. The accounts increment's acts add, rename,
     // delete, correct and move between accounts, and open and close a history; none keeps data or
-    // clears it. The sweep's one act, BringUpToDate, moves an ended period's leftover.
+    // clears it. The sweep's one act, BringUpToDate, moves an ended period's leftover. Verplaatsen's
+    // form moves an amount of purpose, and StartFrom opens it from a category's row.
     [Then(@"^MoneyBud should offer no act for (saving|starting over)$")]
     public void ThenMoneyBudShouldOfferNoActFor(string _)
     {
@@ -309,13 +310,14 @@ public sealed class KeepingSteps(SpecContext context)
             ["ExpenseForm"] = App.ExpenseForm, ["IncomeForm"] = App.IncomeForm,
             ["AssignForm"] = App.AssignForm, ["CategoryForm"] = App.CategoryForm,
             ["AccountForm"] = App.AccountForm, ["TransferForm"] = App.TransferForm,
+            ["ReallocateForm"] = App.ReallocateForm,
         };
         var offered = screen.ToHashSet();
         foreach (var (name, form) in forms)
         {
             var commands = CommandsOf(form);
             Assert.Subset(new HashSet<string>(["SubmitCommand", "CancelCommand", "RemoveCommand", "OpenCommand",
-                                               "EarlierPeriodCommand", "LaterPeriodCommand"]), commands.ToHashSet());
+                                               "EarlierPeriodCommand", "LaterPeriodCommand", "StartFromCommand"]), commands.ToHashSet());
             offered.UnionWith(commands);
         }
 

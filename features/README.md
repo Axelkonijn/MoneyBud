@@ -61,8 +61,8 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
-**Increment 15, *Vrij* and moving *Opgebouwd*, was written on 2026-10-04 and approved by Axel at the
-scenario gate the same day**, not yet bound. It brings two new files, `show-unclaimed.feature` (7 scenarios, 14 cases) and
+**Increment 15, *Vrij* and moving *Opgebouwd*, was written on 2026-10-04, approved by Axel at the
+scenario gate the same day, and bound and passing the same day.** It brings two new files, `show-unclaimed.feature` (7 scenarios, 14 cases) and
 `reallocate-an-amount.feature` (22 scenarios, 34 cases), making forty-three. Besides them it adds 19
 scenarios (24 cases) to approved files, revises 23 approved scenarios and removes one, each marked in its
 file and explained in the file's header:
@@ -75,8 +75,13 @@ scenarios and 72 new cases. Four points raised while writing them were ruled by 
 scenario stage the same day, each on the recommendation, and are in the files. `keep-data.feature` now has
 the first scenarios that involve two versions of MoneyBud: data kept before *Vrij* is read (the data
 promise, ADR 0014). The steps use the English terms *Unclaimed* (*Vrij*) and *Reallocate*
-(*Verplaatsen*), the documentation's proposals, open at the gate. The counts below are from before this
-increment.
+(*Verplaatsen*), the documentation's proposals, approved with them. One scenario's Givens were corrected
+at the build with Axel's agreement (`spend-against-a-backed-category.feature`, its header says which), and
+one point was ruled at the build (`reallocate-an-amount.feature`'s header).
+
+**Forty-three feature files exist, all bound, and every scenario in them passes**: 1104 scenario cases,
+beside 954 developer unit tests, 2058 in all (2026-10-04). What follows was written at increment 14, and its
+counts are from then.
 
 **Forty-one feature files exist, all bound, and every scenario in them passes**: 1030 scenario cases,
 beside 913 developer unit tests, 1943 in all (2026-09-30). Forty are approved at a gate. **The phone
