@@ -6,6 +6,43 @@
 # and the rows moved money leaves in an account's history in show-moved-money.feature. THIS FILE
 # EXPLAINS THE STEPS THE FIVE SHARE.
 #
+# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", settled by the stakeholder
+# that day). The scenarios marked "Revised for increment 15" or "New in increment 15" below are NOT YET
+# APPROVED; they go to the scenario gate. What changed, and why:
+#   - SETTING STAAT OP TO "—" RETURNS ONLY THIS PERIOD'S MONEY to the pool account (ruling 6): this
+#     period's Remaining, and, if this period is overspent, the overspending comes back FROM the pool
+#     account to the account (follow-up 15). EVERYTHING OLDER STAYS ON THE ACCOUNT, STILL THE CATEGORY'S
+#     ACCUMULATED, and its row says where: "Opgebouwd € 5.000,00 op Spaarrekening" (follow-up). His
+#     principle: money stays where it last was until it is set otherwise. So:
+#       - "Money built up in earlier periods goes back to the pool account too" is rewritten: it stays.
+#       - "Unbacking moves what is there for the category ..." keeps its first three rows; its last,
+#         overspent, now moves the overspending back to Deposit.
+#   - BACKING AGAIN, OR POINTING ELSEWHERE, TAKES ALL OF IT ALONG, AND ACCUMULATED CONTINUES. "Backing a
+#     category again after unbacking it starts Accumulated over" is rewritten to continue, and his own
+#     case, "—" and then another account, is new.
+#   - BACKING AN OVERSPENT CATEGORY MOVES THE OVERSPENDING THE OTHER WAY, from the new account to the pool
+#     account (follow-up 15). The last row of "Only what remains ..." changes.
+#   - AN EXPENSE AGAINST A BACKED CATEGORY IS ALWAYS ON ITS BACKING ACCOUNT (the follow-up ruling,
+#     spend-against-a-backed-category.feature). Three scenarios here put one on another account:
+#       - "Unbacking returns what was moved in for the category, even when some of it was spent from the
+#         pool account" is rewritten around an expense on the backing account. Its point now is what goes
+#         back: this period's Remaining.
+#       - "Pointing the backing at another account takes the money along, and Accumulated carries on"
+#         keeps its point; its 50 is now paid from Deposit.
+#       - "An expense against the category paid from a third account does not change what unbacking
+#         returns" is REMOVED. A new or changed expense can no longer be put on a third account, so it
+#         describes nothing I can do. Data kept before this increment may still hold such an expense, and
+#         that is in keep-data.feature.
+#   - THE STRIP NOW SHOWS UNCLAIMED, on screen "Vrij" (show-unclaimed.feature). Some account tables here
+#     gain that column, which shows that backing moves nothing that was already mine.
+#   - Also new: a category set to "—" while the pool account backed it, whose row says its money is on
+#     the pool account (follow-up); and an account a category on "—" left money on, which cannot be
+#     deleted even when no money ever moved there (this file's reading, see its comment).
+#   - RULED AT THE SCENARIO STAGE, 2026-10-04, on the recommendation: RE-POINTING A CATEGORY WHOSE
+#     ACCUMULATED IS BELOW ZERO MOVES THE SHORTFALL TOO, from the new account to the old one. "Re-pointing
+#     when nothing is there for the category moves nothing" becomes an outline: spent exactly, nothing
+#     moves; overspent by 50, 50 moves from Broker to Deposit.
+#
 # The rules, from arc42 §12:
 #   - A category is BACKED BY ONE ACCOUNT, OR BY NONE. I set it, point it at another account, or
 #     remove it, AT ANY TIME, from the category's row: on screen the list "Staat op", with "—" for
@@ -14,9 +51,14 @@
 #     before (show-accounts.feature).
 #   - BACKING A CATEGORY MOVES NOTHING ALREADY IN THE ACCOUNT. Money I already had stays seen by
 #     location only. In the stakeholder's words: "nothing happens except that they are now backed".
+#     (Revised 2026-10-04: it still moves nothing, but money I already had now shows as Unclaimed, and I
+#     can give it a purpose myself: show-unclaimed.feature, reallocate-an-amount.feature.)
 #   - BUT ON THE DAY OF BACKING, THE CATEGORY'S UNSPENT REMAINING IN THE CURRENT PERIOD MOVES from the
 #     pool account to the backing account: a Budget of 300 with 100 spent moves 200, because the 100
 #     spent has already left the pool. IF NOTHING REMAINS, OR THE CATEGORY IS OVERSPENT, NOTHING MOVES.
+#     (Revised 2026-10-04, follow-up 15: IF THE CATEGORY IS OVERSPENT, THE OVERSPENDING MOVES THE OTHER
+#     WAY, from the backing account to the pool account: 300 with 350 spent moves 50 to the pool account.
+#     Accumulated still starts at -50, and now the money matches it.)
 #     Budgets already set for LATER periods move on those periods' first day, like any assignment.
 #     (Since 2026-09-29: or on the day of a change of the period start day, when the change puts one in
 #     a period that has already begun: carry-plans-and-money-across-a-start-day-change.feature.)
@@ -29,13 +71,25 @@
 #     account. IF THERE IS NONE, NOTHING MOVES. Either act MAY OVERDRAW the account the money leaves,
 #     shown with the marker, badge "Rood", and never blocked. All three are follow-ups ruled the same
 #     day.
+#     (Revised 2026-10-04, ruling 6: RE-POINTING STILL TAKES EVERYTHING ALONG, and when what is there is
+#     below zero the shortfall moves from the new account to the old one (ruled at the scenario stage,
+#     2026-10-04). SETTING "—" RETURNS ONLY THIS
+#     PERIOD'S REMAINING, and an overspending of this period comes back from the pool account to the
+#     account (follow-up 15). Since every expense of a backed category is on its account, this period's
+#     Remaining is exactly this period's money still on the account.)
 #   - Money built up in EARLIER PERIODS goes back to the pool account too, WITH NO PURPOSE: it joins
 #     no period's Unassigned (ruled with the revision).
+#     (Revised 2026-10-04, ruling 6: IT STAYS ON THE ACCOUNT, STILL THE CATEGORY'S ACCUMULATED. So does
+#     money given from Unclaimed or moved in from another category, and swept money. The row says where
+#     it is. It counts as claimed in that account's Unclaimed. Its expenses while on "—" do not lower it.)
 #   - MONEY PLANNED FOR A LATER PERIOD has not moved yet, so it is not returned or taken along. It
 #     moves on that period's first day TO WHATEVER THE CATEGORY IS BACKED BY THEN: the new account
 #     after re-pointing, and NOWHERE if it has been unbacked.
 #   - RE-POINTING: ACCUMULATED CARRIES ON. BACKING AGAIN AFTER UNBACKING: ACCUMULATED STARTS OVER,
 #     from what moves at the new backing.
+#     (Revised 2026-10-04, ruling 6: BACKING AGAIN AFTER "—" TAKES THE MONEY LEFT BEHIND ALONG, AND
+#     ACCUMULATED CONTINUES. This period's money, which "—" returned to the pool account, moves off it
+#     again, once.)
 #   - THE POOL ACCOUNT MAY BACK A CATEGORY. Assigning then moves money from the pool to the pool, so
 #     no balance changes, but Accumulated still counts. The same when a backing account is later made
 #     the pool (follow-up). SUCH A MOVEMENT LEAVES NO ROW in the history: no balance changed (ruled at
@@ -57,10 +111,15 @@
 # so that they are approved or contradicted at this gate:
 #   - Which of the category's expenses count for what unbacking moves: those paid from the backing
 #     account and dated after the day it became the backing account, or on that day and recorded after.
+#     (Superseded on 2026-09-28 by "every expense dated in the period of backing or later", and on
+#     2026-10-04 by "—" returning this period's Remaining.)
 #   - Re-pointing when there is nothing there for the category moves nothing, and Accumulated carries
-#     on at the new account.
+#     on at the new account. (Narrowed at the scenario stage, 2026-10-04, by the stakeholder: when less than
+#     nothing is there, the shortfall moves from the new account to the old one. Exactly nothing still
+#     moves nothing.)
 #   - An expense against the category paid from a THIRD account (neither the pool nor the backing
 #     account) comes back to the pool account on unbacking, not to the account that paid.
+#     (Withdrawn for increment 15: such an expense can no longer be recorded. Its scenario is removed.)
 #   - An account may back SEVERAL categories. Nothing limits it, and the settled model allowed it.
 #   - Deleting a category with no history takes its backing with it, and nothing moves.
 #   - A budget left in a PAST period does not move when the category is backed: the ruling names the
@@ -90,7 +149,9 @@
 #     budget in a past period by a Given.
 #   - "I have already spent N euro on "X" ..." is an expense on the pool account, and is only used
 #     before X is backed. A Given that records an expense against a backed category always names its
-#     account.
+#     account. Since increment 15 that is always its backing account, the only account such an expense
+#     can be on (spend-against-a-backed-category.feature), except in keep-data.feature's data kept before
+#     the increment.
 #   - "the backing account of "X" should be "Y"" means X's Staat op list shows Y. ""X" should not be
 #     backed" means it shows "—".
 #   - "the choices offered for the backing account of "X" should be exactly these, in this order" is
@@ -119,6 +180,17 @@
 #   - In an account's history (show-accounts.feature's step), ENTRY "movement" is money MoneyBud moved
 #     on a category's behalf. CATEGORY is the category it moved for, FROM and TO its two accounts, and
 #     AMOUNT the amount, without a sign. See show-moved-money.feature.
+#   - Added for increment 15, for a category set to "—" that left money on an account:
+#       - "Accumulated for "X" in the ... budget period should be N euro, on "Y"" is X's row showing
+#         Opgebouwd N with account Y, as "Opgebouwd € 5.000,00 op Spaarrekening" does. The step without
+#         ", on ..." reads the figure alone, whatever the row says beside it.
+#       - The row table's column ACCUMULATED ON is the account the row names beside Opgebouwd, and a BLANK
+#         cell means it names none, which is how a backed row reads: its Staat op list already says where.
+#         point-at-a-slice.feature's slice table gains the same column.
+#       - "I should be told that "X" is no longer backed, and of no money moved" is the announcement when
+#         "—" moves nothing. It names no amount.
+#       - "I should be told that "X" is now backed by "Y", and that these amounts moved:" is the
+#         announcement when more than one amount moved, with a table of FROM, TO and AMOUNT, in any order.
 #   - Every other step is reused unchanged from the file that introduced it, the account steps from
 #     show-accounts.feature.
 #
@@ -197,9 +269,14 @@ Feature: Back a category with an account
     And Unassigned in the current budget period should still be 1700 euro
 
   # What was spent has already left the pool account, so only what remains moves. Spent down to
-  # exactly nothing, or overspent, nothing moves. Accumulated starts at the period's Remaining, below
-  # zero when overspent (ruling of 2026-09-28; spend-against-a-backed-category.feature).
-  Scenario Outline: Only what remains of the current period's budget moves, and nothing when it is all spent or overspent
+  # exactly nothing, nothing moves. Accumulated starts at the period's Remaining, below zero when
+  # overspent (ruling of 2026-09-28; spend-against-a-backed-category.feature).
+  #
+  # Revised for increment 15 (follow-up 15, the glossary's example). Overspent, nothing used to move,
+  # and Deposit then held 50 more than Savings had. Now the 50 overspent moves the other way, from Deposit
+  # to Bank, which paid it. In every row Deposit's Unclaimed is the 5000 that was mine before: backing moves
+  # none of it.
+  Scenario Outline: Only what remains of the current period's budget moves, nothing when it is all spent, and an overspending moves the other way
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 5000 euro
     And I have a budget of <budget> euro for "Savings" in the current budget period
@@ -208,9 +285,9 @@ Feature: Back a category with an account
     Then I should be told that "Savings" is now backed by "Deposit"
     And I should not be warned or asked to confirm
     And the accounts should be exactly these, in this order:
-      | account | balance   |
-      | Bank    | <bank>    |
-      | Deposit | <deposit> |
+      | account | balance   | unclaimed |
+      | Bank    | <bank>    |           |
+      | Deposit | <deposit> | 5000.00   |
     And Accumulated for "Savings" in the current budget period should be <remaining> euro
     And the remaining "Savings" budget in the current budget period should still be <remaining> euro
 
@@ -219,7 +296,7 @@ Feature: Back a category with an account
       | 300.00 | 100.00 | 200.00    | 1700.00 | 5200.00 |
       | 300.00 | 299.99 | 0.01      | 1700.00 | 5000.01 |
       | 300.00 | 300.00 | 0.00      | 1700.00 | 5000.00 |
-      | 300.00 | 350.00 | -50.00    | 1650.00 | 5000.00 |
+      | 300.00 | 350.00 | -50.00    | 1700.00 | 4950.00 |
 
   # "The current period" is the ruling's own wording: the period on screen does not change what moves.
   Scenario: Backing moves the current period's unspent budget, whichever period is on screen
@@ -276,44 +353,49 @@ Feature: Back a category with an account
     And "Bank" should be shown as overdrawn, with the marker a category over budget has and the badge "Rood"
 
   # ----------------------------------------------------------------------------------
-  # Unbacking a category returns its money to the pool account
+  # Setting a category to "—" returns this period's money to the pool account
   #
-  # What moves is what is there for the category in the backing account: what was moved in for it,
-  # minus its expenses paid from that account. Not Accumulated, which counts its expenses on every
-  # account. So nothing is left in the backing account with no purpose, and the pool account ends up
-  # exactly where MoneyBud assumes it is.
+  # Revised for increment 15 (ruling 6). First ruled: unbacking returns what is there for the category,
+  # all of it. Now only this period's part goes back: this period's Remaining, which, with every expense
+  # of a backed category on its account, is exactly this period's money still on it. That keeps "—"
+  # meaning that this period's money is on the pool account, where the sweep collects it. An overspending
+  # comes back the other way (follow-up 15). Everything older stays, still the category's.
   # ----------------------------------------------------------------------------------
 
-  # The glossary's own example. 200 moved in, 50 spent against Savings from Bank, so Accumulated is
-  # 150, and 200 comes back. Bank ends up exactly 50 down, for the 50 spent.
-  Scenario: Unbacking returns what was moved in for the category, even when some of it was spent from the pool account
+  # Revised for increment 15. It first paid the 50 from Bank, which a backed category's expense can no
+  # longer be, and returned all 200 moved in. Now the 50 is paid from Deposit, and this period's
+  # Remaining, 150, comes back. Bank ends up exactly 50 down, for the 50 spent, as before, and Deposit
+  # holds only what was mine: its Unclaimed.
+  Scenario: Setting a category to none returns this period's unspent budget to the pool account
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 5000 euro
     And I have a budget of 200 euro for "Savings" in the current budget period
     And I have set the backing account of "Savings" to "Deposit"
-    And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Bank"
+    And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"
     And Accumulated for "Savings" in the current budget period is 150 euro
     When I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 200 euro moved from "Deposit" to "Bank"
+    Then I should be told that "Savings" is no longer backed, and that 150 euro moved from "Deposit" to "Bank"
     And I should not be warned or asked to confirm
     And "Savings" should not be backed
     And "Savings" should show no Accumulated in the current budget period
     And the accounts should be exactly these, in this order:
-      | account | balance |
-      | Bank    | 1950.00 |
-      | Deposit | 5000.00 |
+      | account | balance | unclaimed |
+      | Bank    | 1950.00 |           |
+      | Deposit | 5000.00 | 5000.00   |
     And net worth should still be 6950 euro
     And the remaining "Savings" budget in the current budget period should still be 150 euro
     And Unassigned in the current budget period should still be 1800 euro
 
   # Deposit starts at 0, and 200 was moved in for Savings. Then:
-  #   - 50 against Savings paid from Deposit: 150 is there for it, and 150 moves.
-  #   - 150 against Groceries paid from Deposit: that is not Savings money, so 200 is still there for
+  #   - 50 against Savings paid from Deposit: 150 remains, and 150 moves.
+  #   - 150 against Groceries paid from Deposit: that is not Savings money, so 200 still remains for
   #     Savings and 200 moves, which leaves Deposit short: the money moved there was spent on
   #     something else. Ruled true.
-  #   - 200 against Savings paid from Deposit: nothing is there, and nothing moves.
-  #   - 250 against Savings paid from Deposit: less than nothing is there, and nothing moves.
-  Scenario Outline: Unbacking moves what is there for the category in the backing account, and nothing when there is none
+  #   - 200 against Savings paid from Deposit: nothing remains, and nothing moves.
+  #   - 250 against Savings paid from Deposit: 50 overspent. Revised for increment 15 (follow-up 15): it
+  #     first moved nothing and left Deposit 50 in the red. Now the overspending comes back from Bank to
+  #     Deposit, so it is counted once, in this period's leftover, and Deposit is back at nothing.
+  Scenario Outline: Setting a category to none moves this period's Remaining back to the pool account, nothing when it is spent exactly, and an overspending the other way
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 0 euro
     And I have a category "Groceries"
@@ -332,12 +414,14 @@ Feature: Back a category with an account
       | I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"   | 1950.00 | 0.00    | no        |
       | I have recorded an expense of 150 euro for "Groceries" labelled "Markt" dated today on the account "Deposit" | 2000.00 | -150.00 | yes       |
       | I have recorded an expense of 200 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"  | 1800.00 | 0.00    | no        |
-      | I have recorded an expense of 250 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"  | 1800.00 | -50.00  | yes       |
+      | I have recorded an expense of 250 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"  | 1750.00 | 0.00    | no        |
 
-  # Ruled with the revision: money built up in an earlier period goes back too. It was assigned in
-  # that period long ago, so it joins no period's Unassigned: it is money with no purpose, like a
-  # starting balance.
-  Scenario: Money built up in earlier periods goes back to the pool account too, and joins no period's Unassigned
+  # Revised for increment 15 (ruling 6). First ruled with the revision of 2026-09-27: money built up in an
+  # earlier period goes back too, with no purpose. Now only this period's 100 goes back, so that "—" still
+  # means this period's money is on the pool account. The 200 built up in the previous period stays on
+  # Deposit, still Savings' Accumulated, and the row says where it is. Deposit's Unclaimed is nothing:
+  # all of Deposit is Savings'. Neither period's Unassigned changes.
+  Scenario: Only this period's money goes back to the pool account, and money built up in earlier periods stays where it is, still the category's
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
@@ -348,74 +432,94 @@ Feature: Back a category with an account
     When the next budget period begins while MoneyBud is open
     And I assign 100 euro to "Savings" in the current budget period
     And I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 300 euro moved from "Deposit" to "Bank"
-    And the balance of "Bank" should be 3800 euro
-    And the balance of "Deposit" should be 0.00 euro
+    Then I should be told that "Savings" is no longer backed, and that 100 euro moved from "Deposit" to "Bank"
+    And "Savings" should not be backed
+    And the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 3600.00 |           |
+      | Deposit | 200.00  | 0.00      |
+    And Accumulated for "Savings" in the current budget period should be 200 euro, on "Deposit"
     And Unassigned in the current budget period should still be 1700 euro
     And Unassigned in the previous budget period should still be 1800 euro
-    And "Savings" should show no Accumulated in the current budget period
-    And "Savings" should show no Accumulated in the previous budget period
 
-  # A category's expense paid from a third account, Cash, neither the pool nor the backing account.
-  # Derived by the documentation and not put to the stakeholder: what came into Deposit for Savings
-  # all goes back to the pool account, so nothing is stranded, but the 50 lands on Bank rather than
-  # on Cash, which paid it.
-  Scenario: An expense against the category paid from a third account does not change what unbacking returns
-    Given I have recorded an income of 2000 euro labelled "Salaris" dated today
-    And I have an account "Deposit" with a starting balance of 0 euro
-    And I have an account "Cash" with a starting balance of 100 euro
-    And I have a budget of 200 euro for "Savings" in the current budget period
-    And I have set the backing account of "Savings" to "Deposit"
-    And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Cash"
-    When I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 200 euro moved from "Deposit" to "Bank"
-    And the accounts should be exactly these, in this order:
-      | account | balance |
-      | Bank    | 2000.00 |
-      | Deposit | 0.00    |
-      | Cash    | 50.00   |
+  # REMOVED FOR INCREMENT 15: "An expense against the category paid from a third account does not
+  # change what unbacking returns". It recorded a Savings expense on Cash while Deposit backed Savings.
+  # A backed category's expense is now always on its backing account, so that can no longer be done, and
+  # the scenario described nothing I can do. Data kept before increment 15 may still hold such an expense:
+  # keep-data.feature, "Data kept before Unclaimed".
+
+  # New in increment 15 (follow-up of 2026-10-04). The pool account backs Savings, so its money never
+  # left Bank. Set to "—" in the next period, Savings has nothing this period, so nothing moves, and the
+  # 400 built up stays on Bank, still Savings'. Bank shows no Unclaimed, so only the row says it is there.
+  Scenario: A category set to none while the pool account backed it leaves its older money on the pool account, and its row says so
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Bank"
+    And I have a budget of 400 euro for "Savings" in the current budget period
+    When the next budget period begins while MoneyBud is open
+    And I remove the backing of "Savings"
+    Then I should be told that "Savings" is no longer backed, and of no money moved
+    And Accumulated for "Savings" in the current budget period should be 400 euro, on "Bank"
+    And the balance of "Bank" should still be 2000 euro
 
   # ----------------------------------------------------------------------------------
   # Pointing the backing at another account takes the money along
   # ----------------------------------------------------------------------------------
 
+  # Revised for increment 15. It first paid the 50 from Bank, which a backed category's expense can no
+  # longer be, so 200 moved. Now the 50 is paid from Deposit, and the 150 there for Savings moves along.
+  # Re-pointing is otherwise unchanged by the rulings of 2026-10-04: it takes everything along.
   Scenario: Pointing the backing at another account takes the money along, and Accumulated carries on
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 0 euro
     And I have an account "Broker" with a starting balance of 0 euro
     And I have a budget of 200 euro for "Savings" in the current budget period
     And I have set the backing account of "Savings" to "Deposit"
-    And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Bank"
+    And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated today on the account "Deposit"
     When I set the backing account of "Savings" to "Broker"
-    Then I should be told that "Savings" is now backed by "Broker", and that 200 euro moved from "Deposit" to "Broker"
+    Then I should be told that "Savings" is now backed by "Broker", and that 150 euro moved from "Deposit" to "Broker"
     And I should not be warned or asked to confirm
     And the backing account of "Savings" should be "Broker"
     And the accounts should be exactly these, in this order:
       | account | balance |
-      | Bank    | 1750.00 |
+      | Bank    | 1800.00 |
       | Deposit | 0.00    |
-      | Broker  | 200.00  |
+      | Broker  | 150.00  |
     And net worth should still be 1950 euro
     And Accumulated for "Savings" in the current budget period should still be 150 euro
 
   # Derived by the documentation, not put to the stakeholder: the same "nothing when there is none"
   # as unbacking. Deposit has paid out more for Savings than it received, which stays true of Deposit.
-  Scenario: Re-pointing when nothing is there for the category moves nothing, and Accumulated carries on
+  #
+  # Revised for increment 15. RULED AT THE SCENARIO STAGE, 2026-10-04, on the recommendation: RE-POINTING A
+  # CATEGORY WHOSE ACCUMULATED IS BELOW ZERO MOVES THE SHORTFALL TOO, from the new account to the old one,
+  # as backing and "—" now move an overspending (follow-up 15). It first said that nothing moves, leaving
+  # Deposit 50 in the red and Broker holding nothing for a Savings that shows -50 there. Spent down to
+  # exactly nothing, nothing moves. Overspent by 50, 50 moves from Broker to Deposit: Deposit is back at
+  # nothing, Broker shows the -50, "Rood", and on both accounts Unclaimed and Accumulated add up.
+  Scenario Outline: Re-pointing when nothing is there for the category moves nothing, an overspending moves from the new account to the old one, and Accumulated carries on
     Given I have recorded an income of 2000 euro labelled "Salaris" dated today
     And I have an account "Deposit" with a starting balance of 0 euro
     And I have an account "Broker" with a starting balance of 0 euro
     And I have a budget of 200 euro for "Savings" in the current budget period
     And I have set the backing account of "Savings" to "Deposit"
-    And I have recorded an expense of 250 euro for "Savings" labelled "Fiets" dated today on the account "Deposit"
+    And I have recorded an expense of <spent> euro for "Savings" labelled "Fiets" dated today on the account "Deposit"
     When I set the backing account of "Savings" to "Broker"
     Then the backing account of "Savings" should be "Broker"
-    And I should be told that "Savings" is now backed by "Broker", and of no money moved
+    And I should be told that "Savings" is now backed by "Broker"<told>
     And the accounts should be exactly these, in this order:
-      | account | balance | overdrawn |
-      | Bank    | 1800.00 | no        |
-      | Deposit | -50.00  | yes       |
-      | Broker  | 0.00    | no        |
-    And Accumulated for "Savings" in the current budget period should still be -50 euro
+      | account | balance  | overdrawn   | unclaimed |
+      | Bank    | 1800.00  | no          |           |
+      | Deposit | 0.00     | no          | 0.00      |
+      | Broker  | <broker> | <overdrawn> | 0.00      |
+    And Accumulated for "Savings" in the current budget period should still be <broker> euro
+
+    Examples:
+      | spent  | told                                                   | broker | overdrawn |
+      | 200.00 | , and of no money moved                                | 0.00   | no        |
+      | 250.00 | , and that 50 euro moved from "Broker" to "Deposit"    | -50.00 | yes       |
 
   # Settled by the revision: the money is where the category is backed now, so pulling budget back
   # draws from there, and Deposit is not touched.
@@ -471,14 +575,19 @@ Feature: Back a category with an account
       | I remove the backing of "Savings"                  | 2000.00 | 0.00   |
 
   # ----------------------------------------------------------------------------------
-  # Backing again after unbacking starts Accumulated over
+  # Backing again after "—" continues Accumulated
   #
-  # Unbacking returned the old 300 to the pool account. Backing again moves what remains of this
-  # period's budget, 100, and Accumulated counts from there. Before today nothing had moved since
-  # this backing, so the previous period shows zero.
+  # Revised for increment 15 (ruling 6). First ruled: backing again after unbacking starts Accumulated
+  # over, because unbacking had returned the old total. Now "—" returns only this period's money, and the
+  # rest stays on the account, still the category's. Setting an account again takes it all along, and
+  # Accumulated carries on. Pointing straight at another account does the same, as it always did.
   # ----------------------------------------------------------------------------------
 
-  Scenario: Backing a category again after unbacking it starts Accumulated over
+  # Revised for increment 15. "—" returned this period's 100 to Bank and left the previous period's 200 on
+  # Deposit. Backing again with Deposit has nothing to take along, since the 200 is already there, and
+  # moves this period's 100 off Bank again, once. Accumulated is 300 again, not 100, and the previous
+  # period shows the 200 built up by its end, not zero.
+  Scenario: Backing a category again after setting it to none continues Accumulated
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
@@ -490,12 +599,46 @@ Feature: Back a category with an account
     And I assign 100 euro to "Savings" in the current budget period
     Then Accumulated for "Savings" in the current budget period should be 300 euro
     When I remove the backing of "Savings"
-    And I set the backing account of "Savings" to "Deposit"
+    Then Accumulated for "Savings" in the current budget period should be 200 euro, on "Deposit"
+    When I set the backing account of "Savings" to "Deposit"
     Then I should be told that "Savings" is now backed by "Deposit", and that 100 euro moved from "Bank" to "Deposit"
-    And Accumulated for "Savings" in the current budget period should be 100 euro
-    And Accumulated for "Savings" in the previous budget period should be 0.00 euro
-    And the balance of "Bank" should be 3700 euro
-    And the balance of "Deposit" should be 100 euro
+    And Accumulated for "Savings" in the current budget period should be 300 euro
+    And Accumulated for "Savings" in the previous budget period should be 200 euro
+    And the balance of "Bank" should be 3500 euro
+    And the balance of "Deposit" should be 300 euro
+
+  # New in increment 15: the stakeholder's own case (ruling 6), with synthetic names and his figures. The
+  # 5000 was given to Savings from Deposit's Unclaimed (reallocate-an-amount.feature), which is not this
+  # period's budget, and 150 is this period's. "—" sends the 150 back to Bank and leaves the 5000 on
+  # Deposit. Setting Broker then takes both along: the 5000 from Deposit, and the 150 off Bank again. In
+  # his words: "If you choose '—' first and then Aandelenrekening, the same should happen."
+  Scenario: Setting a category to none and then to another account takes everything along, and Accumulated carries on
+    Given I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 5000 euro
+    And I have an account "Broker" with a starting balance of 0 euro
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have reallocated 5000 euro from Unclaimed on "Deposit" to "Savings"
+    And I have a budget of 150 euro for "Savings" in the current budget period
+    When I remove the backing of "Savings"
+    Then I should be told that "Savings" is no longer backed, and that 150 euro moved from "Deposit" to "Bank"
+    And Accumulated for "Savings" in the current budget period should be 5000 euro, on "Deposit"
+    And the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 2000.00 |           |
+      | Deposit | 5000.00 | 0.00      |
+      | Broker  | 0.00    | 0.00      |
+    When I set the backing account of "Savings" to "Broker"
+    Then I should be told that "Savings" is now backed by "Broker", and that these amounts moved:
+      | from    | to     | amount  |
+      | Deposit | Broker | 5000.00 |
+      | Bank    | Broker | 150.00  |
+    And Accumulated for "Savings" in the current budget period should be 5150 euro
+    And the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 1850.00 |           |
+      | Deposit | 0.00    | 0.00      |
+      | Broker  | 5150.00 | 0.00      |
 
   # ----------------------------------------------------------------------------------
   # The pool account may back a category
@@ -643,6 +786,21 @@ Feature: Back a category with an account
     When I remove the backing of "Savings"
     Then "Savings" should not be backed
     And the balance of "Deposit" should be 0.00 euro
+    And I should not be able to delete the account "Deposit"
+
+  # New in increment 15. The glossary derives that an account a category on "—" left money on is used,
+  # "because the money got there by movements". Here it got there with no movement between accounts at
+  # all: Deposit's own 2000 was given to Holiday from Unclaimed. This file's reading, open at this gate:
+  # an account holding a category's money counts as used however the money got there, so deleting it
+  # cannot take that money with it.
+  Scenario: An account a category on none left money on cannot be deleted, even when no money ever moved there
+    Given I have an account "Deposit" with a starting balance of 2000 euro
+    And I have a category "Holiday"
+    And I have set the backing account of "Holiday" to "Deposit"
+    And I have reallocated 2000 euro from Unclaimed on "Deposit" to "Holiday"
+    When I remove the backing of "Holiday"
+    Then I should be told that "Holiday" is no longer backed, and of no money moved
+    And Accumulated for "Holiday" in the current budget period should be 2000 euro, on "Deposit"
     And I should not be able to delete the account "Deposit"
 
   # Derived, not asked: a category with no history has no budget and no expense anywhere, so nothing

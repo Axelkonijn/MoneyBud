@@ -37,6 +37,12 @@
 #   - UNBACKING THE DESTINATION RETURNS ITS SWEPT MONEY TO THE POOL ACCOUNT TOO, like any money there
 #     for it, with no purpose. That is not a redirect. The ended period's line still says where its
 #     leftover was swept.
+#     (REVISED FOR INCREMENT 15, 2026-10-04, not yet approved: setting Staat op to "—" now returns only
+#     this period's money, and swept money is not part of it, even a sweep dated this period's first day.
+#     SWEPT MONEY STAYS ON THE ACCOUNT, STILL THE CATEGORY'S ACCUMULATED, and its row says where
+#     (glossary: "Vrij, and moving Opgebouwd", ruling 6). The one scenario that asserted the old reading,
+#     "Unbacking the destination clears it, says so, returns its swept money to the pool account, and the
+#     next period end moves nothing", is revised below. It still clears the destination and says so.)
 #
 # RULED BY THE STAKEHOLDER AT THE SCENARIO GATE, 2026-09-27, on points raised while writing these
 # scenarios:
@@ -203,11 +209,14 @@ Feature: Choose where a period's leftover money goes
   # When the destination's category changes
   # ----------------------------------------------------------------------------------
 
-  # Ruling 6, and the documentation's reading of what unbacking does with swept money: everything
-  # there for Savings goes back to Bank, the 1000 swept included, with no purpose. The ended period
-  # still says its leftover went to Savings. The next period to end has no destination, so its 500
-  # stays on Bank and shows as still to sweep.
-  Scenario: Unbacking the destination clears it, says so, returns its swept money to the pool account, and the next period end moves nothing
+  # Ruling 6. The ended period still says its leftover went to Savings. The next period to end has no
+  # destination, so its 500 stays on Bank and shows as still to sweep.
+  #
+  # Revised for increment 15. It first said, in the documentation's reading, that everything there for
+  # Savings went back to Bank, the 1000 swept included, with no purpose. Now "—" returns only this period's
+  # money, and Savings has no budget this period, so nothing moves: the swept 1000 stays on Deposit, still
+  # Savings', and its row says where.
+  Scenario: Unbacking the destination clears it and says so, its swept money stays where it is, still the category's, and the next period end moves nothing
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 1000 euro labelled "Salaris" dated today
@@ -219,7 +228,7 @@ Feature: Choose where a period's leftover money goes
     When the next budget period begins while MoneyBud is open
     Then I should be told that the period leftover of the previous budget period, 1000 euro, was swept into "Savings"
     When I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 1000 euro moved from "Deposit" to "Bank"
+    Then I should be told that "Savings" is no longer backed, and of no money moved
     And I should be told that "Savings" is no longer the sweep destination
     And the sweep destination shown in the current budget period should be none
     And the choices offered for the sweep destination should be exactly these, in this order:
@@ -227,11 +236,12 @@ Feature: Choose where a period's leftover money goes
       | none   |
     And the accounts should be exactly these, in this order:
       | account | balance |
-      | Bank    | 1500.00 |
-      | Deposit | 0.00    |
+      | Bank    | 500.00  |
+      | Deposit | 1000.00 |
+    And Accumulated for "Savings" in the current budget period should be 1000 euro, on "Deposit"
     And the previous budget period should still show that 1000 euro was swept into "Savings"
     When the next budget period begins while MoneyBud is open
-    Then the balance of "Bank" should still be 1500 euro
+    Then the balance of "Bank" should still be 500 euro
     And the previous budget period should show 500 euro of its period leftover still to sweep
     And the budget period 2 before the current one should still show that 1000 euro was swept into "Savings"
 

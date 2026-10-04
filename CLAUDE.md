@@ -105,9 +105,44 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-30, after increment 14 was accepted. Update this when a stage completes._
+_Last updated 2026-10-04, after increment 15's scenarios were approved. Update this when a stage completes._
 
-**Start here in a new conversation: MoneyBud is in real use, on Axel's phone.** Increment 14, the
+**Start here in a new conversation: increment 15, *Vrij* and moving *Opgebouwd*, is at stage 4.**
+Work is on branch **`increment-15-vrij`** (from `main`). Stages 1–3 ran on 2026-10-04 and are committed;
+**the scenarios were approved by Axel at the first gate on 2026-10-04**. Next: write the plan in
+`docs/plans/increment-15-vrij.md` and **stop for his approval at the second gate**. Gates are *not*
+waived for this increment. Then stage 5 as usual: build to green, `spec-reviewer`, his try, merge.
+
+- **Read first:** the round [2026-10-04-opgebouwd-en-vrij](docs/stakeholder/2026-10-04-opgebouwd-en-vrij.md)
+  (Dutch, translated), then §12 *Vrij, and moving Opgebouwd* — its *Ruled at the scenario stage*, *What
+  these rulings revise*, *For the plan* and *What this section leaves open* subsections especially. Then
+  [`show-unclaimed.feature`](features/show-unclaimed.feature),
+  [`reallocate-an-amount.feature`](features/reallocate-an-amount.feature), and the headers of the eleven
+  revised feature files (listed in `features/README.md`).
+- **What it is, in one breath:** found in real use. Every account except the pool shows ***Vrij***
+  (Saldo minus what its backed categories have there; may go negative, *Rood*). One new act,
+  ***Verplaatsen*** (Van, Naar, Bedrag), moves an amount between *Vrij*, backed categories'
+  *Opgebouwd* and the current period's *Niet toegewezen* — money moves only when the two ends are on
+  different accounts; no *Budget* changes. **An expense on a backed category is always on its backing
+  account** (list locked from the period it got its account). **"—" returns only this period's part**
+  (shortfall too); older money stays on the account as the category's *Opgebouwd*, and setting an account
+  again takes it along — *Opgebouwd* no longer restarts. A category with *Opgebouwd* ≠ 0, or named by any
+  reallocation, cannot be deleted.
+- **It revises several older rulings** (two of them Axel's own, 2026-09-27), each kept in §12 with a dated
+  note: money already had now *can* get a purpose; unbacking no longer returns everything; re-backing
+  no longer restarts *Opgebouwd*; spending a backed category from another account is gone; an overspent
+  category's shortfall now moves on backing, "—" and re-pointing.
+- **Totals:** 48 new scenarios (72 cases); 23 approved scenarios revised, 1 removed. **None are bound
+  yet**, so until stage 5 the suite reports them as undefined — the 1943 below is the count before.
+- **The data promise holds** (ADR 0014): version 7 must be read, as data with nothing given a purpose.
+  Axel left that choice to us and says he will likely start over anyway; we kept it because it is cheap.
+  This is the first format change under the promise.
+- **For the plan, flagged:** the date-dependent account lock (point 16 in §12's table of open points) is low priority for Axel — if it
+  proves costly, take it back to him rather than build it anyway. The English terms *Unclaimed* and
+  *Reallocate* are used in the steps and were approved with them.
+- Still owed from increment 14, unchanged: the three phone-only figures go onto the desktop (below).
+
+**Before increment 15: MoneyBud is in real use, on Axel's phone.** Increment 14, the
 phone app, was built on 2026-09-30 (stages 3–5 without stopping, as he asked), installed on his phone,
 used for a few hours, changed once at his review (the ring's centre no longer flickers; the budget opens
 in one pull) and **accepted the same day**, then merged into `main` and pushed.

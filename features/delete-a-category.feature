@@ -27,6 +27,19 @@
 #         category once had an expense. The glossary records this as the documentation's
 #         derivation.
 #
+# Since backing (2026-09-27) and the sweep, history also includes money moved for the category between
+# two accounts, and any sweep into it (back-a-category.feature, choose-a-sweep-destination.feature).
+#
+# ADDED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", follow-up 10; not yet
+# approved at the scenario gate): A CATEGORY CANNOT BE DELETED WHILE ITS ACCUMULATED IS NOT ZERO, however it
+# got there: money given to it from an account's Unclaimed, which moves no money between accounts, and
+# money a category set to "—" left behind included. Move it out first, or archive it. Rejected: deleting
+# it, the money going back to Unclaimed. "Not zero" includes below zero (derived).
+# RULED AT THE SCENARIO STAGE, 2026-10-04, on the recommendation: A CATEGORY NAMED BY ANY REALLOCATION ROW
+# CANNOT BE DELETED, EVEN WITH ITS ACCUMULATED BACK AT ZERO; it is archived instead. Those rows stay in an
+# account's history and explain its Unclaimed, and, where the money went on to another category, that
+# category's Accumulated. Rejected: deleting it with its rows. Three scenarios are new.
+#
 # Why have deleting at all, when archiving a category with no history already hides it
 # everywhere: an archived category keeps its name. Adding that name brings the old category back,
 # and renaming another category to it is refused (rename-a-category.feature). A deleted category
@@ -125,6 +138,53 @@ Feature: Delete a category
       | period   |
       | previous |
       | current  |
+
+  # New in increment 15 (follow-up 10). Holiday has no budget and no expense anywhere, and no money was
+  # moved for it between two accounts, so by the rules before this increment it could be deleted. But
+  # Deposit's money was given to it, and that money would lose its purpose. Below zero counts too.
+  Scenario Outline: A category whose Accumulated is not zero cannot be deleted, however it got there
+    Given I have an account "Deposit" with a starting balance of 2000 euro
+    And I have a category "Holiday"
+    And I have set the backing account of "Holiday" to "Deposit"
+    And <how>
+    Then I should not be able to delete the category "Holiday"
+
+    Examples:
+      | how                                                                               |
+      | I have reallocated 2000 euro from Unclaimed on "Deposit" to "Holiday"             |
+      | I have reallocated 100 euro from "Holiday" to Unclaimed on "Deposit"              |
+
+  # The same, for money a category set to "—" left behind: the 2000 stays on Deposit, still Holiday's.
+  Scenario: A category on none that left money behind cannot be deleted
+    Given I have an account "Deposit" with a starting balance of 2000 euro
+    And I have a category "Holiday"
+    And I have set the backing account of "Holiday" to "Deposit"
+    And I have reallocated 2000 euro from Unclaimed on "Deposit" to "Holiday"
+    And I have removed the backing of "Holiday"
+    Then Accumulated for "Holiday" in the current budget period should be 2000 euro, on "Deposit"
+    And I should not be able to delete the category "Holiday"
+
+  # New in increment 15, ruled at the scenario stage, 2026-10-04 (see the header). 200 was given to Holiday
+  # by mistake and moved back: Holiday's Accumulated is zero again, but both moves stay as rows in
+  # Deposit's history, naming it. So it cannot be deleted, whichever way the money went back out. It can
+  # be archived.
+  Scenario Outline: A category named by a reallocation cannot be deleted, even once its Accumulated is back at zero, and can be archived
+    Given I have an account "Deposit" with a starting balance of 2000 euro
+    And I have a category "Holiday"
+    And I have a category "Savings"
+    And I have set the backing account of "Holiday" to "Deposit"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have reallocated 200 euro from Unclaimed on "Deposit" to "Holiday"
+    And <back>
+    Then Accumulated for "Holiday" in the current budget period should be 0.00 euro
+    And I should not be able to delete the category "Holiday"
+    When I archive the category "Holiday"
+    Then I should be told that "Holiday" was archived
+
+    Examples:
+      | back                                                                  |
+      | I have reallocated 200 euro from "Holiday" to Unclaimed on "Deposit"  |
+      | I have reallocated 200 euro from "Holiday" to "Savings"               |
 
   # Unreachable, not refused: an archived category with no history is shown in no period, so
   # there is no row to carry a delete button.

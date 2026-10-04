@@ -23,6 +23,13 @@
 #     IT, like the cap on a negative assignment. IF THE CATEGORY IS NO LONGER BACKED, NOTHING MOVES,
 #     because unbacking already returned its money, and THE LINE STOPS ASKING (follow-up). Rejected:
 #     only from the account it was first swept into.
+#     (REVISED FOR INCREMENT 15, 2026-10-04, not yet approved; glossary: "Vrij, and moving Opgebouwd",
+#     follow-up 14. Setting Staat op to "—" no longer returns swept money: it stays on the account, still
+#     the category's. So AN OVER-SWEEP FROM A CATEGORY ON "—" COMES BACK OUT OF THE MONEY IT LEFT BEHIND,
+#     AT MOST THAT, from the account it is on to the pool account. Nothing moves, and the line stops
+#     asking, only when it left nothing behind. The scenario "When the category the money was swept into
+#     is no longer backed, nothing comes back, and the line stops asking" is revised below, and one
+#     scenario is new: the cap.)
 #   - WHEN A PERIOD'S LEFTOVER WENT TO TWO CATEGORIES, AN OVER-SWEEP IS TAKEN BACK LATEST FIRST: the
 #     most recent move for that period is undone first, then the one before (follow-up). Rejected: in
 #     proportion to what each received.
@@ -375,10 +382,14 @@ Feature: Bring a swept period up to date
     When I assign 100 euro to "Savings" in the current budget period
     Then I should still not be able to bring the swept amount of the previous budget period up to date
 
-  # The follow-up. Unbacking Savings already returned everything there for it, the swept 1900
-  # included, to Bank. So nothing moves for the 40, and the line stops asking. That the line still
-  # names what really went to Savings was ruled at the scenario gate on 2026-09-27.
-  Scenario: When the category the money was swept into is no longer backed, nothing comes back, and the line stops asking
+  # The follow-up, as first ruled: unbacking Savings had already returned everything there for it, the
+  # swept 1900 included, to Bank, so nothing moved for the 40, and the line stopped asking. That the
+  # line names what really went to Savings was ruled at the scenario gate on 2026-09-27.
+  #
+  # Revised for increment 15 (follow-up 14). "—" now returns only this period's money, and Savings has
+  # none this period, so nothing moves: the swept 1900 stays on Deposit, still Savings'. The 40 swept too
+  # much comes back out of it, as it would from a backing account, and the line names what really went.
+  Scenario: When the category the money was swept into is set to none, money swept too much comes back out of the money it left behind
     Given my budget periods are one month long
     And today is the last day of the current budget period
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
@@ -390,14 +401,48 @@ Feature: Bring a swept period up to date
     And I have recorded an expense of 100 euro for "Groceries" labelled "Markt" dated today
     When the next budget period begins while MoneyBud is open
     And I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 1900 euro moved from "Deposit" to "Bank"
+    Then I should be told that "Savings" is no longer backed, and of no money moved
     When I record an expense of 40 euro for "Groceries" labelled "Bon" dated on the last day of the previous budget period
-    Then I should not be able to bring the swept amount of the previous budget period up to date
-    And the previous budget period should show that 1900 euro was swept into "Savings"
+    Then the previous budget period should show 40 euro of its period leftover swept too much
+    And I should be able to bring the swept amount of the previous budget period up to date
+    When I bring the swept amount of the previous budget period up to date
+    Then I should be told that 40 euro swept too much for the previous budget period was taken back from "Savings"
     And the accounts should be exactly these, in this order:
       | account | balance |
-      | Bank    | 1860.00 |
+      | Bank    | 0.00    |
+      | Deposit | 1860.00 |
+    And Accumulated for "Savings" in the current budget period should be 1860 euro, on "Deposit"
+    And the previous budget period should show that 1860 euro was swept into "Savings"
+    And I should not be able to bring the swept amount of the previous budget period up to date
+
+  # New in increment 15 (follow-up 14): at most what it left behind. 1880 of the 1900 was moved to
+  # Unassigned (reallocate-an-amount.feature), so 20 is left on Deposit for Savings. The 50 swept too
+  # much comes back as far as that goes, 20, and the line stops asking for the other 30, for good, as for
+  # any capped take-back. Nothing is left for Savings, so it shows no Accumulated.
+  Scenario: Money swept too much comes back out of what a category on none left behind only as far as that goes
+    Given my budget periods are one month long
+    And today is the last day of the current budget period
+    And I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have set the sweep destination to "Savings"
+    And I have a budget of 400 euro for "Groceries" in the current budget period
+    And I have recorded an expense of 100 euro for "Groceries" labelled "Markt" dated today
+    When the next budget period begins while MoneyBud is open
+    And I remove the backing of "Savings"
+    And I reallocate 1880 euro from "Savings" to Unassigned in the current budget period
+    And I record an expense of 50 euro for "Groceries" labelled "Bon" dated on the last day of the previous budget period
+    Then the previous budget period should show 50 euro of its period leftover swept too much
+    When I bring the swept amount of the previous budget period up to date
+    Then I should be told that 20 euro swept too much for the previous budget period was taken back from "Savings"
+    And the accounts should be exactly these, in this order:
+      | account | balance |
+      | Bank    | 1850.00 |
       | Deposit | 0.00    |
+    And "Savings" should show no Accumulated in the current budget period
+    And the previous budget period should show that 1880 euro was swept into "Savings"
+    And I should not be able to bring the swept amount of the previous budget period up to date
 
   # The documentation's reading. Deposit paid a 1900 Groceries bill, which is not Savings money, so
   # 1900 is still there for Savings and the 40 comes back in full. Deposit goes into the red: the

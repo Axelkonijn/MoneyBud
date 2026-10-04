@@ -30,6 +30,15 @@
 #     TOO: a change never changes it.
 #   - A change moves NO OTHER MONEY.
 #
+# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; not yet
+# approved). Setting Staat op to "—" no longer returns what is there for a category: it returns this
+# period's Remaining, and leaves the rest on the account. So "what unbacking returns" now depends on which
+# period is the current one, which a change of start day does change. What a change still never changes is
+# Accumulated, and what is there for the category, which re-pointing takes along whole. The last scenario,
+# "A change never changes Accumulated, nor what unbacking returns", is revised to re-point instead of
+# setting "—", and its title follows. What "—" does after a change is not specified here: it follows the
+# rules of back-a-category.feature for whichever period is current.
+#
 # NOT specified here: two plans for one category landing in one period. They would add up, but the
 # documentation found no change that makes it happen, since each old first day falls in a different new
 # period. (Found at the build, 2026-09-29: two changes in one period do it. To the 30th on 29 September,
@@ -215,11 +224,17 @@ Feature: Carry plans and money across a change of the period start day
   # September keeps the plan and Cadeau, Resterend 250, and 27 September to 26 October has Boek and no
   # plan, Resterend -20. Opgebouwd is still their sum, 230, and no money moves. What is there for Savings
   # in Deposit is unchanged too (derived), so unbacking returns the same 230 it would have before.
-  Scenario: A change never changes Accumulated, nor what unbacking returns
+  #
+  # Revised for increment 15 (see the header). The last step first set Savings to "—", which returned all
+  # 230. "—" now returns only the current period's Remaining, which the change has made -20, so it no
+  # longer shows what is there for Savings. Pointing the backing at Broker does: it takes all of it along,
+  # the same 230 as before the change.
+  Scenario: A change never changes Accumulated, nor what pointing the backing elsewhere takes along
     Given my budget periods are one month long
     And today is 28 September 2026
     And I have recorded an income of 2000 euro labelled "Salaris" dated 1 September 2026
     And I have an account "Deposit" with a starting balance of 0 euro
+    And I have an account "Broker" with a starting balance of 0 euro
     And I have a budget of 300 euro for "Savings" in the current budget period
     And I have recorded an expense of 50 euro for "Savings" labelled "Cadeau" dated 10 September 2026
     And I have set the backing account of "Savings" to "Deposit"
@@ -235,5 +250,6 @@ Feature: Carry plans and money across a change of the period start day
       | account | balance |
       | Bank    | 1700.00 |
       | Deposit | 230.00  |
-    When I remove the backing of "Savings"
-    Then I should be told that "Savings" is no longer backed, and that 230 euro moved from "Deposit" to "Bank"
+      | Broker  | 0.00    |
+    When I set the backing account of "Savings" to "Broker"
+    Then I should be told that "Savings" is now backed by "Broker", and that 230 euro moved from "Deposit" to "Broker"
