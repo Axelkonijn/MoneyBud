@@ -6,6 +6,7 @@
         x:Class="MoneyBud.Desktop.MainWindow"
         x:DataType="p:MoneyBudApp"
         Title="MoneyBud"
+        Icon="/Assets/moneybud.ico"
         Width="1320" Height="900" MinWidth="1000" MinHeight="720"
         Background="#F6F7F9">
 

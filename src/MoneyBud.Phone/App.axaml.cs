@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Platform;
 using MoneyBud.Phone.Themes;
 using MoneyBud.Phone.Views;
 using MoneyBud.Presentation;
@@ -24,6 +25,7 @@ public sealed partial class App : Application
                 var window = new Window
                 {
                     Title = "MoneyBud — telefoon",
+                    Icon = new WindowIcon(AssetLoader.Open(new Uri("avares://MoneyBud.Phone/Assets/moneybud.ico"))),
                     Width = 412,
                     Height = 900,
                     CanResize = true,

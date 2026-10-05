@@ -30,6 +30,12 @@
     <AvaloniaResource Include="Theme/Kintsugi/*.jpg" />
   </ItemGroup>
 
+  <!-- The logo, for the phone-in-a-PC window (docs/logo/render.ps1). The phone's launcher icon is
+       MoneyBud.Phone.Android's own. -->
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\docs\logo\moneybud.ico" Link="Assets\moneybud.ico" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MoneyBud.Presentation\MoneyBud.Presentation.csproj" />
     <ProjectReference Include="..\MoneyBud.Storage\MoneyBud.Storage.csproj" />

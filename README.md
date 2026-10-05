@@ -1,3 +1,5 @@
+<img src="docs/logo/moneybud.svg" alt="MoneyBud's logo: a gold coin with a sprout, as a sticker" width="120" align="right">
+
 # MoneyBud
 
 A personal budgeting app — track income, expenses and savings goals for one person or household.
