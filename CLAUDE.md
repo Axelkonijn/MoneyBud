@@ -108,7 +108,7 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 _Last updated 2026-10-05, after the logo was made. Update this when a stage completes._
 
-**The logo** (2026-10-05, branch `logo`; not yet on his phone nor merged): a gold coin with a drooping
+**The logo** (2026-10-05, branch `logo`, accepted by Axel — "Looks great" — and merged into `main`): a gold coin with a drooping
 sprout, its stem thick at the coin and thin at the leaves, both leaves in front of the coin, drawn as a
 die-cut sticker to match the Niagara launcher's sticker icons on Axel's phone. Chosen with him over
 about ten rounds of drafts; flat, gradient, line,
