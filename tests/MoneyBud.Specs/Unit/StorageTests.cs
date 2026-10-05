@@ -231,18 +231,25 @@ public sealed class StorageTests : IDisposable
     {
         { "blank", "" },
         { "only whitespace", "  \n\t " },
-        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 7, \"categ" },
+        { "cut off", "{ \"format\": \"MoneyBud\", \"version\": 8, \"categ" },
         { "not an object", "[]" },
         { "another format", Valid().Replace("\"MoneyBud\"", "\"SomethingElse\"") },
-        { "a newer version", Valid().Replace("\"version\": 7", "\"version\": 8") },
-        { "version 6 with a calendar, which version 6 never wrote", Valid().Replace("\"version\": 7", "\"version\": 6") },
-        { "version 5 with a calendar", Valid().Replace("\"version\": 7", "\"version\": 5") },
-        { "version 4 with repeats, which version 4 never wrote", WithoutCalendar(Valid()).Replace("\"version\": 7", "\"version\": 4") },
-        { "version 3, from before the sweep", Valid().Replace("\"version\": 7", "\"version\": 3") },
-        { "version 2, from before backing", Valid().Replace("\"version\": 7", "\"version\": 2") },
-        { "version 1, from before accounts", Valid().Replace("\"version\": 7", "\"version\": 1") },
-        { "version 0", Valid().Replace("\"version\": 7", "\"version\": 0") },
-        { "no version", Valid().Replace("\"version\": 7,", "") },
+        { "a newer version", Valid().Replace("\"version\": 8", "\"version\": 9") },
+        { "version 7 with reallocations, which version 7 never wrote", Valid().Replace("\"version\": 8", "\"version\": 7") },
+        { "version 7 with a category set to none", WithoutReallocations(Valid()).Replace("\"leftBehind\": null", "\"leftBehind\": { }").Replace("\"version\": 8", "\"version\": 7") },
+        { "no reallocations", Valid().Replace("\"reallocations\"", "\"verplaatsingen\"") },
+        { "a reallocation end MoneyBud does not know", Valid().Replace("\"unclaimed\":", "\"vrij\":") },
+        { "a reallocation end that is two things", Valid().Replace("\"to\": {", "\"to\": { \"unclaimed\": 2,") },
+        { "a category without what it left behind", Valid().Replace("\"leftBehind\"", "\"achtergelaten\"") },
+        { "a movement for the reason a backing is carried on, as a word this version does not know", Valid().Replace("\"reason\": \"backed\"", "\"reason\": \"weer\"") },
+        { "version 6 with a calendar, which version 6 never wrote", Valid().Replace("\"version\": 8", "\"version\": 6") },
+        { "version 5 with a calendar", Valid().Replace("\"version\": 8", "\"version\": 5") },
+        { "version 4 with repeats, which version 4 never wrote", WithoutCalendar(Valid()).Replace("\"version\": 8", "\"version\": 4") },
+        { "version 3, from before the sweep", Valid().Replace("\"version\": 8", "\"version\": 3") },
+        { "version 2, from before backing", Valid().Replace("\"version\": 8", "\"version\": 2") },
+        { "version 1, from before accounts", Valid().Replace("\"version\": 8", "\"version\": 1") },
+        { "version 0", Valid().Replace("\"version\": 8", "\"version\": 0") },
+        { "no version", Valid().Replace("\"version\": 8,", "") },
         { "no calendar", Valid().Replace("\"calendar\"", "\"kalender\"") },
         { "a start day change without its day", Valid().Replace("\"startDay\"", "\"begindag\"") },
         { "a start day written as text", Valid().Replace("\"startDay\": 27", "\"startDay\": \"27\"") },
@@ -276,7 +283,7 @@ public sealed class StorageTests : IDisposable
 
     [Theory]
     [MemberData(nameof(Unreadable))]
-    public void Anything_but_a_whole_version_7_document_or_a_version_6_5_or_4_one_cannot_be_read(string what, string text)
+    public void Anything_but_a_whole_version_8_document_or_a_version_7_6_5_or_4_one_cannot_be_read(string what, string text)
     {
         _ = what;
         Assert.NotEqual(Valid(), text);
@@ -295,9 +302,13 @@ public sealed class StorageTests : IDisposable
         ledger.AddCategory("Savings");
         ledger.Assign(100m, "Savings", ledger.CurrentPeriod);
         ledger.SetBacking("Savings", ledger.AccountNamed("Deposit"));
+        ledger.Reallocate(50m, ReallocationEnd.UnclaimedOn(ledger.AccountNamed("Deposit")!),
+            ReallocationEnd.For(ledger.CategoriesOffered.Single(c => c.Name == "Savings")), ledger.CurrentPeriod);
         ledger.ChangeStartDay(27);
         var text = LedgerJson.Write(ledger.ToSnapshot());
         Assert.NotNull(LedgerJson.Read(text));
+        Assert.Contains("\"unclaimed\": 2", text);
+        Assert.Contains("\"leftBehind\": null", text);
         Assert.Contains("\"startDay\": 27", text);
         Assert.Contains("\"backing\": null", text);
         Assert.Contains("\"reason\": \"backed\"", text);
@@ -308,9 +319,21 @@ public sealed class StorageTests : IDisposable
 
     private static string WithoutCalendar(string text) => Regex.Replace(text, @",\s*""calendar"": \[[^\]]*\]", "");
 
+    private static string WithoutReallocations(string text) => Regex.Replace(text, @",\s*""reallocations"": \[[^\]]*\]", "");
+
+    // What version 8 added, taken out again: reallocations, and a category's and a backing's
+    // stretches before, which a document with nothing set to "—" has as null.
+    private static string AsVersion7(string text)
+    {
+        Assert.DoesNotContain("\"leftBehind\": {", text);
+        Assert.DoesNotContain("\"earlier\": {", text);
+        return Regex.Replace(WithoutReallocations(text), @",\s*""(leftBehind|earlier)"": null", "")
+            .Replace("\"version\": 8", "\"version\": 7");
+    }
+
     // What version 7 added, taken out again: the calendar, and a backing's two first days.
     private static string AsVersion6(string text) =>
-        Regex.Replace(WithoutCalendar(text), @",\s*""accumulatingFrom"": ""[^""]*"",\s*""hereFrom"": ""[^""]*""", "")
+        Regex.Replace(WithoutCalendar(AsVersion7(text)), @",\s*""accumulatingFrom"": ""[^""]*"",\s*""hereFrom"": ""[^""]*""", "")
             .Replace("\"version\": 7", "\"version\": 6");
 
     // ------------------------------------------------------------------ repeats (ADR 0011)
@@ -364,12 +387,13 @@ public sealed class StorageTests : IDisposable
         Assert.Empty(read.Repeats);
         var restored = Ledger.FromSnapshot(read, clock);
         Assert.Null(restored.FrequencyOf(restored.ExpensesIn(restored.CurrentPeriod)[0]));
-        Assert.Contains("\"version\": 7", LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Contains("\"version\": 8", LedgerJson.Write(restored.ToSnapshot()));
     }
 
     // Version 5 did not remember a backing's two figures, so they are worked out again on loading
     // (§12, ruling of 2026-09-28). Groceries: 300 budgeted, 100 spent on Deposit, backed by Deposit,
-    // 50 assigned after. Savings: overspent when backed, so nothing moved and the whole budget did not.
+    // 50 assigned after. Savings: overspent when backed, which since increment 15 moves the overspending
+    // the other way, and what did not move is what had been spent.
     [Fact]
     public void A_version_5_document_is_read_with_the_backings_figures_worked_out_again()
     {
@@ -457,6 +481,103 @@ public sealed class StorageTests : IDisposable
         Assert.Equal(Money.FromEuros(250m), restored.AccumulatedFor("Savings", restored.CurrentPeriod));
     }
 
+    // ------------------------------------------------------------------ Vrij (ADR 0015)
+
+    // Version 7 is the first promised version (ADR 0014): read as data in which nothing was given a
+    // purpose yet, and every figure it showed reads the same (plan for increment 15, D1).
+    [Fact]
+    public void A_version_7_document_is_read_as_data_with_no_reallocations_and_nothing_left_behind()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 5000m).Account!;
+        ledger.RecordIncome(2000m, "Salaris", Today);
+        ledger.AddCategory("Savings");
+        ledger.SetBacking("Savings", deposit);
+        ledger.Assign(300m, "Savings", ledger.CurrentPeriod);
+        var written = LedgerJson.Write(ledger.ToSnapshot());
+        var version7 = AsVersion7(written);
+        Assert.DoesNotContain("reallocations", version7);
+        Assert.DoesNotContain("leftBehind", version7);
+
+        var read = LedgerJson.Read(version7);
+
+        Assert.NotNull(read);
+        Assert.Null(read.Reallocations);
+        var restored = Ledger.FromSnapshot(read, clock);
+        Assert.Equal(written, LedgerJson.Write(restored.ToSnapshot()));
+        Assert.Equal(Money.FromEuros(5000m), restored.UnclaimedOf(restored.AccountNamed("Deposit")!));
+        Assert.Equal(Money.FromEuros(300m), restored.AccumulatedFor("Savings", restored.CurrentPeriod));
+    }
+
+    // Before version 8 what is there for a re-pointed category counted the new account's expenses only
+    // from the period of re-pointing. Read from version 7, the ones dated between the backing and the
+    // re-pointing are remembered with the mark, so the figure reads as that version worked it out.
+    [Fact]
+    public void Reading_version_7_keeps_what_is_there_as_it_was_counted_then()
+    {
+        var march = new FixedClock(new DateTimeOffset(Today.ToDateTime(new TimeOnly(12, 0)), TimeSpan.Zero));
+        var ledger = new Ledger(march, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 0m).Account!;
+        var broker = ledger.AddAccount("Broker", 0m).Account!;
+        ledger.RecordIncome(2000m, "Salaris", Today);
+        ledger.AddCategory("Savings");
+        ledger.SetBacking("Savings", deposit);
+        ledger.Assign(300m, "Savings", ledger.CurrentPeriod);
+        march.Now = march.Now.AddMonths(1);
+        ledger.SetBacking("Savings", broker);
+        ledger.RecordExpense(100m, "Savings", Today, "Laat");
+        Assert.Equal(Money.FromEuros(200m), ledger.ThereFor("Savings"));
+
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(AsVersion7(LedgerJson.Write(ledger.ToSnapshot())))!, march);
+
+        Assert.Equal(Money.FromEuros(300m), restored.ThereFor("Savings"));
+    }
+
+    // Reallocations of every kind of end, a category set to "—" with money left behind, and one backed
+    // again after "—": everything comes back, the history of stretches included, and every figure with it.
+    [Fact]
+    public void Reallocations_and_a_backing_s_history_come_back_from_the_format()
+    {
+        var ledger = new Ledger(clock, "Bank");
+        var deposit = ledger.AddAccount("Deposit", 5000m).Account!;
+        var broker = ledger.AddAccount("Broker", 0m).Account!;
+        ledger.RecordIncome(2000m, "Salaris", Today);
+        var savings = ledger.AddCategory("Savings").Category!;
+        var shares = ledger.AddCategory("Shares").Category!;
+        ledger.SetBacking("Savings", deposit);
+        ledger.SetBacking("Shares", deposit);
+        ledger.Assign(200m, "Savings", ledger.CurrentPeriod);
+        ledger.Reallocate(3000m, ReallocationEnd.UnclaimedOn(deposit), ReallocationEnd.For(savings), ledger.CurrentPeriod);
+        ledger.Reallocate(500m, ReallocationEnd.For(savings), ReallocationEnd.Unassigned, ledger.CurrentPeriod);
+        ledger.Reallocate(1000m, ReallocationEnd.UnclaimedOn(deposit), ReallocationEnd.For(shares), ledger.CurrentPeriod);
+        ledger.Reallocate(30m, ReallocationEnd.Unassigned, ReallocationEnd.UnclaimedOn(ledger.PoolAccount), ledger.CurrentPeriod);
+        ledger.SetBacking("Shares", null);
+        ledger.SetBacking("Savings", null);
+        ledger.SetBacking("Savings", broker);
+        var written = LedgerJson.Write(ledger.ToSnapshot());
+        Assert.Contains("\"leftBehind\": {", written);
+        Assert.Contains("\"earlier\": {", written);
+        Assert.Contains("\"unassigned\": true", written);
+        Assert.Contains("\"reason\": \"rebacked\"", written);
+
+        var restored = Ledger.FromSnapshot(LedgerJson.Read(written)!, clock);
+
+        Assert.Equal(written, LedgerJson.Write(restored.ToSnapshot()));
+        foreach (var account in ledger.Accounts)
+        {
+            var again = restored.AccountNamed(account.Name)!;
+            Assert.Equal(ledger.BalanceOf(account), restored.BalanceOf(again));
+            Assert.Equal(ledger.UnclaimedOf(account), restored.UnclaimedOf(again));
+            Assert.Equal(ledger.HistoryOf(account).Count, restored.HistoryOf(again).Count);
+        }
+        foreach (var name in new[] { "Savings", "Shares" })
+        {
+            Assert.Equal(ledger.AccumulatedFor(name, ledger.CurrentPeriod), restored.AccumulatedFor(name, restored.CurrentPeriod));
+            Assert.Equal(ledger.LeftOn(name)?.Name, restored.LeftOn(name)?.Name);
+        }
+        Assert.Equal(ledger.UnassignedIn(ledger.CurrentPeriod), restored.UnassignedIn(restored.CurrentPeriod));
+    }
+
     // ------------------------------------------------------------------ the rules kept data is read against
 
     public static TheoryData<string, LedgerSnapshot> Broken
@@ -478,16 +599,21 @@ public sealed class StorageTests : IDisposable
                 IReadOnlyList<BalanceCorrectionSnapshot>? corrections = null,
                 IReadOnlyList<MovementSnapshot>? movements = null, int? destination = null,
                 IReadOnlyList<PeriodEndSnapshot>? periodEnds = null, IReadOnlyList<LetGoSnapshot>? letGo = null,
-                IReadOnlyList<RepeatSnapshot>? repeats = null, IReadOnlyList<StartDayChange>? calendar = null) =>
+                IReadOnlyList<RepeatSnapshot>? repeats = null, IReadOnlyList<StartDayChange>? calendar = null,
+                IReadOnlyList<ReallocationSnapshot>? reallocations = null) =>
                 new(categories ?? [groceries], budgets ?? [], expenses ?? [], incomes ?? [], last,
                     accounts ?? [bank, cash], pool, transfers ?? [], corrections ?? [], movements ?? [], Today,
-                    destination, periodEnds ?? [], letGo ?? [], repeats ?? [], calendar ?? []);
+                    destination, periodEnds ?? [], letGo ?? [], repeats ?? [], calendar ?? [], reallocations ?? []);
 
             MovementSnapshot movement = new(1, Today, 1, 1, 2, Money.FromCents(100), MovementReason.Assigned, MovementDirection.In);
             BackingSnapshot backing = new(2, new EntryMark(Today, 1), new EntryMark(Today, 1));
             var february = new DateOnly(2026, 2, 1);
             MovementSnapshot sweep = movement with { Reason = MovementReason.Swept, SweptFor = february };
             RepeatSnapshot monthly = new([1], Frequency.Monthly, 15, Today.AddMonths(1));
+            ReallocationEndSnapshot unclaimedOnCash = new(ReallocationEndKind.Unclaimed, Account: 2);
+            ReallocationEndSnapshot toGroceries = new(ReallocationEndKind.Category, Category: 1);
+            ReallocationSnapshot reallocation = new(1, Today, unclaimedOnCash, toGroceries, 2, 2, Money.FromCents(100));
+            LeftBehindSnapshot left = new(2, new EntryMark(Today, 2), march, Money.FromCents(100), backing);
 
             return new()
             {
@@ -529,8 +655,21 @@ public sealed class StorageTests : IDisposable
                 { "a movement from no account", With(movements: [movement with { From = 9 }]) },
                 { "a movement of zero", With(movements: [movement with { Amount = Money.Zero }]) },
                 { "an id used by a movement and an expense", With(expenses: [expense], movements: [movement]) },
-                { "a backing movement going out", With(movements: [movement with { Reason = MovementReason.Backed, Direction = MovementDirection.Out }]) },
-                { "an unbacking movement going in", With(movements: [movement with { Reason = MovementReason.Unbacked }]) },
+                { "a backing carried on moved along", With(movements: [movement with { Reason = MovementReason.Rebacked, Direction = MovementDirection.Along }]) },
+                { "an adjustment going in", With(movements: [movement with { Reason = MovementReason.Adjusted }]) },
+                { "an adjustment from an account to itself", With(movements: [movement with { To = 1, Reason = MovementReason.Adjusted, Direction = MovementDirection.Along }]) },
+                { "a reallocation from an end to itself", With(reallocations: [reallocation with { To = unclaimedOnCash }], last: 1) },
+                { "a reallocation out of Niet toegewezen", With(reallocations: [reallocation with { From = new(ReallocationEndKind.Unassigned), FromAccount = 1 }], last: 1) },
+                { "a reallocation out of Niet toegewezen to Vrij on another account", With(reallocations: [reallocation with { From = new(ReallocationEndKind.Unassigned), FromAccount = 1, To = unclaimedOnCash }], last: 1) },
+                { "a reallocation of Vrij as if it were on another account", With(reallocations: [reallocation with { FromAccount = 1 }], last: 1) },
+                { "a reallocation end that is two things", With(reallocations: [reallocation with { To = toGroceries with { Account = 2 } }], last: 1) },
+                { "a reallocation to no category", With(reallocations: [reallocation with { To = new(ReallocationEndKind.Category, Category: 9) }], last: 1) },
+                { "a reallocation of zero", With(reallocations: [reallocation with { Amount = Money.Zero }], last: 1) },
+                { "an id used by a reallocation and an expense", With(expenses: [expense], reallocations: [reallocation]) },
+                { "a category both backed and set to none", With(categories: [groceries with { Backing = backing, LeftBehind = left }]) },
+                { "a none marked before the backing it ended", With(categories: [groceries with { LeftBehind = left with { Since = new EntryMark(Today, 1), Before = backing with { AccumulatingSince = new EntryMark(Today, 2), HereSince = new EntryMark(Today, 2) } } }]) },
+                { "a none on no account", With(categories: [groceries with { LeftBehind = left with { Account = 9 } }]) },
+                { "a backing older than the none before it", With(categories: [groceries with { Backing = backing, LeftBehind = null }, new(2, "Hobby", false, backing with { Earlier = left }) ]) },
                 { "an assignment moved along", With(movements: [movement with { Direction = MovementDirection.Along }]) },
                 { "a re-pointing from an account to itself", With(movements: [movement with { To = 1, Reason = MovementReason.Repointed, Direction = MovementDirection.Along }]) },
                 { "a backing by no account", With(categories: [groceries with { Backing = backing with { Account = 9 } }], last: 3) },

@@ -385,6 +385,15 @@ public sealed class SpecContext : IDisposable
 
     public void Record(BringUpToDateResult result) => LastAttempt = result;
 
+    public void Record(ReallocateResult result) => LastAttempt = result;
+
+    /// <summary>
+    /// Set by "what follows was kept by the version of MoneyBud from before Unclaimed"
+    /// (keep-data.feature): the expenses a Given put on another account than its backed category's,
+    /// by id, with the account they are on in the data that version kept. Null otherwise.
+    /// </summary>
+    public Dictionary<int, string>? KeptBeforeUnclaimed { get; set; }
+
     public sealed record AccountDeleted(Account Account);
 
     public sealed record PoolMade(Account Account);

@@ -103,6 +103,10 @@ public sealed class SharedSteps(SpecContext context)
                 // Never refused and never confirmed: what it moved, or let go.
                 Assert.True(brought.Moves.Count > 0 || brought.LetGo.Cents > 0);
                 break;
+            case ReallocateResult reallocated:
+                // Never confirmed, and more than there is goes through (reallocate-an-amount.feature).
+                Assert.False(reallocated.WasRefused);
+                break;
             case null:
                 // Nothing was done: only time passed, as when a period ends while MoneyBud is open
                 // and its leftover is swept (sweep-at-a-period-end.feature). No question is waiting,
@@ -147,6 +151,9 @@ public sealed class SharedSteps(SpecContext context)
                 break;
             case CorrectBalanceResult corrected:
                 Assert.False(corrected.WasRecorded, "Expected the balance correction to be refused, but it was recorded.");
+                break;
+            case ReallocateResult reallocated:
+                Assert.Equal(ReallocationRefusal.AmountFinerThanCent, reallocated.Refusal);
                 break;
             default:
                 throw NothingAttempted();

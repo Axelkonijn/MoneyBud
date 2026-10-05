@@ -49,14 +49,16 @@ public sealed partial class TekstTests
         ["Pool account"] = [Tekst.PoolAccount],
         ["Make (an account) the pool account"] = [Tekst.MakePool],
         ["Transfer (the record) / Transfer (the act)"] = [Tekst.Transfer, Tekst.TransferAct],
-        ["A transfer's two accounts"] = [Tekst.From, Tekst.To],
+        ["A transfer's two accounts, and a reallocation's two ends"] = [Tekst.From, Tekst.To],
         ["Starting balance"] = [Tekst.StartingBalance],
         ["Balance correction (the record)"] = [Tekst.BalanceCorrection],
         ["Correct a balance (the act)"] = [Tekst.CorrectBalance],
         ["Add account"] = [Tekst.AddAccount],
-        ["Overdrawn, a negative net worth, and a negative Accumulated (the marker's badge)"] = [Tekst.Overdrawn],
+        ["Overdrawn, a negative net worth, a negative Accumulated and a negative Unclaimed (the marker's badge)"] = [Tekst.Overdrawn],
         ["Backing account (the list on a category row that sets it)"] = [Tekst.BackingAccount],
         ["Accumulated"] = [Tekst.Accumulated],
+        ["Unclaimed (the money on an account that no category claims)"] = [Tekst.Unclaimed],
+        ["Reallocate (the act)"] = [Tekst.Reallocate],
         ["Period leftover"] = [Tekst.PeriodLeftover],
         ["Sweep destination (the list that sets it)"] = [Tekst.SweepDestination],
         ["Bring the swept amount up to date (the button)"] = [Tekst.BringUpToDate],
@@ -125,6 +127,31 @@ public sealed partial class TekstTests
     [Fact]
     public void Every_transfer_refusal_has_Dutch_wording() =>
         AssertWorded(Enum.GetValues<TransferRefusal>().Select(Tekst.Refusal));
+
+    [Fact]
+    public void Every_reallocation_refusal_has_Dutch_wording() =>
+        AssertWorded(Enum.GetValues<ReallocationRefusal>().Select(r => Tekst.Refusal(r, "Sparen")));
+
+    // What is ruled is that the notice names what moved, and which way the money went when it went
+    // between two accounts (§12, derived; plan for increment 15, reading 6). The words are copy.
+    [Fact]
+    public void A_reallocation_names_its_ends_and_the_money_only_when_it_moved_between_accounts()
+    {
+        var ledger = new Ledger(new FixedClock(new(2026, 3, 15, 12, 0, 0, TimeSpan.Zero)), "Bank");
+        var deposit = ledger.AddAccount("Spaarrekening", 5000m).Account!;
+        var savings = ledger.AddCategory("Sparen").Category!;
+        ledger.SetBacking("Sparen", deposit);
+
+        var within = ledger.Reallocate(3000m, ReallocationEnd.UnclaimedOn(deposit), ReallocationEnd.For(savings), ledger.CurrentPeriod).Made!;
+        var away = ledger.Reallocate(500m, ReallocationEnd.For(savings), ReallocationEnd.Unassigned, ledger.CurrentPeriod).Made!;
+
+        Assert.Equal("€ 3.000,00 verplaatst van Vrij op \"Spaarrekening\" naar \"Sparen\".", Tekst.Reallocated(within));
+        Assert.Equal(
+            "€ 500,00 verplaatst van \"Sparen\" naar Niet toegewezen. Het geld gaat van \"Spaarrekening\" naar \"Bank\".",
+            Tekst.Reallocated(away));
+        Assert.Equal("Opgebouwd: € 5.000,00 op \"Spaarrekening\"", Tekst.AccumulatedFigure(Money.FromEuros(5000m), deposit));
+        Assert.Equal("Vrij € 2.000,00", Tekst.UnclaimedFigure(Money.FromEuros(2000m)));
+    }
 
     // The ruling is that a balance correction's row shows the balance typed and the difference; a
     // starting balance's shows no difference (arc42 §12). The words around them are copy.

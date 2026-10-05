@@ -430,28 +430,33 @@ public sealed class SweepTests
         Assert.Equal(SweepLineKind.Swept, ledger.SweepLineFor(march)!.Kind);
     }
 
+    // Since increment 15 "—" leaves swept money where it is, still the category's, and money swept
+    // too much comes back out of it, from that account (§12, follow-up 14).
     [Fact]
-    public void A_category_no_longer_backed_gives_nothing_back_and_the_line_stops_asking()
+    public void A_category_set_to_none_gives_back_from_the_money_it_left_behind()
     {
         SweptIntoSavings();
         ledger.SetBacking("Savings", null);
         ledger.RecordExpense(40m, "Groceries", march.LastDay);
 
-        Assert.Equal(new SweepLineKind?(SweepLineKind.Swept), ledger.SweepLineFor(march)?.Kind);
-        Assert.False(ledger.SweepLineFor(march)!.CanBringUpToDate);
+        var move = Assert.Single(ledger.BringUpToDate(march).Moves);
+
+        Assert.Equal((deposit, Bank, Euros(40m)), (move.From, move.To, move.Amount));
+        Assert.Equal(deposit, ledger.LeftOn("Savings"));
     }
 
-    // Unbacking returned the swept money; backing again starts over, so it holds none of it.
+    // Backing again carries the history on, so the sweep into it can still come back.
     [Fact]
-    public void A_category_unbacked_and_backed_again_since_gives_nothing_back()
+    public void A_category_set_to_none_and_backed_again_since_still_gives_back()
     {
         SweptIntoSavings();
         ledger.SetBacking("Savings", null);
-        ledger.SetBacking("Savings", deposit);
-        ledger.Assign(500m, "Savings", ledger.CurrentPeriod);
+        ledger.SetBacking("Savings", broker);
         ledger.RecordExpense(40m, "Groceries", march.LastDay);
 
-        Assert.Equal(SweepLineKind.Swept, ledger.SweepLineFor(march)!.Kind);
+        var move = Assert.Single(ledger.BringUpToDate(march).Moves);
+
+        Assert.Equal((broker, Bank, Euros(40m)), (move.From, move.To, move.Amount));
     }
 
     [Fact]

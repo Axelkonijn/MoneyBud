@@ -67,6 +67,8 @@ public static class Tekst
     public const string Overdrawn = "Rood";
     public const string BackingAccount = "Staat op";
     public const string Accumulated = "Opgebouwd";
+    public const string Unclaimed = "Vrij";
+    public const string Reallocate = "Verplaatsen";
     public const string PeriodLeftover = "Restant";
     public const string SweepDestination = "Restant naar";
     public const string BringUpToDate = "Restant bijwerken";
@@ -321,6 +323,20 @@ public static class Tekst
         TransferRefusal.DateInFuture => "Een overboeking kan niet in de toekomst liggen.",
     };
 
+    /// <summary>
+    /// Why a reallocation was refused (§12, readings of the scenario stage; plan for increment 15,
+    /// reading 6). <paramref name="into"/> names the category money could not go into.
+    /// </summary>
+    public static string Refusal(ReallocationRefusal refusal, string? into) => refusal switch
+    {
+        ReallocationRefusal.SameEnd => $"{From} en {To} zijn hetzelfde.",
+        ReallocationRefusal.UnclaimedToUnclaimed => $"Geld van {Unclaimed} naar {Unclaimed} verplaatsen is {TransferAct.ToLowerInvariant()}.",
+        ReallocationRefusal.AmountFinerThanCent => FinerThanCent,
+        ReallocationRefusal.OutOfUnassigned => $"Geld uit {Unassigned} halen is toewijzen.",
+        ReallocationRefusal.IntoGivingEnd => $"Er kan geen geld naar {Quoted(into ?? "")} verplaatst worden.",
+        ReallocationRefusal.UnassignedNotCurrent => $"Verplaatsen met {Unassigned} kan alleen in de huidige periode.",
+    };
+
     /// <summary>The one refusal a balance correction has.</summary>
     public const string BalanceFinerThanCent = FinerThanCent;
 
@@ -477,6 +493,7 @@ public static class Tekst
         Domain.Income i => $"{Income} {Quoted(i.Label)}",
         Domain.Expense e => $"{Expense} {Quoted(e.Category.Name)}" + (e.Label is { } label ? $", {label}" : ""),
         Domain.Movement m => MovementText(m, line.SweptPeriod),
+        Reallocation r => $"Verplaatst van {Named(r.From)} naar {Named(r.To)}",
         _ => throw new InvalidOperationException($"{line.Entry.GetType().Name} is not in a history."),
     };
 
@@ -497,6 +514,16 @@ public static class Tekst
     public static string AccumulatedFigure(Money accumulated) => $"{Accumulated}: {Euro(accumulated)}";
 
     /// <summary>
+    /// What the row of a category set to "—" shows, with the account its money was left on:
+    /// "Opgebouwd: € 5.000,00 op "Spaarrekening"" (§12, <i>Setting Staat op to "—"</i>, follow-up).
+    /// </summary>
+    public static string AccumulatedFigure(Money accumulated, Domain.Account on) =>
+        $"{AccumulatedFigure(accumulated)} {OnAccount(on)}";
+
+    /// <summary>Where a category set to "—" left its money: "op "Spaarrekening"".</summary>
+    public static string OnAccount(Domain.Account account) => $"op {Quoted(account.Name)}";
+
+    /// <summary>
     /// Said once a backing is set, pointed elsewhere or removed. It names the money that moved, and
     /// when none moved names only the backing, saying nothing about money (§12, <i>Backing,
     /// re-pointing and unbacking are announced, never confirmed</i>). The sentences are copy; the
@@ -506,19 +533,62 @@ public static class Tekst
     public static string BackingSet(SetBackingResult result)
     {
         var name = Quoted(result.Category.Name);
-        var moved = result.MovedMoney ? result.Moved : null;
+        var moved = result.MovedBetweenAccounts;
 
-        return result.Outcome switch
+        var (said, home) = result.Outcome switch
         {
-            BackingOutcome.Backed or BackingOutcome.Repointed => moved is null
-                ? $"{name} staat nu op {Quoted(result.After!.Name)}."
-                : $"{name} staat nu op {Quoted(result.After!.Name)}: {Euro(moved.Amount)} overgeboekt van {Quoted(moved.From.Name)}.",
-            BackingOutcome.Unbacked => moved is null
-                ? $"{name} staat niet meer op {Quoted(result.Before!.Name)}."
-                : $"{name} staat niet meer op {Quoted(result.Before!.Name)}: {Euro(moved.Amount)} teruggeboekt naar {Quoted(moved.To.Name)}.",
-            BackingOutcome.Unchanged => throw new InvalidOperationException("Nothing changed, so nothing is said."),
+            BackingOutcome.Backed or BackingOutcome.Repointed => ($"{name} staat nu op {Quoted(result.After!.Name)}", result.After!),
+            BackingOutcome.Unbacked => ($"{name} staat niet meer op {Quoted(result.Before!.Name)}", result.Before!),
+            _ => throw new InvalidOperationException("Nothing changed, so nothing is said."),
         };
+
+        return moved.Count == 0 ? $"{said}." : $"{said}: {string.Join(" en ", moved.Select(m => Moved(m, home)))}.";
+
+        // Each amount as seen from the account the sentence is about: money arriving there, money
+        // leaving it, or, for anything else, both ends (since increment 15 an overspending can move
+        // the other way, and backing again after "—" can move two amounts).
+        static string Moved(Domain.Movement m, Domain.Account home) =>
+            m.To == home ? $"{Euro(m.Amount)} overgeboekt van {Quoted(m.From.Name)}"
+            : m.From == home ? $"{Euro(m.Amount)} teruggeboekt naar {Quoted(m.To.Name)}"
+            : $"{Euro(m.Amount)} overgeboekt van {Quoted(m.From.Name)} naar {Quoted(m.To.Name)}";
     }
+
+    // ------------------------------------------------------------------ Vrij, and moving Opgebouwd (§12)
+
+    /// <summary>What the strip shows beside an account's balance: "Vrij € 5.000,00" (§12, ruling 1).</summary>
+    public static string UnclaimedFigure(Money unclaimed) => $"{Unclaimed} {Euro(unclaimed)}";
+
+    /// <summary>
+    /// One end of a reallocation, as the <i>Van</i> and <i>Naar</i> lists and the notices name it:
+    /// "Vrij op "Spaarrekening"", "Sparen", or "Niet toegewezen" (plan for increment 15, reading 5).
+    /// </summary>
+    public static string EndName(ReallocationEnd end) => end.Kind switch
+    {
+        ReallocationEndKind.Unclaimed => $"{Unclaimed} op {Quoted(end.Account!.Name)}",
+        ReallocationEndKind.Category => end.Category!.Name,
+        _ => Unassigned,
+    };
+
+    /// <summary>
+    /// Said once a reallocation went through: what moved, and, when money moved between two accounts,
+    /// which way. Never confirmed first (§12, derived). "€ 3.000,00 verplaatst van Vrij op
+    /// "Spaarrekening" naar "Sparen"." Copy, proposed in the plan for increment 15, reading 6.
+    /// </summary>
+    public static string Reallocated(Reallocation reallocation)
+    {
+        var said = $"{Euro(reallocation.Amount)} verplaatst van {Named(reallocation.From)} naar {Named(reallocation.To)}.";
+        return reallocation.MovedMoney
+            ? $"{said} Het geld gaat van {Quoted(reallocation.FromAccount.Name)} naar {Quoted(reallocation.ToAccount.Name)}."
+            : said;
+    }
+
+    /// <summary>Said for a reallocation of zero, which is accepted and changes nothing.</summary>
+    public static string ReallocatedNothing(ReallocationEnd from, ReallocationEnd to) =>
+        $"{Euro(Money.Zero)} verplaatst van {Named(from)} naar {Named(to)}.";
+
+    // In a sentence a category's name is quoted, as every name in a message is.
+    private static string Named(ReallocationEnd end) =>
+        end.Kind == ReallocationEndKind.Category ? Quoted(end.Category!.Name) : EndName(end);
 
     /// <summary>
     /// What a movement's row in an account's history says: what caused it, the category, and the two
@@ -532,9 +602,14 @@ public static class Tekst
         {
             (MovementReason.Assigned, MovementDirection.Out) => $"Teruggezet van {name}",
             (MovementReason.Assigned, _) => $"Toegewezen aan {name}",
+            (MovementReason.Backed, MovementDirection.Out) => $"{name} staat op {Quoted(movement.From.Name)}",
             (MovementReason.Backed, _) => $"{name} staat op {Quoted(movement.To.Name)}",
+            (MovementReason.Unbacked, MovementDirection.In) => $"{name} staat niet meer op {Quoted(movement.To.Name)}",
             (MovementReason.Unbacked, _) => $"{name} staat niet meer op {Quoted(movement.From.Name)}",
-            (MovementReason.Repointed, _) => $"{name} staat nu op {Quoted(movement.To.Name)}",
+            (MovementReason.Repointed, _) => $"{name} omgezet",
+            (MovementReason.Rebacked, MovementDirection.Out) => $"{name} staat weer op {Quoted(movement.From.Name)}",
+            (MovementReason.Rebacked, _) => $"{name} staat weer op {Quoted(movement.To.Name)}",
+            (MovementReason.Adjusted, _) => $"Bijgewerkt voor {name}",
             (MovementReason.Swept, MovementDirection.Out) => $"{PeriodLeftover} van {PeriodName(Swept(sweptPeriod))} teruggehaald van {name}",
             (MovementReason.Swept, _) => $"{PeriodLeftover} van {PeriodName(Swept(sweptPeriod))} naar {name}",
         };

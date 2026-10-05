@@ -10,6 +10,18 @@ calendar" it ends, and which gains the one sweep not dated the next period's fir
 first day each beside them. Nothing any of the three decided is reversed. 0007 and 0010 carry dated
 notes that point here.
 
+> **Note, 2026-10-04.** *Vrij* and moving *Opgebouwd* ([ADR 0015](0015-moves-of-purpose-and-a-backing-history.md)).
+> **Decision 3 is changed in one point**: `ThereFor` no longer counts expenses from `HereFrom`, the
+> first day of the period of the latest re-pointing, but from `AccumulatingFrom`, the period of backing,
+> as `AccumulatedFor` does. Once the expense form's account list was locked from the period a category
+> got its account, an expense dated in an earlier backed period and entered after a re-pointing went on
+> the new account and was counted in *Opgebouwd* but not in what that account holds. `spec-reviewer`
+> found it at the build. `PaidHereBefore` is remembered from the period of backing, and data from before
+> version 8 is converted on reading, so every figure reads as before. **`HereFrom` is still kept,
+> written and checked on loading**, and no figure counts from it any more. What decision 3 is for still
+> holds: neither figure works its first day out again, so a change of start day changes neither. The
+> body is unchanged.
+
 ## Context
 
 The start-day rulings ([§12](../arc42/12-glossary.md), *A configurable period start day*) let the

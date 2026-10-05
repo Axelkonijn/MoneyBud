@@ -43,27 +43,36 @@ public sealed class BackingTests
 
     // ------------------------------------------------------------------ what is there for a category
 
-    // The glossary's example: 200 moved in, 50 spent from the pool account. Accumulated is 150, and
-    // 200 is there.
+    // Since increment 15 a backed category's expense is on its backing account (arc42 §12, *An expense
+    // on a backed category is on its account*): left without one it goes there, and another is a
+    // caller's mistake, since the list is locked on screen.
     [Fact]
-    public void What_is_there_counts_only_expenses_paid_from_the_backing_account()
+    public void An_expense_against_a_backed_category_goes_on_its_backing_account_and_no_other()
     {
         ledger.Assign(200m, "Savings", March);
         ledger.SetBacking("Savings", deposit);
-        ledger.RecordExpense(50m, "Savings", Today, account: Bank);
 
-        Assert.Equal(Euros(200m), ledger.ThereFor("Savings"));
+        var recorded = ledger.RecordExpense(50m, "Savings", Today).Expense!;
+
+        Assert.Same(deposit, recorded.Account);
+        Assert.Equal(Euros(150m), ledger.ThereFor("Savings"));
         Assert.Equal(Euros(150m), ledger.AccumulatedFor("Savings", March));
+        Assert.Throws<InvalidOperationException>(() => ledger.RecordExpense(10m, "Savings", Today, account: broker));
+        Assert.Throws<InvalidOperationException>(() => ledger.ChangeExpense(recorded, 50m, "Savings", Today, null, Bank));
     }
 
+    // The lock applies from the period the category got its account (follow-up 16): before it, the
+    // list is open, and the expense goes on the pool account unless another is chosen.
     [Fact]
-    public void An_expense_from_a_third_account_is_not_taken_off_what_is_there()
+    public void An_expense_dated_before_the_period_of_backing_is_not_locked()
     {
-        ledger.Assign(200m, "Savings", March);
         ledger.SetBacking("Savings", deposit);
-        ledger.RecordExpense(50m, "Savings", Today, account: broker);
+        var february = ledger.Calendar.Previous(March).LastDay;
 
-        Assert.Equal(Euros(200m), ledger.ThereFor("Savings"));
+        Assert.Null(ledger.LockedAccountFor("Savings", february));
+        Assert.Same(deposit, ledger.LockedAccountFor("Savings", March.FirstDay));
+        Assert.Same(Bank, ledger.RecordExpense(15m, "Savings", february).Expense!.Account);
+        Assert.Same(broker, ledger.RecordExpense(15m, "Savings", february, account: broker).Expense!.Account);
     }
 
     [Fact]
@@ -108,7 +117,7 @@ public sealed class BackingTests
 
         var result = ledger.SetBacking("Savings", deposit);
 
-        Assert.Equal(Euros(300m), result.Moved!.Amount);
+        Assert.Equal(Euros(300m), Assert.Single(result.Moves).Amount);
         Assert.Equal(Euros(1700m), ledger.BalanceOf(Bank));
         Assert.Equal(Euros(300m), ledger.BalanceOf(deposit));
         Assert.Equal(Euros(300m), ledger.AccumulatedFor("Savings", March));
@@ -154,24 +163,27 @@ public sealed class BackingTests
         Assert.Equal(Euros(40m), ledger.AccumulatedFor("Savings", ledger.CurrentPeriod));
     }
 
+    // Since increment 15 "—" returns only this period's money and backing again carries on (§12,
+    // ruling 6). Here everything is this period's, so "—" returns it all and backing again moves it
+    // back: Accumulated reads the same throughout.
     [Fact]
-    public void Backing_again_after_unbacking_starts_Accumulated_over_and_re_pointing_does_not()
+    public void Re_pointing_and_backing_again_after_none_both_carry_Accumulated_on()
     {
         ledger.SetBacking("Savings", deposit);
         ledger.Assign(100m, "Savings", March);
-        ledger.RecordExpense(30m, "Savings", Today, account: Bank);
+        ledger.RecordExpense(30m, "Savings", Today);
         ledger.SetBacking("Savings", broker);
 
         Assert.Equal(Euros(70m), ledger.AccumulatedFor("Savings", March));
 
         ledger.SetBacking("Savings", null);
+        Assert.Null(ledger.AccumulatedFor("Savings", March));
         ledger.SetBacking("Savings", deposit);
 
-        // Budget 100, spent 30: 70 remains and moves, and the 30 spent before this backing no
-        // longer counts.
         Assert.Equal(Euros(70m), ledger.AccumulatedFor("Savings", March));
-        ledger.RecordExpense(10m, "Savings", Today, account: Bank);
+        ledger.RecordExpense(10m, "Savings", Today);
         Assert.Equal(Euros(60m), ledger.AccumulatedFor("Savings", March));
+        Assert.Equal(Euros(60m), ledger.BalanceOf(deposit));
     }
 
     // ------------------------------------------------------------------ a negative assignment
@@ -292,7 +304,7 @@ public sealed class BackingTests
         var none = ledger.SetBacking("Groceries", null);
 
         Assert.Equal(BackingOutcome.Unchanged, again.Outcome);
-        Assert.Null(again.Moved);
+        Assert.Empty(again.Moves);
         Assert.Equal(BackingOutcome.Unchanged, none.Outcome);
         Assert.Single(ledger.HistoryOf(deposit).OfType<Movement>());
     }
@@ -304,7 +316,7 @@ public sealed class BackingTests
 
         var result = ledger.SetBacking("Savings", Bank);
 
-        Assert.NotNull(result.Moved);
+        Assert.Single(result.Moves);
         Assert.False(result.MovedMoney);
         Assert.Empty(ledger.HistoryOf(Bank).OfType<Movement>());
     }

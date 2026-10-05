@@ -91,7 +91,7 @@ account numbers and statements never enter the repository.
 
 ```
 dotnet build MoneyBud.slnx     # expect 0 warnings — the suite is kept warning-free
-dotnet test  MoneyBud.slnx     # 1943 passing: 1030 scenario cases, 913 developer unit tests
+dotnet test  MoneyBud.slnx     # 2097 passing: 1128 scenario cases, 969 developer unit tests
 dotnet run --project src/MoneyBud.Desktop    # the desktop app; keeps its data in %LOCALAPPDATA%\MoneyBud
 dotnet run --project src/MoneyBud.Phone.Desktop                     # the phone's screens in a window
 dotnet run --project src/MoneyBud.Phone.Desktop -- snapshot <folder> dark light kintsugi-dark kintsugi-light
@@ -105,9 +105,90 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-09-30, after increment 14 was accepted. Update this when a stage completes._
+_Last updated 2026-10-05, after increment 15 was accepted and merged. Update this when a stage completes._
 
-**Start here in a new conversation: MoneyBud is in real use, on Axel's phone.** Increment 14, the
+**Start here in a new conversation: one known bug, to fix first.** **On the phone, in *Verplaatsen*, the
+keyboard covers the *Bedrag* field** (found by Axel on 2026-10-05, his words: "when filling in the
+'verplaatsen' the keyboard covers the inputfield"). Likely cause, from reading and not checked: the panels
+pad their scroll area by the keyboard's height (`_keyboard`, set in `KeyboardChanged`,
+`src/MoneyBud.Phone/Views/MainView.axaml.cs`), but the modals in `MainView.Overlays.cs` (`OpenReallocate`,
+`OpenTransfer`, …) do not move up for it; *Verplaatsen*'s is the tallest. Check the other modals too. It is
+phone-only and untestable headless (no keyboard), so it needs a Release APK and his try (`adb install -r`;
+`adb` is on his user PATH, which Git Bash does not see: use PowerShell). Recorded in §11, the phone head's
+tests row. No pipeline stages needed for a layout fix: the head decides nothing.
+
+**Increment 15 is accepted and merged into `main`** (2026-10-05, his word: "Perfect"), including the revision
+found in his first try — *Vrij* on the pool account — built with **gates waived by him**, every decision taken
+without him listed (plan, *After the install*, P1–P11; §12 *Vrij on the pool account: ruled after the
+install*). His phone runs that build. Nothing else is scheduled: ask him what is next.
+
+- **Ruled with him** (the round's last two sections): **ruling 5 revised** (2026-10-04) — the pool account
+  shows *Vrij* = *Saldo* − this period's *Niet toegewezen* (less its income dated after today) − the
+  *Resterend* of categories without an account − what its own categories claim there; it is an end in
+  *Verplaatsen* both ways. **2026-10-05, on the recommendation:** *Niet toegewezen* gives to *Vrij* on the
+  pool account (and nothing else; revises follow-up 7 for that end); and **what an ended period's line still
+  asks for stays claimed on the pool account** (still to sweep +, swept too much −) until *Restant
+  bijwerken* moves it or lets it go — so late changes to an ended period leave the pool's *Vrij* alone, and
+  with no destination a leftover stays its line's, never *Vrij*.
+- **Built:** `Ledger.UnclaimedOf` returns `Money` for every account (`PeriodClaim`, `LinesClaim`);
+  `ReallocateForm.HasEnds` is gone (always two ends); no format change, still version 8. `spec-reviewer`
+  found no money defect and no faked scenario; its one medium finding (a change of pool takes the line
+  claims along, as built) is now written down as P7 and tested. Six mutations caught; the invariant covers
+  the pool; a second 1500-act run must leave the pool's *Vrij* unchanged (it found P6: a capped negative
+  assignment's gap now shows there).
+- **Scenarios** (written by `scenario-writer`, not approved at a gate): 13 new, 28 revised, none removed;
+  every pool *unclaimed* cell now carries a figure (a blank is no longer accepted).
+
+Work is on branch **`increment-15-vrij`** (from `main`). Stages 1–3 ran on 2026-10-04 and are committed;
+**the scenarios were approved by Axel at the first gate on 2026-10-04**. **The plan is written**
+([`docs/plans/increment-15-vrij.md`](docs/plans/increment-15-vrij.md), 2026-10-04: D1, a `Reallocation` entry
+and backing as a history of stretches, ADR 0015, format version 8 reading 7; ten readings) and was
+**approved by Axel at the second gate on 2026-10-04**, everything as written. **Stage 5 is done except his
+try** (2026-10-04): built as planned (ADR 0015, format version 8, version 7 read), 2058 tests green, 0
+warnings. Installed on his phone the same day (`adb install -r`, his version-7 data kept and read).
+
+- **Ruled at the build, with him:** *Vrij* to *Vrij* on another account is refused ("is overboeken"); one
+  scenario's Givens corrected (a starting balance dated today already holds an expense dated yesterday).
+- **`spec-reviewer`** found no faked scenario and three defects, all fixed with tests: a late receipt
+  after re-pointing missing from what the account holds (what is there now counts from the period of
+  backing; data before version 8 converted on reading); deleting an unused account wiping another
+  stretch's money left behind; *Verplaatsen* crashing with nothing to take from (now offered only when
+  there is). An invariant fuzz (*Vrij* + *Opgebouwd* = *Saldo*, 1500 mixed acts) and six mutations hold
+  it. A headless run of the window passed 25 checks. All in §12 *Vrij, and moving Opgebouwd: chosen in
+  the build*.
+- **Known, older than this increment:** the phone snapshot cannot open the accounts panel on kintsugi
+  (fails the same on the last commit); on the desktop a row's *Staat op* list can nudge into the *Budget*
+  column when the row carries an extra link.
+
+- **Read first:** the round [2026-10-04-opgebouwd-en-vrij](docs/stakeholder/2026-10-04-opgebouwd-en-vrij.md)
+  (Dutch, translated), then §12 *Vrij, and moving Opgebouwd* — its *Ruled at the scenario stage*, *What
+  these rulings revise*, *For the plan* and *What this section leaves open* subsections especially. Then
+  [`show-unclaimed.feature`](features/show-unclaimed.feature),
+  [`reallocate-an-amount.feature`](features/reallocate-an-amount.feature), and the headers of the eleven
+  revised feature files (listed in `features/README.md`).
+- **What it is, in one breath:** found in real use. Every account except the pool shows ***Vrij***
+  (Saldo minus what its backed categories have there; may go negative, *Rood*). One new act,
+  ***Verplaatsen*** (Van, Naar, Bedrag), moves an amount between *Vrij*, backed categories'
+  *Opgebouwd* and the current period's *Niet toegewezen* — money moves only when the two ends are on
+  different accounts; no *Budget* changes. **An expense on a backed category is always on its backing
+  account** (list locked from the period it got its account). **"—" returns only this period's part**
+  (shortfall too); older money stays on the account as the category's *Opgebouwd*, and setting an account
+  again takes it along — *Opgebouwd* no longer restarts. A category with *Opgebouwd* ≠ 0, or named by any
+  reallocation, cannot be deleted.
+- **It revises several older rulings** (two of them Axel's own, 2026-09-27), each kept in §12 with a dated
+  note: money already had now *can* get a purpose; unbacking no longer returns everything; re-backing
+  no longer restarts *Opgebouwd*; spending a backed category from another account is gone; an overspent
+  category's shortfall now moves on backing, "—" and re-pointing.
+- **Totals:** 48 new scenarios (72 cases); 23 approved scenarios revised, 1 removed. All bound and passing.
+- **The data promise holds** (ADR 0014): version 7 must be read, as data with nothing given a purpose.
+  Axel left that choice to us and says he will likely start over anyway; we kept it because it is cheap.
+  This is the first format change under the promise.
+- **For the plan, flagged:** the date-dependent account lock (point 16 in §12's table of open points) is low priority for Axel — if it
+  proves costly, take it back to him rather than build it anyway. The English terms *Unclaimed* and
+  *Reallocate* are used in the steps and were approved with them.
+- Still owed from increment 14, unchanged: the three phone-only figures go onto the desktop (below).
+
+**Before increment 15: MoneyBud is in real use, on Axel's phone.** Increment 14, the
 phone app, was built on 2026-09-30 (stages 3–5 without stopping, as he asked), installed on his phone,
 used for a few hours, changed once at his review (the ring's centre no longer flickers; the budget opens
 in one pull) and **accepted the same day**, then merged into `main` and pushed.

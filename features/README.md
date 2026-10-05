@@ -61,6 +61,39 @@ same doors the desktop window uses. `Given` steps set the ledger up directly, an
 about what is *shown* read the screen — see [ADR 0006](../docs/decisions/0006-three-source-projects.md)
 and arc42 §8.4.
 
+**Increment 15 was revised on 2026-10-05, after it was installed on the stakeholder's phone: ruling 5 is
+revised, and the pool account shows *Vrij* (Unclaimed) too.** The stakeholder waived both gates for this
+revision: its scenarios are presented with the plan and the app at the end. `show-unclaimed.feature` now
+has 15 scenarios (27 cases) and `reallocate-an-amount.feature` 27 scenarios (45 cases): 13 new scenarios
+and 24 new cases in all, five of the cases new rows of an existing outline. 28 scenarios are revised, none
+removed: the two files' own, and every accounts table in `back-a-category.feature`,
+`keep-data.feature`, `show-accumulated.feature` and `spend-against-a-backed-category.feature` that gave
+the pool account a blank *unclaimed* cell. Each touched file's header says what changed, with a line
+dated 2026-10-05. A blank *unclaimed* cell is no longer accepted, and the step `"X" should show no
+Unclaimed` is gone. No new step phrase was needed.
+
+**Increment 15, *Vrij* and moving *Opgebouwd*, was written on 2026-10-04, approved by Axel at the
+scenario gate the same day, and bound and passing the same day.** It brings two new files, `show-unclaimed.feature` (7 scenarios, 14 cases) and
+`reallocate-an-amount.feature` (22 scenarios, 34 cases), making forty-three. Besides them it adds 19
+scenarios (24 cases) to approved files, revises 23 approved scenarios and removes one, each marked in its
+file and explained in the file's header:
+`back-a-category.feature`, `spend-against-a-backed-category.feature` (whose user story is revised too),
+`show-accumulated.feature`, `choose-a-sweep-destination.feature`, `bring-a-swept-period-up-to-date.feature`,
+`show-an-ended-period.feature`, `carry-plans-and-money-across-a-start-day-change.feature`,
+`keep-data.feature` and `delete-a-category.feature`. `assign-to-a-backed-category.feature`,
+`show-moved-money.feature` and `record-on-an-account.feature` gain header notes only. In all, 48 new
+scenarios and 72 new cases. Four points raised while writing them were ruled by the stakeholder at the
+scenario stage the same day, each on the recommendation, and are in the files. `keep-data.feature` now has
+the first scenarios that involve two versions of MoneyBud: data kept before *Vrij* is read (the data
+promise, ADR 0014). The steps use the English terms *Unclaimed* (*Vrij*) and *Reallocate*
+(*Verplaatsen*), the documentation's proposals, approved with them. One scenario's Givens were corrected
+at the build with Axel's agreement (`spend-against-a-backed-category.feature`, its header says which), and
+one point was ruled at the build (`reallocate-an-amount.feature`'s header).
+
+**Forty-three feature files exist, all bound, and every scenario in them passes**: 1104 scenario cases,
+beside 954 developer unit tests, 2058 in all (2026-10-04). What follows was written at increment 14, and its
+counts are from then.
+
 **Forty-one feature files exist, all bound, and every scenario in them passes**: 1030 scenario cases,
 beside 913 developer unit tests, 1943 in all (2026-09-30). Forty are approved at a gate. **The phone
 increment's scenarios are not**: the stakeholder waived both gates for increment 14 only, and reviews
@@ -165,6 +198,7 @@ offered, and while a plan is offered the rows are in order of their plan figures
 | Backing | `back-a-category.feature`, `assign-to-a-backed-category.feature`, `spend-against-a-backed-category.feature`, `show-accumulated.feature`, `show-moved-money.feature` — approved and bound 2026-09-27 |
 | The sweep | `sweep-at-a-period-end.feature`, `show-an-ended-period.feature`, `bring-a-swept-period-up-to-date.feature`, `choose-a-sweep-destination.feature` — approved 2026-09-27, bound 2026-09-28 |
 | Recurring entries | `repeat-an-entry.feature`, `change-a-repeat.feature` — approved and bound 2026-09-28 |
+| Money with and without a purpose on an account | `show-unclaimed.feature`, `reallocate-an-amount.feature` — approved 2026-10-04 (increment 15); revised 2026-10-05 for the pool account's *Vrij*, not gated |
 | Keeping data | `keep-data.feature`, `start-moneybud.feature`, `carry-on-when-saving-fails.feature` (its last section, the phone's background, written 2026-09-30, not gated) |
 | The phone's own settings | `choose-how-moneybud-looks.feature` — written and bound 2026-09-30, not gated (increment 14) |
 | Typing | `type-an-amount.feature` — the file whose amounts are quoted text as typed, not numbers. `change-an-entry.feature` borrows that grammar for two outlines |

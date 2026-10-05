@@ -83,6 +83,17 @@ public sealed class BackingSteps(SpecContext context)
     public void ThenAccumulatedShouldBe(string category, string which, string amount) =>
         AssertAccumulated(SpecParsing.MoneyAmount(amount), RowOf(category, which));
 
+    // A category set to "—" that left money behind: its row names the account (back-a-category.feature).
+    [Then(@"^Accumulated for ""([^""]*)"" in the (current|previous|next) budget period should (?:still )?be (\S+) euro, on ""([^""]*)""$")]
+    public void ThenAccumulatedShouldBeOn(string category, string which, string amount, string account)
+    {
+        var row = RowOf(category, which);
+        var figure = SpecParsing.MoneyAmount(amount);
+        Assert.Equal(figure, row.Accumulated);
+        Assert.Equal(account, row.AccumulatedOn?.Name);
+        Assert.Equal(Tekst.AccumulatedFigure(figure, row.AccumulatedOn!), row.AccumulatedText);
+    }
+
     [Then(@"^""([^""]*)"" should show no Accumulated in the (current|previous|next) budget period$")]
     public void ThenShouldShowNoAccumulated(string category, string which) =>
         AssertAccumulated(null, RowOf(category, which));
@@ -104,11 +115,18 @@ public sealed class BackingSteps(SpecContext context)
         Assert.Equal(Marker.None, row.AccumulatedMarker);
     }
 
-    /// <summary>A row's <i>Opgebouwd</i>, both as a figure and as what the row shows.</summary>
+    /// <summary>
+    /// A row's <i>Opgebouwd</i>, both as a figure and as what the row shows. The figure alone, whatever
+    /// account the row names beside it (back-a-category.feature's header).
+    /// </summary>
     internal static void AssertAccumulated(Money? expected, CategoryRow row)
     {
         Assert.Equal(expected, row.Accumulated);
-        Assert.Equal(expected is { } figure ? Tekst.AccumulatedFigure(figure) : null, row.AccumulatedText);
+        Assert.Equal(
+            expected is { } figure
+                ? row.AccumulatedOn is { } on ? Tekst.AccumulatedFigure(figure, on) : Tekst.AccumulatedFigure(figure)
+                : null,
+            row.AccumulatedText);
     }
 
     // ------------------------------------------------------------------ Then: what I am told
@@ -128,6 +146,31 @@ public sealed class BackingSteps(SpecContext context)
         var result = LastBacking(category);
         Assert.Equal(BackingOutcome.Unbacked, result.Outcome);
         AssertMoved(result, amount, from, to);
+    }
+
+    [Then(@"^I should be told that ""([^""]*)"" is no longer backed, and of no money moved$")]
+    public void ThenIShouldBeToldUnbackedAndNothingMoved(string category)
+    {
+        var result = LastBacking(category);
+        Assert.Equal(BackingOutcome.Unbacked, result.Outcome);
+        Assert.False(result.MovedMoney, "Money moved.");
+
+        var text = AssertTold(result);
+        Assert.DoesNotContain("€", text);
+    }
+
+    [Then(@"^I should be told that ""([^""]*)"" is now backed by ""([^""]*)"", and that these amounts moved:$")]
+    public void ThenIShouldBeToldBackedAndTheseMoved(string category, string account, Table table)
+    {
+        var result = LastBacking(category);
+        Assert.True(result.Outcome is BackingOutcome.Backed or BackingOutcome.Repointed, $"Expected it backed, but it was {result.Outcome}.");
+        Assert.Equal(account, result.After!.Name);
+        Assert.Equal(
+            table.Rows.Select(r => (r["from"], r["to"], SpecParsing.MoneyAmount(r["amount"]))).Order(),
+            result.MovedBetweenAccounts.Select(m => (m.From.Name, m.To.Name, m.Amount)).Order());
+
+        var text = AssertTold(result);
+        Assert.All(result.MovedBetweenAccounts, m => Assert.Contains(Tekst.Euro(m.Amount), text));
     }
 
     // Only that the backing was announced: whether money moved is not checked.
@@ -209,12 +252,13 @@ public sealed class BackingSteps(SpecContext context)
     private void AssertMoved(SetBackingResult result, string amount, string from, string to)
     {
         Assert.True(result.MovedMoney, "No money moved.");
+        var moved = Assert.Single(result.MovedBetweenAccounts);
         Assert.Equal(
             (SpecParsing.MoneyAmount(amount), from, to),
-            (result.Moved!.Amount, result.Moved.From.Name, result.Moved.To.Name));
+            (moved.Amount, moved.From.Name, moved.To.Name));
 
         var text = AssertTold(result);
-        Assert.Contains(Tekst.Euro(result.Moved.Amount), text);
+        Assert.Contains(Tekst.Euro(moved.Amount), text);
     }
 
     // Contains rather than equals: unbacking the sweep destination also says that it no longer is

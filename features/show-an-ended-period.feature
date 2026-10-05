@@ -46,6 +46,12 @@
 # NOT specified here, and left to the plan: where the list and the line sit near Niet toegewezen,
 # which is in the ring's hole, and how the line is worded beyond the phrases ruled.
 #
+# REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd", ruling 6; approved
+# at the scenario gate on 2026-10-04). One scenario, "Unbacking a category after a period ended does not make that period look as if
+# it had more to sweep", said that setting Holiday to "—" returned its money to Bank. Setting "—" now
+# returns only this period's money, and Holiday has none this period, so its 100 stays on Deposit, still
+# Holiday's. Its point, that the ended period does not look as if it had more to sweep, is unchanged.
+#
 # Reading the steps: the line's steps and the destination steps are explained in
 # sweep-at-a-period-end.feature. The row table is overview.feature's, with back-a-category.feature's
 # ACCUMULATED column. The backing steps are back-a-category.feature's.
@@ -208,8 +214,12 @@ Feature: See what became of an ended period's leftover money
       | Hobby    | 100.00 | 40.00 | 60.00     | 0.00        |
 
   # The same rule the other way round. Holiday was backed when the period ended, so its unspent 100
-  # was not part of the leftover. Unbacking it now returns its money to Bank, with no purpose
-  # (back-a-category.feature), and does not make the period look as if it had more to sweep.
+  # was not part of the leftover. Unbacking it now does not make the period look as if it had more to
+  # sweep.
+  #
+  # Revised for increment 15. It first said that unbacking returns Holiday's money to Bank, with no
+  # purpose. Now "—" returns only this period's money, and Holiday has none this period, so nothing moves:
+  # the 100 stays on Deposit, still Holiday's, and its row says where (back-a-category.feature).
   Scenario: Unbacking a category after a period ended does not make that period look as if it had more to sweep
     Given my budget periods are one month long
     And today is the last day of the current budget period
@@ -224,6 +234,7 @@ Feature: See what became of an ended period's leftover money
     When the next budget period begins while MoneyBud is open
     Then I should be told that the period leftover of the previous budget period, 900 euro, was swept into "Savings"
     When I remove the backing of "Holiday"
-    Then I should be told that "Holiday" is no longer backed, and that 100 euro moved from "Deposit" to "Bank"
+    Then I should be told that "Holiday" is no longer backed, and of no money moved
+    And Accumulated for "Holiday" in the current budget period should be 100 euro, on "Deposit"
     And the previous budget period should still show that 900 euro was swept into "Savings"
     And I should not be able to bring the swept amount of the previous budget period up to date

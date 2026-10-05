@@ -35,6 +35,14 @@ namespace MoneyBud.Presentation;
 // pick. Picking the account already shown is indistinguishable from the list writing back, and leaves
 // the account following the category.
 //
+// Since increment 15 the list is LOCKED for a backed category, on its backing account, from the period
+// the category got it (arc42 §12, *An expense on a backed category is on its account*): the domain says
+// which account (Ledger.LockedAccountFor), from the category typed and the date. While locked, a write
+// to the list is ignored, as the Herhalen list's is; a pick made before is kept for when the list opens
+// again, so a backed category typed in between does not erase it (derived). Only categories without an
+// account keep a free list, which no longer follows the category: it shows the pool account until an
+// account is picked.
+//
 // Since recurring entries, both forms end with a Herhalen list (arc42 §12, Recurring entries,
 // follow-up 6): Eenmalig, the default, then Wekelijks and Maandelijks. It is locked on Eenmalig for an
 // earlier occurrence of a repeat, which cannot change it (follow-up 2), and a form in Wijzigen reads
@@ -59,36 +67,53 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
     [ObservableProperty] public partial string? Amount { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ChosenAccount))]
+    [NotifyPropertyChangedFor(nameof(ChosenAccount), nameof(IsAccountLocked))]
     public partial string? Category { get; set; }
 
     [ObservableProperty] public partial string? Label { get; set; }
-    [ObservableProperty] public partial DateTime? Date { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChosenAccount), nameof(IsAccountLocked))]
+    public partial DateTime? Date { get; set; }
 
     /// <summary>
     /// The account the user picked, or the one the entry being changed is on. Null until then, when
-    /// the entry is on the account the category typed follows.
+    /// the entry is on the pool account, or on the account its category's list is locked on.
     /// </summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ChosenAccount))]
     public partial Account? Account { get; set; }
 
     /// <summary>
-    /// What the account list shows and sets. Until an account is picked it follows the category
-    /// typed: the backing account of a backed category, and the pool account for an unbacked one or
-    /// for anything that is not a category's name. Setting nothing, or the account already shown,
-    /// changes nothing; setting another account picks it.
+    /// The account the list is locked on, or null while it is open: the backing account of the
+    /// category typed, from the period it got it, or for an entry being changed that was recorded
+    /// before that, the account it is on (plan for increment 15, reading 3).
+    /// </summary>
+    private Account? Locked =>
+        app.Ledger.LockedAccountFor(Category, DateOf(Date) ?? app.Ledger.Today, Editing);
+
+    /// <summary>Whether the account list is locked, so cannot be changed.</summary>
+    public bool IsAccountLocked => Locked is not null;
+
+    /// <summary>
+    /// What the account list shows and sets: the account it is locked on; otherwise the account
+    /// picked, and the pool account until one is. Setting nothing, the account already shown, or
+    /// anything while locked, changes nothing; setting another account picks it.
     /// </summary>
     public Account ChosenAccount
     {
-        get => Account ?? app.Ledger.BackingOf(Category) ?? app.Ledger.PoolAccount;
+        get => Locked ?? Account ?? app.Ledger.PoolAccount;
         set
         {
-            if (value is not null && value != ChosenAccount) Account = value;
+            if (value is not null && !IsAccountLocked && value != ChosenAccount) Account = value;
         }
     }
 
-    internal void RefreshAccount() => OnPropertyChanged(nameof(ChosenAccount));
+    internal void RefreshAccount()
+    {
+        OnPropertyChanged(nameof(IsAccountLocked));
+        OnPropertyChanged(nameof(ChosenAccount));
+    }
 
     /// <summary>
     /// Another account was made the pool. A new entry whose account was picked as the old pool moves
@@ -133,7 +158,8 @@ public sealed partial class ExpenseForm(MoneyBudApp app) : ObservableObject
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText), nameof(CanChangeFrequency), nameof(ChosenFrequency))]
+    [NotifyPropertyChangedFor(nameof(IsEditing), nameof(SubmitText), nameof(CanChangeFrequency), nameof(ChosenFrequency),
+        nameof(ChosenAccount), nameof(IsAccountLocked))]
     public partial Expense? Editing { get; private set; }
 
     public bool IsEditing => Editing is not null;
@@ -572,4 +598,150 @@ public sealed partial class TransferForm(MoneyBudApp app) : ObservableObject
         Date = null;
         IsOpen = false;
     }
+}
+
+/// <summary>One item of the <i>Van</i> or <i>Naar</i> list of <i>Verplaatsen</i>: an end, by the name it shows.</summary>
+public sealed record ReallocationChoice(ReallocationEnd End)
+{
+    public string Text => Tekst.EndName(End);
+
+    public override string ToString() => Text;
+}
+
+/// <summary>
+/// <i>Verplaatsen</i> (arc42 §12, <i>One act moves an amount of purpose</i>, follow-up 12): <i>Van</i>,
+/// <i>Naar</i> and <i>Bedrag</i>. Opened beside <i>Overboeken</i>, or from a category's row, which
+/// starts it with that category as <i>Van</i> (derived). Nothing is confirmed first; the form empties
+/// once the move goes through, and keeps what was typed after a refusal.
+///
+/// <para>The lists, in the order of the plan for increment 15, reading 5: <i>Vrij</i> on each account,
+/// the pool account's included since ruling 5 was revised, in the strip's order, then the categories
+/// alphabetically, then <i>Niet toegewezen</i>, which means the period on screen — in <i>Van</i> too
+/// since it gives to the pool account's <i>Vrij</i> (ruled 2026-10-05). Like every list here, a
+/// choice is a plain value once set, and a list writing back nothing changes nothing. The lists are
+/// the same collections for as long as what they offer stays the same, so a redraw does not make a
+/// list let go of its choice.</para>
+/// </summary>
+public sealed partial class ReallocateForm(MoneyBudApp app) : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChosenFrom), nameof(ChosenTo))]
+    public partial ReallocationEnd? From { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChosenTo))]
+    public partial ReallocationEnd? To { get; private set; }
+
+    [ObservableProperty] public partial string? Amount { get; set; }
+
+    /// <summary>Whether the form is open: <i>Verplaatsen</i> opens it, and so does a row's button.</summary>
+    [ObservableProperty] public partial bool IsOpen { get; set; }
+
+    private IReadOnlyList<ReallocationChoice> fromChoices = [];
+    private IReadOnlyList<ReallocationChoice> toChoices = [];
+
+    /// <summary>What <i>Van</i> offers.</summary>
+    public IReadOnlyList<ReallocationChoice> FromChoices => fromChoices = Same(fromChoices, Ordered(app.Ledger.ReallocationSources));
+
+    /// <summary>What <i>Naar</i> offers.</summary>
+    public IReadOnlyList<ReallocationChoice> ToChoices => toChoices = Same(toChoices, Ordered(app.Ledger.ReallocationDestinations));
+
+    /// <summary><i>Van</i>, which starts out on the first choice.</summary>
+    public ReallocationChoice? ChosenFrom
+    {
+        get => FromChoices.FirstOrDefault(c => c.End == From) ?? FromChoices.FirstOrDefault();
+        set
+        {
+            if (value is not null) From = value.End;
+        }
+    }
+
+    /// <summary>
+    /// <i>Naar</i>, which starts out on the first choice that is not <i>Van</i> and, when <i>Van</i> is a
+    /// <i>Vrij</i>, not another <i>Vrij</i> either, which is always refused. Since every account has a
+    /// <i>Vrij</i>, that would otherwise be the pair the form opens on.
+    /// </summary>
+    public ReallocationChoice? ChosenTo
+    {
+        get => ToChoices.FirstOrDefault(c => c.End == To)
+               ?? ToChoices.FirstOrDefault(c => c.End != ChosenFrom?.End && !BothUnclaimed(c.End, ChosenFrom?.End))
+               ?? ToChoices.FirstOrDefault(c => c.End != ChosenFrom?.End);
+        set
+        {
+            if (value is not null) To = value.End;
+        }
+    }
+
+    internal void RefreshChoices()
+    {
+        OnPropertyChanged(nameof(FromChoices));
+        OnPropertyChanged(nameof(ToChoices));
+        OnPropertyChanged(nameof(ChosenFrom));
+        OnPropertyChanged(nameof(ChosenTo));
+    }
+
+    /// <summary>
+    /// Opens the form. It is always offered: the pool account always has <i>Vrij</i> and there is always
+    /// <i>Niet toegewezen</i>, so even a first start has two ends (arc42 §12, ruling 5 revised).
+    /// </summary>
+    [RelayCommand]
+    private void Open() => IsOpen = true;
+
+    /// <summary>Opened from a category's row: <i>Van</i> is that category (derived).</summary>
+    [RelayCommand]
+    public void StartFrom(string category)
+    {
+        app.Decline();
+        Clear();
+        From = ReallocationEnd.For(app.Ledger.CategoriesOffered.Concat(app.Ledger.ArchivedCategories)
+            .Single(c => c.Name == category));
+        IsOpen = true;
+    }
+
+    [RelayCommand]
+    private void Submit() => Reallocate();
+
+    /// <returns>What came of it, or null when the amount could not be read.</returns>
+    public ReallocateResult? Reallocate()
+    {
+        if (ChosenFrom is not { } from || ChosenTo is not { } to)
+        {
+            Clear();
+            return null;
+        }
+
+        var result = app.Reallocate(Amount, from.End, to.End);
+        if (result is { WasRefused: false }) Clear();
+        return result;
+    }
+
+    [RelayCommand]
+    public void Cancel()
+    {
+        app.Decline();
+        Clear();
+    }
+
+    public void Clear()
+    {
+        From = null;
+        To = null;
+        Amount = null;
+        IsOpen = false;
+    }
+
+    private static bool BothUnclaimed(ReallocationEnd end, ReallocationEnd? other) =>
+        end.Kind == ReallocationEndKind.Unclaimed && other?.Kind == ReallocationEndKind.Unclaimed;
+
+    private static List<ReallocationChoice> Ordered(IReadOnlyList<ReallocationEnd> ends) =>
+    [
+        .. ends.Where(e => e.Kind == ReallocationEndKind.Unclaimed).Select(e => new ReallocationChoice(e)),
+        .. ends.Where(e => e.Kind == ReallocationEndKind.Category)
+            .OrderBy(e => e.Category!.Name, MoneyBudApp.Alphabetical).Select(e => new ReallocationChoice(e)),
+        .. ends.Where(e => e.Kind == ReallocationEndKind.Unassigned).Select(e => new ReallocationChoice(e)),
+    ];
+
+    // The list already held, while it offers the same ends under the same names.
+    private static IReadOnlyList<ReallocationChoice> Same(IReadOnlyList<ReallocationChoice> held, List<ReallocationChoice> wanted) =>
+        held.Select(c => (c.End, c.Text)).SequenceEqual(wanted.Select(c => (c.End, c.Text))) ? held : wanted;
 }

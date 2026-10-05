@@ -70,9 +70,24 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
 
     /// <summary>
     /// The category's <i>Accumulated</i> as the period shown sees it, on screen <i>Opgebouwd</i> (arc42
-    /// §12). Null for a category that is not backed, which shows none at all, not a zero.
+    /// §12). Null for a category that is not backed, which shows none at all, not a zero — unless it was
+    /// set to "—" and left money behind, which it shows with <see cref="AccumulatedOn"/> (§12, <i>Setting
+    /// Staat op to "—"</i>, follow-up).
     /// </summary>
     public Money? Accumulated { get; init; }
+
+    /// <summary>
+    /// For a category set to "—" that shows <i>Opgebouwd</i>, the account its money was left on, named
+    /// beside it: "Opgebouwd: € 5.000,00 op "Spaarrekening"". Null for a backed row, whose <i>Staat op</i>
+    /// list already says where.
+    /// </summary>
+    public Account? AccumulatedOn { get; init; }
+
+    /// <summary>
+    /// Whether <i>Verplaatsen</i> can start from this row: its category is backed, or set to "—" with money
+    /// left behind (plan for increment 15, reading 5).
+    /// </summary>
+    public bool CanReallocate => BackingAccount is not null || AccumulatedOn is not null;
 
     /// <summary>Below zero, <i>Accumulated</i> carries the one marker, badge <i>Rood</i>. Exactly zero does not.</summary>
     public Marker AccumulatedMarker => Accumulated is { IsNegative: true } ? Marker.Over : Marker.None;
@@ -80,7 +95,9 @@ public sealed record CategoryRow(string Name, Money Budget, Money Spent, Money R
     public bool IsAccumulatedBelowZero => AccumulatedMarker == Marker.Over;
 
     /// <summary>"Opgebouwd: € 600,00" under the row's figures, or null for an unbacked category.</summary>
-    public string? AccumulatedText => Accumulated is { } accumulated ? Tekst.AccumulatedFigure(accumulated) : null;
+    public string? AccumulatedText => Accumulated is { } accumulated
+        ? AccumulatedOn is { } on ? Tekst.AccumulatedFigure(accumulated, on) : Tekst.AccumulatedFigure(accumulated)
+        : null;
 
     /// <summary>The account backing the category, or null. Today's backing, whichever period is shown.</summary>
     public Account? BackingAccount { get; init; }
@@ -289,6 +306,9 @@ public sealed record PeriodOverview(
                 IsRenaming = c.Name == renaming,
                 PlanFigure = offer?.FigureFor(c),
                 Accumulated = ledger.AccumulatedFor(c.Name, period),
+                AccumulatedOn = ledger.BackingOf(c.Name) is null && ledger.AccumulatedFor(c.Name, period) is not null
+                    ? ledger.LeftOn(c.Name)
+                    : null,
                 BackingAccount = ledger.BackingOf(c.Name),
                 BackingChoices = choices,
                 ChooseBacking = chooseBacking,

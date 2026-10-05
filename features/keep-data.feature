@@ -43,6 +43,31 @@
 # version without them: it says so and closes, which is a row of start-moneybud.feature's outline
 # for data MoneyBud cannot read (glossary: "Saved data from before accounts").
 #
+# ADDED AND REVISED FOR INCREMENT 15, 2026-10-04 (glossary: "Vrij, and moving Opgebouwd"; approved at the scenario gate on 2026-10-04
+# at the scenario gate):
+#   - THE DATA PROMISE IS KEPT (ruling 7, left by the stakeholder to the documentation: "Make the choice
+#     yourself, based on what is efficient"). Data kept by the version before this increment, the first
+#     version the promise covers (ADR 0014), IS READ, AS DATA IN WHICH NOTHING WAS GIVEN A PURPOSE YET.
+#     EVERY FIGURE SHOWN BEFORE THE UPDATE READS THE SAME AFTER IT; Unclaimed is new, and shows at once
+#     what an account held that no category claims. So, for the first time, scenarios here DO involve two
+#     versions: the section "Data kept before Unclaimed" (derived, open at this gate). He added that he will
+#     most likely start over anyway; that stays his choice.
+#   - DERIVED, AND SHOWN SO THAT IT IS APPROVED KNOWINGLY: that version allowed an expense against a backed
+#     category on another account. Such an expense IS READ AS IT IS, on the account it was put on, and the
+#     figures follow the general rules. Opening it and saving it puts it on the backing account, since a
+#     change is judged as if recorded now, and that is a change.
+#   - New sections: what was reallocated is kept, and so is the money a category on "—" left behind and
+#     the account it is on.
+#   - One scenario is revised: "Whether an expense was recorded before or after the backing, on the day of
+#     backing, is kept" put Fiets, a Savings expense recorded after Savings was backed, on Bank. It is now on
+#     Deposit, as it must be. What the scenario keeps, Accumulated, reads the same.
+#
+# REVISED 2026-10-05 for ruling 5 revised; gates waived by Axel, presented with the plan and the app. The
+# pool account now shows Unclaimed too (show-unclaimed.feature). The four accounts tables with an UNCLAIMED
+# column gave Bank, the pool account, a blank cell, meaning it shows none; each now carries its figure. Three
+# are 0.00. The fourth, in "An expense kept on another account than its category's backing account stays
+# there until it is changed", is -120.00 until Fiets is saved: see that scenario's comment.
+#
 # Reading the steps:
 #   - "I close MoneyBud and start it again" is closing it and starting it again on the same day,
 #     with nothing going wrong in between. Everything asserted afterwards is what the new start shows.
@@ -70,6 +95,11 @@
 #   - "the expense form should be empty and ready for a new expense" means nothing is typed in it
 #     and it is not changing an entry. "no rename should be in progress" means no category's rename
 #     box is open.
+#   - Added for increment 15: "what follows was kept by the version of MoneyBud from before Unclaimed",
+#     as a Given, means the Givens after it describe what that version kept, done under its rules:
+#     there, an expense against a backed category could be put on another account. "I start MoneyBud,
+#     updated to the version with Unclaimed" starts the version this increment builds on that data, on the
+#     same day.
 #   - "nothing should have been said about saving" means no message mentions saving: when saving
 #     works, and has not failed before, it is not announced. "MoneyBud should offer no act for
 #     saving (starting over)" means no button or other act for it exists anywhere on the screen.
@@ -77,7 +107,8 @@
 #     file gives it: the list steps are list-transactions-in-a-period.feature's, the category row
 #     steps overview.feature's, the correcting steps change-an-entry.feature's and
 #     remove-an-entry.feature's, the account steps show-accounts.feature's, the backing steps
-#     back-a-category.feature's, the sweep steps sweep-at-a-period-end.feature's, the steps about
+#     back-a-category.feature's, the Unclaimed steps show-unclaimed.feature's, the reallocating steps
+#     reallocate-an-amount.feature's, the sweep steps sweep-at-a-period-end.feature's, the steps about
 #     repeats repeat-an-entry.feature's, which names dates as calendar dates, and the steps about the
 #     period start day change-the-period-start-day.feature's.
 #
@@ -427,14 +458,132 @@ Feature: Keep my data between runs
   # recorded in (spend-against-a-backed-category.feature). Voorschot came before the backing, and
   # Fiets after it. 200 moved at the backing, and only Fiets counts against it. Were that order lost,
   # Accumulated would read 70 or 200 instead of 170.
+  #
+  # Revised for increment 15: Fiets was put on Bank, which an expense against a backed category can no
+  # longer be. It is now on Deposit, the only account it can be on. Accumulated reads 170 as before.
   Scenario: Whether an expense was recorded before or after the backing, on the day of backing, is kept
     Given I have an account "Deposit" with a starting balance of 0 euro
     And I have a budget of 300 euro for "Savings" in the current budget period
     And I have recorded an expense of 100 euro for "Savings" labelled "Voorschot" dated today on the account "Bank"
     When I set the backing account of "Savings" to "Deposit"
-    And I record an expense of 30 euro for "Savings" labelled "Fiets" on the account "Bank"
+    And I record an expense of 30 euro for "Savings" labelled "Fiets"
     And I close MoneyBud and start it again
     Then Accumulated for "Savings" in the current budget period should be 170 euro
+
+  # ----------------------------------------------------------------------------------
+  # What was reallocated is kept (new in increment 15)
+  #
+  # A move of purpose within one account moves no balance, yet it must survive starting again: Unclaimed
+  # and Accumulated depend on it, and so does its row (reallocate-an-amount.feature). So must the money a
+  # category on "—" left behind, and which account it is on, since "—" itself no longer says.
+  # ----------------------------------------------------------------------------------
+
+  # 3000 given to Savings on Deposit, then 500 of it moved to Unassigned, which moved it to Bank. After
+  # starting again every figure and both rows are as they were.
+  Scenario: Unclaimed, what was reallocated, and its rows are all there after starting again
+    Given I have a category "Savings"
+    When I record an income of 2000 euro labelled "Salaris"
+    And I add an account "Deposit" with a starting balance of 5000 euro
+    And I set the backing account of "Savings" to "Deposit"
+    And I reallocate 3000 euro from Unclaimed on "Deposit" to "Savings"
+    And I reallocate 500 euro from "Savings" to Unassigned in the current budget period
+    And I close MoneyBud and start it again
+    Then the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 2500.00 | 0.00      |
+      | Deposit | 4500.00 | 2000.00   |
+    And Accumulated for "Savings" in the current budget period should be 2500 euro
+    And Unassigned in the current budget period should be 2500 euro
+    And the history of "Deposit" should be exactly these, newest first:
+      | date  | entry            | category | from      | to         | amount  | balance |
+      | today | reallocation     |          | Savings   | Unassigned | 500.00  |         |
+      | today | reallocation     |          | Unclaimed | Savings    | 3000.00 |         |
+      | today | starting balance |          |           |            |         | 5000.00 |
+
+  # Savings is set to "—" with 300 given from Unclaimed, which stays on Deposit. After starting again it
+  # is still there, still Savings', still on Deposit; and backing Savings with Broker takes it along.
+  Scenario: The money a category on none left behind, and the account it is on, are there after starting again
+    Given I have a category "Savings"
+    When I add an account "Deposit" with a starting balance of 300 euro
+    And I add an account "Broker" with a starting balance of 0 euro
+    And I set the backing account of "Savings" to "Deposit"
+    And I reallocate 300 euro from Unclaimed on "Deposit" to "Savings"
+    And I remove the backing of "Savings"
+    And I close MoneyBud and start it again
+    Then "Savings" should not be backed
+    And Accumulated for "Savings" in the current budget period should be 300 euro, on "Deposit"
+    And the Unclaimed of "Deposit" should be 0.00 euro
+    When I set the backing account of "Savings" to "Broker"
+    Then I should be told that "Savings" is now backed by "Broker", and that 300 euro moved from "Deposit" to "Broker"
+    And Accumulated for "Savings" in the current budget period should be 300 euro
+
+  # ----------------------------------------------------------------------------------
+  # Data kept before Unclaimed (new in increment 15)
+  #
+  # Ruling 7: the data promise is kept. What the version before this increment kept is read as data in
+  # which nothing was given a purpose yet, and every figure it showed reads the same. Derived, open at this
+  # gate (see the header).
+  # ----------------------------------------------------------------------------------
+
+  # Deposit was added with 5000, and Savings, backed by it, was given 300. The update shows every figure
+  # as it was, and Unclaimed, new, shows the 5000 that no category claims. Starting the update says
+  # nothing (this file's reading: nothing about it needs me).
+  Scenario: Data kept before Unclaimed opens with every figure as it was, and shows what no category claims
+    Given what follows was kept by the version of MoneyBud from before Unclaimed
+    And I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 5000 euro
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have a budget of 300 euro for "Savings" in the current budget period
+    When I start MoneyBud, updated to the version with Unclaimed
+    Then I should not have been told anything
+    And the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 1700.00 | 0.00      |
+      | Deposit | 5300.00 | 5000.00   |
+    And net worth should be 7000 euro
+    And the backing account of "Savings" should be "Deposit"
+    And Accumulated for "Savings" in the current budget period should be 300 euro
+    And Unassigned in the current budget period should be 1700 euro
+    And the history of "Deposit" should be exactly these, newest first:
+      | date  | entry            | category | from | to      | amount | balance |
+      | today | movement         | Savings  | Bank | Deposit | 300.00 |         |
+      | today | starting balance |          |      |         |        | 5000.00 |
+
+  # Derived, and shown so that it is approved knowingly. The old version let Fiets, a Savings expense, be
+  # put on Bank while Deposit backed Savings. It is read as it was: on Bank. Accumulated counts it, as it
+  # always did, but what Deposit holds for Savings does not, so here, and only in such kept data,
+  # Unclaimed plus Accumulated falls short of Deposit's balance by the 120. Opened and saved, Fiets goes onto
+  # Deposit, since its list is now locked there, and the figures add up again. That is a change, and is
+  # announced as one.
+  #
+  # Revised 2026-10-05 (ruling 5 revised): Bank, the pool account, now shows Unclaimed too. Bank paid the 120
+  # that Deposit still holds, and this period's Unassigned, 1700, is claimed on Bank, which holds only 1580.
+  # So Bank's Unclaimed is -120.00 until Fiets is saved, and 0.00 after: the same 120, seen from the account
+  # that paid it.
+  Scenario: An expense kept on another account than its category's backing account stays there until it is changed
+    Given what follows was kept by the version of MoneyBud from before Unclaimed
+    And I have recorded an income of 2000 euro labelled "Salaris" dated today
+    And I have an account "Deposit" with a starting balance of 0 euro
+    And I have a category "Savings"
+    And I have set the backing account of "Savings" to "Deposit"
+    And I have a budget of 300 euro for "Savings" in the current budget period
+    And I have recorded an expense of 120 euro for "Savings" labelled "Fiets" dated today on the account "Bank"
+    When I start MoneyBud, updated to the version with Unclaimed
+    Then the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 1580.00 | -120.00   |
+      | Deposit | 300.00  | 0.00      |
+    And Accumulated for "Savings" in the current budget period should be 180 euro
+    And the expense labelled "Fiets" should open on the account "Deposit", locked
+    When I save the expense labelled "Fiets" without changing anything
+    Then the change should go through
+    And I should be told that the expense was changed
+    And the accounts should be exactly these, in this order:
+      | account | balance | unclaimed |
+      | Bank    | 1700.00 | 0.00      |
+      | Deposit | 180.00  | 0.00      |
+    And Accumulated for "Savings" in the current budget period should still be 180 euro
 
   # ----------------------------------------------------------------------------------
   # The sweep is kept

@@ -16,14 +16,15 @@ later ask "why on earth is it like this?".
 | [0004](../decisions/0004-solution-layout.md) | The layout of the solution: two projects, xUnit, linked feature files | Accepted; **decision 1 superseded by 0006** | 2026-09-24 |
 | [0005](../decisions/0005-avalonia-ui-toolkit.md) | The desktop UI toolkit is Avalonia | Accepted. Dated note, 2026-09-29: **the phone's toolkit too**, by 0013 | 2026-09-25 |
 | [0006](../decisions/0006-three-source-projects.md) | Three source projects: domain, presentation, desktop | Accepted; supersedes 0004's decision 1; **amended by 0007**. Dated notes, 2026-09-26: tests read the Desktop's markup, and a fourth project. Dated note, 2026-09-29: **a second head, the phone**, by 0013 | 2026-09-25 |
-| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), **version 7 since 0012**, by dated notes. Dated note, 2026-09-29: **the start day is stored**, as the calendar's history, and version 6, from the change to *Opgebouwd*, had no record. **Superseded in part by 0014** (2026-09-29): from the phone version accepted at the end review, "cannot read" is no longer an answer to an older version, and reversal is no longer cheap | 2026-09-26 |
+| [0007](../decisions/0007-keeping-the-ledger.md) | Keeping the ledger: one JSON file in the user's profile, in a fourth project | Accepted; amends 0006. **Format version 2 since 0008, version 3 since 0009, version 4 since 0010, version 5 since 0011** (the first to read the version before), **version 7 since 0012**, by dated notes. Dated note, 2026-09-29: **the start day is stored**, as the calendar's history, and version 6, from the change to *Opgebouwd*, had no record. **Superseded in part by 0014** (2026-09-29): from the phone version accepted at the end review, "cannot read" is no longer an answer to an older version, and reversal is no longer cheap. Dated note, 2026-10-04: **version 8 since 0015**, reading version 7, the first reading path owed under the promise | 2026-09-26 |
 | [0008](../decisions/0008-balance-is-worked-out.md) | A balance is worked out; a typed balance is a dated statement | Accepted; takes 0007's format to version 2. Dated note: a fifth entry kind since 0009 | 2026-09-27 |
-| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated notes, 2026-09-28: **its saving gap narrowed for sweeps by 0010, and for occurrences by 0011**; settling event by event and no longer at most once a day, by 0011 | 2026-09-27 |
+| [0009](../decisions/0009-movements-are-entries.md) | Money moved for a category is a stored entry, written on the day it moves | Accepted; takes 0007's format to version 3. Dated notes, 2026-09-28: **its saving gap narrowed for sweeps by 0010, and for occurrences by 0011**; settling event by event and no longer at most once a day, by 0011. Dated note, 2026-10-04: **a movement is no longer the only entry that moves money for a purpose, and a category's backing is a history**, by 0015 | 2026-09-27 |
 | [0010](../decisions/0010-sweeps-and-period-ends.md) | A sweep is a movement for a period, and settling records each period's end | Accepted; takes 0007's format to version 4. Dated note, 2026-09-28: occurrences recorded before their period's sweep, by 0011. Dated note, 2026-09-29: a sweep's period named through the ledger's calendar, and a sweep made by a change of start day dated that day, by 0012 | 2026-09-28 |
 | [0011](../decisions/0011-recurring-entries.md) | A recurring entry is state beside its occurrences, and settling works event by event | Accepted; takes 0007's format to version 5 and reads version 4 | 2026-09-28 |
-| [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4 | 2026-09-29 |
+| [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4. Dated note, 2026-10-04: **decision 3 changed in one point** by 0015, what is there for a category counting from the period of backing | 2026-09-29 |
 | [0013](../decisions/0013-an-android-phone-app.md) | MoneyBud is used on an Android phone, as a second head over the same projects | Accepted; **supersedes 0002**; extends 0005 and 0006 by dated notes. Built 2026-09-30, its decision 6 answered by the phone plan's D1 without a record of its own | 2026-09-29 |
-| [0014](../decisions/0014-real-use-and-the-phone-data.md) | Real use: every later version reads the data, which on the phone lives in the app's own folder under one fixed signing key | Accepted; **supersedes 0007 in part** | 2026-09-29 |
+| [0014](../decisions/0014-real-use-and-the-phone-data.md) | Real use: every later version reads the data, which on the phone lives in the app's own folder under one fixed signing key | Accepted; **supersedes 0007 in part**. Its promise first kept by 0015 | 2026-09-29 |
+| [0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md) | A move of purpose is an entry of its own, and a category's backing is a history of stretches | Accepted; takes 0007's format to version 8 and **reads version 7**, and through it 6, 5 and 4. Extends 0009 and changes one point of 0012's decision 3, by dated notes. Dated notes, 2026-10-05: **the pool account has a *Vrij* too**, and one load check loosened, still version 8 | 2026-10-04 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -291,3 +292,39 @@ and **the file format stays at version 7**, so 0007 needs no dated note either. 
 format, or put the phone's navigation in the head, a record or a note would have been owed. **None of it
 was approved at a gate**, since the stakeholder waived both; if his review at the end overturns a plan
 decision that a record would have held, that is the moment to write one.
+
+**The *Vrij* increment added one: ADR 0015**, approved at its plan gate on 2026-10-04 (decision D1 of
+the plan, as proposed) and built the same day. The rulings (§12, *Vrij, and moving Opgebouwd*) need two
+things the model could not hold: a move of purpose that changes no balance must still be kept, and
+*Opgebouwd* must carry on across "—" instead of starting over, while stepping back still shows what each
+period built. The answer is that **a `Reallocation` is a sixth entry kind**, on the shared counter,
+holding its two ends and the account each was on at that moment, and moving the money itself when those
+differ; that **a category's backing is a history of stretches**, a `Backing` pointing back through
+`Earlier` to a `LeftBehind` and through its `Before` to the backing it ended, with *Opgebouwd* for a
+period worked out by the stretch it falls in and a `Rebacked` movement carrying the money left behind
+into a new stretch; that ***Vrij* is worked out, never stored**; and file format version 8. The rejected
+alternatives were a reallocation as movements, resuming the old backing's marks, starting afresh with an
+opening figure, and a stored *Vrij*. It passes this section's test as 0009 to 0012 did: it touches the
+file format, now under a promise to read the old one, and a backing that points to the "—" before it
+would draw a "why on earth" without its reasoning. **The build changed one detail of D1** (the stretches
+are a chain, not a list) **and review at the build changed one point of ADR 0012**, and the record says
+both.
+
+**It extends ADR 0009 and changes one point of ADR 0012, rather than superseding either.** 0009's
+decisions stand: movements are entries written on their day, and settling writes planned money. What
+changed is that a movement is not the only entry that moves money for a purpose, and that "—" no longer
+deletes a backing, so 0009 carries a dated note. 0012's calendar stands; one sentence of its decision 3,
+that what is there for a category counts from the period of the latest re-pointing, no longer holds,
+because a late receipt locked on today's account went missing from it. That is a dated note too, as 0011
+changed one sentence of 0009's decision 3. **Version 7 is read** (ruling 7, left to the documentation by
+the stakeholder): the first format change under [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)'s
+promise, so for the first time reading the older version was owed rather than chosen. 0007 carries a
+dated note for version 8, as for every version before it. **0014 carries none**: its decision is kept,
+not changed, and the index says it was first kept here.
+
+**The revision after the install added no record** (2026-10-05; §12, *Vrij on the pool account: ruled
+after the install*). The pool account gets a *Vrij*, and *Niet toegewezen* can be moved to it. 0015's
+decisions all stand: *Vrij* is still worked out and never stored, a reallocation already holds both its
+ends and their accounts, and the file stays at version 8. What changed is a requirement 0015 quoted, "the
+pool account has none", and one check on loading, so 0015 carries two dated notes rather than being
+superseded. Nothing in it is costly to reverse beyond what 0015 already was.

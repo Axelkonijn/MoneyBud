@@ -287,6 +287,24 @@ public sealed partial class CorrectionSteps(SpecContext context)
         }
     }
 
+    // What the account list shows once the row is clicked, and whether it can be changed: "locked" is
+    // tried, by choosing another account, and must still show the same one. Left with Annuleren.
+    [Then(@"^" + Entry + @" should open on the account ""([^""]*)"", (changeable|locked)$")]
+    public void ThenItShouldOpenOnTheAccount(string entry, string account, string state)
+    {
+        var expense = Assert.IsType<ExpenseLine>(Pick(entry));
+        App.EditExpense(expense);
+        var form = App.ExpenseForm;
+        Assert.Equal(account, form.ChosenAccount.Name);
+        Assert.Equal(state == "locked", form.IsAccountLocked);
+        if (state == "locked")
+        {
+            form.ChosenAccount = Ledger.Accounts.First(a => a.Name != account);
+            Assert.Equal(account, form.ChosenAccount.Name);
+        }
+        form.Cancel();
+    }
+
     [Then(@"^I should have been asked to confirm first$")]
     public void ThenIShouldHaveBeenAskedToConfirmFirst() =>
         Assert.True(context.AskedFirst, "Expected a question while the entry was still there.");
@@ -438,7 +456,13 @@ public sealed partial class CorrectionSteps(SpecContext context)
     private void RecordExpense(
         string amount, string category, string? label, DateOnly date, Account? account = null, Frequency? repeat = null)
     {
-        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label, account, repeat);
+        // Data kept before Vrij could put a backed category's expense on another account, which
+        // today's rules cannot: it is recorded on the backing account, and written to the file on
+        // the account named (keep-data.feature; ReallocateSteps.RecordAsKeptBefore).
+        var keptBefore = context.KeptBeforeUnclaimed is not null && account is not null
+                         && Ledger.LockedAccountFor(category, date) is { } locked && locked != account;
+        var result = Ledger.RecordExpense(SpecParsing.Amount(amount), category, date, label, keptBefore ? null : account, repeat);
+        if (keptBefore && result.Expense is { } kept) ReallocateSteps.RecordAsKeptBefore(context, kept, account!);
         Assert.True(result.WasRecorded, $"Setting up an expense for {category} was refused: {result.Refusal}.");
         Assert.False(result.CategoryBroughtBack, $"Setting up an expense brought {category} back.");
         AssertNothingWasDue();

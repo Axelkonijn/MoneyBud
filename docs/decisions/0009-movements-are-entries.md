@@ -30,6 +30,20 @@ that points here.
 > The argument that settling sees exactly what the day saw still holds, because occurrences are
 > written in date order with the period ends between them. The file format is version 5. The body is
 > unchanged.
+>
+> **Note, 2026-10-04.** *Vrij* and moving *Opgebouwd* ([ADR 0015](0015-moves-of-purpose-and-a-backing-history.md)).
+> **A movement is no longer the only entry that moves money for a purpose.** A `Reallocation`, a sixth
+> entry kind on the same counter, moves an amount of purpose between an account's *Vrij*, a category and
+> *Niet toegewezen*, and when its two ends are on different accounts it moves the money itself, with no
+> movement beside it. **And a category's backing is now a history**: setting it to "—" no longer deletes
+> the backing (decision 4 above), but closes it and opens a "—" stretch that keeps the money left behind,
+> and an account set again carries on from there with a movement of a sixth reason, `Rebacked`. A seventh,
+> `Adjusted`, moves the difference a changed receipt from before the backing makes. **Two statements
+> below no longer hold as written**: the Context's "unbacking returns what is there for it" (only this
+> period's part returns now), and, under the consequences, which direction fits which reason: `Backed`
+> and `Unbacked` may now each go either way, since an overspending moves the other way. Decisions 1 to 3
+> and 5 stand: movements are entries written on their day, settling writes planned money, and the
+> figures are worked out. The file format is version 8. The body is unchanged.
 
 ## Context
 

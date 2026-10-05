@@ -35,13 +35,22 @@ public enum MovementReason
     /// <summary>Assigning to a backed category: a positive amount in, a negative one back out.</summary>
     Assigned,
 
-    /// <summary>Backing a category: its unspent <i>Remaining</i> for the current period.</summary>
+    /// <summary>
+    /// Backing a category: its unspent <i>Remaining</i> for the current period, in; or, since increment
+    /// 15, its overspending, out to the pool account (§12, follow-up 15).
+    /// </summary>
     Backed,
 
-    /// <summary>Unbacking a category: what was there for it goes back to the pool account.</summary>
+    /// <summary>
+    /// Setting a category to "—": its money of the current period back to the pool account, out; or an
+    /// overspending of the current period back from it, in. Before increment 15, everything there for it.
+    /// </summary>
     Unbacked,
 
-    /// <summary>Pointing the backing at another account: what was there for it goes along.</summary>
+    /// <summary>
+    /// Pointing the backing at another account: what was there for it goes along; or, since increment
+    /// 15, a shortfall comes from the new account to the old one (§12, ruled at the scenario stage, 1).
+    /// </summary>
     Repointed,
 
     /// <summary>
@@ -49,6 +58,21 @@ public enum MovementReason
     /// button, and out of a category it was swept into too much, by the button.
     /// </summary>
     Swept,
+
+    /// <summary>
+    /// Setting an account again after "—": the money the category left behind, from where it was to the
+    /// new account, in; or, below zero, the other way, out. To the same account it moves no balance, and
+    /// still carries <i>Opgebouwd</i> on (§12, ruling 6; ADR 0015).
+    /// </summary>
+    Rebacked,
+
+    /// <summary>
+    /// An expense from before the backing account became the backing account was changed or removed:
+    /// the difference that made between <i>Opgebouwd</i> and what is there for the category, between the
+    /// account the expense is on and the backing account (§12, ruled at the scenario stage, 2). It
+    /// changes what is there, never <i>Opgebouwd</i>, so it goes <see cref="MovementDirection.Along"/>.
+    /// </summary>
+    Adjusted,
 }
 
 /// <summary>Which way a movement goes, as <i>Accumulated</i> counts it.</summary>
@@ -60,6 +84,9 @@ public enum MovementDirection
     /// <summary>Back to the pool account. Takes away from <i>Accumulated</i>.</summary>
     Out,
 
-    /// <summary>From one backing account to the next. <i>Accumulated</i> carries on unchanged.</summary>
+    /// <summary>
+    /// From one account to another for the same purpose: re-pointing, and an adjustment.
+    /// <i>Accumulated</i> carries on unchanged.
+    /// </summary>
     Along,
 }

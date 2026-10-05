@@ -22,6 +22,12 @@
 #     So when some of the category's money was spent before the backing, or paid from the backing
 #     account, less money moves back than the Budget comes down by. How that difference is reported,
 #     if at all, is not fixed here.
+#     (Noted for increment 15, 2026-10-04, derived and not put to the stakeholder: "what was moved in for
+#     it" now also counts money given to it from an account's Unclaimed or moved in from another
+#     category, less money moved out of it (reallocate-an-amount.feature, which has a scenario for it). The
+#     clip against the Budget is unchanged, so in practice the Budget still bounds what comes back. No
+#     scenario in this file changes: none of them reallocates, and every expense in them against a backed
+#     category is already on its backing account, as it now must be.)
 #   - It GOES THROUGH WHEN THE POOL ACCOUNT HAS NOT GOT THE MONEY, leaving it overdrawn and marked,
 #     never blocked or warned about.
 #

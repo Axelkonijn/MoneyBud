@@ -323,7 +323,7 @@ public sealed partial class MainView
             remove.IsVisible = form.IsEditing;
             suggestions.Content = SuggestionChips(form.Category, name => form.Category = name);
             dates.Content = DateChips(form.Date, allowFuture: false, d => form.Date = d);
-            accounts.Content = AccountChips(form.ChosenAccount, a => form.ChosenAccount = a);
+            accounts.Content = AccountChips(form.ChosenAccount, a => form.ChosenAccount = a, form.IsAccountLocked);
             repeats.Content = FrequencyChips(form.ChosenFrequency, form.CanChangeFrequency, f => form.ChosenFrequency = f);
         }
 
@@ -395,11 +395,15 @@ public sealed partial class MainView
         });
     }
 
-    /// <summary>The accounts, in the strip's order, the one the form holds chosen.</summary>
-    private Control AccountChips(Account chosen, Action<Account> set)
+    /// <summary>
+    /// The accounts, in the strip's order, the one the form holds chosen. Locked, as the form decides,
+    /// only the chosen one can be tapped: a backed category's expense is on its account (§12).
+    /// </summary>
+    private Control AccountChips(Account chosen, Action<Account> set, bool locked = false)
     {
         var accounts = App.AccountChoices;
-        return Ui.Chips(accounts.Select(a => a.Name), chosen.Name, picked => set(accounts.First(a => a.Name == picked)));
+        return Ui.Chips(accounts.Select(a => a.Name), chosen.Name, picked => set(accounts.First(a => a.Name == picked)),
+            locked ? name => name == chosen.Name : null);
     }
 
     /// <summary><i>Herhalen</i>: fixed on <i>Eenmalig</i> for an earlier occurrence, as the form decides.</summary>
@@ -736,6 +740,11 @@ public sealed partial class MainView
         if (row.Accumulated is { } accumulated)
         {
             var value = Ui.Row(6, Ui.Text(Tekst.Euro(accumulated), "row"));
+            if (row.AccumulatedOn is { } on)
+            {
+                value.Children.Add(Ui.Text(Tekst.OnAccount(on), "muted"));
+            }
+
             if (row.IsAccumulatedBelowZero)
             {
                 value.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
@@ -791,6 +800,15 @@ public sealed partial class MainView
                 name.Children.Add(Ui.Icon(Ui.House, "Accent", 17));
             }
 
+            // Vrij, on every account, under its name (§12, ruling 1; ruling 5 revised).
+            var vrij = Ui.Row(6, Ui.Text(line.UnclaimedText, "faint"));
+            if (line.IsUnclaimedBelowZero)
+            {
+                vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
+            }
+
+            var left = Ui.Stack(2, name, vrij);
+
             var right = Ui.Row(6, Ui.Text(line.BalanceText, "row"));
             if (line.IsOverdrawn)
             {
@@ -798,7 +816,8 @@ public sealed partial class MainView
             }
 
             right.Children.Add(Ui.Chevron());
-            return (Control)Ui.Plain(Ui.Columns("*,Auto", name, right), () => OpenHistory(line.Account), new Thickness(16, 15));
+            right.VerticalAlignment = VerticalAlignment.Center;
+            return (Control)Ui.Plain(Ui.Columns("*,Auto", left, right), () => OpenHistory(line.Account), new Thickness(16, 15));
         });
 
         var actions = Ui.Columns("*,12,*",
@@ -806,7 +825,9 @@ public sealed partial class MainView
             new Border(),
             Ui.Pill(Tekst.AddAccount, AddAccount, "Ghost"));
         actions.Margin = new Thickness(0, 16, 0, 0);
-        foreach (var child in actions.Children)
+        var reallocate = Ui.Pill(Tekst.Reallocate, () => OpenReallocate(null), "Ghost");
+        reallocate.Margin = new Thickness(0, 12, 0, 0);
+        foreach (var child in actions.Children.Append(reallocate))
         {
             child.HorizontalAlignment = HorizontalAlignment.Stretch;
             if (child is Button button)
@@ -815,7 +836,7 @@ public sealed partial class MainView
             }
         }
 
-        var body = Ui.Stack(0, worth, Ui.Caption(Tekst.Accounts), Ui.List(rows), actions);
+        var body = Ui.Stack(0, worth, Ui.Caption(Tekst.Accounts), Ui.List(rows), actions, reallocate);
         AccountsList.Child = Page(Header(Tekst.Accounts, null, gear), body, footer: Ui.Handle());
     }
 
@@ -844,7 +865,14 @@ public sealed partial class MainView
             balance.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
         }
 
-        var big = Ui.Stack(0, Ui.Text(Tekst.BalanceToday, "muted"), balance);
+        var vrij = Ui.Row(6, Ui.Text(line.UnclaimedText, "muted"));
+        if (line.IsUnclaimedBelowZero)
+        {
+            vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
+        }
+
+        var big = Ui.Stack(0, Ui.Text(Tekst.BalanceToday, "muted"), balance, vrij);
+
         big.Margin = new Thickness(4, 0, 0, 0);
         var body = Ui.Stack(0, big);
 

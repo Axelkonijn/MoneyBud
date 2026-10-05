@@ -147,6 +147,13 @@
                           <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
                         </Border>
                       </StackPanel>
+                      <!-- Vrij, on every account, with its own marker below zero. -->
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding UnclaimedText}" Classes="caption" VerticalAlignment="Center" />
+                        <Border Classes="marker" IsVisible="{Binding IsUnclaimedBelowZero}">
+                          <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
+                        </Border>
+                      </StackPanel>
                     </StackPanel>
                   </Button>
                 </DataTemplate>
@@ -165,6 +172,7 @@
             </StackPanel>
             <Button Content="{x:Static p:Tekst.AddAccount}" Command="{Binding AccountForm.OpenCommand}" />
             <Button Content="{x:Static p:Tekst.TransferAct}" Command="{Binding TransferForm.OpenCommand}" />
+            <Button Content="{x:Static p:Tekst.Reallocate}" Command="{Binding ReallocateForm.OpenCommand}" />
           </StackPanel>
         </Grid>
       </Border>
@@ -211,6 +219,33 @@
           <Button Grid.Column="11" Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" />
           <Button Grid.Column="13" Content="{x:Static p:Tekst.Remove}" Command="{Binding RemoveCommand}"
                   IsVisible="{Binding IsEditing}" />
+        </Grid>
+      </Border>
+
+      <!-- Verplaatsen: Van, Naar, Bedrag. Opened beside Overboeken, or from a category's row, which
+           starts it from that category. Niet toegewezen is the period on screen's. -->
+      <Border Classes="card" Padding="10" IsVisible="{Binding ReallocateForm.IsOpen}">
+        <Grid DataContext="{Binding ReallocateForm}" x:DataType="p:ReallocateForm"
+              ColumnDefinitions="*,8,*,8,*,8,Auto,8,Auto">
+          <ComboBox Grid.Column="0" Margin="0" HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.From}"
+                    ItemsSource="{Binding FromChoices}" SelectedItem="{Binding ChosenFrom}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="p:ReallocationChoice">
+                <TextBlock Text="{Binding Text}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <ComboBox Grid.Column="2" Margin="0" HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.To}"
+                    ItemsSource="{Binding ToChoices}" SelectedItem="{Binding ChosenTo}">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="p:ReallocationChoice">
+                <TextBlock Text="{Binding Text}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBox Grid.Column="4" Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" Margin="0" />
+          <Button Grid.Column="6" Content="{x:Static p:Tekst.Reallocate}" Command="{Binding SubmitCommand}" Classes="accent" />
+          <Button Grid.Column="8" Content="{x:Static p:Tekst.Cancel}" Command="{Binding CancelCommand}" />
         </Grid>
       </Border>
 
@@ -499,7 +534,7 @@
             <ItemsControl ItemsSource="{Binding Overview.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="p:CategoryRow">
-                  <Grid ColumnDefinitions="18,*,104,86,92,90" RowDefinitions="Auto,Auto" Margin="0,3">
+                  <Grid ColumnDefinitions="18,*,104,86,92,90" RowDefinitions="Auto,Auto,Auto" Margin="0,3">
                     <Ellipse Width="10" Height="10" VerticalAlignment="Center"
                              Fill="{Binding SliceIndex, Converter={x:Static d:SliceColours.Swatch}}" />
                     <StackPanel Grid.Column="1" Grid.RowSpan="2" Spacing="1">
@@ -517,6 +552,9 @@
                                 CommandParameter="{Binding Name}" />
                         <Button Classes="link" Content="{x:Static p:Tekst.Delete}" IsVisible="{Binding CanDelete}"
                                 Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).DeleteCommand}"
+                                CommandParameter="{Binding Name}" />
+                        <Button Classes="link" Content="{x:Static p:Tekst.Reallocate}" IsVisible="{Binding CanReallocate}"
+                                Command="{Binding $parent[Window].((p:MoneyBudApp)DataContext).ReallocateForm.StartFromCommand}"
                                 CommandParameter="{Binding Name}" />
                         <TextBlock Text="{x:Static p:Tekst.BackingAccount}" Classes="caption"
                                    VerticalAlignment="Center" Margin="8,0,4,0" />
@@ -553,10 +591,12 @@
                             HorizontalAlignment="Center">
                       <TextBlock Text="{x:Static p:Tekst.OverBudget}" />
                     </Border>
-                    <TextBlock Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="3" Text="{Binding AccumulatedText}"
+                    <!-- Its own line, under the row's acts: with "op <account>" for a category on "—"
+                         it is too long to share theirs. -->
+                    <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" Text="{Binding AccumulatedText}"
                                TextAlignment="Right" Classes="caption"
                                IsVisible="{Binding AccumulatedText, Converter={x:Static ObjectConverters.IsNotNull}}" />
-                    <Border Grid.Row="1" Grid.Column="5" Classes="marker" IsVisible="{Binding IsAccumulatedBelowZero}"
+                    <Border Grid.Row="2" Grid.Column="5" Classes="marker" IsVisible="{Binding IsAccumulatedBelowZero}"
                             HorizontalAlignment="Center">
                       <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
                     </Border>
@@ -583,9 +623,10 @@
             <TextBox Text="{Binding Amount}" PlaceholderText="{x:Static p:Tekst.Amount}" />
             <CalendarDatePicker SelectedDate="{Binding Date}" PlaceholderText="{x:Static p:Tekst.Today}"
                                 HorizontalAlignment="Stretch" />
+            <!-- Locked on a backed category's account, from the period it got it. -->
             <ComboBox HorizontalAlignment="Stretch" PlaceholderText="{x:Static p:Tekst.Account}"
                       ItemsSource="{Binding $parent[Window].((p:MoneyBudApp)DataContext).AccountChoices}"
-                      SelectedItem="{Binding ChosenAccount}">
+                      SelectedItem="{Binding ChosenAccount}" IsEnabled="{Binding !IsAccountLocked}">
               <ComboBox.ItemTemplate>
                 <DataTemplate x:DataType="dom:Account">
                   <TextBlock Text="{Binding Name}" />
