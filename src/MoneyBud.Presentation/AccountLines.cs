@@ -11,12 +11,12 @@ namespace MoneyBud.Presentation;
 /// over-assigned carry, with its own badge, <see cref="Tekst.Overdrawn"/>. Exactly zero does not.
 /// Nothing is blocked or warned about.</para>
 ///
-/// <para>Since increment 15 every account but the pool account shows <see cref="Unclaimed"/>, on screen
-/// <i>Vrij</i>: the money on it no category claims (arc42 §12, ruling 1). Below zero it carries the same
-/// marker, badge <i>Rood</i>, on its own (ruling 3): an account can show a negative <i>Vrij</i> without
-/// being overdrawn. Null on the pool account, which shows none (ruling 5).</para>
+/// <para>Since increment 15 every account shows <see cref="Unclaimed"/>, on screen <i>Vrij</i>: the money
+/// on it no category claims (arc42 §12, ruling 1), the pool account too since ruling 5 was revised. Below
+/// zero it carries the same marker, badge <i>Rood</i>, on its own (ruling 3): an account can show a
+/// negative <i>Vrij</i> without being overdrawn.</para>
 /// </summary>
-public sealed record AccountLine(Account Account, Money Balance, bool IsPool, Money? Unclaimed = null)
+public sealed record AccountLine(Account Account, Money Balance, bool IsPool, Money Unclaimed)
 {
     public string Name => Account.Name;
 
@@ -26,12 +26,12 @@ public sealed record AccountLine(Account Account, Money Balance, bool IsPool, Mo
 
     public string BalanceText => Tekst.Euro(Balance);
 
-    public bool IsUnclaimedBelowZero => Unclaimed is { IsNegative: true };
+    public bool IsUnclaimedBelowZero => Unclaimed.IsNegative;
 
     public Marker UnclaimedMarker => IsUnclaimedBelowZero ? Marker.Over : Marker.None;
 
-    /// <summary>"Vrij € 5.000,00", or null on the pool account.</summary>
-    public string? UnclaimedText => Unclaimed is { } unclaimed ? Tekst.UnclaimedFigure(unclaimed) : null;
+    /// <summary>"Vrij € 5.000,00".</summary>
+    public string UnclaimedText => Tekst.UnclaimedFigure(Unclaimed);
 
     /// <summary>Shown on the pool account only: <i>Hoofdrekening</i>.</summary>
     public string? PoolText => IsPool ? Tekst.PoolAccount : null;

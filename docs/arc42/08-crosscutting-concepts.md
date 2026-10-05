@@ -1137,6 +1137,14 @@ not both backed and on "—"; and each stretch's marks issued, no entry's, and n
 This is the reading path [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md) made owed, kept for
 good, and `StorageTests` reads a version-7 document.
 
+**Revised and built on 2026-10-05, with no format change** ([§12](12-glossary.md), *Vrij on the pool
+account: ruled after the install*; ADR 0015, dated note on decision 4): a move from *Niet toegewezen* to
+*Vrij* on the same account, the pool account, is allowed, and version 8 already holds it. The load check
+"not out of *Niet toegewezen*" becomes "out of *Niet toegewezen* only to *Vrij* on the same account",
+and anything else is refused as damaged data; `StorageTests` round-trips the new move. Version 8 is not
+yet the promised version: the promise starts with the version the stakeholder accepts. His phone's data
+is version 8 already, and this build reads it unchanged.
+
 **Opening a period changed nothing here.** The plan offered is worked out from the budgets already
 kept ([§8.1](#81-domain-model)), and nothing about it is stored, so the file's format and its version
 are unchanged.

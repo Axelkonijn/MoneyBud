@@ -1,6 +1,6 @@
 # Increment 15 — *Vrij*, and moving *Opgebouwd*: implementation plan
 
-**Status:** written 2026-10-04, **approved by Axel at the second gate on 2026-10-04**: D1 as proposed, all ten readings as written.
+**Status:** written 2026-10-04, **approved by Axel at the second gate on 2026-10-04**: D1 as proposed, all ten readings as written. **A section added 2026-10-05**, *After the install: Vrij on the pool account*, with both gates waived by him.
 
 **What it builds against:** the approved scenarios, `show-unclaimed` and `reallocate-an-amount`, and the
 revisions to eleven approved files (48 new scenarios, 72 cases; 23 revised, 1 removed). They were **approved
@@ -128,6 +128,10 @@ rule the scenarios pass with. **Readings 1–4 are about money, so they are the 
      "—" row with money left behind. **Phone:** it opens from the accounts panel beside *Overboeken*, and
      from the category's ⋯ menu.
    - Opened from a row, it starts with that category as *Van*.
+
+   > **Revised 2026-10-05** (*After the install*, below): *Vrij* is listed for **every** account, the pool
+   > account first, on both sides; *Niet toegewezen* is last in *Van* too; and *Naar* opens on the first end
+   > that can take from *Van* (P10).
 6. **Copy**, all proposed:
    - **Strip:** *"Saldo € 5.200,00 · Vrij € 5.000,00"*. Below zero it carries the marker and *Rood*.
    - **Notice, no money moved:** *"€ 3.000,00 verplaatst van Vrij op Spaarrekening naar Sparen."*
@@ -139,7 +143,8 @@ rule the scenarios pass with. **Readings 1–4 are about money, so they are the 
      - *"Van en Naar zijn hetzelfde."*
      - *"Geld uit Niet toegewezen halen is toewijzen."*
      - *"Er kan geen geld naar "Sparen" verplaatst worden."*
-     - *"Naar Niet toegewezen verplaatsen kan alleen in de huidige periode."*
+     - *"Naar Niet toegewezen verplaatsen kan alleen in de huidige periode."* **Revised 2026-10-05**
+       (P11): *"Verplaatsen met Niet toegewezen kan alleen in de huidige periode."*
      - The cent refusal is the existing one.
    - **The carrying movement's history row:** *"Sparen staat weer op "Aandelenrekening""*.
    - **Backing notices that move two amounts** list both, in the order they moved.
@@ -152,6 +157,10 @@ rule the scenarios pass with. **Readings 1–4 are about money, so they are the 
    refused instead**, in the scenario-stage order: the same end on both sides, then finer than a cent, then
    a minus sign that would move money *into* an end that only gives, then *Niet toegewezen* outside the
    current period.
+
+   > **Revised 2026-10-05** (*After the install*, below): *Vrij* on the pool account and *Niet toegewezen*
+   > as *Van* are ends now, and no longer throw. A move out of *Niet toegewezen* to anything but the pool
+   > account's *Vrij* is refused as a user situation.
 9. **An account is used**, and cannot be deleted, while a reallocation row is on it or a "—" category's
    money is left on it. Both are history that explains its *Vrij*.
 10. **A repeat's next occurrence against a backed category goes on the account backing it on its day**,
@@ -244,3 +253,74 @@ expense form's list and the category page.
 - arc42 §5, §6, §8, §9 (ADR 0015), §11, and §12's *Chosen in the build*; the README; CLAUDE.md.
 - Then your try, on your phone, as an update that keeps your data. The new version reads your version-7
   file.
+
+---
+
+## After the install: *Vrij* on the pool account
+
+**Status:** written and built 2026-10-05. **Both gates waived by Axel** for this change: the scenarios, this
+section and the app are presented together, with every decision taken without him listed below.
+
+**Why.** Installed on his phone, increment 15 showed no *Vrij* on the Betaalrekening (ruling 5), so the money
+already on it could never be given a purpose: *Niet toegewezen* only ever holds income and what is moved into
+it, never a starting balance or a correction. **Ruling 5 is revised** (2026-10-04, the round's *Na het
+installeren op de telefoon*), and two more questions came up in building it, both answered by him on
+2026-10-05 on the recommendation (the round's *Bij het bouwen*). Everything is in §12, *Vrij on the pool
+account: ruled after the install*. This section does not restate it.
+
+### What is built
+
+1. ***Vrij* on the pool account is its balance less what is claimed there.** As on every account: what is
+   there for each category it backs, and what a "—" category left on it. Plus two claims only the pool
+   account has:
+   - **The current period's**: its leftover so far (*Niet toegewezen* plus the *Resterend* of every category
+     without an account, the figure the sweep would take), **less its income dated after today**, which
+     counts in *Niet toegewezen* but is not on the account yet.
+   - **The ended periods' lines** (his ruling, 2026-10-05): what each line still asks for, *still to sweep*
+     as a claim and *swept too much* as a negative one, until *Restant bijwerken* moves it or lets it go.
+   Worked out on every read, never stored, like every *Vrij* (ADR 0015, decision 3, with a dated note).
+2. ***Niet toegewezen* gives to *Vrij* on the pool account** (his ruling, 2026-10-05), and to nothing else.
+   It is now offered as *Van* too, last, as in *Naar*. *Niet toegewezen* counts a move out of it as it
+   counts a move in. To a category it is still refused as assigning, and so is a move to *Vrij* on another
+   account, with the same refusal. The refusal order is otherwise unchanged.
+3. ***Vrij* on the pool account is an end on both sides**, like any account's. Nothing else in the act
+   changes: money moves only when the two ends are on different accounts.
+4. **No format change: still version 8.** Version 8 already keeps both ends and their accounts. Reading
+   accepts a move out of *Niet toegewezen* only to *Vrij* on the account it was on, and refuses anything else
+   as damaged data. Version 8 is not yet promised (ADR 0014: the promise starts with the version Axel
+   accepts), but his phone's data is version 8 already, and this build reads it unchanged.
+5. **Presentation and heads.** `Ledger.UnclaimedOf` returns a `Money`, no longer null; `AccountLine` always
+   carries *Vrij*; the desktop strip and the phone's accounts panel show it on every account.
+   `ReallocateForm.HasEnds` is gone: there are always two ends, so *Verplaatsen* is always offered.
+
+### Chosen here, without Axel
+
+| # | Choice | Why |
+|---|---|---|
+| P1 | **"This period" is the current period**, whatever is on screen | *Vrij* is today's, the same in every period, on every account |
+| P2 | **Income dated later in the period is left out of the claim until its date** | CLAUDE.md asked that it not make *Vrij* dip; recording it, assigning it and its date arriving now leave *Vrij* where it was |
+| P3 | **An income on another account stays in *Niet toegewezen*** (the known corner) | The pool's *Vrij* falls by it and that account's rises, until a transfer to the pool squares both. Summed over all accounts it is now right, where before the same euros were free twice |
+| P4 | **An expense on a category without an account paid from another account** raises the pool's *Vrij* and lowers that account's | The general rule, on both accounts; a transfer from the pool account squares both |
+| P5 | **A leftover below zero is not swept and nothing asks for it**, so the pool's *Vrij* falls by it at the period's end | During the period the overspending lowers the claim, not *Vrij*; at its end it shows it was paid from money with no purpose |
+| P6 | **A capped negative assignment shows on the pool's *Vrij*** | Taking a backed category's *Budget* back moves at most what is there for it (increment 10); what it cannot bring back still joins *Niet toegewezen*. That gap was invisible before; now the pool's *Vrij* falls by it. Shown, not changed |
+| P7 | **Making another account the pool moves the period's claim with it, and the ended periods' line claims too** | *Restant bijwerken* moves to and from whichever account is the pool then, so a line's claim left on the old one would make bringing it up to date move the pool's *Vrij*, against his ruling. The new pool's *Vrij* may go below zero (with no destination, by every unswept period) until the money is transferred; the old one's rises. The line claims were found by `spec-reviewer` |
+| P8 | ***Niet toegewezen* to *Vrij* on another account is refused** as "out of *Niet toegewezen* is assigning" | It would move money between accounts with no purpose, which is *Overboeken*. A message of its own was not worth a new refusal |
+| P9 | **No format version change** | Nothing new is stored, only a new valid pair of ends (point 4 above) |
+| P10 | ***Naar* opens on the first end that can take from *Van***: not *Van*, and not a *Vrij* when *Van* is one | With a *Vrij* on every account the form would otherwise open on *Vrij* to *Vrij*, which is always refused. Seen in the phone's snapshot |
+| P11 | **The refusal for another period's *Niet toegewezen* is reworded**: *"Verplaatsen met Niet toegewezen kan alleen in de huidige periode."* | It is now said for a move out of it too, where "Naar …" was wrong. The step reads "Unassigned can be used only in the current budget period" |
+
+### Tests
+
+- **Unit** (`VrijTests`, `StorageTests`): the figure; income dated later; income and cash on another account;
+  each period end (swept, no destination, below zero); a late change to a swept period staying with its line
+  through *Restant bijwerken*; *Niet toegewezen* to *Vrij* and every refusal around it; the first start's
+  two ends; the lists' order; what a line lets go stops being claimed; a change of pool taking the line
+  claims along; the pool's *Vrij* to a category the pool backs. A round trip with the new move, and the
+  damaged-data case. **The invariant now
+  covers the pool account** (1500 mixed acts), and **a second run of 1500 acts** that must leave the pool's
+  *Vrij* exactly where it was — planning, spending, backing, "—", re-pointing, moves that do not touch it,
+  income now and later in the period, days passing — found P6, which it now accounts for.
+- **Specs:** blank *Vrij* cells for the pool account are gone (every account shows one); the step for "shows
+  no *Vrij*" is removed; new and revised scenarios in `show-unclaimed` and `reallocate-an-amount`.
+- **After green:** `spec-reviewer`, a few mutations, the phone's snapshot pictures, then a Release APK for his
+  phone, installed with `adb install -r` over the version he has.

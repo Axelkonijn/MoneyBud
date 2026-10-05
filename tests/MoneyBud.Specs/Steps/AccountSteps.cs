@@ -173,13 +173,12 @@ public sealed class AccountSteps(SpecContext context)
             Assert.All(lines, l => Assert.Equal(l.IsOverdrawn ? Marker.Over : Marker.None, l.Marker));
         }
 
-        // Vrij, a blank cell being an account that shows none (show-unclaimed.feature).
+        // Vrij, which every account shows, the pool account too since ruling 5 was revised
+        // (show-unclaimed.feature).
         if (table.ContainsColumn("unclaimed"))
         {
-            Assert.Equal(
-                table.Rows.Select(r => r["unclaimed"] is "" ? (Money?)null : SpecParsing.MoneyAmount(r["unclaimed"])),
-                lines.Select(l => l.Unclaimed));
-            Assert.All(lines, l => Assert.Equal(l.Unclaimed is { } u ? Tekst.UnclaimedFigure(u) : null, l.UnclaimedText));
+            Assert.Equal(table.Rows.Select(r => SpecParsing.MoneyAmount(r["unclaimed"])), lines.Select(l => l.Unclaimed));
+            Assert.All(lines, l => Assert.Equal(Tekst.UnclaimedFigure(l.Unclaimed), l.UnclaimedText));
         }
 
         if (table.ContainsColumn("unclaimed marked"))

@@ -43,6 +43,14 @@
 #     when nothing is there for the category moves nothing" becomes an outline: spent exactly, nothing
 #     moves; overspent by 50, 50 moves from Broker to Deposit.
 #
+# REVISED 2026-10-05 for ruling 5 revised; gates waived by Axel, presented with the plan and the app. The
+# pool account now shows Unclaimed too (show-unclaimed.feature). Every accounts table here with an UNCLAIMED
+# column gave Bank, the pool account, a blank cell, meaning it shows none; each now carries its figure, 0.00
+# in every one, since Bank holds exactly this period's Unassigned and the Remaining of its categories
+# without an account. "A category set to none while the pool account backed it ..." said that Bank shows no
+# Unclaimed; it now also checks that Bank's Unclaimed is 0.00, with the 400 counted as Savings'. Nothing else
+# changes.
+#
 # The rules, from arc42 §12:
 #   - A category is BACKED BY ONE ACCOUNT, OR BY NONE. I set it, point it at another account, or
 #     remove it, AT ANY TIME, from the category's row: on screen the list "Staat op", with "—" for
@@ -286,7 +294,7 @@ Feature: Back a category with an account
     And I should not be warned or asked to confirm
     And the accounts should be exactly these, in this order:
       | account | balance   | unclaimed |
-      | Bank    | <bank>    |           |
+      | Bank    | <bank>    | 0.00      |
       | Deposit | <deposit> | 5000.00   |
     And Accumulated for "Savings" in the current budget period should be <remaining> euro
     And the remaining "Savings" budget in the current budget period should still be <remaining> euro
@@ -380,7 +388,7 @@ Feature: Back a category with an account
     And "Savings" should show no Accumulated in the current budget period
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1950.00 |           |
+      | Bank    | 1950.00 | 0.00      |
       | Deposit | 5000.00 | 5000.00   |
     And net worth should still be 6950 euro
     And the remaining "Savings" budget in the current budget period should still be 150 euro
@@ -436,7 +444,7 @@ Feature: Back a category with an account
     And "Savings" should not be backed
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 3600.00 |           |
+      | Bank    | 3600.00 | 0.00      |
       | Deposit | 200.00  | 0.00      |
     And Accumulated for "Savings" in the current budget period should be 200 euro, on "Deposit"
     And Unassigned in the current budget period should still be 1700 euro
@@ -451,6 +459,11 @@ Feature: Back a category with an account
   # New in increment 15 (follow-up of 2026-10-04). The pool account backs Savings, so its money never
   # left Bank. Set to "—" in the next period, Savings has nothing this period, so nothing moves, and the
   # 400 built up stays on Bank, still Savings'. Bank shows no Unclaimed, so only the row says it is there.
+  #
+  # Revised 2026-10-05 (ruling 5 revised): Bank now shows Unclaimed, and it does not count the 400 as
+  # Unclaimed, since it is still Savings'. The rest of Bank's 2000, 1600, is the previous period's leftover:
+  # there is no sweep destination, so it stays claimed by that period's line (show-unclaimed.feature).
+  # Bank's Unclaimed is 0.00. The row still says where the 400 is.
   Scenario: A category set to none while the pool account backed it leaves its older money on the pool account, and its row says so
     Given my budget periods are one month long
     And today is the last day of the current budget period
@@ -463,6 +476,7 @@ Feature: Back a category with an account
     Then I should be told that "Savings" is no longer backed, and of no money moved
     And Accumulated for "Savings" in the current budget period should be 400 euro, on "Bank"
     And the balance of "Bank" should still be 2000 euro
+    And the Unclaimed of "Bank" should be 0.00 euro
 
   # ----------------------------------------------------------------------------------
   # Pointing the backing at another account takes the money along
@@ -511,7 +525,7 @@ Feature: Back a category with an account
     And I should be told that "Savings" is now backed by "Broker"<told>
     And the accounts should be exactly these, in this order:
       | account | balance  | overdrawn   | unclaimed |
-      | Bank    | 1800.00  | no          |           |
+      | Bank    | 1800.00  | no          | 0.00      |
       | Deposit | 0.00     | no          | 0.00      |
       | Broker  | <broker> | <overdrawn> | 0.00      |
     And Accumulated for "Savings" in the current budget period should still be <broker> euro
@@ -625,7 +639,7 @@ Feature: Back a category with an account
     And Accumulated for "Savings" in the current budget period should be 5000 euro, on "Deposit"
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 2000.00 |           |
+      | Bank    | 2000.00 | 0.00      |
       | Deposit | 5000.00 | 0.00      |
       | Broker  | 0.00    | 0.00      |
     When I set the backing account of "Savings" to "Broker"
@@ -636,7 +650,7 @@ Feature: Back a category with an account
     And Accumulated for "Savings" in the current budget period should be 5150 euro
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1850.00 |           |
+      | Bank    | 1850.00 | 0.00      |
       | Deposit | 0.00    | 0.00      |
       | Broker  | 5150.00 | 0.00      |
 

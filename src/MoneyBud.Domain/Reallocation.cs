@@ -9,7 +9,10 @@ public enum ReallocationEndKind
     /// <summary>A category's <i>Opgebouwd</i>: a backed category, or one set to "—" that left money behind.</summary>
     Category,
 
-    /// <summary>A period's <i>Niet toegewezen</i>. Only ever a destination.</summary>
+    /// <summary>
+    /// A period's <i>Niet toegewezen</i>. It gives only to <i>Vrij</i> on the pool account, the account that
+    /// holds it (arc42 §12, ruled 2026-10-05); anything else out of it is assigning.
+    /// </summary>
     Unassigned,
 }
 

@@ -312,6 +312,9 @@ Feature: Sweep a period's leftover money when the period ends
   # The next period's pool is its own income and nothing else: the 900 does not roll into it. It
   # stays on Bank with no purpose, and the ended period says it was not swept. There is nowhere for
   # the button to move it (bring-a-swept-period-up-to-date.feature).
+  # Note, 2026-10-05 (ruling 5 revised; gates waived by Axel): the 900 is not Bank's Unclaimed. It is
+  # claimed by the ended period's line, which still asks for it, until a destination is set and the
+  # line is brought up to date (show-unclaimed.feature). This comment's "no purpose" predates that.
   Scenario: With no sweep destination, nothing moves at a period's end, nothing is announced, and nothing rolls into the next period
     Given my budget periods are one month long
     And today is the last day of the current budget period

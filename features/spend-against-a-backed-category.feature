@@ -47,6 +47,12 @@
 #     SCENARIO STAGE, 2026-10-04, too: OPENED TO BE CHANGED, SUCH AN EXPENSE KEEPS THE ACCOUNT IT IS ON, AND
 #     THE LIST IS LOCKED TO IT; another cannot be chosen. One small scenario is new for it.
 #
+# REVISED 2026-10-05 for ruling 5 revised; gates waived by Axel, presented with the plan and the app. The
+# pool account now shows Unclaimed too (show-unclaimed.feature). The one accounts table here with an
+# UNCLAIMED column, in "Changing or removing an expense from before the backing ...", gave Bank, the pool
+# account, a blank cell, meaning it shows none. It now carries 0.00 in every row: Bank holds 1700, exactly
+# this period's Unassigned. Nothing else changes.
+#
 # The rules, from arc42 §12:
 #   - AN EXPENSE AGAINST A BACKED CATEGORY IS PRE-FILLED WITH ITS BACKING ACCOUNT, and the account list
 #     still lets me pick another, for that one expense. (Revised 2026-10-04: IT IS ALWAYS ON ITS BACKING
@@ -454,7 +460,7 @@ Feature: Spend against a backed category
     And the remaining "Savings" budget in the current budget period should be <remaining> euro
     And the accounts should be exactly these, in this order:
       | account | balance     | unclaimed |
-      | Bank    | 1700.00     |           |
+      | Bank    | 1700.00     | 0.00      |
       | Deposit | <remaining> | 0.00      |
 
     Examples:

@@ -147,9 +147,8 @@
                           <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
                         </Border>
                       </StackPanel>
-                      <!-- Vrij, on every account but the Hoofdrekening, with its own marker below zero. -->
-                      <StackPanel Orientation="Horizontal" Spacing="6"
-                                  IsVisible="{Binding UnclaimedText, Converter={x:Static ObjectConverters.IsNotNull}}">
+                      <!-- Vrij, on every account, with its own marker below zero. -->
+                      <StackPanel Orientation="Horizontal" Spacing="6">
                         <TextBlock Text="{Binding UnclaimedText}" Classes="caption" VerticalAlignment="Center" />
                         <Border Classes="marker" IsVisible="{Binding IsUnclaimedBelowZero}">
                           <TextBlock Text="{x:Static p:Tekst.Overdrawn}" />
@@ -173,8 +172,7 @@
             </StackPanel>
             <Button Content="{x:Static p:Tekst.AddAccount}" Command="{Binding AccountForm.OpenCommand}" />
             <Button Content="{x:Static p:Tekst.TransferAct}" Command="{Binding TransferForm.OpenCommand}" />
-            <Button Content="{x:Static p:Tekst.Reallocate}" Command="{Binding ReallocateForm.OpenCommand}"
-                    IsVisible="{Binding ReallocateForm.HasEnds}" />
+            <Button Content="{x:Static p:Tekst.Reallocate}" Command="{Binding ReallocateForm.OpenCommand}" />
           </StackPanel>
         </Grid>
       </Border>

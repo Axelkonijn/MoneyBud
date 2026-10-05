@@ -119,6 +119,21 @@ on. **Re-pointing stays inside one stretch**, as before.
 ([ADR 0008](0008-balance-is-worked-out.md)), *Vrij* is worked out on every read from the entries, so a
 late receipt or a balance correction moves it without anything updating it.
 
+> **Dated note, 2026-10-05: ruling 5 was revised after the install, so the pool account has a *Vrij*
+> too** (§12, *Vrij on the pool account: ruled after the install*; built 2026-10-05). Its claims are
+> those of any account, plus two only the pool account has: **`PeriodClaim`**, the current period's
+> leftover (*Niet toegewezen* and the *Resterend* of every category without an account) less that
+> period's income dated after today; and **`LinesClaim`**, over every ended period, what its sweep line
+> still asks for, plus for still to sweep and minus for swept too much, until *Restant bijwerken* moves it
+> or it is let go (ruled 2026-10-05). `UnclaimedOf` returns a `Money` on every account, no longer null.
+> **Both claims belong to whichever account is the pool now**, so making another account the pool moves
+> them with it: *Restant bijwerken* takes from, or returns to, the current pool account, and a line's
+> claim left on the old one would let bringing the line up to date move the pool's *Vrij* (§12,
+> derivation f, as built). The decision stands: *Vrij* is worked out on every read and never stored, on
+> the pool account as on every other. Only "the pool account has none" no longer holds. It needs no new
+> record: the requirement changed, not the way it is held, and the file format does not change (next
+> note).
+
 `ThereFor` and `AccumulatedFor` count reallocations: into a category adds, out of it takes away. A move
 between two accounts counts in `ThereFor` by which account it went to.
 
@@ -157,6 +172,15 @@ expenses the account paid between that period and the period of the latest re-po
 toegewezen*, not from an end to itself, and *Vrij* must be on the account it names; a category is not
 both backed and on "—"; each stretch's marks are issued ids that are no entry's, and each stretch is
 newer than the one before it.
+
+> **Dated note, 2026-10-05: one load check is loosened, and the format stays at version 8.** A move from
+> *Niet toegewezen* to *Vrij* on the account that holds it, the pool account, was ruled allowed (§12,
+> *Vrij on the pool account: ruled after the install*). Version 8 already holds its two ends and their
+> accounts, so nothing new is written. `FromSnapshot` now accepts a move out of *Niet toegewezen* when it
+> goes to *Vrij* on the same account, and still refuses every other. Version 8 is not yet promised: [ADR
+> 0014](0014-real-use-and-the-phone-data.md)'s promise covers the version the stakeholder accepts, and
+> this increment is not accepted. Built 2026-10-05; his phone's data is version 8 already, and the build
+> reads it unchanged.
 
 ## Why
 
@@ -244,7 +268,9 @@ The table is the plan's own, D1, as approved.
   away another stretch's money left behind too; now only the stretch naming the account is cut.
 - **The figures still store nothing.** *Vrij*, *Opgebouwd* and what is there are worked out on every
   read. A unit test checks the invariant across 1500 mixed acts: on every account but the pool, *Vrij*
-  plus the *Opgebouwd* of its categories is its balance.
+  plus the *Opgebouwd* of its categories is its balance. Since the dated note on decision 3 it covers
+  the pool account too, *Vrij* plus everything claimed on it, and a second run of 1500 acts checks that
+  acts which should not touch the pool's *Vrij* leave it exactly where it was (built 2026-10-05).
 - **[§8.2](../arc42/08-crosscutting-concepts.md) is not reopened.** A reallocation moves a typed amount,
   *Vrij* is a difference of whole cents, and the carrying and adjusting movements move sums and
   differences of them.

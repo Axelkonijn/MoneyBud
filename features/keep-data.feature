@@ -62,6 +62,12 @@
 #     backing, is kept" put Fiets, a Savings expense recorded after Savings was backed, on Bank. It is now on
 #     Deposit, as it must be. What the scenario keeps, Accumulated, reads the same.
 #
+# REVISED 2026-10-05 for ruling 5 revised; gates waived by Axel, presented with the plan and the app. The
+# pool account now shows Unclaimed too (show-unclaimed.feature). The four accounts tables with an UNCLAIMED
+# column gave Bank, the pool account, a blank cell, meaning it shows none; each now carries its figure. Three
+# are 0.00. The fourth, in "An expense kept on another account than its category's backing account stays
+# there until it is changed", is -120.00 until Fiets is saved: see that scenario's comment.
+#
 # Reading the steps:
 #   - "I close MoneyBud and start it again" is closing it and starting it again on the same day,
 #     with nothing going wrong in between. Everything asserted afterwards is what the new start shows.
@@ -484,7 +490,7 @@ Feature: Keep my data between runs
     And I close MoneyBud and start it again
     Then the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 2500.00 |           |
+      | Bank    | 2500.00 | 0.00      |
       | Deposit | 4500.00 | 2000.00   |
     And Accumulated for "Savings" in the current budget period should be 2500 euro
     And Unassigned in the current budget period should be 2500 euro
@@ -533,7 +539,7 @@ Feature: Keep my data between runs
     Then I should not have been told anything
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1700.00 |           |
+      | Bank    | 1700.00 | 0.00      |
       | Deposit | 5300.00 | 5000.00   |
     And net worth should be 7000 euro
     And the backing account of "Savings" should be "Deposit"
@@ -550,6 +556,11 @@ Feature: Keep my data between runs
   # Unclaimed plus Accumulated falls short of Deposit's balance by the 120. Opened and saved, Fiets goes onto
   # Deposit, since its list is now locked there, and the figures add up again. That is a change, and is
   # announced as one.
+  #
+  # Revised 2026-10-05 (ruling 5 revised): Bank, the pool account, now shows Unclaimed too. Bank paid the 120
+  # that Deposit still holds, and this period's Unassigned, 1700, is claimed on Bank, which holds only 1580.
+  # So Bank's Unclaimed is -120.00 until Fiets is saved, and 0.00 after: the same 120, seen from the account
+  # that paid it.
   Scenario: An expense kept on another account than its category's backing account stays there until it is changed
     Given what follows was kept by the version of MoneyBud from before Unclaimed
     And I have recorded an income of 2000 euro labelled "Salaris" dated today
@@ -561,7 +572,7 @@ Feature: Keep my data between runs
     When I start MoneyBud, updated to the version with Unclaimed
     Then the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1580.00 |           |
+      | Bank    | 1580.00 | -120.00   |
       | Deposit | 300.00  | 0.00      |
     And Accumulated for "Savings" in the current budget period should be 180 euro
     And the expense labelled "Fiets" should open on the account "Deposit", locked
@@ -570,7 +581,7 @@ Feature: Keep my data between runs
     And I should be told that the expense was changed
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1700.00 |           |
+      | Bank    | 1700.00 | 0.00      |
       | Deposit | 180.00  | 0.00      |
     And Accumulated for "Savings" in the current budget period should still be 180 euro
 

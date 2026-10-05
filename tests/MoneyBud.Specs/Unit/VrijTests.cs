@@ -8,8 +8,9 @@ namespace MoneyBud.Specs.Unit;
 /// Developer tests for <i>Vrij</i> and moving <i>Opgebouwd</i> (arc42 §12; ADR 0015; plan for increment
 /// 15): the history of stretches across periods, the difference a changed old receipt moves (reading
 /// 4), the lists of <i>Verplaatsen</i> (reading 5), and the invariant the rulings were made for —
-/// on every account but the pool, <i>Vrij</i> plus the <i>Opgebouwd</i> of its categories is its
-/// <i>Saldo</i>.
+/// on every account, <i>Vrij</i> plus the <i>Opgebouwd</i> of its categories is its <i>Saldo</i>, and on
+/// the pool account also what the current period claims there. And <i>Vrij</i> on the pool account
+/// (ruling 5, revised 2026-10-04), with <i>Niet toegewezen</i> giving to it (ruled 2026-10-05).
 /// </summary>
 public sealed class VrijTests
 {
@@ -250,22 +251,22 @@ public sealed class VrijTests
         Assert.Equal(Money.Zero, ledger.BalanceOf(broker));
     }
 
-    // A first start has nothing to take from: Verplaatsen is not offered, and a form left open as its
-    // last end went away closes rather than failing.
+    // A first start has two ends, Vrij on the pool account and Niet toegewezen, so Verplaatsen opens and
+    // starts from one to the other (ruling 5 revised; ruled 2026-10-05).
     [Fact]
-    public void With_nothing_to_take_from_Verplaatsen_is_not_offered_and_does_nothing()
+    public void A_first_start_offers_Vrij_on_the_pool_account_and_Niet_toegewezen()
     {
         var app = new MoneyBudApp(Ledger.StartNew(clock));
         var form = app.ReallocateForm;
+        string[] both = ["Vrij op \"Betaalrekening\"", Tekst.Unassigned];
 
-        Assert.False(form.HasEnds);
         form.OpenCommand.Execute(null);
-        Assert.False(form.IsOpen);
 
-        form.IsOpen = true;
-        form.Amount = "10";
-        Assert.Null(form.Reallocate());
-        Assert.False(form.IsOpen);
+        Assert.True(form.IsOpen);
+        Assert.Equal(both, form.FromChoices.Select(c => c.Text));
+        Assert.Equal(both, form.ToChoices.Select(c => c.Text));
+        Assert.Equal(form.FromChoices[0], form.ChosenFrom);
+        Assert.Equal(form.ToChoices[1], form.ChosenTo);
     }
 
     // ------------------------------------------------------------------ the lists of Verplaatsen
@@ -282,14 +283,20 @@ public sealed class VrijTests
 
         var form = app.ReallocateForm;
         Assert.Equal(
-            ["Vrij op \"Deposit\"", "Vrij op \"Broker\"", "Aandelen", "Savings", "Shares"],
+            ["Vrij op \"Bank\"", "Vrij op \"Deposit\"", "Vrij op \"Broker\"", "Aandelen", "Savings", "Shares", Tekst.Unassigned],
             form.FromChoices.Select(c => c.Text));
         Assert.Equal(
-            ["Vrij op \"Deposit\"", "Vrij op \"Broker\"", "Savings", "Shares", Tekst.Unassigned],
+            ["Vrij op \"Bank\"", "Vrij op \"Deposit\"", "Vrij op \"Broker\"", "Savings", "Shares", Tekst.Unassigned],
             form.ToChoices.Select(c => c.Text));
         Assert.Same(form.FromChoices, form.FromChoices);
         Assert.Equal(form.FromChoices[0], form.ChosenFrom);
-        Assert.Equal(form.ToChoices[1], form.ChosenTo);
+        Assert.Equal("Savings", form.ChosenTo!.Text);
+
+        // From a category, Vrij is a fine first Naar.
+        form.ChosenFrom = form.FromChoices.Single(c => c.Text == "Savings");
+        form.Clear();
+        form.ChosenFrom = form.FromChoices.Single(c => c.Text == "Savings");
+        Assert.Equal("Vrij op \"Bank\"", form.ChosenTo!.Text);
     }
 
     // A list writing back nothing changes nothing, as every list on screen.
@@ -307,12 +314,286 @@ public sealed class VrijTests
         Assert.Equal(savings, form.ChosenTo!.End.Category);
     }
 
+    // ------------------------------------------------------------------ Vrij on the pool account
+
+    // Ruling 5 revised: the pool account's Vrij is its balance less what this period claims there —
+    // Niet toegewezen and the Resterend of every category without an account — and less what the
+    // categories it backs have there. 500 of my own, given no purpose, stays 500 through a plan.
+    [Fact]
+    public void The_pool_account_s_Vrij_is_its_balance_less_this_period_s_claim_and_its_categories()
+    {
+        ledger.CorrectBalance(Bank, 2500m);
+        Assert.Equal(Euros(500m), ledger.UnclaimedOf(Bank));
+
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(40m, "Groceries", Today);
+        ledger.SetBacking("Shares", Bank);
+        ledger.Assign(200m, "Shares", ledger.CurrentPeriod);
+        ledger.SetBacking("Savings", deposit);
+        ledger.Assign(100m, "Savings", ledger.CurrentPeriod);
+
+        Assert.Equal(Euros(2360m), ledger.BalanceOf(Bank));
+        Assert.Equal(Euros(1400m), ledger.UnassignedIn(ledger.CurrentPeriod));
+        Assert.Equal(Euros(500m), ledger.UnclaimedOf(Bank));
+    }
+
+    // Derived: an income dated later in the period counts in Niet toegewezen at once and reaches the
+    // balance on its date, so the pool account's Vrij does not dip in between, even once it is assigned.
+    [Fact]
+    public void An_income_dated_later_in_the_period_leaves_the_pool_account_s_Vrij_as_it_was()
+    {
+        ledger.RecordIncome(800m, "Bonus", new DateOnly(2026, 3, 25));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+
+        ledger.Assign(800m, "Groceries", ledger.CurrentPeriod);
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+
+        MoveTo(new DateOnly(2026, 3, 25));
+        Assert.Equal(Euros(2800m), ledger.BalanceOf(Bank));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+    }
+
+    // Derived: what changes another account's balance against a claim on the pool account shows on both,
+    // and a transfer squares both. An income on Deposit counts in Niet toegewezen; cash spent on
+    // Groceries lowers its Resterend.
+    [Fact]
+    public void Income_or_spending_on_another_account_against_the_pool_s_claim_shows_on_both_until_transferred()
+    {
+        var cash = ledger.AddAccount("Contant", 50m).Account!;
+        ledger.RecordIncome(100m, "Rente", Today, deposit);
+        ledger.Assign(100m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(20m, "Groceries", Today, "Markt", cash);
+
+        Assert.Equal(Euros(-80m), ledger.UnclaimedOf(Bank));
+        Assert.Equal(Euros(100m), ledger.UnclaimedOf(deposit));
+        Assert.Equal(Euros(30m), ledger.UnclaimedOf(cash));
+
+        ledger.RecordTransfer(100m, deposit, Bank, Today);
+        ledger.RecordTransfer(20m, Bank, cash, Today);
+
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(deposit));
+        Assert.Equal(Euros(50m), ledger.UnclaimedOf(cash));
+    }
+
+    // Derived: at a period's end what is swept leaves the pool account with its claim. With no destination
+    // the leftover stays claimed, by the period's line, which still asks for it (ruled 2026-10-05). A
+    // leftover below zero is not swept and nothing asks for it: it was paid from the pool account's Vrij.
+    [Theory]
+    [InlineData(false, 100, 0)]
+    [InlineData(true, 100, 0)]
+    [InlineData(true, 2400, -400)]
+    [InlineData(false, 2400, -400)]
+    public void At_a_period_s_end_what_is_not_swept_is_the_pool_account_s_Vrij(bool destination, decimal spent, decimal vrij)
+    {
+        ledger.SetBacking("Savings", deposit);
+        if (destination) ledger.SetSweepDestination("Savings");
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(spent, "Groceries", Today);
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+
+        MoveTo(new DateOnly(2026, 4, 2));
+        ledger.Settle();
+
+        Assert.Equal(Euros(vrij), ledger.UnclaimedOf(Bank));
+    }
+
+    // Ruled 2026-10-05: Niet toegewezen gives to Vrij on the pool account, the account that holds it, in
+    // the current period. No money moves, and the row is in the pool account's history. A minus sign the
+    // other way is the same move. To anything else it is still refused.
+    [Fact]
+    public void Niet_toegewezen_gives_to_Vrij_on_the_pool_account_and_to_nothing_else()
+    {
+        ledger.SetBacking("Savings", deposit);
+        var unassigned = ReallocationEnd.Unassigned;
+        var poolVrij = ReallocationEnd.UnclaimedOn(Bank);
+
+        var made = ledger.Reallocate(30m, unassigned, poolVrij, ledger.CurrentPeriod).Made!;
+        Assert.False(made.MovedMoney);
+        Assert.Contains(made, ledger.HistoryOf(Bank));
+        Assert.Equal(Euros(1970m), ledger.UnassignedIn(ledger.CurrentPeriod));
+        Assert.Equal(Euros(30m), ledger.UnclaimedOf(Bank));
+        Assert.Equal(Euros(2000m), ledger.BalanceOf(Bank));
+
+        var back = ledger.Reallocate(-20m, poolVrij, unassigned, ledger.CurrentPeriod).Made!;
+        Assert.Equal((unassigned, poolVrij), (back.From, back.To));
+        Assert.Equal(Euros(1950m), ledger.UnassignedIn(ledger.CurrentPeriod));
+
+        Assert.Equal(ReallocationRefusal.OutOfUnassigned,
+            ledger.Reallocate(10m, unassigned, ReallocationEnd.UnclaimedOn(deposit), ledger.CurrentPeriod).Refusal);
+        Assert.Equal(ReallocationRefusal.OutOfUnassigned,
+            ledger.Reallocate(10m, unassigned, ReallocationEnd.For(savings), ledger.CurrentPeriod).Refusal);
+        Assert.Equal(ReallocationRefusal.UnassignedNotCurrent,
+            ledger.Reallocate(10m, unassigned, poolVrij, ledger.Calendar.Next(ledger.CurrentPeriod)).Refusal);
+        Assert.Equal(Euros(1950m), ledger.UnassignedIn(ledger.CurrentPeriod));
+    }
+
+    // Ruled 2026-10-05: what an ended period's line still asks for is the line's, not Vrij. A late refund
+    // in a swept period, and a late receipt, leave the pool account's Vrij where it was; Restant
+    // bijwerken moves the money and the claim together.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void A_late_change_to_a_swept_period_is_its_line_s_and_leaves_the_pool_account_s_Vrij(bool refund)
+    {
+        ledger.SetBacking("Savings", deposit);
+        ledger.SetSweepDestination("Savings");
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(100m, "Groceries", Today);
+        MoveTo(new DateOnly(2026, 4, 10));
+        ledger.Settle();
+        var before = ledger.UnclaimedOf(Bank);
+
+        var march = Period(Today);
+        if (refund) ledger.RecordIncome(40m, "Terugbetaling", Today);
+        else ledger.RecordExpense(40m, "Groceries", Today, "Bon");
+
+        Assert.Equal(refund ? SweepLineKind.StillToSweep : SweepLineKind.SweptTooMuch, ledger.SweepLineFor(march)!.Kind);
+        Assert.Equal(before, ledger.UnclaimedOf(Bank));
+
+        ledger.BringUpToDate(march);
+
+        Assert.Equal(before, ledger.UnclaimedOf(Bank));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(deposit));
+    }
+
+    // Ruled 2026-10-05, and what letting go means for it: an amount the line lets go is no longer
+    // asked for, so it stops being claimed, for good, and the pool account's Vrij falls by what could
+    // not come back. Savings spent everything the sweep gave it.
+    [Fact]
+    public void What_a_line_lets_go_stops_being_claimed()
+    {
+        ledger.SetBacking("Savings", deposit);
+        ledger.SetSweepDestination("Savings");
+        ledger.Assign(300m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(100m, "Groceries", Today);
+        MoveTo(new DateOnly(2026, 4, 10));
+        ledger.Settle();
+        ledger.RecordExpense(1900m, "Savings", ledger.Today);
+        var before = ledger.UnclaimedOf(Bank);
+
+        ledger.RecordExpense(40m, "Groceries", Today, "Bon");
+        Assert.Equal(before, ledger.UnclaimedOf(Bank));
+
+        var result = ledger.BringUpToDate(Period(Today));
+
+        Assert.Equal(Euros(40m), result.LetGo);
+        Assert.Equal(before - Euros(40m), ledger.UnclaimedOf(Bank));
+    }
+
+    // Derived (f), and found by review: making another account the pool takes every claim only the
+    // pool account has along, an ended period's line included, since Restant bijwerken moves to and from
+    // whichever account is the pool then. Until the money is transferred, the new one shows it short.
+    [Fact]
+    public void Making_another_account_the_pool_takes_the_period_s_and_the_lines_claims_along()
+    {
+        ledger.Assign(400m, "Groceries", ledger.CurrentPeriod);
+        ledger.RecordExpense(100m, "Groceries", Today);
+        MoveTo(new DateOnly(2026, 4, 2));
+        ledger.RecordIncome(500m, "Salaris", ledger.Today);
+        Assert.Equal(SweepLineKind.StillToSweep, ledger.SweepLineFor(Period(Today))!.Kind);
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+
+        var bank = Bank;
+        ledger.MakePool(deposit);
+
+        Assert.Equal(Euros(-2400m), ledger.UnclaimedOf(deposit));
+        Assert.Equal(Euros(2400m), ledger.UnclaimedOf(bank));
+
+        ledger.RecordTransfer(2400m, bank, deposit, ledger.Today);
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(deposit));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(bank));
+    }
+
+    // Derived (g): Vrij on the pool account to a category the pool account backs moves no money, and is a
+    // row in its history.
+    [Fact]
+    public void Vrij_on_the_pool_account_to_a_category_it_backs_moves_no_money()
+    {
+        ledger.CorrectBalance(Bank, 2500m);
+        ledger.SetBacking("Savings", Bank);
+
+        var made = ledger.Reallocate(500m, ReallocationEnd.UnclaimedOn(Bank), ReallocationEnd.For(savings), ledger.CurrentPeriod).Made!;
+
+        Assert.False(made.MovedMoney);
+        Assert.Contains(made, ledger.HistoryOf(Bank));
+        Assert.Equal(Euros(2500m), ledger.BalanceOf(Bank));
+        Assert.Equal(Money.Zero, ledger.UnclaimedOf(Bank));
+        Assert.Equal(Euros(500m), ledger.AccumulatedFor("Savings", ledger.CurrentPeriod));
+    }
+
+    // Ruling 5 revised: the pool account's Vrij moves only by what changes its balance and no claim, or a
+    // claim and not its balance. A long run of everything else — planning, spending, backing, "—",
+    // re-pointing, moves of purpose that do not touch it, income dated now or later in the period, days
+    // passing — leaves it exactly where it was, but for the gap a capped negative assignment leaves.
+    [Fact]
+    public void The_pool_account_s_Vrij_stays_put_through_planning_spending_backing_and_moving_purpose()
+    {
+        var random = new Random(5);
+        var names = new[] { "Savings", "Shares", "Groceries" };
+        var backings = new[] { null, Bank, deposit, broker };
+        ledger.CorrectBalance(Bank, 2600m);
+        ledger.CorrectBalance(deposit, 1000m);
+        var vrij = ledger.UnclaimedOf(Bank);
+        Assert.Equal(Euros(600m), vrij);
+
+        for (var step = 0; step < 1500; step++)
+        {
+            var name = names[random.Next(names.Length)];
+            var amount = random.Next(1, 300);
+            var act = random.Next(10);
+            switch (act)
+            {
+                case 0: ledger.Assign(amount, name, ledger.CurrentPeriod); break;
+                case 1:
+                    // Derived: a negative assignment to a backed category moves back at most what is there
+                    // for it, and what it cannot bring back still joins Niet toegewezen: the pool account's
+                    // Vrij shows that gap.
+                    var budget = ledger.BudgetFor(name, ledger.CurrentPeriod);
+                    var there = ledger.ThereFor(name);
+                    ledger.Assign(-amount, name, ledger.CurrentPeriod);
+                    if (there is { } before)
+                        vrij -= budget - ledger.BudgetFor(name, ledger.CurrentPeriod) - (before - ledger.ThereFor(name)!.Value);
+                    break;
+                case 2: ledger.RecordExpense(amount, name, ledger.Today, account: ledger.LockedAccountFor(name, ledger.Today) ?? Bank); break;
+                case 3: ledger.SetBacking(name, backings[random.Next(backings.Length)]); break;
+                case 4: ReallocateWithoutThePoolsVrij(amount, random); break;
+                case 5: ledger.RecordIncome(amount, "Extra", ledger.Today); break;
+                case 6: ledger.RecordIncome(amount, "Later", ledger.CurrentPeriod.LastDay); break;
+                case 7: ledger.RecordTransfer(amount, deposit, broker, ledger.Today); break;
+                case 8:
+                    // One paid from where its category's money is: one paid from elsewhere moves Vrij, as recording it did.
+                    if (ledger.ExpensesIn(ledger.CurrentPeriod)
+                            .FirstOrDefault(e => e.Account == (ledger.BackingOf(e.Category.Name) ?? Bank)) is { } expense)
+                        ledger.RemoveExpense(expense);
+                    break;
+                case 9:
+                    if (ledger.Today < new DateOnly(2026, 3, 30)) MoveTo(ledger.Today.AddDays(1));
+                    break;
+            }
+
+            Assert.True(vrij == ledger.UnclaimedOf(Bank),
+                $"After step {step}, act {act} for {name} with {amount}: the pool account's Vrij went from {vrij} to {ledger.UnclaimedOf(Bank)}.");
+        }
+    }
+
+    private void ReallocateWithoutThePoolsVrij(decimal amount, Random random)
+    {
+        var poolVrij = ReallocationEnd.UnclaimedOn(Bank);
+        var from = ledger.ReallocationSources.Where(e => e != poolVrij && e.Kind != ReallocationEndKind.Unassigned).ToList();
+        var to = ledger.ReallocationDestinations.Where(e => e != poolVrij).ToList();
+        var end = from[random.Next(from.Count)];
+        var other = to[random.Next(to.Count)];
+        if (end != other) ledger.Reallocate(amount, end, other, ledger.CurrentPeriod);
+    }
+
     // ------------------------------------------------------------------ the invariant
 
     // A long run of mixed acts under today's rules: late receipts dated back, dates changed, re-pointing,
     // "—", moves of purpose, corrections, sweeps across period ends and changes of start day. After each,
-    // on every account but the pool, Vrij plus the Opgebouwd of the categories whose money is on it is
-    // its balance; and net worth is the sum of the balances.
+    // on every account, Vrij plus the Opgebouwd of the categories whose money is on it is its balance —
+    // on the pool account plus what the current period claims there; and net worth is the sum of the
+    // balances.
     [Fact]
     public void Vrij_plus_Opgebouwd_is_the_balance_on_every_account_after_every_act()
     {
@@ -387,13 +668,28 @@ public sealed class VrijTests
 
     private void AssertTheInvariant(int step)
     {
-        foreach (var account in ledger.Accounts.Where(a => a != ledger.PoolAccount))
+        var period = ledger.CurrentPeriod;
+        var linesClaim = Money.Zero;
+        for (var ended = Period(new DateOnly(2025, 1, 1)); ended.FirstDay < period.FirstDay; ended = ledger.Calendar.Next(ended))
+        {
+            linesClaim += ledger.SweepLineFor(ended) switch
+            {
+                { Kind: SweepLineKind.StillToSweep } line => line.Amount,
+                { Kind: SweepLineKind.SweptTooMuch } line => -line.Amount,
+                _ => Money.Zero,
+            };
+        }
+
+        var periodClaim = ledger.PeriodLeftover(period) + linesClaim
+                          - Money.Sum(ledger.IncomesIn(period).Where(i => i.Date > ledger.Today).Select(i => i.Amount));
+        foreach (var account in ledger.Accounts)
         {
             var claimed = Money.Sum(ledger.CategoriesOffered.Concat(ledger.ArchivedCategories)
                 .Where(c => (ledger.BackingOf(c.Name) ?? ledger.LeftOn(c.Name)) == account)
-                .Select(c => ledger.AccumulatedFor(c.Name, ledger.CurrentPeriod) ?? Money.Zero));
+                .Select(c => ledger.AccumulatedFor(c.Name, period) ?? Money.Zero))
+                + (account == ledger.PoolAccount ? periodClaim : Money.Zero);
             Assert.True(
-                ledger.UnclaimedOf(account)!.Value + claimed == ledger.BalanceOf(account),
+                ledger.UnclaimedOf(account) + claimed == ledger.BalanceOf(account),
                 $"After step {step}, {account.Name}: Vrij {ledger.UnclaimedOf(account)} + Opgebouwd {claimed} is not its balance {ledger.BalanceOf(account)}.");
         }
 

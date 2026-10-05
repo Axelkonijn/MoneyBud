@@ -334,7 +334,7 @@ public static class Tekst
         ReallocationRefusal.AmountFinerThanCent => FinerThanCent,
         ReallocationRefusal.OutOfUnassigned => $"Geld uit {Unassigned} halen is toewijzen.",
         ReallocationRefusal.IntoGivingEnd => $"Er kan geen geld naar {Quoted(into ?? "")} verplaatst worden.",
-        ReallocationRefusal.UnassignedNotCurrent => $"Naar {Unassigned} verplaatsen kan alleen in de huidige periode.",
+        ReallocationRefusal.UnassignedNotCurrent => $"Verplaatsen met {Unassigned} kan alleen in de huidige periode.",
     };
 
     /// <summary>The one refusal a balance correction has.</summary>

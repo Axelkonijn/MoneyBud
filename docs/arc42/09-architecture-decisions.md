@@ -24,7 +24,7 @@ later ask "why on earth is it like this?".
 | [0012](../decisions/0012-the-calendar-is-a-history.md) | The calendar is a history of start-day changes, and it is kept | Accepted; takes 0007's format to version 7 and reads versions 6, 5 and 4. Dated note, 2026-10-04: **decision 3 changed in one point** by 0015, what is there for a category counting from the period of backing | 2026-09-29 |
 | [0013](../decisions/0013-an-android-phone-app.md) | MoneyBud is used on an Android phone, as a second head over the same projects | Accepted; **supersedes 0002**; extends 0005 and 0006 by dated notes. Built 2026-09-30, its decision 6 answered by the phone plan's D1 without a record of its own | 2026-09-29 |
 | [0014](../decisions/0014-real-use-and-the-phone-data.md) | Real use: every later version reads the data, which on the phone lives in the app's own folder under one fixed signing key | Accepted; **supersedes 0007 in part**. Its promise first kept by 0015 | 2026-09-29 |
-| [0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md) | A move of purpose is an entry of its own, and a category's backing is a history of stretches | Accepted; takes 0007's format to version 8 and **reads version 7**, and through it 6, 5 and 4. Extends 0009 and changes one point of 0012's decision 3, by dated notes | 2026-10-04 |
+| [0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md) | A move of purpose is an entry of its own, and a category's backing is a history of stretches | Accepted; takes 0007's format to version 8 and **reads version 7**, and through it 6, 5 and 4. Extends 0009 and changes one point of 0012's decision 3, by dated notes. Dated notes, 2026-10-05: **the pool account has a *Vrij* too**, and one load check loosened, still version 8 | 2026-10-04 |
 
 **Records are superseded, not rewritten**, so that what we believed stays readable. ADR 0003 is the
 one exception so far and says why in the record itself: its decision did not change, but one
@@ -321,3 +321,10 @@ the stakeholder): the first format change under [ADR 0014](../decisions/0014-rea
 promise, so for the first time reading the older version was owed rather than chosen. 0007 carries a
 dated note for version 8, as for every version before it. **0014 carries none**: its decision is kept,
 not changed, and the index says it was first kept here.
+
+**The revision after the install added no record** (2026-10-05; §12, *Vrij on the pool account: ruled
+after the install*). The pool account gets a *Vrij*, and *Niet toegewezen* can be moved to it. 0015's
+decisions all stand: *Vrij* is still worked out and never stored, a reallocation already holds both its
+ends and their accounts, and the file stays at version 8. What changed is a requirement 0015 quoted, "the
+pool account has none", and one check on loading, so 0015 carries two dated notes rather than being
+superseded. Nothing in it is costly to reverse beyond what 0015 already was.

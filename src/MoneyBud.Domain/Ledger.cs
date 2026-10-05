@@ -74,8 +74,8 @@ namespace MoneyBud.Domain;
 /// current one moves; only plans made ahead are moved, into the period their old first day falls
 /// in.</para>
 ///
-/// <para><b><i>Vrij</i>, and moving <i>Opgebouwd</i></b> (arc42 §12; ADR 0015): every account but the
-/// pool account shows the money on it that no category claims (<see cref="UnclaimedOf"/>), worked out
+/// <para><b><i>Vrij</i>, and moving <i>Opgebouwd</i></b> (arc42 §12; ADR 0015): every account, the pool
+/// account too since ruling 5 was revised, shows the money on it that no category claims (<see cref="UnclaimedOf"/>), worked out
 /// like a balance. The user moves an amount of purpose between those, categories' <i>Opgebouwd</i> and
 /// the current period's <i>Niet toegewezen</i> (<see cref="Reallocate"/>), as a stored
 /// <see cref="Reallocation"/>. Setting a category to "—" sends only the current period's money back and
@@ -258,7 +258,8 @@ public sealed class Ledger
     /// one that is not an expense or an income or mixes the two, an entry in two repeats, a running
     /// repeat with no next date or a stopped one with one, and a day of the month on anything but a
     /// monthly repeat, or none on one. And, since <i>Vrij</i>: a reallocation with an end MoneyBud does
-    /// not know, from an end to itself or out of <i>Niet toegewezen</i>, or with <i>Vrij</i> on another
+    /// not know, from an end to itself or out of <i>Niet toegewezen</i> to anything but <i>Vrij</i> on its own
+    /// account, or with <i>Vrij</i> on another
     /// account than its own; a category both backed and set to "—"; and a stretch marked out of order.
     /// Data like that cannot be read (arc42 §12, <i>When the data cannot be read</i>).</para>
     ///
@@ -397,10 +398,12 @@ public sealed class Ledger
             CheckEntry(kept.Id, kept.Amount);
             var from = EndFor(kept.From, kept.Id);
             var to = EndFor(kept.To, kept.Id);
-            if (from == to || from.Kind == ReallocationEndKind.Unassigned)
-                throw Invalid($"reallocation {kept.Id} is from an end to itself, or out of Niet toegewezen");
             var fromAccount = AccountFor(kept.FromAccount);
             var toAccount = AccountFor(kept.ToAccount);
+            // Out of Niet toegewezen only to Vrij on the account that held it then, the pool account.
+            if (from == to || (from.Kind == ReallocationEndKind.Unassigned
+                               && (to.Kind != ReallocationEndKind.Unclaimed || toAccount != fromAccount)))
+                throw Invalid($"reallocation {kept.Id} is from an end to itself, or out of Niet toegewezen to anything but Vrij on its account");
             if ((from.Account is { } a && a != fromAccount) || (to.Account is { } b && b != toAccount))
                 throw Invalid($"reallocation {kept.Id} moves Vrij on one account as if it were on another");
             ledger.reallocations.Add(new Reallocation(kept.Id, kept.Date, from, to, fromAccount, toAccount, kept.Amount));
@@ -1420,13 +1423,16 @@ public sealed class Ledger
     ///
     /// <para>Since increment 15 it also counts what was moved into it from <i>Opgebouwd</i> or
     /// <i>Vrij</i> (<see cref="Reallocate"/>), in the period each move is dated in, like an income
-    /// (§12, <i>One act moves an amount of purpose</i>, derived).</para>
+    /// (§12, <i>One act moves an amount of purpose</i>, derived), less what was moved out of it to
+    /// <i>Vrij</i> on the pool account (ruled 2026-10-05).</para>
     /// </summary>
     public Money UnassignedIn(BudgetPeriod period) =>
         Money.Sum(IncomesIn(period).Select(i => i.Amount))
         + Money.Sum(reallocations
-            .Where(r => r.To.Kind == ReallocationEndKind.Unassigned && period.Contains(r.Date))
-            .Select(r => r.Amount))
+            .Where(r => period.Contains(r.Date))
+            .Select(r => r.To.Kind == ReallocationEndKind.Unassigned ? r.Amount
+                         : r.From.Kind == ReallocationEndKind.Unassigned ? -r.Amount
+                         : Money.Zero))
         - Money.Sum(budgets.Where(b => b.Key.PeriodStart == period.FirstDay).Select(b => b.Value));
 
     /// <summary>
@@ -2176,20 +2182,59 @@ public sealed class Ledger
     /// category it backs (<see cref="ThereFor"/>), and less what each category set to "—" left on it.
     /// Worked out, never stored, like the balance (ADR 0008, ADR 0015). It is today's, the same in every
     /// period. It may be below zero — a fall in value the categories have not been told about — and is
-    /// never adjusted by itself (ruling 3). <b>Null for the pool account</b>, which shows none: there,
-    /// the period's <i>Niet toegewezen</i> plays that role (ruling 5).
+    /// never adjusted by itself (ruling 3).
+    ///
+    /// <para><b>The pool account has one too</b> (ruling 5, revised 2026-10-04): there the current period
+    /// also claims its <i>Niet toegewezen</i> and the <i>Resterend</i> of every category without an
+    /// account, less its income dated after today, which counts in <i>Niet toegewezen</i> but is not on
+    /// the account yet (<see cref="PeriodClaim"/>). And each ended period claims what its line still asks
+    /// for: still to sweep, or, swept too much, less (<see cref="LinesClaim"/>; ruled 2026-10-05).</para>
     ///
     /// <para><b>Throws</b> for an account not in the ledger.</para>
     /// </summary>
-    public Money? UnclaimedOf(Account account)
+    public Money UnclaimedOf(Account account)
     {
         CheckIsMine(account);
-        if (account == pool) return null;
 
         var claimed = Money.Sum(backings.Where(b => b.Value.Account == account).Select(b => ThereFor(b.Key, b.Value)))
                       + Money.Sum(leftBehind.Where(l => l.Value.Account == account)
                           .Select(l => LeftFigure(l.Key, l.Value, CurrentPeriod)));
+        if (account == pool) claimed += PeriodClaim() + LinesClaim();
         return BalanceOf(account) - claimed;
+    }
+
+    // What the current period claims on the pool account: its leftover so far, Niet toegewezen and the
+    // Resterend of every category without an account, less its income dated after today, which reaches
+    // the balance only on its date (§12, ruling 5 revised, derived). Below zero when the period is
+    // overspent or over-assigned: that was paid from money no category claimed.
+    private Money PeriodClaim()
+    {
+        var period = CurrentPeriod;
+        var notYetIn = Money.Sum(IncomesIn(period).Where(i => i.Date > Today).Select(i => i.Amount));
+        return PeriodLeftover(period) - notYetIn;
+    }
+
+    // What the lines of ended periods still ask for: still to sweep, which is to leave the pool account,
+    // and swept too much, which is to come back to it. That money is the line's until Restant bijwerken
+    // moves it or lets it go, not Vrij, so it has one place (§12, ruled 2026-10-05). With no destination,
+    // an ended period's leftover stays its line's. Only a period with something dated in it, or swept
+    // for it, can have a line.
+    private Money LinesClaim()
+    {
+        var current = CurrentPeriod.FirstDay;
+        var ended = incomes.Select(i => i.Date).Concat(expenses.Select(e => e.Date))
+            .Concat(budgets.Keys.Select(b => b.PeriodStart)).Concat(reallocations.Select(r => r.Date))
+            .Concat(movements.Where(m => m.SweptFor is not null).Select(m => m.SweptFor!.Value))
+            .Where(day => day < current)
+            .Select(Calendar.PeriodContaining)
+            .DistinctBy(period => period.FirstDay);
+
+        return Money.Sum(ended.Select(period => SweepLineFor(period) switch
+        {
+            { Kind: SweepLineKind.StillToSweep } line => line.Amount,
+            { Kind: SweepLineKind.SweptTooMuch } line => -line.Amount,
+            _ => Money.Zero,
+        }));
     }
 
     /// <summary>
@@ -2218,24 +2263,27 @@ public sealed class Ledger
     }
 
     /// <summary>
-    /// What a reallocation can take from, in the order added: <i>Vrij</i> on every account but the pool
-    /// account, then every backed category, archived ones included, and every category set to "—"
-    /// that has money left behind (arc42 §12, <i>One act moves an amount of purpose</i>, derived).
+    /// What a reallocation can take from, in the order added: <i>Vrij</i> on every account, the pool
+    /// account's included (ruling 5, revised), then every backed category, archived ones included, and
+    /// every category set to "—" that has money left behind (arc42 §12, <i>One act moves an amount of
+    /// purpose</i>, derived), and last <i>Niet toegewezen</i>, which gives only to <i>Vrij</i> on the pool
+    /// account (ruled 2026-10-05).
     /// </summary>
     public IReadOnlyList<ReallocationEnd> ReallocationSources =>
-        accountsInOrderAdded.Where(a => a != pool).Select(ReallocationEnd.UnclaimedOn)
+        accountsInOrderAdded.Select(ReallocationEnd.UnclaimedOn)
             .Concat(categoriesInOrderAdded
                 .Where(c => backings.ContainsKey(c)
                             || (leftBehind.TryGetValue(c, out var left) && LeftFigure(c, left, CurrentPeriod) != Money.Zero))
                 .Select(ReallocationEnd.For))
+            .Append(ReallocationEnd.Unassigned)
             .ToList();
 
     /// <summary>
-    /// What a reallocation can go to, in the order added: <i>Vrij</i> on every account but the pool
-    /// account, every backed category that is not archived, and <i>Niet toegewezen</i>.
+    /// What a reallocation can go to, in the order added: <i>Vrij</i> on every account, the pool
+    /// account's included, every backed category that is not archived, and <i>Niet toegewezen</i>.
     /// </summary>
     public IReadOnlyList<ReallocationEnd> ReallocationDestinations =>
-        accountsInOrderAdded.Where(a => a != pool).Select(ReallocationEnd.UnclaimedOn)
+        accountsInOrderAdded.Select(ReallocationEnd.UnclaimedOn)
             .Concat(categoriesInOrderAdded.Where(CanReceive).Select(ReallocationEnd.For))
             .Append(ReallocationEnd.Unassigned)
             .ToList();
@@ -2254,15 +2302,16 @@ public sealed class Ledger
     ///
     /// <para>Refused, for the first that applies (§12, readings of the scenario stage): the same end on
     /// both sides; <i>Vrij</i> on one account to <i>Vrij</i> on another, which gives nothing a purpose
-    /// and is <i>Overboeken</i> (ruled at the build, 2026-10-04); an amount finer than a cent; money that would come <b>out of</b> <i>Niet
-    /// toegewezen</i>, which is assigning (follow-up 7); money that would go <b>into</b> an archived
-    /// category or one set to "—", which only give (follow-up 5); <i>Niet toegewezen</i> of a period
-    /// other than the current one (follow-up 6). A refused reallocation changes nothing.</para>
+    /// and is <i>Overboeken</i> (ruled at the build, 2026-10-04); an amount finer than a cent; money that
+    /// would come <b>out of</b> <i>Niet toegewezen</i>, which is assigning (follow-up 7), <b>unless it goes
+    /// to <i>Vrij</i> on the pool account</b>, the account that holds it (ruled 2026-10-05); money that
+    /// would go <b>into</b> an archived category or one set to "—", which only give (follow-up 5);
+    /// <i>Niet toegewezen</i> of a period other than the current one (follow-up 6). A refused
+    /// reallocation changes nothing.</para>
     ///
     /// <para><b>Throws</b> for an end no list offers (plan for increment 15, reading 8): <i>Vrij</i> on
-    /// the pool account or on an account not in the ledger, a category with no account and nothing left
-    /// behind, and <i>Niet toegewezen</i> as <paramref name="from"/>. And for a period that is not one of
-    /// <see cref="Calendar"/>'s own.</para>
+    /// an account not in the ledger, and a category with no account and nothing left behind. And for a
+    /// period that is not one of <see cref="Calendar"/>'s own.</para>
     /// </summary>
     public ReallocateResult Reallocate(decimal amountInEuros, ReallocationEnd from, ReallocationEnd to, BudgetPeriod period)
     {
@@ -2270,8 +2319,6 @@ public sealed class Ledger
         CheckIsAPeriod(period);
         CheckIsAnEnd(from);
         CheckIsAnEnd(to);
-        if (from.Kind == ReallocationEndKind.Unassigned)
-            throw new InvalidOperationException("Niet toegewezen is only ever a destination.");
 
         if (from == to)
             return ReallocateResult.Refused(ReallocationRefusal.SameEnd);
@@ -2284,7 +2331,7 @@ public sealed class Ledger
 
         var amount = Money.FromEuros(amountInEuros);
         var (giver, receiver) = amount.IsNegative ? (to, from) : (from, to);
-        if (giver.Kind == ReallocationEndKind.Unassigned)
+        if (giver.Kind == ReallocationEndKind.Unassigned && receiver != ReallocationEnd.UnclaimedOn(pool))
             return ReallocateResult.Refused(ReallocationRefusal.OutOfUnassigned);
         if (receiver.Category is { } into && !CanReceive(into))
             return ReallocateResult.Refused(ReallocationRefusal.IntoGivingEnd, into);
@@ -2310,7 +2357,7 @@ public sealed class Ledger
     {
         var offered = end.Kind switch
         {
-            ReallocationEndKind.Unclaimed => end.Account is { } account && accountsInOrderAdded.Contains(account) && account != pool,
+            ReallocationEndKind.Unclaimed => end.Account is { } account && accountsInOrderAdded.Contains(account),
             ReallocationEndKind.Category => end.Category is { } category
                                             && categoriesInOrderAdded.Contains(category)
                                             && (backings.ContainsKey(category) || leftBehind.ContainsKey(category)),

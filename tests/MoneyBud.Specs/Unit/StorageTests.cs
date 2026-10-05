@@ -550,6 +550,7 @@ public sealed class StorageTests : IDisposable
         ledger.Reallocate(3000m, ReallocationEnd.UnclaimedOn(deposit), ReallocationEnd.For(savings), ledger.CurrentPeriod);
         ledger.Reallocate(500m, ReallocationEnd.For(savings), ReallocationEnd.Unassigned, ledger.CurrentPeriod);
         ledger.Reallocate(1000m, ReallocationEnd.UnclaimedOn(deposit), ReallocationEnd.For(shares), ledger.CurrentPeriod);
+        ledger.Reallocate(30m, ReallocationEnd.Unassigned, ReallocationEnd.UnclaimedOn(ledger.PoolAccount), ledger.CurrentPeriod);
         ledger.SetBacking("Shares", null);
         ledger.SetBacking("Savings", null);
         ledger.SetBacking("Savings", broker);
@@ -659,6 +660,7 @@ public sealed class StorageTests : IDisposable
                 { "an adjustment from an account to itself", With(movements: [movement with { To = 1, Reason = MovementReason.Adjusted, Direction = MovementDirection.Along }]) },
                 { "a reallocation from an end to itself", With(reallocations: [reallocation with { To = unclaimedOnCash }], last: 1) },
                 { "a reallocation out of Niet toegewezen", With(reallocations: [reallocation with { From = new(ReallocationEndKind.Unassigned), FromAccount = 1 }], last: 1) },
+                { "a reallocation out of Niet toegewezen to Vrij on another account", With(reallocations: [reallocation with { From = new(ReallocationEndKind.Unassigned), FromAccount = 1, To = unclaimedOnCash }], last: 1) },
                 { "a reallocation of Vrij as if it were on another account", With(reallocations: [reallocation with { FromAccount = 1 }], last: 1) },
                 { "a reallocation end that is two things", With(reallocations: [reallocation with { To = toGroceries with { Account = 2 } }], last: 1) },
                 { "a reallocation to no category", With(reallocations: [reallocation with { To = new(ReallocationEndKind.Category, Category: 9) }], last: 1) },

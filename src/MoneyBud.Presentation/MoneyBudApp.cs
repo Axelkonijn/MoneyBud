@@ -851,8 +851,8 @@ public sealed partial class MoneyBudApp : ObservableObject
     /// <summary>
     /// The strip across the top: every account with its balance today, the pool account first and
     /// the rest in the order added (arc42 §12, <i>Accounts and net worth</i>), and, since increment 15,
-    /// every account but the pool account with its <i>Vrij</i>. The same in every period — a balance
-    /// is about today, not the period on screen.
+    /// each with its <i>Vrij</i>, the pool account's too since ruling 5 was revised. The same in every
+    /// period — a balance is about today, not the period on screen.
     /// </summary>
     public IReadOnlyList<AccountLine> Accounts =>
         Ledger.Accounts

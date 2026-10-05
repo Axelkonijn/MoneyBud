@@ -109,7 +109,7 @@ public sealed class ReallocateSteps(SpecContext context)
     [Then(@"^I should be told that moving money out of Unassigned is assigning$")]
     public void ThenToldOutOfUnassigned() => AssertRefused(ReallocationRefusal.OutOfUnassigned);
 
-    [Then(@"^I should be told that money can be moved to Unassigned only in the current budget period$")]
+    [Then(@"^I should be told that Unassigned can be used only in the current budget period$")]
     public void ThenToldOnlyTheCurrentPeriod() => AssertRefused(ReallocationRefusal.UnassignedNotCurrent);
 
     [Then(@"^I should be told that money cannot be moved into ""([^""]*)""$")]
@@ -169,14 +169,6 @@ public sealed class ReallocateSteps(SpecContext context)
         var expected = SpecParsing.MoneyAmount(amount);
         Assert.Equal(expected, line.Unclaimed);
         Assert.Equal(Tekst.UnclaimedFigure(expected), line.UnclaimedText);
-    }
-
-    [Then(@"^""([^""]*)"" should show no Unclaimed$")]
-    public void ThenShouldShowNoUnclaimed(string account)
-    {
-        var line = LineOf(account);
-        Assert.Null(line.Unclaimed);
-        Assert.Null(line.UnclaimedText);
     }
 
     [Then(@"^the Unclaimed of ""([^""]*)"" should be marked below zero, with the marker a category over budget has and the badge ""([^""]*)""$")]

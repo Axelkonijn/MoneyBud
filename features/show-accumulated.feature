@@ -26,6 +26,12 @@
 #   - "An archived backed category with money built up is shown ... until it is unbacked" is revised: set to
 #     "—", it keeps the money it built up in earlier periods, so it stays shown until nothing is left for it.
 #
+# REVISED 2026-10-05 for ruling 5 revised; gates waived by Axel, presented with the plan and the app. The
+# pool account now shows Unclaimed too (show-unclaimed.feature). The three accounts tables with an UNCLAIMED
+# column gave Bank, the pool account, a blank cell, meaning it shows none; each now carries its figure, 0.00
+# in every one, since Bank holds exactly this period's Unassigned and the Remaining of its categories without
+# an account. Nothing else changes.
+#
 # The rules, from arc42 §12:
 #   - ACCUMULATED, on screen "Opgebouwd", IS WHAT HAS MOVED IN ON THE CATEGORY'S BEHALF SINCE IT WAS
 #     LAST BACKED, MINUS WHAT HAS BEEN SPENT AGAINST IT SINCE, on any account. "Moved in" is net: a
@@ -177,7 +183,7 @@ Feature: See what has been built up for a backed category
       | Savings  | 100.00 | <spent> | <remaining> | <over>      | <accumulated> | <marked>           |
     And the accounts should be exactly these, in this order:
       | account | balance       | overdrawn | unclaimed |
-      | Bank    | 1900.00       | no        |           |
+      | Bank    | 1900.00       | no        | 0.00      |
       | Deposit | <accumulated> | <marked>  | 0.00      |
 
     Examples:
@@ -317,7 +323,7 @@ Feature: See what has been built up for a backed category
       | Savings  | 100.00 | 0.00  | 100.00    | 5000.00     | Deposit        |
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 2000.00 |           |
+      | Bank    | 2000.00 | 0.00      |
       | Deposit | 5000.00 | 0.00      |
     When I point at the "Savings" slice in the ring for the current budget period
     Then the slice pointed at should show these figures:
@@ -342,5 +348,5 @@ Feature: See what has been built up for a backed category
     And Accumulated for "Savings" in the current budget period should still be 5000 euro, on "Deposit"
     And the accounts should be exactly these, in this order:
       | account | balance | unclaimed |
-      | Bank    | 1950.00 |           |
+      | Bank    | 1950.00 | 0.00      |
       | Deposit | 5000.00 | 0.00      |

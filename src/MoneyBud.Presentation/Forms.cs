@@ -614,9 +614,10 @@ public sealed record ReallocationChoice(ReallocationEnd End)
 /// starts it with that category as <i>Van</i> (derived). Nothing is confirmed first; the form empties
 /// once the move goes through, and keeps what was typed after a refusal.
 ///
-/// <para>The lists, in the order of the plan for increment 15, reading 5: <i>Vrij</i> on each account
-/// but the pool account, in the strip's order, then the categories alphabetically, then — in
-/// <i>Naar</i> only — <i>Niet toegewezen</i>, which means the period on screen. Like every list here, a
+/// <para>The lists, in the order of the plan for increment 15, reading 5: <i>Vrij</i> on each account,
+/// the pool account's included since ruling 5 was revised, in the strip's order, then the categories
+/// alphabetically, then <i>Niet toegewezen</i>, which means the period on screen — in <i>Van</i> too
+/// since it gives to the pool account's <i>Vrij</i> (ruled 2026-10-05). Like every list here, a
 /// choice is a plain value once set, and a list writing back nothing changes nothing. The lists are
 /// the same collections for as long as what they offer stays the same, so a redraw does not make a
 /// list let go of its choice.</para>
@@ -655,10 +656,16 @@ public sealed partial class ReallocateForm(MoneyBudApp app) : ObservableObject
         }
     }
 
-    /// <summary><i>Naar</i>, which starts out on the first choice that is not <i>Van</i>.</summary>
+    /// <summary>
+    /// <i>Naar</i>, which starts out on the first choice that is not <i>Van</i> and, when <i>Van</i> is a
+    /// <i>Vrij</i>, not another <i>Vrij</i> either, which is always refused. Since every account has a
+    /// <i>Vrij</i>, that would otherwise be the pair the form opens on.
+    /// </summary>
     public ReallocationChoice? ChosenTo
     {
-        get => ToChoices.FirstOrDefault(c => c.End == To) ?? ToChoices.FirstOrDefault(c => c.End != ChosenFrom?.End);
+        get => ToChoices.FirstOrDefault(c => c.End == To)
+               ?? ToChoices.FirstOrDefault(c => c.End != ChosenFrom?.End && !BothUnclaimed(c.End, ChosenFrom?.End))
+               ?? ToChoices.FirstOrDefault(c => c.End != ChosenFrom?.End);
         set
         {
             if (value is not null) To = value.End;
@@ -671,17 +678,14 @@ public sealed partial class ReallocateForm(MoneyBudApp app) : ObservableObject
         OnPropertyChanged(nameof(ToChoices));
         OnPropertyChanged(nameof(ChosenFrom));
         OnPropertyChanged(nameof(ChosenTo));
-        OnPropertyChanged(nameof(HasEnds));
     }
 
     /// <summary>
-    /// Whether <i>Verplaatsen</i> is offered: there is something to take from — an account besides the
-    /// pool, or a category with an account or money left behind. A first start has neither.
+    /// Opens the form. It is always offered: the pool account always has <i>Vrij</i> and there is always
+    /// <i>Niet toegewezen</i>, so even a first start has two ends (arc42 §12, ruling 5 revised).
     /// </summary>
-    public bool HasEnds => FromChoices.Count > 0;
-
     [RelayCommand]
-    private void Open() => IsOpen = HasEnds;
+    private void Open() => IsOpen = true;
 
     /// <summary>Opened from a category's row: <i>Van</i> is that category (derived).</summary>
     [RelayCommand]
@@ -697,8 +701,7 @@ public sealed partial class ReallocateForm(MoneyBudApp app) : ObservableObject
     [RelayCommand]
     private void Submit() => Reallocate();
 
-    /// <returns>What came of it, or null when the amount could not be read or, with the form open
-    /// as its last end went away, there was nothing to move between, which closes it.</returns>
+    /// <returns>What came of it, or null when the amount could not be read.</returns>
     public ReallocateResult? Reallocate()
     {
         if (ChosenFrom is not { } from || ChosenTo is not { } to)
@@ -726,6 +729,9 @@ public sealed partial class ReallocateForm(MoneyBudApp app) : ObservableObject
         Amount = null;
         IsOpen = false;
     }
+
+    private static bool BothUnclaimed(ReallocationEnd end, ReallocationEnd? other) =>
+        end.Kind == ReallocationEndKind.Unclaimed && other?.Kind == ReallocationEndKind.Unclaimed;
 
     private static List<ReallocationChoice> Ordered(IReadOnlyList<ReallocationEnd> ends) =>
     [

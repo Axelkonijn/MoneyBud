@@ -800,18 +800,14 @@ public sealed partial class MainView
                 name.Children.Add(Ui.Icon(Ui.House, "Accent", 17));
             }
 
-            // Vrij, on every account but the Hoofdrekening, under its name (§12, ruling 1).
-            var left = Ui.Stack(2, name);
-            if (line.UnclaimedText is { } unclaimed)
+            // Vrij, on every account, under its name (§12, ruling 1; ruling 5 revised).
+            var vrij = Ui.Row(6, Ui.Text(line.UnclaimedText, "faint"));
+            if (line.IsUnclaimedBelowZero)
             {
-                var vrij = Ui.Row(6, Ui.Text(unclaimed, "faint"));
-                if (line.IsUnclaimedBelowZero)
-                {
-                    vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
-                }
-
-                left.Children.Add(vrij);
+                vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
             }
+
+            var left = Ui.Stack(2, name, vrij);
 
             var right = Ui.Row(6, Ui.Text(line.BalanceText, "row"));
             if (line.IsOverdrawn)
@@ -831,7 +827,6 @@ public sealed partial class MainView
         actions.Margin = new Thickness(0, 16, 0, 0);
         var reallocate = Ui.Pill(Tekst.Reallocate, () => OpenReallocate(null), "Ghost");
         reallocate.Margin = new Thickness(0, 12, 0, 0);
-        reallocate.IsVisible = App.ReallocateForm.HasEnds;
         foreach (var child in actions.Children.Append(reallocate))
         {
             child.HorizontalAlignment = HorizontalAlignment.Stretch;
@@ -870,17 +865,13 @@ public sealed partial class MainView
             balance.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
         }
 
-        var big = Ui.Stack(0, Ui.Text(Tekst.BalanceToday, "muted"), balance);
-        if (line.UnclaimedText is { } unclaimed)
+        var vrij = Ui.Row(6, Ui.Text(line.UnclaimedText, "muted"));
+        if (line.IsUnclaimedBelowZero)
         {
-            var vrij = Ui.Row(6, Ui.Text(unclaimed, "muted"));
-            if (line.IsUnclaimedBelowZero)
-            {
-                vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
-            }
-
-            big.Children.Add(vrij);
+            vrij.Children.Add(Ui.Badge(Tekst.Overdrawn, "Danger", "OnAccent"));
         }
+
+        var big = Ui.Stack(0, Ui.Text(Tekst.BalanceToday, "muted"), balance, vrij);
 
         big.Margin = new Thickness(4, 0, 0, 0);
         var body = Ui.Stack(0, big);

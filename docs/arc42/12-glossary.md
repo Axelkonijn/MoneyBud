@@ -187,8 +187,9 @@ Everything above stands as the intended model, with three things added or narrow
 backing now returns **only this period's money** to the pool account; the older money stays on the
 account, still the category's *Accumulated*, and goes along when an account is set again. Purpose can
 be given to money already in an account, and moved between backed categories, by a new act; the money
-moves along between accounts when the two categories are on different ones. Every account but the pool
-shows ***Vrij***, the money on it that no category claims. **And an expense against a backed category
+moves along between accounts when the two categories are on different ones. Every account shows
+***Vrij***, the money on it that no category claims: first ruled every account but the pool, the pool
+account too since a revision the same day, after the install. **And an expense against a backed category
 is always on its backing account**: the per-expense override in the first paragraph is gone for backed
 categories.
 
@@ -258,6 +259,15 @@ for the money the sweep collects. **The pool account shows no *Vrij***, by rulin
 *Niet toegewezen* plays that role. And it gains a second way in for money with a purpose: moving a
 category's *Opgebouwd* to this period's *Niet toegewezen* moves the money from the backing account to the
 pool account.
+
+> ***Revised on 2026-10-04, after the install*** (*Vrij on the pool account: ruled after the install*,
+> below): **the pool account shows *Vrij* too**, its *Saldo* less this period's *Niet toegewezen*, the
+> *Resterend* of the categories without an account and the *Opgebouwd* of the categories it backs. *Niet
+> toegewezen* did not play that role after all: it only ever holds income, so a starting balance or a
+> balance correction on the pool account had no way to get a purpose. **Money not swept is not part of
+> it**: what an ended period's line still asks for stays claimed on the pool account, by that line,
+> until *Restant bijwerken* moves it or it is let go (ruled 2026-10-05). It stays with no purpose, as the
+> paragraph below says, but it is shown, in its period's line.
 
 **Settled for the sweep increment on 2026-09-27, and built on 2026-09-28** (*The sweep and Restant*,
 below). The pool account is the **source of the sweep**: the pool account of the moment the period's end is
@@ -1476,7 +1486,7 @@ different from the others is now the user's act, not a later version of MoneyBud
 
 | Term | Definition |
 |---|---|
-| **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. **Settled for the accounts increment on 2026-09-27, and built the same day** (*Accounts and net worth*, above): an account is **a name and what is on it**. The kinds above are examples, not a type, and nothing behaves differently by kind (*derived*). It is added with a name and, if the user types one, a *Starting balance* (follow-up, 2026-09-27: left empty, the account has none), can be renamed, and can be deleted only while **unused**: no income, expense or transfer on it (*derived*). Deleting one is **never confirmed** and is announced afterwards, even with a starting balance (follow-up, 2026-09-27). Its name follows the category name rules and is unique among accounts, and it may share a name with a category (*derived*). **Adding a name another account has is refused**, not handed back as a category's would be, so a starting balance just typed is never dropped (follow-up, 2026-09-27). Accounts are listed **pool account first, then in the order added**, in the strip and in the forms (follow-up, 2026-09-27). Archiving an account is deferred until missed. A first start has one, *Betaalrekening*, as the *Pool account*, **with no starting balance**, so its balance is the sum of what is on it until first corrected. Backing waits for the increment after. On screen *Rekening*, renamed with *Hernoemen* and deleted with *Verwijderen* (approved 2026-09-27; into the display-terms table at the build). **Backing settled on 2026-09-27, and built the same day** (*Backing and Accumulated*, above): an account may back a category, chosen in the category's *Staat op* list (several categories, in the documentation's reading), and **an account that backs a category, or has a *Movement* on it, counts as used**, so it cannot be deleted. Money MoneyBud moves into or out of it on a category's behalf shows in its history, one row per movement. Money already in it when it starts backing a category keeps no purpose. **Since 2026-10-04 (settled, not built)** it can be given one: every account but the pool shows ***Vrij***, the money on it that no category claims, and an amount of it can be moved into a category it backs (*Vrij, and moving Opgebouwd*, above; *Unclaimed*, below). |
+| **Account** | A place where money actually sits. Current account, savings account, investment account, or cash. Answers *where*. Cash is modelled as an account despite not being a bank account. May **back** one or more categories — see below. **Settled for the accounts increment on 2026-09-27, and built the same day** (*Accounts and net worth*, above): an account is **a name and what is on it**. The kinds above are examples, not a type, and nothing behaves differently by kind (*derived*). It is added with a name and, if the user types one, a *Starting balance* (follow-up, 2026-09-27: left empty, the account has none), can be renamed, and can be deleted only while **unused**: no income, expense or transfer on it (*derived*). Deleting one is **never confirmed** and is announced afterwards, even with a starting balance (follow-up, 2026-09-27). Its name follows the category name rules and is unique among accounts, and it may share a name with a category (*derived*). **Adding a name another account has is refused**, not handed back as a category's would be, so a starting balance just typed is never dropped (follow-up, 2026-09-27). Accounts are listed **pool account first, then in the order added**, in the strip and in the forms (follow-up, 2026-09-27). Archiving an account is deferred until missed. A first start has one, *Betaalrekening*, as the *Pool account*, **with no starting balance**, so its balance is the sum of what is on it until first corrected. Backing waits for the increment after. On screen *Rekening*, renamed with *Hernoemen* and deleted with *Verwijderen* (approved 2026-09-27; into the display-terms table at the build). **Backing settled on 2026-09-27, and built the same day** (*Backing and Accumulated*, above): an account may back a category, chosen in the category's *Staat op* list (several categories, in the documentation's reading), and **an account that backs a category, or has a *Movement* on it, counts as used**, so it cannot be deleted. Money MoneyBud moves into or out of it on a category's behalf shows in its history, one row per movement. Money already in it when it starts backing a category keeps no purpose. **Since 2026-10-04 (settled, not built)** it can be given one: every account but the pool shows ***Vrij***, the money on it that no category claims, and an amount of it can be moved into a category it backs (*Vrij, and moving Opgebouwd*, above; *Unclaimed*, below). **Since the revision of 2026-10-04, after the install, the pool account shows *Vrij* too.** |
 | **Location** | The dimension answered by "which account". Not a separate entity — a way of grouping. |
 | **Category** | What money is earmarked for: groceries, hobby, moving out. Answers *what for*. A category is a label and exists independently of any amount assigned to it. Its **name** is **trimmed** at the ends. It is compared **case-insensitively**, with any run of inner whitespace counting as one space. It is stored trimmed, with its capitalisation and inner spacing as typed. So there are never two categories that differ only in case or spacing. A name that trims to nothing is **refused**. Adding a name that already exists hands back the category that already has it, **spelled as it already was**, with the user told so (see *A category name is compared case-insensitively* above). A category with history is taken out of use by **archiving**, never by deleting: its history stays, and adding its name again, recording an expense against it or assigning a positive amount to it brings it back (*A category is taken out of use, not deleted*, above). A category with **no history in any period** can instead be **deleted** (*Deleting a category that has no history anywhere*, above). It can be **renamed**, under the same name rules, to any name no other category has (*Renaming a category*, above). Deleting and renaming were settled on 2026-09-26 and built in the corrections increment. MoneyBud ships with six **default categories** (above). |
 | **Archived** | The state of a category that has been taken out of use. It is **no longer offered for new entry**, whether recording an expense or assigning, and its last figure is not offered back when a period opens. Everything it already owns stays: its expenses, its budgets, and its place in those periods' figures. It is **shown in every budget period where it has history** — a budget of more than zero or an expense in that period — **including the current one**, and not in a period where it has none, so a zero budget alone does not count (*Where an archived category is still shown*, above). Archiving is **never confirmed first**, and the user is **told afterwards** that the category was archived (*Archiving is announced, never confirmed*, above). Archiving destroys no record, which is why the state is not called *removed*, and it is **not permanent**. It is **brought back**, history and all and spelled as it was, by any of three acts the user already has: **adding its name** again, **recording an expense against it** (which records the expense rather than refusing it), or **assigning a positive amount to it**. Each way, the user is told it was brought back. A **negative or zero** assignment does **not** bring it back: pulling an archived category's money out is tidying up, not planning for it (*Only a positive assignment brings it back*, above). There is no separate act of un-archiving, for the same reason there is no separate act of unassigning; bringing back is a side-effect of those acts, always announced. Only a category in use can be archived. An archived category can be **renamed**, and stays archived (*Renaming a category*, above). On the Overview, an archived category that is shown carries a *Gearchiveerd* caption and has no archive button (*Where an archived category is still shown*, above). Distinct from a period being **closed** — a state MoneyBud deliberately has not got (*Ending versus closing a budget period*, below). See *A category is taken out of use, not deleted* above. Built in the category increment: `Ledger.ArchiveCategory`, specified by [`archive-category.feature`](../../features/archive-category.feature) and, for bringing back by recording, [`record-expense.feature`](../../features/record-expense.feature) ([§8.1](08-crosscutting-concepts.md)). Bringing back by assigning was built in the assigning increment, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature). **Archiving does nothing to backing** (follow-up, 2026-09-27, built the same day): an archived backed category stays backed, keeps and shows *Opgebouwd*, and its later budgets still move; unbacking it is a separate act (*Archiving does nothing to backing*, above). **An archived backed category is also shown in the current period and every later one while its *Accumulated* there is not zero**, even with no history there, so money still there for it is never hidden (ruled after the build, 2026-09-27; *Backing: ruled after the build*, above). **Since the recurring rulings** (2026-09-28, built the same day): **an occurrence MoneyBud records by itself on an archived category brings it back too**, said in the occurrences' notice. It is the first way back not taken by the user himself (*Recurring entries*, ruling 8, above). |
@@ -1486,8 +1496,8 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Purpose** | The dimension answered by "which category". Not a separate entity — a way of grouping. |
 | **Account-backed category** | A category that names one or more accounts its money really sits in — Savings, Stocks. Most categories are not backed. The relationship is **many-to-many**: a category may be backed by several accounts, and an account may back several categories. Backing changes what assigning, spending and the end of a period do to the category — see *Account-backed categories* above. Not in the first increment, which has no accounts, and not in the accounts increment either: it is the one after (settled 2026-09-27). **Settled for the backing increment on 2026-09-27, and built the same day:** **one backing account per category, or none**. Several backing accounts, and a default among them, are deferred until missed, not rejected. Backing can be set, re-pointed or removed at any time. Setting it moves the category's unspent *Remaining* in the current period off the pool account, and moves nothing already in the account. **Removing it returns to the pool account what is there for the category in the backing account, and re-pointing takes that along**, on that day: what MoneyBud moved in for it, minus its expenses paid from that account, and nothing if there is none (revised by the stakeholder the same day, made exact in a follow-up). Either may overdraw the account the money leaves (follow-up). **Archiving does nothing to backing** (follow-up). See *Backing and Accumulated* above. **Revised on 2026-10-04, settled and not built** (*Vrij, and moving Opgebouwd*, above): removing it returns **only this period's money**; older money stays on the account, still the category's, and goes along when an account is set again. |
 | **Backing account** | One of the accounts backing a category. A backed category names exactly one of them as its **default backing account**: the one used whenever money moves on that category's behalf, overridable per assignment or per expense. **Settled for the backing increment on 2026-09-27, and built the same day:** a category has **at most one**, so its default backing account is simply its backing account, and overriding it **per assignment is deferred until missed**. Per expense it can still be overridden: an expense against the category is pre-filled with it, and the pre-fill follows the category typed until the user picks an account himself (follow-up). **Revised on 2026-10-04 (settled, not built): no longer overridden per expense**; an expense against the category is always on it, the list locked. It is chosen in the category row's ***Staat op*** list, and can be pointed elsewhere or removed at any time. **Pointing it elsewhere takes along what is there for the category; removing it returns that to the pool account**: what MoneyBud moved into it for the category, minus the category's expenses paid from it, which can differ from *Opgebouwd* (revised the same day and made exact in a follow-up; first ruled, money that had moved stayed where it went). Either may overdraw it, marked *Rood* (follow-up). Money planned for a later period goes to whatever the category is backed by on that period's first day. **Any account may be one, the pool account included**, in which case assigning moves no balance (follow-up). An account that backs a category counts as used (*Backing and Accumulated*, above). |
-| **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day**: **any** account can be made the pool, since there are no account kinds, and there is **always exactly one**. It pre-fills the account field of every new income and expense. Making another account the pool changes that default for new entries only. The pool cannot be deleted while it is the pool, so there is always at least one account (*derived*). A first start's *Betaalrekening* is the pool. It is **listed first**, in the strip and in the forms' account list, the rest following in the order added (follow-up, 2026-09-27). On screen it is ***Hoofdrekening***, made so by *Maak hoofdrekening* (*The pool account can be any account*, above). Its role as source of MoneyBud's own movements waits for backing and the sweep. **Settled for the backing increment on 2026-09-27, and built the same day:** it is the **source** of every movement made for a backed category, an assignment and the move made when a category is backed, and a negative assignment returns money to it. Overriding the source per movement is deferred until missed. **Confirmed the same day:** the money assigned to an unbacked category is on the pool account (*Backing a category that already has money*, above). **Follow-ups the same day:** unbacking a category returns to the pool account what is there for it in the backing account, the part from earlier periods with no purpose; and the pool account may itself back a category, in which case assigning moves no balance but *Opgebouwd* counts. Money planned for a later period comes out of the pool as it is on the day it moves (*derived*). Its role as the sweep's source still waits for the sweep. **Settled for the sweep on 2026-09-27, and built on 2026-09-28:** it is the sweep's source, as it is at the moment the period's end is settled, and the source or target of the one-click difference; overriding it is deferred until missed (*derived*). Money not swept stays on it with no purpose. The sweep may overdraw it where money did not go where MoneyBud assumes (*The sweep and Restant*, above). **Settled on 2026-10-04, not built** (*Vrij, and moving Opgebouwd*, above): **it shows no *Vrij***, the one account that does not, because the period's *Niet toegewezen* plays that role there (ruled, with a weaker confirmation, recorded there); and it receives the money when a category's *Opgebouwd* is moved to *Niet toegewezen*. |
-| **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. **Settled for the sweep on 2026-09-27, and built on 2026-09-28** (*The sweep and Restant*, above): at a period's end it is swept **netted** with every unbacked category's *Remaining*, as the period's *Restant*, and not at all when that total is zero or less or no destination is set. **The figure itself does not change when the period is swept**: an ended period still shows its *Unassigned* as it was, with one line saying where the *Restant* went (ruling 11). "Does not survive the end of a budget period" means it does not roll forward, not that it is shown as zero. **Revised on 2026-10-04, settled and not built** (*Vrij, and moving Opgebouwd*, above): the figure is that period's income minus everything assigned in it, **plus what was moved into it from a category's *Opgebouwd***, which is how money built up is used (*derived*). So the ring adds up to the income plus that. Money on an account other than the pool that no category claims is ***Vrij***, not *Unassigned*: his own word for it in the wish was "niet toegewezen", rejected as a name because it is this figure's (*Unclaimed*, below). |
+| **Pool account** | The one current account designated as where *Unassigned* money is assumed to live. It is the default **source** for every movement MoneyBud makes on its own initiative — assigning to a backed category, and the end-of-period sweep — overridable per movement. It is also the account an **expense against an unbacked category** is assumed to have left, again overridable, which is a guess about a past event rather than a choice of source and is the weaker of its two roles ([§11](11-risks-and-technical-debt.md)). May go *Overdrawn*; nothing blocks that. A fact about one account, not a redefinition of *Unassigned*, which remains a purpose and not a place. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day**: **any** account can be made the pool, since there are no account kinds, and there is **always exactly one**. It pre-fills the account field of every new income and expense. Making another account the pool changes that default for new entries only. The pool cannot be deleted while it is the pool, so there is always at least one account (*derived*). A first start's *Betaalrekening* is the pool. It is **listed first**, in the strip and in the forms' account list, the rest following in the order added (follow-up, 2026-09-27). On screen it is ***Hoofdrekening***, made so by *Maak hoofdrekening* (*The pool account can be any account*, above). Its role as source of MoneyBud's own movements waits for backing and the sweep. **Settled for the backing increment on 2026-09-27, and built the same day:** it is the **source** of every movement made for a backed category, an assignment and the move made when a category is backed, and a negative assignment returns money to it. Overriding the source per movement is deferred until missed. **Confirmed the same day:** the money assigned to an unbacked category is on the pool account (*Backing a category that already has money*, above). **Follow-ups the same day:** unbacking a category returns to the pool account what is there for it in the backing account, the part from earlier periods with no purpose; and the pool account may itself back a category, in which case assigning moves no balance but *Opgebouwd* counts. Money planned for a later period comes out of the pool as it is on the day it moves (*derived*). Its role as the sweep's source still waits for the sweep. **Settled for the sweep on 2026-09-27, and built on 2026-09-28:** it is the sweep's source, as it is at the moment the period's end is settled, and the source or target of the one-click difference; overriding it is deferred until missed (*derived*). Money not swept stays on it with no purpose. The sweep may overdraw it where money did not go where MoneyBud assumes (*The sweep and Restant*, above). **Settled on 2026-10-04, not built** (*Vrij, and moving Opgebouwd*, above): **it shows no *Vrij***, the one account that does not, because the period's *Niet toegewezen* plays that role there (ruled, with a weaker confirmation, recorded there); and it receives the money when a category's *Opgebouwd* is moved to *Niet toegewezen*. **Revised the same day, after the install** (*Vrij on the pool account: ruled after the install*, above): **it shows *Vrij* too**, its *Balance* less what is claimed on it: the current period's *Unassigned* (income dated after today left out), the *Remaining* of every category without an account, what is there for each category it backs or that a category on "—" left on it, and what each ended period's sweep line still asks for, plus or minus (ruled 2026-10-05). It is an end in *Verplaatsen* both ways, and the one *Vrij* that *Unassigned* can be moved into, with no money moving (ruled 2026-10-05). Making another account the pool moves every one of those pool-only claims with it, the ended lines' included, so with no destination the new pool account can show a negative *Vrij* until the money is transferred (widened at the build). **Built on 2026-10-05**. |
+| **Unassigned** | Two things under one name, deliberately. (a) The **absence of a purpose**: a value on the purpose dimension, not a location — unassigned money still sits in an account. (b) The **figure** that measures it for one budget period: that period's income minus everything assigned to categories in it. It is the pool that assigning draws from and that a negative assignment puts money back into. Starts at the period's full income, because carrying budgets over carries figures and not assignments; reaches zero when the user has finished budgeting the period; goes **negative** past that, which is *Over-assigned*. Shown prominently and assigned from directly, rather than being only a total the user has to work out — and never enforced. Not a category: nothing is budgeted for it and nothing is spent against it. Does not survive the end of a budget period: it is *swept* — see below. An income joins its period's *Unassigned* **when it is recorded**, which for a future-dated income is before its date arrives — so *Unassigned* covers a **whole period** where *Net worth* covers a **point in time**, and the two disagree about expected income by design (*The central distinction*, above). Formerly also called *Left to assign*; that name is retired — see *One figure, not two*. **Settled for the sweep on 2026-09-27, and built on 2026-09-28** (*The sweep and Restant*, above): at a period's end it is swept **netted** with every unbacked category's *Remaining*, as the period's *Restant*, and not at all when that total is zero or less or no destination is set. **The figure itself does not change when the period is swept**: an ended period still shows its *Unassigned* as it was, with one line saying where the *Restant* went (ruling 11). "Does not survive the end of a budget period" means it does not roll forward, not that it is shown as zero. **Revised on 2026-10-04, settled and not built** (*Vrij, and moving Opgebouwd*, above): the figure is that period's income minus everything assigned in it, **plus what was moved into it from a category's *Opgebouwd***, which is how money built up is used (*derived*). So the ring adds up to the income plus that. Money on an account other than the pool that no category claims is ***Vrij***, not *Unassigned*: his own word for it in the wish was "niet toegewezen", rejected as a name because it is this figure's (*Unclaimed*, below). **Revised after the install** (2026-10-04 and 2026-10-05, *Vrij on the pool account: ruled after the install*, above): the pool account has a *Vrij* too, and the current period's *Unassigned* is one of the claims on it; and *Unassigned* can be moved **out**, to *Vrij* on the pool account, which **lowers** it, may take it below zero (*Over-assigned*) and so also lowers the period's *Restant* (*derived*). |
 | **Assign** | The act of giving money a purpose: moving an amount out of *Unassigned* and into a category's **Budget**. An amount may be assigned **negatively**, which moves it back out of the category and into *Unassigned* — so there is no separate act of unassigning. A negative assignment larger than the category's *Budget* is **clipped** to what is there and the shortfall is **reported** to the user; it is never refused (see *An amount may be assigned negatively* above). For an unbacked category it is a planning act only — it changes what money is *for*, not where it is, and spends nothing. For an *account-backed* category it is also a real transfer, out of the *pool account* and into the category's default backing account, either end of which can be overridden — and which goes through even when the pool account has not got the money, leaving it *Overdrawn*. Possible in the **current budget period and any later one**; assigning in a **past** period is **refused** (*Assigning happens in the current budget period and later ones*, above). **Assigning zero** is accepted and changes nothing, unlike a zero expense or income, which is refused (*Assigning zero is accepted and moves nothing*, above). Refused only for its **target** or its cents, never for being zero or negative. The refusals, in the order the first one broken is reported, are: a name that trims to nothing, a name that is not one of your categories, an amount finer than a cent, and a past period. That is the same order recording an expense uses. An otherwise acceptable zero or clippable negative is still refused if its target is wrong (*When an assignment is refused*, above). An **archived** category is not offered for assigning. Assigning a **positive** amount to its name anyway **brings it back**, and the user is told; a negative or zero assignment leaves it archived (see *Assigning to an archived category brings it back* above). Built in the assigning increment for **unbacked** categories, which is every category while there are no accounts: `Ledger.Assign`, specified by [`assign-to-category.feature`](../../features/assign-to-category.feature) ([§8.1](08-crosscutting-concepts.md)). The backed half, the real transfer, was built in the backing increment. **Settled on 2026-09-27, and built the same day:** for a backed category the amount moves from the pool account to its backing account **on the day of assigning, or on the period's first day if that is later**, to whatever the category is backed by on that day; a negative assignment moves back only what the clip lets through, and never more money than is there for the category in its backing account (follow-up, 2026-09-27); and overriding either end is **deferred until missed**. Taking a plan over follows the same rule (*Assigning to a backed category moves money*, above). Distinct from recording the income that brought the money in, and done whenever the user is ready rather than at the moment money arrives. |
 | **Budget** | The **plan** for one category in one budget period: what the user intends that category to have. "€400 for groceries in October" is a budget; "groceries" on its own is a category. A budget is never a container that can run empty — see *plan and actual* above. It **floors at zero**: a plan for less than nothing is not a plan. That is a rule about the plan and not about money in general — *Remaining* still goes negative freely, and that is *Over budget*. For an unbacked category it is also not money that has moved; for a backed one the money really has moved, but the *Budget* is still the plan and *Remaining* still measures spending against it. Budgets **carry over as figures**, offered back rather than applied — see below. Since 2026-09-26 that is settled in detail, and it is built: a current or later period whose every *Budget* is zero is offered the plan of the latest earlier period that has one, and can **take it over** (*Opening a period*, below). A category for which **no budget has been set** behaves exactly as one budgeted at zero: there is no separate "unbudgeted" state, and a missing budget never blocks recording an expense. Assigning changes it only in the current period or a later one, so a **past** period's budgets cannot be re-planned (*Assigning happens in the current budget period and later ones*, above). |
 | **Take over (a plan)** | The one act that assigns an earlier period's plan in full. It is **offered** in the current period and every later one while every *Budget* there is zero, a budget taken back to zero included and an archived category's budget counting, and only then. It acts on the **period on screen**, never on a period the assign form has been stepped to. The plan offered is that of the **latest earlier period that has a plan**: a *Budget* of more than zero for a category not archived now, however small, one cent included. Taking it over assigns each of that period's figures, for categories not archived, even past *Unassigned*, which may leave the period *Over-assigned*. It is **not confirmed first**, and a notice names the period it went into. Not offered in a past period: past a boundary it disappears quietly at the next refresh, and pressing it before then is refused like any past-period assignment. No undo: a take-over is corrected row by row by negative assignments. See *Opening a period* above. Settled 2026-09-26, specified by [`take-over-a-plan.feature`](../../features/take-over-a-plan.feature), and built in the opening-a-period increment as `Ledger.TakeOverPlan`, which assigns each figure through `Ledger.Assign`, with the offer worked out by `Ledger.PlanOfferedIn` ([§8.1](08-crosscutting-concepts.md)). On screen it is *Plan overnemen*. |
@@ -1516,8 +1526,8 @@ different from the others is now the user's act, not a later version of MoneyBud
 | **Balance correction** | A balance the user types for an account, recorded as **what that account really held on that day**: dated today (*derived*), and taking in every entry dated before it, so an expense remembered late does not knock it off. It changes the account's *Balance* and net worth, and **nothing on the purpose side**: it is not income, counts in no *Unassigned*, and changes no budget figure. May be **negative or zero** (*derived*). Can be **removed**, which asks first, but **not changed**: to change one, correct again (*derived*). Listed in the account's history **with the new balance and the difference** (follow-up, 2026-09-27), the only trace left of something forgotten. The difference is **recomputed, not fixed**: it is what is still unexplained, the typed balance minus what the previous balance correction and the entries it takes in would give now, so it shrinks to €0,00 as forgotten entries are recorded, while the balance itself does not move (follow-up, 2026-09-27). Distinct from a *Change* to an entry, which corrects a record rather than a balance. **Why two words.** This glossary already says "correction" for changing or removing an entry: *the corrections increment*, *Corrections and the sweep*, and the entries in *Answered* about them, all left as written. A one-word term would have collided with that older use in every sentence that reached both, so the term was renamed from *Correction* to *Balance correction* on 2026-09-27, before anything was specified or built with it. The Dutch keeps one word, *Correctie*, because on screen entries are changed through *Wijzigen* and the word never appears beside them. Settled 2026-09-27, and built the same day. On screen *Correctie*, and the act *Saldo corrigeren* (approved 2026-09-27). |
 | **Transfer** | Money moved by the user **from one account to another**, on a date: an ATM withdrawal from Betaalrekening to Contant. It moves both balances and changes **neither net worth nor any budget figure**, except that net worth **may** change where a *Balance correction* dated after the transfer has already counted one side; that is true, not a flaw (follow-up, 2026-09-27). Not an income or an expense, and not a *Transaction* in this glossary's sense. **May not be dated in the future**, like an expense. Needs two different accounts and an amount above zero, never finer than a cent (*derived*). Changed or removed from an account's history, like an entry, removing asking first (*derived*). That history is the only place a transfer is changed; an income or expense, by contrast, is changed only from the Overview's lists (follow-up, 2026-09-27). It carries **no label**, and a transfer breaking several rules reports the first of: two different accounts, more than 0, whole cents, not in the future (approved at the scenario gate, 2026-09-27). The same kind of movement MoneyBud will make itself once backing and the sweep exist, in the stakeholder's own framing. Settled 2026-09-27, and built the same day (*Transfers*, *Accounts and net worth*, above). On screen *Overboeking*, the act *Overboeken*, with *Van* and *Naar* (approved 2026-09-27). Since the backing increment MoneyBud makes its own counterpart, a *Movement* (next). |
 | **Movement** | Money **MoneyBud** moves on a category's behalf, from one account to another: the user's own counterpart is a *Transfer*. Made by assigning to a backed category, by backing, unbacking and re-pointing, and by money planned for a later period moving on that period's first day. It moves two balances and no budget figure, and it is neither income nor an expense, so it is in neither of the Overview's lists. It shows as a row in **both accounts' histories**, read-only: it is changed by assigning again, never from the history. **A movement from an account to itself**, when the pool account backs the category, changes no balance and has no row, but *Opgebouwd* counts it. Written on the day the money moves and never changed, so the amounts fixed on their day stay fixed. Money for a later period is written by **settling**: the first time MoneyBud runs on or after that period's first day, before anything else is done, with the backing and the pool account of that moment. An account with a movement between two different accounts on it counts as used and cannot be deleted; movements from it to itself do not count. A category cannot be deleted while a movement between two different accounts stands for it; one from the pool account to itself does not block, and goes with the category (ruled 2026-09-27). The feature files say *movement* for a history row of this kind. Settled and built 2026-09-27 (*Moved money in the account's history*, *Backing and Accumulated*, above; [ADR 0009](../decisions/0009-movements-are-entries.md)). No display term: the row's words are copy. **Settled for the sweep on 2026-09-27, and built on 2026-09-28** (*The sweep and Restant*, above; [ADR 0010](../decisions/0010-sweeps-and-period-ends.md)): **the sweep is a movement too**, written at settling and dated the next period's first day, and so is **what the one-click difference moves**, dated the day it is pressed. A sweep is never changed afterwards; a difference is a new movement beside it (the documentation's reading). A sweep between two different accounts makes the destination category and both accounts used (*derived*). To hold ruling 5, a sweep movement must say which period it was for (for the plan). **Built so**: reason `Swept`, with the period it was for; a sweep makes its category and its account used whichever accounts it went between, a sweep from an account to itself included (*Sweep: chosen in the build*, above). **Settled on 2026-10-04, not built** (*Vrij, and moving Opgebouwd*, above): a *Reallocation* whose two ends are on different accounts moves the money along, as a movement made at the user's act and dated today (*derived*); so does moving a category's *Opgebouwd* to *Niet toegewezen*, from the backing account to the pool account. Unbacking's movement now carries only this period's money. |
-| **Unclaimed** | **The documentation's proposed English term, not ruled** (2026-10-04): the money on an account, **other than the pool account**, that **no category claims**. In the documentation's reading, put to the stakeholder with the ruling: today's *Balance* minus what is there for the categories the account backs, and minus older money a category on "—" left there (*derived*). A *Starting balance*, a *Transfer* in and a *Balance correction* upwards land in it by themselves; a fall in value, corrected, can take it **below zero**, shown with the one marker and the badge *Rood*, never adjusted by itself. A purpose is given to it by a *Reallocation* into a category the account backs. **The pool account shows none**: there the period's *Unassigned* plays that role (ruled, with a weaker confirmation). Point-in-time and the same in every period, like the *Balance* (*derived*). Not *Unassigned*, which is a period's figure on the purpose side, and whose Dutch name was rejected for this one for that reason. Since a backed category's expenses are always on its account (follow-up ruling, 2026-10-04), what is there for it equals its *Accumulated* as of today, so *Unclaimed* plus the account's *Accumulated* is its *Balance*, apart from kept data; a month overspent at backing now moves its overspending to the pool account, so it agrees too (follow-up 15). On screen ***Vrij***, ruled: *"Saldo € 5.200,00 · Vrij € 5.000,00"*. See *Vrij, and moving Opgebouwd* above. Settled 2026-10-04, not specified or built. |
-| **Reallocate** | **The documentation's proposed English term, not ruled** (2026-10-04), chosen over *move* so as not to collide with *Movement*: the act of moving **an amount of purpose**, as assigning moves an amount. Its ends: an account's *Unclaimed* money and a category that account backs, either way; one backed category's *Accumulated* to another's; and a backed category's *Accumulated* to the current period's *Unassigned*, which is how money built up is used. **Money moves between accounts only when the two ends are on different accounts.** A negative amount moves back. It changes **no *Budget* and no *Remaining*** in any period; moving to *Unassigned* raises that figure. Dated today, announced and never confirmed (*derived*). Proposed on screen ***Verplaatsen***, his word in the round, with *Van* and *Naar*. **Follow-ups the same day:** *Unassigned* only as a destination, and only the current period's (undoing a move into it is assigning); *Unclaimed* may also go to a category on another account, or to *Unassigned*, the money moving along; a same-account move leaves a read-only history row; moving more than there is goes through, *Rood*; one form, beside *Overboeken*, on a backed category's row, and in the phone's ⋯ menu. Settled 2026-10-04, not specified or built. |
+| **Unclaimed** | **The documentation's proposed English term, not ruled** (2026-10-04): the money on an account, **other than the pool account**, that **no category claims**. In the documentation's reading, put to the stakeholder with the ruling: today's *Balance* minus what is there for the categories the account backs, and minus older money a category on "—" left there (*derived*). A *Starting balance*, a *Transfer* in and a *Balance correction* upwards land in it by themselves; a fall in value, corrected, can take it **below zero**, shown with the one marker and the badge *Rood*, never adjusted by itself. A purpose is given to it by a *Reallocation* into a category the account backs. **The pool account shows none**: there the period's *Unassigned* plays that role (ruled, with a weaker confirmation). Point-in-time and the same in every period, like the *Balance* (*derived*). Not *Unassigned*, which is a period's figure on the purpose side, and whose Dutch name was rejected for this one for that reason. Since a backed category's expenses are always on its account (follow-up ruling, 2026-10-04), what is there for it equals its *Accumulated* as of today, so *Unclaimed* plus the account's *Accumulated* is its *Balance*, apart from kept data; a month overspent at backing now moves its overspending to the pool account, so it agrees too (follow-up 15). On screen ***Vrij***, ruled: *"Saldo € 5.200,00 · Vrij € 5.000,00"*. See *Vrij, and moving Opgebouwd* above. Settled 2026-10-04, not specified or built. **Revised the same day, after the install: the pool account shows it too** (*Vrij on the pool account: ruled after the install*, above). There the claims are also the current period's *Unassigned*, less income dated after today, the *Remaining* of every category without an account, and what each ended period's sweep line still asks for (ruled 2026-10-05), so *Unclaimed* plus what is claimed is the *Balance* on every account, the pool included (*derived*). Built 2026-10-05. |
+| **Reallocate** | **The documentation's proposed English term, not ruled** (2026-10-04), chosen over *move* so as not to collide with *Movement*: the act of moving **an amount of purpose**, as assigning moves an amount. Its ends: an account's *Unclaimed* money and a category that account backs, either way; one backed category's *Accumulated* to another's; and a backed category's *Accumulated* to the current period's *Unassigned*, which is how money built up is used. **Money moves between accounts only when the two ends are on different accounts.** A negative amount moves back. It changes **no *Budget* and no *Remaining*** in any period; moving to *Unassigned* raises that figure. Dated today, announced and never confirmed (*derived*). Proposed on screen ***Verplaatsen***, his word in the round, with *Van* and *Naar*. **Follow-ups the same day:** *Unassigned* only as a destination, and only the current period's (undoing a move into it is assigning); *Unclaimed* may also go to a category on another account, or to *Unassigned*, the money moving along; a same-account move leaves a read-only history row; moving more than there is goes through, *Rood*; one form, beside *Overboeken*, on a backed category's row, and in the phone's ⋯ menu. Settled 2026-10-04, not specified or built. **Revised after the install** (*Vrij on the pool account: ruled after the install*, above): the pool account's *Unclaimed* is an end too, both ways (2026-10-04); and *Unassigned* can now also be a source, **to *Unclaimed* on the pool account only**, with no money moving (2026-10-05). *Unassigned* to a category stays assigning, and to *Unclaimed* on another account stays refused. Built 2026-10-05. |
 | **Overdrawn** | The state of an *account* whose *Balance* is **negative**. Reachable by assigning more than the *pool account* holds, which MoneyBud allows without blocking or warning — see *Assigning may overdraw the pool account* above. Distinct from *Over budget*, which is a negative *Remaining*: that is a plan overrun inside MoneyBud, this is a claim about the world. Not in the first increment, which has no accounts. **Settled for the accounts increment on 2026-09-27, and built the same day:** shown with **the same marker** as *Over budget* and *Over-assigned*, with its own badge, ***Rood*** (ruled in a follow-up the same day). Never blocked or warned about. In that increment it is reached by an expense, a transfer out, or a negative starting balance or balance correction, and not by assigning, which moves no money until backing. **Since the backing increment** (built 2026-09-27) it is also reached by assigning to a backed category, by backing a category, and by unbacking or re-pointing one, each of which may overdraw the account the money leaves. |
 | **Overview** | The screen MoneyBud opens on, displayed as *Overzicht*. It shows one budget period at a time, starting at the current one and stepping back and forward. It is headed by the **Ring** and lists the categories the display rule shows for that period (*When any category is shown in a period: the full rule*). It is laid out income left, plan middle, expenses right. Built in the UI increment, as `PeriodOverview` in the presentation layer (*The user interface*, above; [§8.4](08-crosscutting-concepts.md)). **On the phone** (settled 2026-09-29, built 2026-09-30, not yet reviewed): the Overview is **the ring alone**, with the period under it, a still home screen that every other part is pulled over as a *Panel* (*MoneyBud on the phone*, above). What it shows for a period does not change, **with one exception chosen in the build**: the ring's hole also shows the period's income total under *Niet toegewezen*, which the desktop does not (B8, under *MoneyBud on the phone: chosen without the stakeholder*). |
 | **Ring** | The radial diagram at the head of the Overview. One **slice** per category with a *Budget* above zero, sized to that *Budget* and filled in as far as it has been spent, so the unfilled part is its *Remaining*. *Unassigned*, when above zero, is a slice of its own, so the whole ring is the period's income. An overspent slice stays budget-sized, completely filled and marked. A category with spending and no budget gets no slice and is listed with the marker instead. An *Over-assigned* period's ring shows its budgets only. A period with neither income nor any *Budget* shows an **empty ring**, a grey outline with a hint. The full rules are in *The overview, and its ring*, above. Built in the UI increment, as `Ring`. **Revised at the first demo, 2026-09-26, and built:** every slice, *Unassigned* included, is drawn at least **2% of the ring**, so the ring is no longer drawn exactly in proportion, although the slices' figures still add up to the income. The fill stays exact. Pointing at a slice shows its figures in the ring's hole, which otherwise shows *Unassigned*, and the ring is the middle column's centrepiece (*Every slice has a minimum width*, *Hovering a slice shows its figures*, *The Overview's layout*, above). **On the phone** (settled 2026-09-29, built 2026-09-30, not yet reviewed; the shared `Ring` drawn, with a slice's colour by its place, plan D6): pointing is **holding and sliding** over the ring, with a **pizza-shaped** hit area, or **tapping** a slice; a slice stays chosen when the finger lifts, and tapping it again or elsewhere goes back to *Unassigned* (*Touching the ring*, under *MoneyBud on the phone*, above). In the *Kintsugi* theme it is drawn as a mended porcelain plate; what it shows is the same. |
@@ -4278,6 +4288,8 @@ a ruling.
 starting balance or a balance correction lands in that account's ***Vrij***, and the user can move an
 amount of it into a backed category's *Opgebouwd* (*Vrij, and moving Opgebouwd*, below). It is still not
 income, still counts in no period's *Unassigned*, and still changes no *Budget*: the rule above stands.
+**On the pool account too since the same day's revision, after the install**: that one was the gap he
+found (*Vrij on the pool account: ruled after the install*, below).
 
 > ***Derived, as usage:* interest is recorded as an income if the user wants to budget it, and a
 > change in an investment's value as a balance correction.**
@@ -4292,7 +4304,8 @@ reaches net worth only.
 **His own usage, stated on 2026-10-04** (*Vrij, and moving Opgebouwd*, ruling 4, below): what a savings
 or shares account earns he brings in **as a balance correction**, into the account's *Vrij*, and shares
 out from there; he does not record it as income. Still usage, not a rule. "Reaches net worth only" is
-no longer the whole of it: on an account other than the pool, it now also reaches *Vrij*.
+no longer the whole of it: it now also reaches the account's *Vrij*, on every account (the pool account
+too since the revision of ruling 5, after the install).
 
 ### A first start has one account
 
@@ -5106,7 +5119,8 @@ as a typed balance (*The central distinction*, above).
 > ***Revised on 2026-10-04, settled and not built: money the user already had can now be given a
 > purpose*** (*Vrij, and moving Opgebouwd*, below). Every account but the pool account shows ***Vrij***,
 > the money on it that no category claims, and an amount of it can be moved into the *Opgebouwd* of a
-> category that account backs.
+> category that account backs. **Since a revision the same day, after the install, the pool account
+> shows *Vrij* too**, so money already had there can get a purpose as well.
 
 **What stands of the ruling above**: backing a category still moves nothing already in the account, and
 *Accumulated* still starts where it did. The money is no longer seen by location only, though: it shows
@@ -5230,7 +5244,8 @@ The two versions below are kept as they were. **What the revision of 2026-10-04 
 why**, in short: the contradiction the 2026-09-27 revision removed stays removed, because this period's
 money still goes back, so backing again in the same period does not move it twice. The reason
 "nothing is stranded" is answered differently: what stays is still claimed by the category, and since
-the same rulings every account but the pool shows *Vrij*, so nothing on an account is out of sight. His
+the same rulings every account shows *Vrij* (the pool account since their revision after the install),
+so nothing on an account is out of sight. His
 principle, in his words: money stays where it last was until set otherwise, and in real life he moves
 it himself. The first version's reason, "a movement that did not happen", comes back for the older
 money.
@@ -6134,6 +6149,11 @@ that period's income and nothing else. It is the same situation as money returne
 no longer lost from sight, because the ended period says it was not swept and offers the button. It
 does cross the boundary without a purpose until the user acts. The rulings accept that, over a
 movement he did not ask for.
+
+> ***Since 2026-10-05*** (*Vrij, and moving Opgebouwd*, *Vrij on the pool account: ruled after the
+> install*, below): the pool account now shows a *Vrij*, and **money not swept stays out of it**, by
+> ruling. What an ended period's line still asks for is claimed on the pool account by that line, until
+> the button moves it or it is let go, so it has one place, the line. The paragraph above stands.
 
 ### The destination is one list, "Restant naar"
 
@@ -8652,7 +8672,9 @@ in a round of their own ([2026-10-04-opgebouwd-en-vrij.md](../stakeholder/2026-1
 **He took the recommendation every time.** **Two answers carry his own words**, and more than the option
 he chose: what happens when an account falls in value (ruling 3), and what setting *Staat op* to "—"
 does (ruling 6), where he reshaped the question himself. **One ruling is weaker than the others**
-(ruling 5), and **one was left to the documentation** (ruling 7). **The round records the options and
+(ruling 5), and **one was left to the documentation** (ruling 7). **The weaker one did not hold**: on
+2026-10-04, after installing the build on his phone, he found the pool account needs *Vrij* too, and
+**ruling 5 was revised** (*Vrij on the pool account: ruled after the install*, below). **The round records the options and
 his choices, and the explanations he was given, but not the arguments put with each recommendation.**
 So a reason below is his where it is quoted, the explanation he was given where it says so, and
 otherwise the documentation's, marked "in the documentation's reasoning".
@@ -8687,6 +8709,14 @@ nine earlier rulings and readings, most of them under *Backing and Accumulated*,
 recorded where it stands with a dated note and its old text kept (*What these rulings revise*, below).
 Several approved scenarios assert what is revised, and go back through the scenario stage.
 
+**Revised after the install, before the merge.** Built, the increment was installed on his phone on
+2026-10-04, and his first try found that the pool account needs *Vrij* too. **Ruling 5 was revised the
+same day, and follow-up 7 for one end on 2026-10-05**, both by him, and a second ruling that day keeps
+what an ended period's line asks for out of *Vrij*; the rest of the revision is derived (*Vrij on the pool
+account: ruled after the install*, below). **He waived both gates for it**: scenarios, plan and app are
+put to him together at the end, with every decision taken without him listed. **Built on 2026-10-05**,
+green, and not yet tried by him.
+
 **Where it comes from.** In his words, translated: he cannot change *Opgebouwd*, nor move it between
 categories, and "I already have savings and shares, so *Opgebouwd* doesn't really match what is in
 there". His picture: "all the money on the account has a category underneath, visible through
@@ -8708,6 +8738,10 @@ purpose: *Opgebouwd* stays where it was, and the money lands on the pool account
 > category's *Opgebouwd*, and goes along when an account is set again. **Data kept by version 7 is
 > read**, as data in which nothing was given a purpose yet. ***Follow-up*: an expense on a category
 > with an account is always on that account**; only categories without one let the account be chosen.
+>
+> ***Revised on 2026-10-04, after the install*: the pool account shows *Vrij* too**, and is an end in
+> the act both ways; ***on 2026-10-05*: *Niet toegewezen* can be moved to *Vrij* on the pool account**,
+> with no money moving (*Vrij on the pool account: ruled after the install*, below).
 
 An example, with synthetic figures. It is 10 November. Betaalrekening is the pool account. Spaarrekening,
 which holds both savings and shares, was added with a starting balance of €5.000 and backs *Sparen* and
@@ -8730,6 +8764,8 @@ Spaarrekening then holds €4.400, and *Sparen* and *Beleggen* claim €2.700 an
 ### What this increment covers, and what waits
 
 > ***Vrij* on every account but the pool, one act that moves an amount of purpose, and a revised "—".**
+>
+> ***Revised on 2026-10-04, after the install*:** *Vrij* on every account, the pool account included.
 
 Nothing is deferred by the rulings. **Rejected, not deferred**: typing a new *Opgebouwd* (ruling 2), and
 spending straight from a category's *Opgebouwd* without the over-budget marker (ruling 2, the last
@@ -8785,6 +8821,14 @@ gate. *Free* was passed over because in English it also means costing nothing.
 - **Making another account the pool** moves *Vrij* with it: the old pool account starts to show one,
   which may be most of its balance, and the new one stops.
 - **Below zero it carries the one marker, badge *Rood*** (ruling 3).
+
+> ***Revised on 2026-10-04, after the install*** (*Vrij on the pool account: ruled after the install*,
+> below): the readings above hold for the pool account too, which now has a *Vrij*, with more claims on
+> it: the current period's *Niet toegewezen* and the *Resterend* of every category without an account,
+> and, by a ruling of 2026-10-05, what each ended period's sweep line still asks for. **Making another
+> account the pool now moves every one of those claims**, not *Vrij*: both accounts keep showing one
+> (derivation f there, as built), which replaces "the old pool account starts to show one, and the new
+> one stops".
 
 ### One act moves an amount of purpose
 
@@ -8854,7 +8898,10 @@ below).
   back to him (*What this section leaves open*, point 9). **Ruled in a follow-up (below): it does.**
 - **The category ends are backed categories.** A category with no backing is not offered: its money is
   on the pool account, where *Niet toegewezen* and assigning already reach it. **The pool account has no
-  *Vrij*** (ruling 5), so a category it backs can receive only from another category.
+  *Vrij*** (ruling 5), so a category it backs can receive only from another category. ***Revised on
+  2026-10-04, after the install*:** the pool account has a *Vrij*, so a category it backs can receive
+  from it too, with no money moving (derivation g, *Vrij on the pool account: ruled after the install*,
+  below).
 - **An archived backed category is offered as a source and not as a destination**: taking its money out
   is tidying up, as a negative assignment to it is, and putting money in would be using it
   (*Only a positive assignment brings it back*, above).
@@ -8872,7 +8919,9 @@ below).
 >   period is refused (point 6).
 > - **Undoing a move to *Niet toegewezen* is assigning.** *Niet toegewezen* is only ever a destination
 >   of a move: €500 moved from *Sparen* by mistake goes back by assigning €500 to *Sparen*, which raises
->   its *Budget* and moves the money (point 7).
+>   its *Budget* and moves the money (point 7). ***Revised on 2026-10-05 for one end*** (below): *Niet
+>   toegewezen* can now be moved to *Vrij* on the pool account. Undoing a move to a category is still
+>   assigning.
 > - **One rule for money: it moves along whenever the two ends are on different accounts.** So *Vrij* on
 >   Spaarrekening can also go to a category backed by Aandelenrekening, or straight to *Niet toegewezen*
 >   (point 8).
@@ -8889,6 +8938,10 @@ below).
   moves back, and *Niet toegewezen* is only a destination, **a negative amount with *Niet toegewezen* as
   *Naar* is refused** as a non-case (*derived*): the form cannot express it except by a minus sign, and
   the ruling says assigning does it.
+
+  ***Revised on 2026-10-05, for one end*** (*Vrij on the pool account: ruled after the install*, below):
+  with *Vrij* on the pool account as *Van*, a negative amount to *Niet toegewezen* is the move from *Niet
+  toegewezen* to that *Vrij*, now allowed, so −€30 goes through. With any other *Van* it stays refused.
 - **A row for a same-account move is an exception to "a movement from an account to itself leaves no
   history row"** (*The pool account may back a category*, above). That rule stands for assigning to a
   category the pool account backs; this one changes *Vrij*, which the strip shows, so it is explained.
@@ -8946,6 +8999,14 @@ question that is not urgent (*What this section leaves open*, point 13).
 
 It stays a known corner ([§11](11-risks-and-technical-debt.md), the *Vrij* row), not a rule.
 
+> ***Changed by the revision of ruling 5*** (2026-10-04, after the install; *derived*, derivation c in
+> *Vrij on the pool account: ruled after the install*, below): **the corner no longer counts the money
+> twice in total.** The income still counts in *Niet toegewezen*, which is now claimed on the pool account,
+> so the pool account's *Vrij* is lower by it while that account's is higher by it, until a transfer to
+> the pool account squares both. Summed over all accounts *Vrij* is right. What is left of the corner is
+> that the two accounts' *Vrij* are each wrong by the income, in opposite directions, and the sweep still
+> takes it from the pool account, which never had it. Still a corner, not a rule.
+
 ### No *Vrij* on the pool account
 
 > **Ruling 5. The pool account shows no *Vrij*.** There, the period's *Niet toegewezen* already plays
@@ -8964,6 +9025,228 @@ toegewezen*. **He did not come back on it.**
 the pool account with no figure showing them**, as today (*With no destination, nothing moves*, above).
 So do money not swept because a *Restant* was below zero, and the earlier money unbacking returned before
 these rulings.
+
+> ***Revised on 2026-10-04, after the install*: the pool account shows *Vrij* too**, and is an end in
+> *Verplaatsen* both ways (next subsection). The text above is kept as it was ruled. **What was wrong
+> with it**: the explanation rested on the pool account "normally" holding only this period's money,
+> which a pool account with a starting balance does not, and *Niet toegewezen* only ever holds income,
+> so that starting balance, or a balance correction there, could never be given a purpose. **The
+> accepted cost is only partly gone** (ruled 2026-10-05, next subsection): leftovers not swept are shown,
+> in each ended period's line, which claims them on the pool account, not as *Vrij*.
+
+### *Vrij* on the pool account: ruled after the install
+
+> **Ruling 5, revised on 2026-10-04. The pool account shows *Vrij* too**: its *Saldo*, minus this
+> period's *Niet toegewezen*, minus the *Resterend* of this period's categories without an account, minus
+> the *Opgebouwd* of the categories it backs. **And it is an end in *Verplaatsen*, both ways.**
+
+**How it came up.** The build was installed on his phone on 2026-10-04, and he saw that Betaalrekening,
+his pool account, had no *Vrij*, so the money already on it could not be given a purpose. He was told
+how that came about: *Niet toegewezen* only holds money that came in as income, and a starting balance
+or a correction on Betaalrekening never becomes *Niet toegewezen*. In his words, translated (the round,
+*Na het installeren op de telefoon*): *"I'm so confused, how did this get through? Why wouldn't I want to
+move the money that is free on the main account to a category? Or am I missing something?"* Asked whether
+Betaalrekening gets *Vrij*, figured as above, and can be chosen in *Verplaatsen*: *"Yes, of course. Right
+now I have no easy way to assign money from my Betaalrekening to a category on that account. I would have
+to transfer it to another account and then put it on a category from there. And if I corrected the
+balance, I would have no easy way to move money out of a category to Vrij, to let it come off there when
+I lower the balance."*
+
+**Why ruling 5 was wrong**, as explained to him and in the documentation's reading: it rested on "the
+period's *Niet toegewezen* already plays that role". It does for income, and since this increment for
+money moved into it, and for nothing else. A starting
+balance or a balance correction is net worth only (*A starting balance or a balance correction is net worth
+only*, above), so on the pool account it was money that no figure showed and no act could reach: the
+gap this increment closed on every other account, left open on the one he uses most. It was recorded as
+the weaker ruling at the time (above), and the explanation he accepted then assumed the pool account
+holds only this period's money, which his own data does not. No alternative was put to him; it was a yes
+or no.
+
+> **Ruled on 2026-10-05, at the build, on the recommendation: money can move from *Niet toegewezen* to
+> *Vrij* on the account that holds *Niet toegewezen*, the pool account.** The current period only. No
+> money moves; a read-only row in the pool account's history.
+
+**How it came up** (the round, *Bij het bouwen, 5 oktober 2026*, asked in Dutch): he lowers
+Betaalrekening's balance by €30 for something forgotten, and its *Vrij* reads −€30. *Niet toegewezen* was
+only ever a destination (follow-up 7), and for *Vrij* on the pool account no assignment does the same, so
+this period's money could not cover it. **Why**, as the round records it with his choice: he can then
+cover a lower correction with this period's money, from categories without an account too (a negative
+assignment first, then *Niet toegewezen* to *Vrij*), and a *Vrij* to *Niet toegewezen* made by mistake can
+be undone.
+
+| Rejected | Why |
+|---|---|
+| **No: only out of categories with an account** | Recorded only as the alternative. In the documentation's reading, a lower correction on the pool account could then be covered only from money already given a purpose, never from this period's own, and a move into *Niet toegewezen* made by mistake could not be taken back |
+
+**What it revises**: follow-up 7, "*Niet toegewezen* is only ever a destination", **for this one end
+only**, and with it the derived "a negative amount with *Niet toegewezen* as *Naar* is refused": −€30 from
+*Vrij* on the pool account to *Niet toegewezen* is the same move, and goes through. **Still refused**:
+*Niet toegewezen* to a category, which is assigning; and *Niet toegewezen* to *Vrij* on another account
+(*derived*), which would move money between accounts and give nothing a purpose, which is *Overboeken*.
+Both with the refusal that money out of *Niet toegewezen* already gets. The refusal order is otherwise
+unchanged (*Ruled by the stakeholder at the build, 2026-10-04*, below).
+
+***Derived*, taken without him**, each listed so that he can contradict it when scenarios, plan and app
+are put to him together:
+
+- **(a) The figure, exactly.** *Vrij* on the pool account is its *Saldo* today, less the current period's
+  *Niet toegewezen* minus that period's income dated after today, less the current period's *Resterend*
+  of every category without an account (archived ones and those on "—" included: the same set the
+  period's *Restant* sums), less what is there for each category the pool account backs, less what each
+  category on "—" left on the pool account. **"This period" is the current period**, today's, whatever is
+  on screen: *Vrij* is today's and the same in every period, as on every other account. Worked out, never
+  stored. **So on every account, the pool included, *Vrij* plus what is claimed on it is its *Saldo*.**
+- **(b) Income dated after today** counts in *Niet toegewezen* at once but reaches the *Saldo* only on its
+  date, so it is left out of the claim until then. Recording it, and its date arriving, leave the pool
+  account's *Vrij* as it was.
+- **(c) An income recorded on another account**, the known corner (*Gains come in as a balance
+  correction*, above): it still counts in *Niet toegewezen*, which is claimed on the pool account, so the
+  pool account's *Vrij* is lower by it and that account's higher by it, until a transfer to the pool
+  account squares both. Summed over all accounts *Vrij* is now right, so the same euros are no longer free
+  twice in total. Still a corner, not a rule.
+- **(d) An expense on a category without an account, paid from another account** (cash, a second card):
+  the category's *Resterend* falls, so the pool account's *Vrij* rises by it, and that account's *Vrij*
+  falls by it. A transfer from the pool account squares both. It is the rule "what changes the balance
+  and no claim lands in *Vrij*" (*Vrij*, derived, above), applied to both accounts.
+- **(e) At a period's end** the claim of the period that ended goes, and the sweep takes its *Restant* off
+  the pool account: with a destination and a *Restant* above zero, the pool account's *Vrij* does not
+  change. **With no destination, the *Restant* becomes the pool account's *Vrij***, so the accepted cost
+  under ruling 5 is gone: those leftovers now show. **A *Restant* below zero is not swept, and the pool
+  account's *Vrij* falls by it at the period's end**: overspending or over-assigning during a period lowers
+  the claim, not *Vrij*, until the period ends, when it shows that it was paid from money with no purpose.
+
+  > ***Revised on 2026-10-05, by his ruling*** (*The line keeps what it asks for*, below): **with no
+  > destination, the *Restant* does not become *Vrij***. It stays claimed by its period's line, so the
+  > accepted cost under ruling 5 is only partly gone: those leftovers are shown, in each line, not as
+  > *Vrij*. The rest of (e) stands: with a destination and a *Restant* above zero nothing changes, and a
+  > *Restant* below zero, which nothing asks for, still lowers the pool account's *Vrij* at the period's
+  > end. (a)'s figure gains one claim accordingly.
+- **(f) Making another account the pool moves the claims** of *Niet toegewezen* and the unbacked
+  *Resterend* with it. The new pool account's *Vrij* is its *Saldo* less those, which may be below zero,
+  *Rood*, until the money is transferred; the old one's rises by them. This revises the derivation that
+  "the old pool account starts to show one, and the new one stops" (*Vrij*, derived, above).
+
+  > ***Widened at the build, 2026-10-05*** (found by `spec-reviewer`, decided without him; *Built,
+  > 2026-10-05*, below): **every claim only the pool account has moves with it**, the ended periods' line
+  > claims as well as the current period's. *Restant bijwerken* takes from, or returns to, whichever
+  > account is the pool now; were a line's claim left on the old pool account, bringing that line up to
+  > date would move the new pool account's *Vrij*, against the ruling that such money belongs to the line.
+  > **The consequence, shown**: with no destination, every unswept ended period shows on the new pool
+  > account as a negative *Vrij*, *Rood*, until the money is transferred to it.
+- **(g) *Verplaatsen*'s ends.** *Vrij* on the pool account is offered on both sides, like any account's.
+  To *Niet toegewezen*, on the same account, no money moves, and the move leaves a row in the pool
+  account's history: an exception to the pool-to-pool rule, as follow-up 9 already is. To or from a
+  category on another account the money moves (follow-up 8). *Vrij* to *Vrij* on another account stays
+  refused (*Ruled by the stakeholder at the build*, (a), below). **A category the pool account backs can
+  now receive from the pool account's *Vrij***, which revises "so a category it backs can receive only from
+  another category" (*One act moves an amount of purpose*, derived, above). ***Niet toegewezen* is now
+  offered as *Van* too**, listed last, as it is in *Naar*.
+- **(h) A move out of *Niet toegewezen* lowers it**: it is counted out of the period's *Niet toegewezen*,
+  as a move in is counted in. So what is moved out also leaves the period's *Restant* and the ring's *Niet
+  toegewezen* slice. It may take *Niet toegewezen* below zero, *Over-assigned*, shown and never blocked
+  (follow-up 11).
+- **(i) *Verplaatsen* is always offered**, since the pool account always has a *Vrij*. At a first start
+  its lists hold *Vrij* on Betaalrekening and *Niet toegewezen*. The guard added for `spec-reviewer`'s
+  third finding (below) would always be met, and **the build removed it** (`ReallocateForm.HasEnds`).
+- **(j) No format change.** Version 8 already keeps a reallocation's two ends and the account each was on.
+  Reading allows a move out of *Niet toegewezen* only to *Vrij* on the same account, where it refused every
+  move out of it ([ADR 0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md), decision 4,
+  dated note). Version 8 is not yet promised: [ADR 0014](../decisions/0014-real-use-and-the-phone-data.md)'s
+  promise covers the version he accepts, and increment 15 is not accepted.
+- **(k) The invariant** the build checks, *Vrij* plus what is claimed equals the *Saldo*, now covers the
+  pool account too.
+
+**It also changes two plan readings**, for the plan to record: reading 5, whose *Van* listed *Vrij* for
+every account but the pool; and reading 8, under which *Vrij* on the pool account and *Niet toegewezen* as
+*Van* were caller mistakes that throw.
+
+#### The line keeps what it asks for
+
+**Found while writing it up.** As (e) was first derived, money an ended period did not sweep became the
+pool account's *Vrij*, while **that period's line still asked for it**: once a destination is set,
+*Restant bijwerken* moves what is still to sweep from the pool account to the destination (*A swept
+period that changes*, above), and the same holds when a swept period's *Restant* rises later, by a late
+income. So the same euros could be given a purpose twice: moved from the pool account's *Vrij* into a
+category, then swept by the button, leaving the pool account's *Vrij* below zero by them, *Rood*.
+
+> **Ruled on 2026-10-05, on the recommendation: that money belongs to the line, not to *Vrij*, both
+> ways.** What an ended period's line still asks for stays claimed on the pool account: still to sweep as
+> a claim, and swept too much, while the line asks for it (some move can still be taken back), as a
+> negative claim, until *Restant bijwerken* moves it or it is let go. **With no destination, an ended
+> period's *Restant* stays its line's** and does not become *Vrij*. What is let go stops being claimed,
+> for good.
+
+It was put to him in Dutch, as a multiple-choice question (the round, *Bij het bouwen, 5 oktober 2026*):
+a late €40 refund in September, the money on Betaalrekening, and September's line saying €40 still to
+sweep, with the button; with no *Restant naar*, every ended period keeps asking like that. **Why**, as
+put with the recommendation: the money then has one place, the line, so a late change to an ended period
+leaves the pool account's *Vrij* where it was.
+
+| Rejected | Why |
+|---|---|
+| **In *Vrij*, and the line stays** | The same euros in two places, *Rood* if both are used |
+
+**What it means for the figure**, as built: the pool account's claims, (a), also include,
+over every ended period, the amount its line asks for, plus for still to sweep and minus for swept too
+much. **A *Restant* below zero** is not swept and nothing asks for it, so it is no claim, and the pool
+account's *Vrij* falls by it at the period's end, as (e) says. **It revises (e)** for a period with no
+destination (dated note there), and so leaves the accepted cost under ruling 5 only partly gone: the
+leftovers are shown, in each period's line, not as *Vrij*.
+
+#### Approved scenarios to bring back
+
+**Approved scenarios that assert what is revised**, for the scenario stage to bring back:
+
+- In [`show-unclaimed.feature`](../../features/show-unclaimed.feature): *Every account but the pool
+  account shows what no category claims, beside its balance* (its title); *The pool account shows no
+  Unclaimed, and making another account the pool moves Unclaimed with it*; *A first start's only account is
+  the pool account, and shows no Unclaimed*; and the header's "THE POOL ACCOUNT SHOWS NO UNCLAIMED",
+  "MAKING ANOTHER ACCOUNT THE POOL MOVES UNCLAIMED WITH IT" and the known corner's "AND in that account's
+  Unclaimed. So the same euros could be given a purpose twice" (derivation c).
+- In [`reallocate-an-amount.feature`](../../features/reallocate-an-amount.feature): *The form offers every
+  end there is, and each only on the side it can be*, and the header's "The pool account has no
+  Unclaimed, so it is no end" and "UNASSIGNED IS ONLY EVER A DESTINATION", with its "only ever a 'to'"
+  and the refusal order's "out of Unassigned". The scenarios that refuse a move out of *Niet toegewezen*
+  all have a category at the other end, and still hold.
+- **Every accounts table whose pool row has a blank *unclaimed* cell**, in those two files and in
+  [`back-a-category.feature`](../../features/back-a-category.feature),
+  [`keep-data.feature`](../../features/keep-data.feature),
+  [`show-accumulated.feature`](../../features/show-accumulated.feature) and
+  [`spend-against-a-backed-category.feature`](../../features/spend-against-a-backed-category.feature).
+
+**Brought back at the build, 2026-10-05**: the blank pool cells are filled, since every account shows
+*Vrij*; the step for an account that shows none is removed; and `show-unclaimed` and
+`reallocate-an-amount` have new and revised scenarios. They are put to him with the plan and the app,
+the gate being waived.
+
+#### Built, 2026-10-05
+
+**Built as planned**, on 2026-10-05: the [plan](../plans/increment-15-vrij.md)'s section *After the
+install: Vrij on the pool account*, P1–P11, which carry the derivations above. No format change, still
+version 8 (ADR 0015, dated notes). **2097 tests green** (1128 scenario cases, 969 developer unit tests),
+no warnings. **Not yet tried by him.**
+
+**Chosen in the build, not put to the stakeholder**, listed so that they can be contradicted:
+
+| Choice | Why |
+|---|---|
+| **P6. A capped negative assignment shows on the pool account's *Vrij*** | Taking a backed category's *Budget* back moves at most what is there for it (*Assigning to a backed category moves money*, above), while the whole amount joins *Niet toegewezen*. That gap was invisible before; now the pool account's *Vrij* falls by what could not be brought back. Shown, not changed. Found by the second invariant run (below) |
+| **P10. *Naar* opens on the first end that can take from *Van***: never *Van* itself, and never a *Vrij* when *Van* is one | With a *Vrij* on every account the form would otherwise open on *Vrij* to *Vrij*, which is always refused. Seen in the phone's snapshot |
+| **P11. The refusal for another period's *Niet toegewezen* reads *"Verplaatsen met Niet toegewezen kan alleen in de huidige periode."*** | It read *"Naar Niet toegewezen verplaatsen kan alleen in de huidige periode."*, and is now also said for a move out of it. Copy |
+| **Making another account the pool moves the ended lines' claims too** (derivation f, widened) | Found by `spec-reviewer`. *Restant bijwerken* works on the current pool account, so a line's claim left on the old one would let bringing the line up to date move the pool's *Vrij*, against his ruling of 2026-10-05. With no destination, every unswept ended period then shows on the new pool account as a negative *Vrij*, *Rood*, until the money is transferred |
+
+**What `spec-reviewer` found**: no money defect and no faked scenario. Its findings were the gap in (f),
+above, drift in the documentation, and places the tests did not reach. All were dealt with.
+
+**Checks:**
+
+- **Six deliberate mutations** of the new claim and refusal code, each caught by between 2 and 10 tests.
+- **The invariant now covers the pool account**: 1500 mixed acts, after each of which *Vrij* plus
+  everything claimed on an account is its balance, on every account (derivation k).
+- **A second run of 1500 acts that must leave the pool account's *Vrij* exactly where it was**: planning,
+  spending, backing, "—", re-pointing, moves that do not touch it, income now and later in the period, days
+  passing. It found P6, which it now accounts for.
+- **The phone's snapshot pictures**, dark and light, show *Vrij € 0,00* on the Betaalrekening.
 
 ### Setting *Staat op* to "—"
 
@@ -9035,7 +9318,8 @@ until it is set otherwise, and in real life he moves it himself.
 - **A category set to "—" while the pool account backs it** leaves its older money on the pool account,
   still claimed. The pool shows no *Vrij*, so nothing on screen says it is there apart from the row,
   if the row shows it (point 3). **It does** (follow-up, below): *"Opgebouwd € 400,00 op
-  Betaalrekening"*.
+  Betaalrekening"*. ***Since the revision of ruling 5*** (2026-10-04, after the install, above) the pool
+  account has a *Vrij*, and the money left behind is one of the claims on it, as on any account.
 - **The account where money is left behind is used**, and cannot be deleted: the money got there by
   movements, and an account with a movement on it is used (*Backing can be set, changed or removed at any
   time*, above). **An account whose only content is a starting balance, all *Vrij*, can still be
@@ -9272,6 +9556,10 @@ expense in this window it does not.
   > second, after the same end, by the stakeholder's ruling (*chosen in the build*, below, (a)). And the
   > third reason is built as two, in the same place in the order: money out of *Niet toegewezen*, then
   > money into an archived category or one on "—". The reading as approved is kept above.
+
+  > ***Narrowed on 2026-10-05*** (*Vrij on the pool account: ruled after the install*, above): "money
+  > out of *Niet toegewezen*" no longer covers a move to *Vrij* on the pool account, which goes through.
+  > The order is otherwise unchanged.
 - **A "—" category's slice shows "op <rekening>"**, like its row (*"Opgebouwd € 5.000,00 op
   Spaarrekening"*).
 - **An account holding a "—" category's money counts as used**, even when the money got there only
@@ -9298,6 +9586,11 @@ Each is revised where it stands, with a dated note, and the old text and its rea
 | "Re-pointing when there is none moves nothing" (derived, 2026-09-27) | **A shortfall moves too**, from the new account to the old (scenario stage, 1) |
 | "The amount moved at backing stays what it was" (2026-09-27, kept on 2026-09-28) | **A changed or removed pre-backing expense in the backing period moves its difference** between the pool and backing account; the original movement stays (scenario stage, 2) |
 | *Backing: ruled after the build*, ruling 2: a movement from an account to itself does not block deleting | **Any reallocation row naming a category blocks deleting it** (scenario stage, 3) |
+| **Ruling 5 of this section**, *No Vrij on the pool account* (2026-10-04, recorded as the weaker ruling) | **Revised the same day, after the install: the pool account shows *Vrij* too**, and is an end in *Verplaatsen* both ways; its accepted cost, leftovers not swept with no figure showing them, is partly gone: they are shown in their period's line, which claims them on the pool account, not as *Vrij* (ruled 2026-10-05; *Vrij on the pool account: ruled after the install*) |
+| **Follow-up 7 of this section**, "*Niet toegewezen* is only ever a destination" (2026-10-04), with the derived refusal of a negative amount towards it | **Revised on 2026-10-05, for one end only**: *Niet toegewezen* can be moved to *Vrij* on the pool account, no money moving. To a category it stays assigning, and to *Vrij* on another account it stays refused |
+
+The last two rows are this section's own rulings, revised after the build was installed. Their approved
+scenarios are listed with the revision (*Vrij on the pool account: ruled after the install*, above).
 
 **Approved scenarios that assert what is revised**, for the scenario stage to bring back, in the
 documentation's reading: in [`back-a-category.feature`](../../features/back-a-category.feature), *Money
@@ -9365,7 +9658,7 @@ list above is kept as it was written. Where each point went:
 |---|---|
 | What is stored, and the format's next version | **A `Reallocation`, a sixth entry kind** on the shared counter, holding its two ends and the account each was on at that moment; **a category's backing as a history of stretches**, a "—" stretch (`LeftBehind`) holding the account its older money was left on and the amount; **version 8**, reading version 7 ([ADR 0015](../decisions/0015-moves-of-purpose-and-a-backing-history.md), decisions 1, 2 and 4). A same-account move is kept like any other and leaves a row. **A record: ADR 0015** |
 | How *Opgebouwd* and what is there are worked out | **By the stretch a period falls in**, reallocations counted, and a `Rebacked` movement carrying the money left behind into a new stretch. Both count expenses from the first day the period of backing had, remembered, so a change of start day still changes neither (ADR 0015, decisions 2 and 3). What is there counted from the latest re-pointing as planned; the build moved it to the period of backing (*chosen in the build*, below, fix 1) |
-| How *Vrij* is worked out | **Today's balance minus each claim**: what is there for a backed category, the amount left there for a "—" one, none on the pool account. Worked out on every read, never stored (ADR 0015, decision 3) |
+| How *Vrij* is worked out | **Today's balance minus each claim**: what is there for a backed category, the amount left there for a "—" one, none on the pool account. Worked out on every read, never stored (ADR 0015, decision 3). ***Revised after the install*** (2026-10-04, built 2026-10-05): the pool account has one too, with two claims of its own, `PeriodClaim` (the current period's leftover less its income dated after today) and `LinesClaim` (what every ended period's line still asks for) (*Vrij on the pool account: ruled after the install*, derivation a and *The line keeps what it asks for*) |
 | Both heads | Plan reading 5. Desktop: *Vrij* in the strip, *Verplaatsen* beside *Overboeken* and on a row. Phone: *Vrij* in the accounts panel and history, a *Verplaatsen* pill and modal, the category's ⋯ menu ([§5](05-building-block-view.md)) |
 | The locked account list | **In the domain and the form**: `Ledger.LockedAccountFor`, by category, date and the expense being changed, with another account a caller's mistake that throws; and `ExpenseForm.IsAccountLocked`. **Point 16, the lock that depends on the date, is built**: it was one comparison (the plan, *Point 16 is cheap, so it is built*) |
 
@@ -9390,7 +9683,8 @@ and give nothing a purpose. **Why**, as recorded with the ruling: it gives nothi
 money between accounts is *Overboeken*. One act per need. No option not chosen is recorded with it.
 
 **The refusal order, as built**, the first that applies reported: the same end on both sides; *Vrij* to
-*Vrij*; an amount finer than a cent; money out of *Niet toegewezen*; money into an end that only gives (an
+*Vrij*; an amount finer than a cent; money out of *Niet toegewezen* (since 2026-10-05, except to *Vrij* on
+the pool account); money into an end that only gives (an
 archived category, or one on "—"); *Niet toegewezen* outside the current period. It extends the
 scenario stage's reading (*Ruled at the scenario stage, 2026-10-04*, above, where a dated note says so).
 **No scenario was added**: a unit test holds it (`VrijTests`), and the header of
@@ -9420,7 +9714,7 @@ ruling or plan reading already said.
 |---|---|
 | **1. A late receipt after a re-pointing went missing from what the account holds** | After re-pointing, an expense dated in an earlier backed period was locked on the new account, as follow-up 16 says, and counted in *Opgebouwd*, but not in what that account holds for the category, which counted from the period of the latest re-pointing. So *Vrij* went wrong, and "—" moved the wrong amount. **What is there now counts the account's expenses from the period of backing** (`AccumulatingFrom`), as *Opgebouwd* does, and `PaidHereBefore` is remembered from there. Data from before version 8 is converted on reading, so every figure reads as before. It changes one point of [ADR 0012](../decisions/0012-the-calendar-is-a-history.md)'s decision 3, which carries a dated note |
 | **2. Deleting an unused account cut away another stretch's money** | Deleting an unused account named deep in a category's history also wiped the money another stretch had left behind. Now only the stretch naming the deleted account is cut |
-| **3. *Verplaatsen* with nothing to take from crashed** | At a first start there is no account but the pool and no backed category, so *Van* had nothing in it. **It is now offered only when there is something to take from** (`ReallocateForm.HasEnds`), and the form closes rather than failing |
+| **3. *Verplaatsen* with nothing to take from crashed** | At a first start there is no account but the pool and no backed category, so *Van* had nothing in it. **It is now offered only when there is something to take from** (`ReallocateForm.HasEnds`), and the form closes rather than failing. Since the revision of ruling 5 there always is, the pool account's *Vrij*, and the build of 2026-10-05 removed `HasEnds` (derivation i, above) |
 | **4. *Vrij* to *Vrij* was not refused** | Ruled by the stakeholder: (a), above |
 
 #### Chosen in the build, not put to the stakeholder
@@ -9436,7 +9730,9 @@ ruling or plan reading already said.
   re-pointing, "—", reallocations, balance corrections, period ends and start-day changes. After each,
   on every account but the pool, *Vrij* plus the *Opgebouwd* of its categories equals its balance. It
   holds for data made under today's rules; kept version-7 data with a backed category's expense on
-  another account is outside it by ruling (*Kept data: version 7 is read*, above).
+  another account is outside it by ruling (*Kept data: version 7 is read*, above). **It covers the pool
+  account too since the revision of ruling 5**, *Vrij* plus everything claimed on it (derivation k, and
+  *Built, 2026-10-05*, above).
 - **Six deliberate mutations**, each caught by between 2 and 19 tests.
 - **A headless run of the real desktop window** passed 25 checks, the new lists' write-back and the
   locked list's included: none of them said or saved anything.
@@ -9458,7 +9754,13 @@ Both were seen in this increment's checks and are not from it. Neither is fixed.
 
 ### What this section leaves open
 
-**Nothing is open for the stakeholder.** Two points raised by the follow-up ruling were answered the
+**Nothing is open for the stakeholder.** The one point found while writing up the revision of ruling 5
+was ruled on 2026-10-05: money an ended period's line still asks for belongs to the line, not to the
+pool account's *Vrij* (*Vrij on the pool account: ruled after the install*, *The line keeps what it asks
+for*, above). The derivations a–k there are taken without him, and are put to him with the scenarios,
+plan and app.
+
+Two points raised by the follow-up ruling were answered the
 same day, on the recommendation (*An expense on a backed category is on its account*, follow-ups 15 and
 16, above). Point 16 is ruled but low priority for him, and may go back to him if the plan finds it
 costly. **The plan found it cheap, and it is built** (2026-10-04, *chosen in the build*, above). They
@@ -9480,7 +9782,7 @@ record of where each went; the ruling and its reasoning are in the subsection it
 | 4. Its expenses and the money left behind | ***Follow-up***: they do not lower it |
 | 5. Moving out of it, and into it | ***Follow-up***: out yes, in no |
 | 6. Which periods' *Niet toegewezen* | ***Follow-up***: the current period only |
-| 7. *Niet toegewezen* into *Opgebouwd* | ***Follow-up***: that is assigning; *Niet toegewezen* is only a destination |
+| 7. *Niet toegewezen* into *Opgebouwd* | ***Follow-up***: that is assigning; *Niet toegewezen* is only a destination. **Revised for one end on 2026-10-05**: it can be moved to *Vrij* on the pool account |
 | 8. Across accounts, and *Vrij* to *Niet toegewezen* | ***Follow-up***: both allowed, money moving along when the ends are on different accounts |
 | 9. A row for a same-account move | ***Follow-up***: yes, read-only |
 | 10. Deleting a category with *Opgebouwd* | ***Follow-up***: not while it is not zero |
@@ -9515,7 +9817,10 @@ sweep destination; version 7 is read with nothing given a purpose, its off-accou
 they are until changed; a negative amount towards *Niet toegewezen* is refused; a same-account move's
 row is an exception to the pool-to-pool rule; the list follows the category typed, a pick surviving a
 backed category typed in between; re-pointing leaves earlier expenses where they are; and an occurrence
-on a backed category goes on that category's account of its day.
+on a backed category goes on that category's account of its day. **Two of them are revised by the
+revision of ruling 5** (*Vrij on the pool account: ruled after the install*, above): making another
+account the pool now moves the claims, not *Vrij* (derivation f); and a negative amount towards *Niet
+toegewezen* goes through when *Van* is *Vrij* on the pool account (ruled 2026-10-05).
 
 ## Dutch source terms
 
