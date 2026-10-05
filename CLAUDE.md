@@ -105,17 +105,9 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-10-05, after increment 15 was accepted and merged. Update this when a stage completes._
+_Last updated 2026-10-05, after the keyboard fixes were merged. Update this when a stage completes._
 
-**Start here in a new conversation: one known bug, to fix first.** **On the phone, in *Verplaatsen*, the
-keyboard covers the *Bedrag* field** (found by Axel on 2026-10-05, his words: "when filling in the
-'verplaatsen' the keyboard covers the inputfield"). Likely cause, from reading and not checked: the panels
-pad their scroll area by the keyboard's height (`_keyboard`, set in `KeyboardChanged`,
-`src/MoneyBud.Phone/Views/MainView.axaml.cs`), but the modals in `MainView.Overlays.cs` (`OpenReallocate`,
-`OpenTransfer`, …) do not move up for it; *Verplaatsen*'s is the tallest. Check the other modals too. It is
-phone-only and untestable headless (no keyboard), so it needs a Release APK and his try (`adb install -r`;
-`adb` is on his user PATH, which Git Bash does not see: use PowerShell). Recorded in §11, the phone head's
-tests row. No pipeline stages needed for a layout fix: the head decides nothing.
+**Start here in a new conversation: nothing is scheduled; ask Axel what is next.** The one known bug is fixed (2026-10-05, branch `fix-keyboard-over-modals`, merged; tried by him on the phone): the keyboard covered *Bedrag* in *Verplaatsen*, because centred pop-ups did not move up for it, and a list redrawn while a pop-up's keyboard was up kept the keyboard's padding and scrolled on its own. Every pop-up now keeps clear of the keyboard (`ModalMargin` in `MainView.Overlays.cs`), and `KeyboardChanged` resets every panel. No pipeline stages: a layout fix, the head decides nothing. Recorded in §11, the phone head's row.
 
 **Increment 15 is accepted and merged into `main`** (2026-10-05, his word: "Perfect"), including the revision
 found in his first try — *Vrij* on the pool account — built with **gates waived by him**, every decision taken

@@ -666,19 +666,35 @@ public sealed partial class MainView : UserControl
     private void KeyboardChanged(double height)
     {
         _keyboard = height;
-        foreach (var form in new[] { IncomeFormPanel, ExpenseFormPanel, BudgetSheet, AccountHistory })
+
+        // Every panel, the lists too: a list redrawn while a pop-up's keyboard was up was built with
+        // its padding, and kept it after the keyboard went, scrolling on its own.
+        foreach (var panel in new[] { IncomeList, IncomeFormPanel, ExpenseList, ExpenseFormPanel, BudgetSheet, AccountsList, AccountHistory })
         {
-            if (form.Child is Grid grid && grid.Children.OfType<ScrollViewer>().FirstOrDefault() is { } scroller)
+            if (panel.Child is Grid grid && grid.Children.OfType<ScrollViewer>().FirstOrDefault() is { } scroller)
             {
                 scroller.Padding = new Thickness(0, 0, 0, height);
             }
         }
 
-        if (_modal is { } modal && _modalFromBottom)
+        if (_modal is { } modal)
         {
-            modal.Margin = new Thickness(0, 0, 0, height);
+            modal.Margin = ModalMargin(_modalFromBottom);
         }
 
         PlaceToast();
+
+        // The field was focused before the keyboard took its space; once the layout has caught up,
+        // scroll it back into sight.
+        if (height > 0)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is Control focused)
+                {
+                    focused.BringIntoView();
+                }
+            }, DispatcherPriority.Loaded);
+        }
     }
 }

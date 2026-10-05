@@ -133,6 +133,7 @@ public sealed partial class MainView
         var scrim = new Border { Background = Brushes.Black, Opacity = 0 };
         scrim.PointerPressed += (_, _) => CloseModal();
         content.VerticalAlignment = fromBottom ? VerticalAlignment.Bottom : VerticalAlignment.Center;
+        content.Margin = ModalMargin(fromBottom);
         ModalLayer.Children.Add(scrim);
         ModalLayer.Children.Add(content);
         ModalLayer.IsVisible = true;
@@ -190,6 +191,13 @@ public sealed partial class MainView
         }
     }
 
+    /// <summary>
+    /// Clear of the keyboard while it is up: a sheet sits on it, a card is centred in the space above
+    /// it, and a card too tall for that space scrolls (<see cref="Card"/>).
+    /// </summary>
+    private Thickness ModalMargin(bool fromBottom) =>
+        fromBottom ? new Thickness(0, 0, 0, _keyboard) : new Thickness(18, 18, 18, 18 + _keyboard);
+
     private Surface Sheet(string title, Control body) =>
         new Surface
         {
@@ -200,15 +208,21 @@ public sealed partial class MainView
             Child = Ui.Stack(12, Ui.Handle(), Ui.Text(title, "h2"), body),
         }.Res(Surface.BackgroundProperty, "Card").Res(Surface.BorderBrushProperty, "CardEdge");
 
-    private static Surface Card(string title, Control body) =>
-        new Surface
+    /// <summary>A pop-up in the middle. A grid, not a stack, so a body that scrolls is held to the height there is.</summary>
+    private static Surface Card(string title, Control body)
+    {
+        var grid = new Grid { RowDefinitions = RowDefinitions.Parse("Auto,*"), RowSpacing = 14 };
+        grid.Children.Add(Ui.Text(title, "h2"));
+        Grid.SetRow(body, 1);
+        grid.Children.Add(body);
+        return new Surface
         {
             CornerRadius = new CornerRadius(26),
             Padding = new Thickness(22),
-            Margin = new Thickness(18),
             BorderThickness = new Thickness(1),
-            Child = Ui.Stack(14, Ui.Text(title, "h2"), body),
+            Child = grid,
         }.Res(Surface.BackgroundProperty, "Card").Res(Surface.BorderBrushProperty, "CardEdge");
+    }
 
     /// <summary>A list that slides up from below, to choose one thing or do one act; the one chosen now carries a tick.</summary>
     private void Choice(string title, IEnumerable<(string Label, bool Danger, Action Act)> options, string? chosen = null)
