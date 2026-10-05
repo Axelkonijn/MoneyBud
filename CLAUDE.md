@@ -105,14 +105,22 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-10-05, after the pool account's *Vrij* was built. Update this when a stage completes._
+_Last updated 2026-10-05, after increment 15 was accepted and merged. Update this when a stage completes._
 
-**Start here in a new conversation: increment 15 is built and committed, plus a revision found in his try —
-*Vrij* on the pool account — also built and committed (2026-10-05), but NOT yet tried by Axel and NOT
-merged.** Next: his try of the new APK, then merge `increment-15-vrij` into `main` and push. **Gates were
-waived by him** for the revision: present the scenarios, the plan section and the app together, with every
-decision taken without him (plan, *After the install*, P1–P11; §12 *Vrij on the pool account: ruled after
-the install*).
+**Start here in a new conversation: one known bug, to fix first.** **On the phone, in *Verplaatsen*, the
+keyboard covers the *Bedrag* field** (found by Axel on 2026-10-05, his words: "when filling in the
+'verplaatsen' the keyboard covers the inputfield"). Likely cause, from reading and not checked: the panels
+pad their scroll area by the keyboard's height (`_keyboard`, set in `KeyboardChanged`,
+`src/MoneyBud.Phone/Views/MainView.axaml.cs`), but the modals in `MainView.Overlays.cs` (`OpenReallocate`,
+`OpenTransfer`, …) do not move up for it; *Verplaatsen*'s is the tallest. Check the other modals too. It is
+phone-only and untestable headless (no keyboard), so it needs a Release APK and his try (`adb install -r`;
+`adb` is on his user PATH, which Git Bash does not see: use PowerShell). Recorded in §11, the phone head's
+tests row. No pipeline stages needed for a layout fix: the head decides nothing.
+
+**Increment 15 is accepted and merged into `main`** (2026-10-05, his word: "Perfect"), including the revision
+found in his first try — *Vrij* on the pool account — built with **gates waived by him**, every decision taken
+without him listed (plan, *After the install*, P1–P11; §12 *Vrij on the pool account: ruled after the
+install*). His phone runs that build. Nothing else is scheduled: ask him what is next.
 
 - **Ruled with him** (the round's last two sections): **ruling 5 revised** (2026-10-04) — the pool account
   shows *Vrij* = *Saldo* − this period's *Niet toegewezen* (less its income dated after today) − the

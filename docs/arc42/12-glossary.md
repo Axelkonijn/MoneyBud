@@ -8715,7 +8715,8 @@ same day, and follow-up 7 for one end on 2026-10-05**, both by him, and a second
 what an ended period's line asks for out of *Vrij*; the rest of the revision is derived (*Vrij on the pool
 account: ruled after the install*, below). **He waived both gates for it**: scenarios, plan and app are
 put to him together at the end, with every decision taken without him listed. **Built on 2026-10-05**,
-green, and not yet tried by him.
+green, **tried by him on his phone and accepted the same day** ("Perfect"), with one
+layout bug left for later: the keyboard covers *Verplaatsen*'s *Bedrag* field ([§11](11-risks-and-technical-debt.md)).
 
 **Where it comes from.** In his words, translated: he cannot change *Opgebouwd*, nor move it between
 categories, and "I already have savings and shares, so *Opgebouwd* doesn't really match what is in
@@ -9224,7 +9225,8 @@ the gate being waived.
 **Built as planned**, on 2026-10-05: the [plan](../plans/increment-15-vrij.md)'s section *After the
 install: Vrij on the pool account*, P1–P11, which carry the derivations above. No format change, still
 version 8 (ADR 0015, dated notes). **2097 tests green** (1128 scenario cases, 969 developer unit tests),
-no warnings. **Not yet tried by him.**
+no warnings. **Tried by him on his phone and accepted, 2026-10-05**; the one bug he found, the keyboard
+covering *Verplaatsen*'s *Bedrag* field, is recorded in [§11](11-risks-and-technical-debt.md) for a later session.
 
 **Chosen in the build, not put to the stakeholder**, listed so that they can be contradicted:
 
