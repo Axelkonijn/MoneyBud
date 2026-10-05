@@ -6,7 +6,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- The logo, made by docs/logo/render.ps1: the .exe's icon here, the window's below. -->
+    <ApplicationIcon>..\..\docs\logo\moneybud.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AvaloniaResource Include="..\..\docs\logo\moneybud.ico" Link="Assets\moneybud.ico" />
+  </ItemGroup>
 
   <!-- The windows and the drawing, and nothing that decides anything: that is all in
        MoneyBud.Presentation (ADR 0006), which is where the scenarios are run. -->

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="14 40 236 236" width="236" height="236">
+  <!-- MoneyBud's logo: a gold coin with a sprout, drawn as a die-cut sticker to sit among the
+       stickers on Axel's home screen (Niagara's sticker icons). The source of every icon made from
+       it: render.ps1 makes the Android launcher icon and the Windows .ico. Stem, leaves and coin
+       are drawn twice: first fat, in sticker paper, for the cut edge; then in colour on top. The
+       stem is an outline, 22 wide where it leaves the coin and 8 at the leaves, thinning fast;
+       both leaves lie in front of the coin, the small one on top. -->
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- The sticker paper -->
+  <g filter="url(#shadow)" fill="#F3EFE6" stroke="#F3EFE6" stroke-width="30" stroke-linejoin="round" stroke-linecap="round">
+    <circle cx="116" cy="180" r="60"/>
+    <path stroke-width="20" d="M90.5 130.6 L88.5 126.4 L87.3 122.6 L86.4 118.7 L86 114.7 L86 110.6 L86.5 106.6 L87.4 102.6 L88.8 98.7 L90.6 94.9 L92.8 91.3 L95.5 87.9 L98.6 84.7 L102.2 81.8 L106.1 79.2 L110.5 77 L115.4 75.2 L120.5 73.8 L125.5 72.8 L130.3 72.3 L134.9 72.2 L139.3 72.6 L143.4 73.3 L147.3 74.4 L150.9 75.8 L154.2 77.6 L157.2 79.7 L159.9 82.1 L162.2 84.8 L164.2 87.8 L165.9 91.1 L167.2 94.7 L168.1 98.9 A4 4 0 0 1 175.9 97.1 L174.9 92.5 L173.3 88 L171.2 83.8 L168.7 79.9 L165.8 76.4 L162.4 73.3 L158.7 70.5 L154.6 68.2 L150.2 66.3 L145.5 64.7 L140.6 63.7 L135.4 63 L130 62.8 L124.4 63 L118.6 63.7 L112.6 64.8 L106.6 66.5 L100.9 68.8 L95.6 71.5 L90.6 74.8 L86.1 78.4 L82 82.5 L78.4 87 L75.2 91.8 L72.5 96.9 L70.4 102.2 L68.8 107.8 L67.7 113.6 L67.3 119.6 L67.5 125.7 L68.3 131.8 L69.5 137.4 Z"/>
+    <path d="M172 98 C142.6 127.2 160.5 161.9 202 170 C210.7 145.2 197.2 108.6 172 98 Z"/>
+    <path d="M172 98 C147.7 83 127 100.8 128 130 C146.1 131.8 168.8 116.7 172 98 Z"/>
+  </g>
+
+  <g stroke-width="9" stroke-linejoin="round" stroke-linecap="round">
+    <!-- The stem, its foot behind the coin -->
+    <path fill="#1E6B57" d="M90.5 130.6 L88.5 126.4 L87.3 122.6 L86.4 118.7 L86 114.7 L86 110.6 L86.5 106.6 L87.4 102.6 L88.8 98.7 L90.6 94.9 L92.8 91.3 L95.5 87.9 L98.6 84.7 L102.2 81.8 L106.1 79.2 L110.5 77 L115.4 75.2 L120.5 73.8 L125.5 72.8 L130.3 72.3 L134.9 72.2 L139.3 72.6 L143.4 73.3 L147.3 74.4 L150.9 75.8 L154.2 77.6 L157.2 79.7 L159.9 82.1 L162.2 84.8 L164.2 87.8 L165.9 91.1 L167.2 94.7 L168.1 98.9 A4 4 0 0 1 175.9 97.1 L174.9 92.5 L173.3 88 L171.2 83.8 L168.7 79.9 L165.8 76.4 L162.4 73.3 L158.7 70.5 L154.6 68.2 L150.2 66.3 L145.5 64.7 L140.6 63.7 L135.4 63 L130 62.8 L124.4 63 L118.6 63.7 L112.6 64.8 L106.6 66.5 L100.9 68.8 L95.6 71.5 L90.6 74.8 L86.1 78.4 L82 82.5 L78.4 87 L75.2 91.8 L72.5 96.9 L70.4 102.2 L68.8 107.8 L67.7 113.6 L67.3 119.6 L67.5 125.7 L68.3 131.8 L69.5 137.4 Z"/>
+
+    <!-- The coin, its shine and the euro sign. The sign sits halfway between its ink centred on the
+         coin and its arc concentric with the coin's edge (Axel's choice). -->
+    <circle cx="116" cy="180" r="60" fill="#FFD9A0" stroke="#8A5A1C"/>
+    <path d="M78.8 150 A45 45 0 0 0 78.8 210" fill="none" stroke="#FFF1D9" stroke-width="7" opacity="0.85"/>
+    <g fill="none" stroke="#8A5A1C" stroke-width="10">
+      <path d="M138.9 160.1 A27.3 27.3 0 1 0 138.9 199.9"/>
+      <path d="M85.8 172.7 H124"/>
+      <path d="M85.8 188.2 H120.3"/>
+    </g>
+
+    <!-- The leaves, in front of the coin: the big one with its rib, then the small one over it -->
+    <path d="M172 98 C142.6 127.2 160.5 161.9 202 170 C210.7 145.2 197.2 108.6 172 98 Z" fill="#8FE3C8" stroke="#1E6B57"/>
+    <path d="M178.6 113.8 L190.6 142.6" fill="none" stroke="#1E6B57" stroke-width="5"/>
+    <path d="M172 98 C147.7 83 127 100.8 128 130 C146.1 131.8 168.8 116.7 172 98 Z" fill="#8FE3C8" stroke="#1E6B57"/>
+  </g>
+</svg>

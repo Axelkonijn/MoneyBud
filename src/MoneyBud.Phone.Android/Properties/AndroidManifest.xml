@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The data stays on the phone: no automatic backup to the Google account, and no copy on a device
      transfer either, which on Android 12 and later allowBackup alone does not stop (ADR 0014,
-     decision 5; plan for increment 14, D5). Axel's own copies over the cable are the backup. -->
+     decision 5; plan for increment 14, D5). Axel's own copies over the cable are the backup.
+     The icon is the logo (docs/logo), for round launchers too. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-  <application android:allowBackup="false"
+  <application android:icon="@mipmap/ic_launcher"
+               android:roundIcon="@mipmap/ic_launcher"
+               android:allowBackup="false"
                android:fullBackupContent="false"
                android:dataExtractionRules="@xml/data_extraction_rules" />
   <uses-permission android:name="android.permission.VIBRATE" />

@@ -48,6 +48,7 @@ quietly.
 | `docs/arc42/` | Architecture documentation, arc42 template, English. Sections filled progressively — empty sections are normal, not gaps to pad |
 | `docs/decisions/` | ADRs, indexed from arc42 §9 |
 | `docs/plans/` | An increment's implementation plan, when it is too long to keep here. Written at stage 4, approved at the second gate |
+| `docs/logo/` | The logo: `moneybud.svg` (the sticker) and `monochrome.svg` (Android's themed icons) are the source; `render.ps1` makes the Android launcher icons and `moneybud.ico` from them with headless Edge. Edit the SVGs, rerun it, commit what it makes |
 | `features/` | Gherkin feature files. Conventions in `features/README.md`. They stay here and are *linked* into the test project, not copied — [ADR 0004](docs/decisions/0004-solution-layout.md) |
 | `src/` | `MoneyBud.Domain` — the rules. `MoneyBud.Presentation` — everything the screen decides, with no UI toolkit, and all the Dutch text (`Tekst`); since increment 14 also the phone's own rules (`PhoneScreen`, `PhoneSettings`). `MoneyBud.Storage` — the data file: its JSON form, the lock, the atomic save ([ADR 0007](docs/decisions/0007-keeping-the-ledger.md)), and the phone's settings file. `MoneyBud.Desktop` — the Avalonia window and the ring's drawing, deliberately thin and untested by plan ([ADR 0006](docs/decisions/0006-three-source-projects.md)). `MoneyBud.Phone` — the phone's screens, themes and motion, as thin and as untested ([ADR 0013](docs/decisions/0013-an-android-phone-app.md)); `MoneyBud.Phone.Android` — the Android host, **not in `MoneyBud.slnx`**; `MoneyBud.Phone.Desktop` — the phone's screens in a PC window, and headless pictures of them |
 | `tests/` | `MoneyBud.Specs` — Reqnroll step definitions, plus developer unit tests under `Unit/`. Every `When` acts through `MoneyBudApp`, not the ledger |
@@ -105,7 +106,18 @@ The solution file is `MoneyBud.slnx`, not `.sln` — the .NET 10 SDK's default f
 
 ## Where we are
 
-_Last updated 2026-10-05, after the keyboard fixes were merged. Update this when a stage completes._
+_Last updated 2026-10-05, after the logo was made. Update this when a stage completes._
+
+**The logo** (2026-10-05, branch `logo`; not yet on his phone nor merged): a gold coin with a drooping
+sprout, its stem thick at the coin and thin at the leaves, both leaves in front of the coin, drawn as a
+die-cut sticker to match the Niagara launcher's sticker icons on Axel's phone. Chosen with him over
+about ten rounds of drafts; flat, gradient, line,
+kintsugi and watercolour versions were tried and rejected ("all kind of terrible"). The € sits halfway
+between its ink centred on the coin and its arc concentric with it, his choice. Used as the Android
+launcher icon (adaptive, transparent background, plus a monochrome layer for themed icons), the
+desktop and phone-in-a-PC windows' icon, and in the README. No pipeline stages: appearance, the heads
+decide nothing. Niagara gives apps it does not know its own "dot" sticker, so on his phone he may have
+to pick MoneyBud's own icon by hand.
 
 **Start here in a new conversation: nothing is scheduled; ask Axel what is next.** The one known bug is fixed (2026-10-05, branch `fix-keyboard-over-modals`, merged; tried by him on the phone): the keyboard covered *Bedrag* in *Verplaatsen*, because centred pop-ups did not move up for it, and a list redrawn while a pop-up's keyboard was up kept the keyboard's padding and scrolled on its own. Every pop-up now keeps clear of the keyboard (`ModalMargin` in `MainView.Overlays.cs`), and `KeyboardChanged` resets every panel. No pipeline stages: a layout fix, the head decides nothing. Recorded in §11, the phone head's row.
 
